@@ -1,0 +1,69 @@
+base_dir=/Users/huku2729/overlap_diff_model/data/$1_$2_2_811e-4_koff_10_14_f_26_1_v_0_$7_bc_$5_$6_vg_$4e-1_sh_$3e-4_eq_120
+
+# create directory and change it to the current directory
+# note: if directory already exists the script will exit with an error
+# without continuing
+mkdir $base_dir
+cd $base_dir
+
+# motor_velocity = 0.5
+# motor_turning_frequency = 26.1    ##critical ~1.7 nM
+# 4000000 40000
+
+cat > c_run.param << endofdata
+n_steps = 4000000
+pickup_time = 40000
+growing_velocity = 0
+shrinking_velocity = 0
+motor_velocity = $7e-2
+motor_turning_frequency = 26.1
+c_motor = $1
+kon = 2.811e-4
+koff = 10.14
+right_conc_right = 10000e-4
+right_conc_left = $5e-4
+left_conc_right = $5e-4
+left_conc_left = 10000e-4
+flux_flag = 0
+seed = $RANDOM
+endofdata
+
+
+# When the microtubule length is changing, the final.config is not reliable (don't use final.config). # 20000000 200
+cat > c_run2.param << endofdata
+n_steps = 20000000
+pickup_time = 200
+growing_velocity = $4e-1
+shrinking_velocity = $3e-4
+motor_velocity = $7e-2
+motor_turning_frequency = 26.1
+c_motor = $1
+kon = 2.811e-4
+koff = 10.14
+right_conc_right = $6e-4
+right_conc_left = $5e-4
+left_conc_right = $5e-4
+left_conc_left = 10000e-4
+flux_flag = 0
+seed = $RANDOM
+endofdata
+
+
+cp /Users/huku2729/overlap_diff_model/$2.config ./
+
+cp /Users/huku2729/overlap_diff_model/overlap ./
+#cp /home/hskuan/microtubule_hskuan/overlap_diff_model/data/$1_$2_-7_f_1_386_v_0_00_bc_0_015/final.config ./
+#mv final.config start_eq.config
+
+./overlap c_run.param $2.config output.file detail.file 1> over.out 2> over.err
+mv final.config start.config
+mv all.config all1.config
+mv diff.config diff1.config
+./overlap c_run2.param start.config output.file_2 detail.file_2 1> over2.out 2> over2.err
+mv final.config start_2.config
+mv all.config all2.config
+mv diff.config diff2.config
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+rm -r time.txt
+echo $ELAPSED_TIME > time.txt

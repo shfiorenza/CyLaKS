@@ -1,0 +1,12 @@
+icc -O2 -g   -c -o main.o main.c
+icc -O2 -g   -c -o parse_parameters.o parse_parameters.c
+icc -O2 -g   -c -o parse_tokens.o parse_tokens.c
+icc -O2 -g   -c -o overlap_growth.o overlap_growth.c
+icc -O2 -g   -c -o output.o output.c
+icc -O2 -g   -c -o gfopen.o gfopen.c
+icc -O2 -g   -c -o allocate.o allocate.c
+icc -O2 -g   -c -o ran3.o ran3.c
+icc -O2 -g   -c -o error_exit.o error_exit.c
+icc  -o overlap main.o parse_parameters.o parse_tokens.o overlap_growth.o output.o gfopen.o allocate.o ran3.o error_exit.o -L/usr/local/lib/ -I/usr/local/include/gsl/ -lgsl -lgslcblas -lm
+icc -O2 -g   -c -o build_microtubule.o build_microtubule.c
+icc  -o build_micro_hskuan build_microtubule.o gfopen.o allocate.o error_exit.o -lm

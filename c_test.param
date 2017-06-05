@@ -1,0 +1,9 @@
+n_steps = 100000
+pickup_time = 100
+growing_velocity = 0
+motor_velocity = 0.022
+motor_turning_frequency = 0
+c_motor = 10
+kon = 2.7e-4
+koff = 0.5
+seed = 23866

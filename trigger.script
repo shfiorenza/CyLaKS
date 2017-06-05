@@ -1,0 +1,13 @@
+for m in 200000 500000 700000 800000 # 300000 # 200000 # 300000 # 100000 200000 400000 #100000 1000000 1000 #100000 50000 #10000 5000 1000 #2000 3000 4000 5000 #41000 40500 #2500 3000 3500 #8000 8100 8200 8300 8400 8500 8600 8700 8800 8900 #100 1000 10000 100000 1000000
+   do
+for p in 5 10 15 25 80 90 100 200 # 100 200 300 #100 150 200 250 300 #15 25 100 #25 35 45 55 65 75 85 95 100 #35 45 55 65 75 85 95 100
+   do
+      echo "$p"
+      echo "$m"
+      sleep 1
+      # echo "/home/hskuan/vieques/overlap_diff_model/run.script $p 200 $m 24 0 10000 0" | qsub
+      echo "/home/hskuan/vieques/overlap_diff_model/run.script $p 200 $m 24 0 10000 50" | qsub
+      # echo "/home/hskuan/vieques/overlap_diff_model/run.script $p 200 $m 20 0 10000 50" | qsub
+      # echo "/home/hskuan/vieques/overlap_diff_model/run_flux_2.script $p 200 $m 24 0 10000 50" | qsub
+done
+done

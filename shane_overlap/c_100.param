@@ -1,0 +1,8 @@
+n_steps = 100000
+pickup_time = 1000
+motor_velocity = 0.52
+motor_turning_frequency = 0
+c_motor = 100
+kon = 2.7e-3
+koff = 0.169
+seed = 22739

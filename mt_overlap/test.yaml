@@ -1,0 +1,11 @@
+n_steps: 4200000
+data_threshold: 4000000
+seed : 4194304
+delta_t : 0.005
+k_on : 2.7e-4
+c_motor : 200
+k_off : 0.169
+motor_speed : 0.5
+switch_rate : 0.5
+alpha: 0.3
+beta: 0.1

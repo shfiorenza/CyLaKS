@@ -265,30 +265,54 @@ void motors_boundaries(system_parameters *parameters, microtubule *mt_array, std
 		if(random1 >= p_plus && mt_array[j_mt].track[plus_end].occupancy[0] == 2){
 			mt_array[j_mt].track[plus_end].occupancy[0] = 0;	
 			mt_array[j_mt].n_bound[0]--;
-			// Removes (plus_end) from bound list; adds it to unbound list
+			// Removes (plus_end) from bound list
 			bound_list[j_mt].erase(std::remove(bound_list[j_mt].begin(), bound_list[j_mt].end(), plus_end), bound_list[j_mt].end());
-			unbound_list[j_mt].push_back(plus_end);
+			// Randomize where we place (plus_end) in unbound_list
+			int list_size = unbound_list[j_mt].size();
+			int pushback_offset = 0;
+			if(list_size > 0){
+				pushback_offset = gsl_random_uniform_int(rng, list_size);
+			}
+			unbound_list[j_mt].insert(unbound_list[j_mt].begin() + pushback_offset, plus_end);
 		}
 		else if(random1 < p_plus && mt_array[j_mt].track[plus_end].occupancy[0] == 0){
 			mt_array[j_mt].track[plus_end].occupancy[0] = 2;
 			mt_array[j_mt].n_bound[0]++;			
-			// Removes (plus_end) from unbound list; adds it to bound list
+			// Removes (plus_end) from unbound list
 			unbound_list[j_mt].erase(std::remove(unbound_list[j_mt].begin(), unbound_list[j_mt].end(), plus_end), unbound_list[j_mt].end());
-			bound_list[j_mt].push_back(plus_end);
+			// Randomize where we place (plus_end) in bound_list
+			int list_size = bound_list[j_mt].size();
+			int pushback_offset = 0;
+			if(list_size > 0){
+				pushback_offset = gsl_random_uniform_int(rng, list_size);
+			}
+			bound_list[j_mt].insert(bound_list[j_mt].begin() + pushback_offset, plus_end);
 		}
 		// Enforces boundary condition for minus-end
 		if(random2 >= p_minus && mt_array[j_mt].track[minus_end].occupancy[0] == 2){
 			mt_array[j_mt].track[minus_end].occupancy[0] = 0;	
 			mt_array[j_mt].n_bound[0]--;
-			// Removes (minus_end) from bound list; adds it to unbound list
+			// Removes (minus_end) from bound list
 			bound_list[j_mt].erase(std::remove(bound_list[j_mt].begin(), bound_list[j_mt].end(), minus_end), bound_list[j_mt].end());
-			unbound_list[j_mt].push_back(minus_end);
+			// Randomize where we place (minus_end) in unbound_list
+			int list_size = unbound_list[j_mt].size();
+			int pushback_offset = 0;
+			if(list_size > 0){
+				pushback_offset = gsl_random_uniform_int(rng, list_size);
+			}
+			unbound_list[j_mt].insert(unbound_list[j_mt].begin() + pushback_offset, minus_end);
 		}
 		else if(random2 < p_minus && mt_array[j_mt].track[minus_end].occupancy[0] == 0){
 			mt_array[j_mt].track[minus_end].occupancy[0] = 2;
 			mt_array[j_mt].n_bound[0]++;			
 			// Removes (minus_end) from unbound list; adds it to bound list
 			unbound_list[j_mt].erase(std::remove(unbound_list[j_mt].begin(), unbound_list[j_mt].end(), minus_end), unbound_list[j_mt].end());
+			// Randomize where we place (minus) end in bound_list
+			int list_size = bound_list[j_mt].size();
+			int pushback_offset = 0;
+			if(list_size > 0){
+				pushback_offset = gsl_random_uniform_int(rng, list_size);
+			}
 			bound_list[j_mt].push_back(minus_end);
 		}
 	}

@@ -8,7 +8,7 @@ int main(int argc, char *argv[])
 	microtubule *mt_array, *mt_array_initial;
 	char param_file[160];
 	int n_runs, length_of_microtubule, n_microtubules, n_steps, data_threshold, range_of_data, pickup_time, equil_milestone;
-	double delta_t, duration, p_bind, p_unbind, p_switch, p_move, p_plus, p_minus;
+	double delta_t, duration, p_bind, p_unbind, p_switch, p_move;
 	long seed;
 	FILE *f_config, *output_file, *stream; 
 	clock_t start, finish;
@@ -40,11 +40,7 @@ int main(int argc, char *argv[])
 	p_bind = parameters.k_on*parameters.c_motor*parameters.delta_t;
 	p_unbind = parameters.k_off*parameters.delta_t;
 	p_switch = parameters.switch_rate*parameters.delta_t;
-	p_move = 125*parameters.motor_speed*parameters.delta_t;	
-	double alpha = parameters.alpha;
-	double beta = parameters.beta;
-	p_plus = 1 - beta;
-	p_minus = alpha;
+	p_move = 125*parameters.motor_speed*parameters.delta_t;		
 
 	range_of_data = n_steps - data_threshold;
 	pickup_time = range_of_data/10000;								// We want ~10,000 timepoints to average from
@@ -120,145 +116,133 @@ int main(int argc, char *argv[])
 	// Main simulation loop
 	output_file = gfopen(argv[3], "w");
 	for(int i_run = 0; i_run < n_runs; i_run++){
-		// Copy data from initial mt array
+
+		// Use vectors rather than linked lists for their built-in functions and multi-dimensionality
+		// Vectors will store the ABSOLUTE COORD (MT array index + coord of MT edge) of relevant items 
+		std::vector< std::vector<int> > bound_list,
+										unbound_list;
+		// Populates vectors from initial conditions 
 		for(int j_mt = 0; j_mt < n_microtubules; j_mt++){
+			// Resets the MT array to what was read from the config file 
+			// ****MAKE CLEAR_ARRAY FUNCTION TO ENABLE MULTIPLE RUNS***
 			memcpy(&mt_array[j_mt], &mt_array_initial[j_mt], sizeof(microtubule));
+			std::vector<int> temp_bound, 
+							 temp_unbound;
+			for(int k_site = 0; k_site < length_of_microtubule; k_site++){
+				if(mt_array[j_mt].track[k_site].occupancy[0] == 0){
+					temp_unbound.push_back(k_site + mt_array[j_mt].coord[0]);
+				}
+				else if(mt_array[j_mt].track[k_site].occupancy[0] == 2){
+					temp_bound.push_back(k_site + mt_array[j_mt].coord[0]);
+				}
+			}
+			unbound_list.push_back(temp_unbound);
+			bound_list.push_back(temp_bound);
+			temp_unbound.clear();
+			temp_bound.clear();
 		}
 
 		// Main kMC loop 
 		for(int i_step = 0; i_step < n_steps; i_step++){
-
-			// Store the indices (from 0 to length_of_microtubule - 1) in a list
-			std::vector<int> index_list;
-			for(int k_site = 0; k_site < length_of_microtubule; k_site++){
-				index_list.push_back(k_site);
-			}
-			// Calculate total number of expected kMC events, i.e how many times to run below loop
-			int n_events = n_microtubules*index_list.size();
-		
-			for(int i_kmc = 0; i_kmc < n_events; i_kmc++){
-				// Randomly choose a microtubule
-				int mt_index = gsl_rng_uniform_int(rng, n_microtubules);
-
-				int mt_index_adj, delta_x, plus_end, minus_end;
-				// Assign the relevant directions depending on polarity of MT
-				if(mt_array[mt_index].polarity[0] == 0){
-					mt_index_adj = mt_index + 1;
-					delta_x = 1;
-					plus_end = length_of_microtubule - 1;
-					minus_end = 0;
-				}
-				else if(mt_array[mt_index].polarity[0] == 1){
-					mt_index_adj = mt_index - 1;
-					delta_x = -1;
-					plus_end = 0;
-					minus_end = length_of_microtubule - 1;
-				}
 			
-				// Randomly choose a site from the appropriate index list
-				int list_size = index_list.size();
-				int list_entry = gsl_rng_uniform_int(rng, list_size);
-				// Get appropriate index for that site
-				int index = index_list[list_entry];
-				// Roll the random numbers we'll need for this timestep
-				double random1 = gsl_rng_uniform(rng);
-				double random2 = gsl_rng_uniform(rng);
+			// Initiate vectors to keep track of statistics for each individual MT		
+			std::vector<int> n_to_bind(n_microtubules),
+                             n_to_unbind(n_microtubules),
+                             n_to_switch(n_microtubules),
+                             n_to_move(n_microtubules),
+							 n_tot(n_microtubules);
+            std::vector<double> n_avg(n_microtubules);
 
-				// Check if we're dealing with the boundaries here
-				if(index == 0 || index == (length_of_microtubule - 1)){
-					// If index is the plus end, nothing interesting can happen; go to BC
-					if(index == plus_end){
-						goto boundary_conditions;
-					}
-					// Otherwise, it must be the minus end
-					else if(index == minus_end){
-						// If site is unoccupied, nothing interesting can happen; go to BC
-						if(mt_array[mt_index].track[minus_end].occupancy[0] == 0){
-							goto boundary_conditions;
-						}
-						// Otherwise, check if a motor is at the minus end
-						else if(mt_array[mt_index].track[minus_end].occupancy[0] == 2){
-							// Check if the motor isn't blocked by something
-							if(mt_array[mt_index].track[(minus_end + delta_x)].occupancy[0] == 0){	
-								// Attempt to move
-								if(random2 < p_move){
-									mt_array[mt_index].track[index].occupancy[0] = 0;
-									mt_array[mt_index].track[(index + delta_x)].occupancy[0] = 2;
-									goto boundary_conditions;
-								}	
-							}
-						}
-					}
+			int n_max = 0;			// Maximum number of kMC events for any one MT in a timestep; needed for mem alloc
+			int n_tot_step = 0;		// Combined number of ALL kMC events on ALL MTs in a timestep; needed for mem alloc
+			// Calculate expected number of events in this particular timestep for each MT
+			for(int j_mt = 0; j_mt < n_microtubules; j_mt++){	
+				// Calculate average number of binding events per timestep, then use it to sample Poisson for expected number of events
+				n_avg[j_mt] = p_bind*(length_of_microtubule - mt_array[j_mt].n_bound[0]);
+				n_to_bind[j_mt] = gsl_ran_poisson(rng, n_avg[j_mt]);
+				// Sample binomial distribution for the rest of the events (self-explanatory)
+				n_to_unbind[j_mt] = gsl_ran_binomial(rng, p_unbind, mt_array[j_mt].n_bound[0]);
+				n_to_switch[j_mt] = gsl_ran_binomial(rng, p_switch, mt_array[j_mt].n_bound[0]);
+				n_to_move[j_mt] = gsl_ran_binomial(rng, p_move, mt_array[j_mt].n_bound[0]);
+				// Calculates the total number of events expected in this timestep for each MT
+				n_tot[j_mt] = n_to_bind[j_mt] + n_to_unbind[j_mt] + n_to_switch[j_mt] + n_to_move[j_mt];
+				// Need to know the largest number of total expected events on any one MT to allocate kmc_array later
+				if(n_tot[j_mt] > n_max){
+					n_max = n_tot[j_mt];
 				}
-				// If not at boundaries, go to routine algorithm:
-				else{
-					// Check if site is unoccupied; if so, attempt to bind:
-					if(mt_array[mt_index].track[index].occupancy[0] == 0){
-						if(random1 < p_bind){
-							mt_array[mt_index].track[index].occupancy[0] = 2;
-							mt_array[mt_index].n_bound[0]++;
-							goto boundary_conditions;
-						}
-					}
-					// Otherwise, check if motor is bound; if so, attempt to unbind:
-					else if(mt_array[mt_index].track[index].occupancy[0] == 2){
-						if(random2 < p_unbind){	
-							mt_array[mt_index].track[index].occupancy[0] = 0;
-							mt_array[mt_index].n_bound[0]--;	
-							goto boundary_conditions;
-						}
-						// Otherwise, roll to see if we should attempt to switch:
-						else if(random2 < (p_unbind + p_switch)){ 
-							if(mt_array[mt_index_adj].track[index].occupancy[0] == 0){
-								mt_array[mt_index].track[index].occupancy[0] = 0;
-								mt_array[mt_index].n_bound[0]--;
-								mt_array[mt_index_adj].track[index].occupancy[0] = 2;
-								mt_array[mt_index_adj].n_bound[0]++;
-								goto boundary_conditions;
-							}
-						}
-						// Otherwise, roll to see if we should attempt to move:
-						else if(random2 < (p_unbind + p_switch + p_move)){ 
-							if(mt_array[mt_index].track[(index + delta_x)].occupancy[0] == 0){
-									mt_array[mt_index].track[index].occupancy[0] = 0;
-									mt_array[mt_index].track[(index + delta_x)].occupancy[0] = 2;
-									goto boundary_conditions;
-							}
-						}
-					}
+				// Need to know number of total expected events for ALL Mts combined to allocate mt_list later
+				n_tot_step += n_tot[j_mt];
+			}
+			// The 1D array 'mt_list' acts as a master list of all kMC events expected in a timestep; 
+			// each entry will lead to one kMC event on the MT which the entry's index corresponds to
+			int mt_list[n_tot_step];
+			int list_start = 0;
+			// Populate mt_list according to above statistics; the index of each MT appears n_tot[j_mt] times	
+			for(int j_mt = 0; j_mt < n_microtubules; j_mt++){
+				for(int i_list = list_start; i_list < (n_tot[j_mt] + list_start); i_list++){
+					mt_list[i_list] = j_mt;
 				}
-// Enforce BC after every kmc event in timestep
-boundary_conditions:
-				for(int j_mt = 0; j_mt < n_microtubules; j_mt++){
-					if(mt_array[j_mt].polarity[0] == 0){
-            			plus_end = (length_of_microtubule - 1);
-            			minus_end = 0;
-        			}
-        			else if(mt_array[j_mt].polarity[0] == 1){
-            			plus_end = 0;
-            			minus_end = (length_of_microtubule - 1);
-        			}
-					double random3 = gsl_rng_uniform(rng);
-					double random4 = gsl_rng_uniform(rng);
-					// Enforces boundary condition for plus-end
-					if(random3 >= p_plus && mt_array[j_mt].track[plus_end].occupancy[0] == 2){ 
-						mt_array[j_mt].track[plus_end].occupancy[0] = 0;    
-						mt_array[j_mt].n_bound[0]--;
-					}
-					else if(random3 < p_plus && mt_array[j_mt].track[plus_end].occupancy[0] == 0){ 
-						mt_array[j_mt].track[plus_end].occupancy[0] = 2;
-						mt_array[j_mt].n_bound[0]++;    
-					}
-					// Enforces boundary condition for minus-end
-					if(random4 >= p_minus && mt_array[j_mt].track[minus_end].occupancy[0] == 2){ 
-						mt_array[j_mt].track[minus_end].occupancy[0] = 0;   
-						mt_array[j_mt].n_bound[0]--;
-					}
-					else if(random4 < p_minus && mt_array[j_mt].track[minus_end].occupancy[0] == 0){ 
-						mt_array[j_mt].track[minus_end].occupancy[0] = 2;
-						mt_array[j_mt].n_bound[0]++;    
-					}
+				list_start += n_tot[j_mt];
+			}
+			// Only attempt to shuffle mt_list if it exists
+			if(n_tot_step > 0){
+				gsl_ran_shuffle(rng, mt_list, n_tot_step, sizeof(int));
+			}
+			// Similar to mt_list, but kmc_array stores the exact type of kmc event that will occur for each MT
+			int kmc_array[n_microtubules][n_max];	
+			// Populates and shuffles the kmc_list of each MT, i.e. kmc_array[j_mt], according to above statistics
+			for(int j_mt = 0; j_mt < n_microtubules; j_mt++){	
+				for(int i_list = 0; i_list < n_to_bind[j_mt]; i_list++){
+					kmc_array[j_mt][i_list] = 0;				// "0" means the kMC event corresponds to binding
 				}
+				for(int i_list = n_to_bind[j_mt]; i_list < (n_to_bind[j_mt] + n_to_unbind[j_mt]); i_list++){
+					kmc_array[j_mt][i_list] = 1;				// "1" means the kMC event corresponds to unbinding
+				}
+				for(int i_list = (n_to_bind[j_mt] + n_to_unbind[j_mt]); i_list < (n_tot[j_mt] - n_to_move[j_mt]); i_list++){
+					kmc_array[j_mt][i_list] = 2;				// "2" means the kMC event corresponds to switching
+				}
+				for(int i_list = (n_tot[j_mt] - n_to_move[j_mt]); i_list < n_tot[j_mt]; i_list++){
+					kmc_array[j_mt][i_list] = 3;				// "3" means the kMC event corresponds to moving
+				}
+				// Only attempt to shuffle kmc_array[j_mt] if it exists
+				if(n_tot[j_mt] > 0){
+					gsl_ran_shuffle(rng, kmc_array[j_mt], n_tot[j_mt], sizeof(int));
+				}
+			}
+
+			// Initializes the entry of each list to 0, i.e. makes sure we start at the beginning of each list
+			int mt_list_entry = 0;
+			// Each MT has its own kmc_list, so multiple entries need to be kept track of; these are stored in kmc_list_entries
+			int kmc_list_entries[n_microtubules];
+			for(int j_mt = 0; j_mt < n_microtubules; j_mt++){
+				kmc_list_entries[j_mt] = 0;
+			}
+
+			// Keeps running until the expected number of kMC events occur
+			while(mt_list_entry < n_tot_step){
+
+				int mt_index = mt_list[mt_list_entry];
+
+				int kmc_list_entry = kmc_list_entries[mt_index];
+				int kmc_index = kmc_array[mt_index][kmc_list_entry];
+				switch(kmc_index){
+					case 0:
+						motors_bind(&parameters, mt_array, bound_list, unbound_list, mt_index, rng);
+						break;
+					case 1:
+						motors_unbind(&parameters, mt_array, bound_list, unbound_list, mt_index, rng);
+						break;
+					case 2:
+						motors_switch(&parameters, mt_array, bound_list, unbound_list, mt_index, rng);
+						break;
+					case 3:
+						motors_move(&parameters, mt_array, bound_list, unbound_list, mt_index, rng);
+						break;
+				}
+				motors_boundaries(&parameters, mt_array, bound_list, unbound_list, rng);
+
+				mt_list_entry++;
+				kmc_list_entries[mt_index]++;
 			}
 //			print_microtubules(&parameters, mt_array);
 //			printf("\n");

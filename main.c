@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
    //c_eff = (sqrt(1.0+8.0*0.4*parameters.c_motor)-1.0)/(4.0*0.4);// assume some dimer forms and only monomers work. The association constant (K) is 0.5. K = c_2/c^2;
    parameters.c_kon = c_eff * parameters.kon/2000.0; // change the unit to /0.005s
    // c_motor is in unit of nM, and kon is in unit of nM-1 s-1
-   parameters.koff = parameters.koff/60.0/2000.0;	// change the unit to 1/0.005s
+   parameters.koff = parameters.koff/2000.0;	// change the unit to 1/0.005s
 
    //parameters.shrink = parameters.v_motor_g - parameters.vg;
    length_temp = 0.0;
@@ -272,7 +272,6 @@ int main(int argc, char *argv[])
    //fflush(final_config);
    fclose(final_config);
 
-   /*
    final_config = gfopen("all.config", "wb");
    final_config2 = gfopen("diff.config", "wb");
    double all, diff;

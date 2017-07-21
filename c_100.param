@@ -1,9 +1,9 @@
-n_steps = 1000000
+n_steps = 10000000
 pickup_time = 1000
 growing_velocity = 0
 motor_velocity = 0.52
 motor_turning_frequency = 0
 c_motor = 100
-kon = 2.7e-3
+kon = 2.7e-4
 koff = 0.169
 seed = 22739

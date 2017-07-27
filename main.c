@@ -80,6 +80,7 @@ int main(int argc, char *argv[])
    fprintf(stdout, "   n_runs = %d\n", n_runs);
    fprintf(stdout, "   n_protofilaments = %d\n", n_protofilaments);
    fprintf(stdout, "   initial length = %d\n", initial_length);
+
    microtubule_right = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
    microtubule_left = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
    microtubule_right_0 = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
@@ -210,6 +211,8 @@ int main(int argc, char *argv[])
             }
          }
 
+		// Seems like HSK was attempting to do the averaging in this code at first??
+
          /* microtubule[i][j] = 1, tubulin only.
          microtubule[i][j] = 1+1, tubulin + motor_right
          microtubule[i][j] = 1+2, tubulin + motor_left
@@ -259,7 +262,7 @@ int main(int argc, char *argv[])
    length_temp = length_temp/((double)((n_steps/2)));
    fprintf(stdout, "Average length = %f.\n", length_temp);
    fflush(stdout);
-
+/*
    final_config = gfopen("final.config", "wb");
    fwrite(&n_runs, sizeof(int), 1, final_config);
    fwrite(&n_protofilaments, sizeof(int), 1, final_config);
@@ -271,7 +274,9 @@ int main(int argc, char *argv[])
    }
    //fflush(final_config);
    fclose(final_config);
+*/
 
+/*
    final_config = gfopen("all.config", "wb");
    final_config2 = gfopen("diff.config", "wb");
    double all, diff;
@@ -292,7 +297,7 @@ int main(int argc, char *argv[])
    //printf("%d\n", microtubule_final[(int)(n_steps/pickup_time)][0][0][0]);
    fclose(final_config);
    fclose(final_config2);
-   
+*/   
 
    finish = clock();
 
@@ -301,9 +306,9 @@ int main(int argc, char *argv[])
    stream = fopen("time_main.dat","w");
    fprintf(stream, "%f seconds\n", duration);
    fclose(stream);
-   stream = fopen("pseudo_end.dat","w");
+  /* stream = fopen("pseudo_end.dat","w");
    fprintf(stream, "%d %d\n", pseudo_end[0], pseudo_end[1]);
    fclose(stream);
-
+*/
    return 0;
 }

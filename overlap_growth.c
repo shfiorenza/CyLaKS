@@ -52,7 +52,7 @@ void overlap_growth(system_parameters * parameters, int **microtubule_right, int
       else{
          i = 1;
       }
-      i = ii;
+	  i = ii;
 
       for (m=0;m<2;m++){	// 2 means right and left.
          random0 = ran3(&seed);
@@ -507,7 +507,7 @@ void motors_move(system_parameters * parameters, int **microtubule_right, int **
    c_kon = parameters->c_kon;
    c_kon_old = c_kon;
    v_motor_g = parameters->v_motor_g;
-   v_motor_g_boundary = 0.0*v_motor_g;
+   v_motor_g_boundary = 0;
    //*(1.0+1.0/(parameters->c_motor+82.61)*parameters->right_conc_right);//*parameters->right_conc_right;
    v_motor_g_old = v_motor_g;
    vg = parameters->vg;
@@ -516,22 +516,22 @@ void motors_move(system_parameters * parameters, int **microtubule_right, int **
    f_turning = parameters->f_turning;
    rho0 = c_kon/(c_kon+koff);
    shrink = parameters->shrink;
-   c_kon_end = 1.0*0.00003125*parameters->c_motor;
+   c_kon_end = 0*c_kon;
    //0.0*c_kon;//0.003125*parameters->c_motor;//1000.0*c_kon;//+shrink*vg/(shrink-vg)*(1-parameters->c_motor/(parameters->c_motor+84.0));
-   c_kon_endd = 1.0*c_kon;
+   c_kon_endd = 0*c_kon;
    //0.0;//c_kon;//parameters->c_motor*vg;//c_kon;//0.001*parameters->c_motor;//c_kon;//0.001*parameters->c_motor;//* parameters->right_conc_right;
-   koff_end[0] = 1.0*84.0*0.00003125;//0.0*koff;//84.0*0.003125;//1000.0*koff;//0.0083;//*(parameters->c_motor/(parameters->c_motor+84.0));
+   koff_end[0] = 0;//*84.0*0.03125;//0.0*koff;//84.0*0.003125;//1000.0*koff;//0.0083;//*(parameters->c_motor/(parameters->c_motor+84.0));
    //parameters->c_motor/1500.0;//koff;//shrink*(parameters->c_motor/(parameters->c_motor+84.0));//koff;//0.08241;//koff;//0.08241;
-   koff_end[1] = 1.0*84.0*0.00003125;//0.0*koff;//84.0*0.003125;//1000.0*koff;//0.0083;//*(parameters->c_motor/(parameters->c_motor+84.0));
-   koff_endd = 1.0*koff;
+   koff_end[1] = 0;//*84.0*0.03125;//0.0*koff;//84.0*0.003125;//1000.0*koff;//0.0083;//*(parameters->c_motor/(parameters->c_motor+84.0));
+   koff_endd = 0*koff;
    factor = 1.0;//1.0+100.0/parameters->c_motor;
    factor_off = 1.0;
    factor_off2 = 1.0;//1.0/(1.0*koff)*2.0*(parameters->vg-parameters->shrink)*parameters->vg/(parameters->shrink*(parameters->vg-parameters->shrink));
    f_turning_end = 0.0*f_turning;//0.0;//f_turning;//0.0;//parameters->f_turning;//0.0;
-   r_c_r = v_motor_g * parameters->right_conc_right;
-   r_c_l = v_motor_g * parameters->right_conc_left;//vg * 80.6 / (parameters->c_motor + 80.6);//v_motor_g * parameters->right_conc_left;
-   l_c_r = v_motor_g * parameters->left_conc_right;//vg * 80.6 / (parameters->c_motor + 80.6);//v_motor_g * parameters->left_conc_right;
-   l_c_l = v_motor_g * parameters->left_conc_left;
+   r_c_r = 0.1; //parameters->right_conc_right;
+   r_c_l = 0.6; //parameters->right_conc_left;//vg * 80.6 / (parameters->c_motor + 80.6);//v_motor_g * parameters->right_conc_left;
+   l_c_r = 0.6; //parameters->left_conc_right;//vg * 80.6 / (parameters->c_motor + 80.6);//v_motor_g * parameters->left_conc_right;
+   l_c_l = 0.1; //parameters->left_conc_left;
    qb = c_kon*0.0; qv = v_motor_g*0.0; one_l_c_l = 0.0; one_r_c_r = 0.0;
 
    /*
@@ -1856,26 +1856,26 @@ void motors_move(system_parameters * parameters, int **microtubule_right, int **
       }
 
       /* Set up boundary condition. 
-      * microtubule[i][j] = 1, tubulin only.
+      microtubule[i][j] = 1, tubulin only.
       microtubule[i][j] = 1+1, tubulin + motor_right
       microtubule[i][j] = 1+2, tubulin + motor_left
-      microtubule[i][j] = 1+1+2, tubulin + motor_right_left *
-      random = ran3(&seed);
-      if (random < 0.8){	// 0 and 1. set boundary conc = 0 and 0.75.
+      microtubule[i][j] = 1+1+2, tubulin + motor_right_left */
+ /*     random = ran3(&seed);
+      if (random < 0.5){	// 0 and 1. set boundary conc = 0 and 0.75.
          microtubule_left[i][microtubule_left[i][N_SITES_MAX]-1] = 3;
       }
       else{
          microtubule_left[i][microtubule_left[i][N_SITES_MAX]-1] = 1;
       }
       random = ran3(&seed);
-      if (random < 0.8){      // 0 and 1. set boundary conc = 0 and 0.75.
+      if (random < 0.5){      // 0 and 1. set boundary conc = 0 and 0.75.
          microtubule_right[i][microtubule_right[i][N_SITES_MAX]-1] = 2;
       }
       else{
          microtubule_right[i][microtubule_right[i][N_SITES_MAX]-1] = 1;
       }
-      */
-
+      
+*/
       //microtubule_left[i][microtubule_left[i][N_SITES_MAX]-1] = 3;   // only have a motor turns left at the left end, and no motor turns right.
       //microtubule_right[i][microtubule_right[i][N_SITES_MAX]-1] = 2;   // only have a motor turns right at the right end, and no motor turns left.
       /* End. */

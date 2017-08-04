@@ -1,0 +1,67 @@
+base_dir=/Users/huku2729/overlap/data/$1_$2_2_7e-4_koff_10_14_f_26_1_v_0_5_bc_0_1_vg_2_sh_$3e-1_eq_flux
+
+# create directory and change it to the current directory
+# note: if directory already exists the script will exit with an error
+# without continuing
+mkdir $base_dir
+cd $base_dir
+
+# motor_velocity = 0.5
+# motor_turning_frequency = 26.1    ##critical ~1.7 nM
+
+cat > c_run.param << endofdata
+n_steps = 4000000
+pickup_time = 400
+growing_velocity = 0
+shrinking_velocity = 0
+motor_velocity = 0.5
+motor_turning_frequency = 26.1
+c_motor = $1
+kon = 2.7e-4
+koff = 10.14
+right_conc_right = 1.0
+right_conc_left = 0.0
+left_conc_right = 0.0
+left_conc_left = 1.0
+flux_flag = 1
+seed = $RANDOM
+endofdata
+
+cat > c_run2.param << endofdata
+n_steps = 20000000
+pickup_time = 2000
+growing_velocity = 2
+shrinking_velocity = $3e-1
+motor_velocity = 0.5
+motor_turning_frequency = 26.1
+c_motor = $1
+kon = 2.7e-4
+koff = 10.14
+right_conc_right = 1.0
+right_conc_left = 0.0
+left_conc_right = 0.0
+left_conc_left = 1.0
+flux_flag = 1
+seed = $RANDOM
+endofdata
+
+
+cp /Users/huku2729/overlap/$2.config ./
+
+cp /Users/huku2729/overlap/overlap ./
+#cp /home/hskuan/microtubule_hskuan/overlap/data/$1_$2_-7_f_1_386_v_0_00_bc_0_015/final.config ./
+#mv final.config start_eq.config
+#mv overlap overlap_$1_$2_-5_f_138_6
+
+./overlap c_run.param $2.config output.file detail.file 1> over.out 2> over.err
+mv final.config start.config
+mv all.config all1.config
+mv diff.config diff1.config
+./overlap c_run2.param start.config output.file_2 detail.file_2 1> over2.out 2> over2.err
+mv final.config start_2.config
+mv all.config all2.config
+mv diff.config diff2.config
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+rm -r time.txt
+echo $ELAPSED_TIME > time.txt

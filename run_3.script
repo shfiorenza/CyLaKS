@@ -1,0 +1,48 @@
+base_dir=/home/hskuan/microtubule_hskuan/overlap/data/$1_$2_-5_f_0_1386_v_0_$3
+
+# create directory and change it to the current directory
+# note: if directory already exists the script will exit with an error
+# without continuing
+mkdir $base_dir
+cd $base_dir
+
+# motor_velocity = 31.2
+# motor_turning_frequency = 138.6
+
+cat > c_run.param << endofdata
+n_steps = 20000000
+pickup_time = 2000
+growing_velocity = 0
+motor_velocity = 0.$3
+motor_turning_frequency = 0.1386
+c_motor = $1
+kon = 2.7e-5
+koff = 0.169
+right_conc_right = 1.0
+right_conc_left = 0.0
+left_conc_right = 0.0
+left_conc_left = 1.0
+seed = $RANDOM
+endofdata
+
+
+cp /home/hskuan/microtubule_hskuan/overlap/$2.config ./
+
+cp /home/hskuan/microtubule_hskuan/overlap/overlap ./
+#mv overlap overlap_$1_$2_-5_f_138_6
+
+./overlap c_run.param $2.config output.file detail.file 1> over.out 2> over.err
+mv final.config start.config
+mv all.config all1.config
+mv diff.config diff1.config
+./overlap c_run.param start.config output.file_2 detail.file_2 1> over2.out 2> over2.err
+mv final.config start_2.config
+mv all.config all2.config
+mv diff.config diff2.config
+./overlap c_run.param start_2.config output.file_3 detail.file_3 1> over3.out 2> over3.err
+mv all.config all3.config
+mv diff.config diff3.config
+
+ELAPSED_TIME=$(($SECONDS - $START_TIME))
+rm -r time.txt
+echo $ELAPSED_TIME > time.txt

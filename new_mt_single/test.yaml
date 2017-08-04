@@ -1,17 +1,18 @@
-data_threshold: 40000000
-n_steps: 60000000
-delta_t : 0.0005
+data_threshold: 4000000
+n_steps: 10000000
+n_datapoints: 100000
+delta_t : 0.005
 
-seed : 4194304
-
-length_of_microtubule: 180
-
-c_motor : 200
 n_microtubules: 2
-k_on : 2.7e-4
+length_of_microtubule: 1000
+
+seed : 4198615
+
+switch_rate : 0.5
+motor_speed : 62.5
+c_motor : 200
+k_on : 0.00027
 k_off : 0.169
-motor_speed : 0.5
 
 alpha: 0.3
-switch_rate : 0.1
 beta: 0.1

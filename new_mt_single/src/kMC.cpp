@@ -259,62 +259,68 @@ void motors_move(system_parameters *parameters, microtubule *mt_array, std::vect
 		}
 	}
 }
-void motors_boundaries(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, std::vector<int> &unbound_list, gsl_rng *rng){
+void motors_boundaries(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, std::vector<int> &unbound_list, gsl_rng *rng, int n_events){
 
 	int n_microtubules, length_of_microtubule, plus_end, minus_end, delta_x;
-	double alpha, beta, p_move, p_switch;
+	double alpha, beta, motor_speed, delta_t;
+	long double p_move, alpha_eff, beta_eff;
 
 	n_microtubules = parameters->n_microtubules;
 	length_of_microtubule = parameters->length_of_microtubule;
 	alpha = parameters->alpha;
 	beta = parameters->beta;
-	p_move = 125*parameters->motor_speed*parameters->delta_t;		
-	p_switch = parameters->switch_rate*parameters->delta_t;
-	// For BC to work, alpha and beta must be scaled so that motor speed is unity 
-	double alpha_eff = alpha*p_move;
-	double beta_eff = beta*p_move;		
+	motor_speed = parameters->motor_speed; 		// Convert from um/s to sites/s (each site is ~8nm)
+	delta_t = parameters->delta_t;
+	p_move = motor_speed*delta_t;		
 
-	for(int i_mt = 0; i_mt < n_microtubules; i_mt++){
+	// For boundary conditions to work, alpha/beta must be scaled down such that motor speed is unity relative to them
+	// Furthermore, since boundaries are checked after every kMC event, scale down by alpha/beta appropriately to keep probability per timestep constant
+	alpha_eff = alpha*p_move/n_events;
+	beta_eff = beta*p_move/n_events;
+
+//	printf("%Lg__%Lg\n", alpha_eff, beta_eff);
+
+	for(int mt_index = 0; mt_index < n_microtubules; mt_index++){
 		// Get appropriate plus_ and minus_end site coordinates		
-		plus_end = mt_array[i_mt].plus_end;
-		minus_end = mt_array[i_mt].minus_end;
-		delta_x = mt_array[i_mt].delta_x;
+		plus_end = mt_array[mt_index].plus_end;
+		minus_end = mt_array[mt_index].minus_end;
+		delta_x = mt_array[mt_index].delta_x;
 
 		// Generate two random numbers in the range [0.0, 1.0)
-		double ran1 = gsl_rng_uniform(rng);
-		double ran2 = gsl_rng_uniform(rng);		
+		long double ran1 = gsl_rng_uniform(rng);
+		long double ran2 = gsl_rng_uniform(rng);		
 
 		// If minus end is unoccupied, insert a motor onto the microtubule track with probability alpha_eff
-		if(mt_array[i_mt].track[minus_end] == NULL && ran1 < alpha_eff){
+		if(mt_array[mt_index].track[minus_end] == NULL && ran1 < alpha_eff){
 			// Find motor to bind
 			int motor_entry = 0;
 			while(motor_list[motor_entry].bound == true){
 				motor_entry++;
 			}
 			// Get global_coord of this site
-			int global_coord = i_mt*length_of_microtubule + minus_end;
+			int global_coord = mt_index*length_of_microtubule + minus_end;
 			// Update motor details
 			motor_list[motor_entry].bound = true;
-			motor_list[motor_entry].mt_index = i_mt;
+			motor_list[motor_entry].mt_index = mt_index;
 			motor_list[motor_entry].site_coord = minus_end;
 			motor_list[motor_entry].global_coord = global_coord;
 			motor_list[motor_entry].motor_entry = motor_entry;
 			// Update microtubule
-			mt_array[i_mt].track[minus_end] = &motor_list[motor_entry];
-			mt_array[i_mt].n_bound++;
+			mt_array[mt_index].track[minus_end] = &motor_list[motor_entry];
+			mt_array[mt_index].n_bound++;
 			// Get memory location of this motor and add it to bound_list
 			motor* motor_address = &motor_list[motor_entry];
 			bound_list.push_back(motor_address);
 		}
 		// If a motor is at the plus end, remove it from the microtubule track with probability beta_eff 
-		if(mt_array[i_mt].track[plus_end] != NULL && ran2 < beta_eff){
+		if(mt_array[mt_index].track[plus_end] != NULL && ran2 < beta_eff){
 			// Find motor list entry that corresponds to this motor
-			int motor_entry = mt_array[i_mt].track[plus_end]->motor_entry;
+			int motor_entry = mt_array[mt_index].track[plus_end]->motor_entry;
 			// Update motor
 			motor_list[motor_entry].bound = false; 
 			// Update microtubule
-			mt_array[i_mt].track[plus_end] = NULL;	
-			mt_array[i_mt].n_bound--;
+			mt_array[mt_index].track[plus_end] = NULL;	
+			mt_array[mt_index].n_bound--;
 			// Find bound list entry that points to the memory location of this motor, then remove it
 			motor* motor_address = &motor_list[motor_entry];
 			auto bound_entry = std::find(bound_list.begin(), bound_list.end(), motor_address);		// Generate iterator pointing to entry

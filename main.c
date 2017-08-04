@@ -35,19 +35,20 @@ int main(int argc, char *argv[])
    pickup_time = parameters.pickup_time;/* how frequent to output data */
    seed = parameters.seed;
 
+	double delta_t = 0.0005;
+
    /* Unit conversion, 1um=1000nm, 1 tubulin length ~ 8 nm. The standard units are showed in parameters.h file. */
-   parameters.vg = parameters.vg*1000.0/8.0/60.0/2000.0;	// change the unit from um/min to tubulin/0.005s
-   parameters.shrink = parameters.shrink*1000.0/8.0/60.0/2000.0; // change the unit from um/min to tubulin/0.005s
-   parameters.v_motor_g = parameters.v_motor_g*1000.0/8.0/2000.0;	// change the unit from um/s to tubulin/0.005s
-   parameters.f_turning = parameters.f_turning/60.0/2000.0;		// change the unit from 1/min to 1/0.005s
+   parameters.vg = parameters.vg*delta_t*1000.0/8.0/60.0;	// change the unit from um/min to tubulin/0.005s
+   parameters.shrink = parameters.shrink*delta_t*1000.0/8.0/60.0; // change the unit from um/min to tubulin/0.005s
+
+   parameters.v_motor_g = parameters.v_motor_g*delta_t;//*1000.0/8.0;	// change the unit from um/s to tubulin/0.005s
+   parameters.f_turning = parameters.f_turning*delta_t;		// change the unit from 1/min to 1/0.005s
    c_eff = parameters.c_motor;                                        // effective c
-   //if (parameters.vg != 0){
-   //   parameters.vg = 38.53*c_eff/(c_eff+82.61)/8.0/200.0;
-   //}
-   //c_eff = (sqrt(1.0+8.0*0.4*parameters.c_motor)-1.0)/(4.0*0.4);// assume some dimer forms and only monomers work. The association constant (K) is 0.5. K = c_2/c^2;
-   parameters.c_kon = c_eff * parameters.kon/2000.0; // change the unit to /0.005s
+
+   parameters.c_kon = c_eff*parameters.kon*delta_t; // change the unit to /0.005s
+
    // c_motor is in unit of nM, and kon is in unit of nM-1 s-1
-   parameters.koff = parameters.koff/2000.0;	// change the unit to 1/0.005s
+   parameters.koff = parameters.koff*delta_t;	// change the unit to 1/0.005s
 
    //parameters.shrink = parameters.v_motor_g - parameters.vg;
    length_temp = 0.0;
@@ -65,10 +66,10 @@ int main(int argc, char *argv[])
    }
 
    //parameters.koff_end = parameters.koff_end/60/200;        // change the unit to 1/0.005s
-   printf("Growing velocity : %f tubulin/0.005s\nShrinking velocity : %f tubulin/0.005s\nMotor moving velocity : %f tubulin/0.005s\nMotor turning frequency : %f 1/0.005s\n", parameters.vg, parameters.shrink, parameters.v_motor_g, parameters.f_turning);
-   printf("kon * c_eff : %f 1/0.005s\nDissociation frequency : %f 1/0.005s\n", parameters.c_kon, parameters.koff);
-   printf("rho_0 : %f\nlambda : %f\n", parameters.c_kon/(parameters.c_kon + parameters.koff), parameters.v_motor_g/(parameters.c_kon + parameters.koff));
-   printf("Overall frequency %f\n", parameters.v_motor_g+parameters.f_turning+parameters.koff);
+   printf("Growing velocity: %f tubulin/timestep\nShrinking velocity: %f tubulin/timestep\nMotor moving velocity: %f tubulin/timestep\nMotor turning frequency: %f 1/timestep\n", parameters.vg, parameters.shrink, parameters.v_motor_g, parameters.f_turning);
+   printf("kon*c_eff: %f 1/timestep\nDissociation frequency: %f 1/timestep\n", parameters.c_kon, parameters.koff);
+   printf("rho_0 : %f\nlambda: %f\n", parameters.c_kon/(parameters.c_kon + parameters.koff), parameters.v_motor_g/(parameters.c_kon + parameters.koff));
+   printf("Overall frequency: %f\n", parameters.v_motor_g+parameters.f_turning+parameters.koff);
    fflush(stdout);
 
    /* Read initial state */
@@ -80,7 +81,6 @@ int main(int argc, char *argv[])
    fprintf(stdout, "   n_runs = %d\n", n_runs);
    fprintf(stdout, "   n_protofilaments = %d\n", n_protofilaments);
    fprintf(stdout, "   initial length = %d\n", initial_length);
-
    microtubule_right = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
    microtubule_left = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
    microtubule_right_0 = (int**) allocate_2d_array(n_protofilaments, N_SITES_MAX + 1, sizeof(int));
@@ -211,8 +211,6 @@ int main(int argc, char *argv[])
             }
          }
 
-		// Seems like HSK was attempting to do the averaging in this code at first??
-
          /* microtubule[i][j] = 1, tubulin only.
          microtubule[i][j] = 1+1, tubulin + motor_right
          microtubule[i][j] = 1+2, tubulin + motor_left
@@ -262,7 +260,7 @@ int main(int argc, char *argv[])
    length_temp = length_temp/((double)((n_steps/2)));
    fprintf(stdout, "Average length = %f.\n", length_temp);
    fflush(stdout);
-/*
+
    final_config = gfopen("final.config", "wb");
    fwrite(&n_runs, sizeof(int), 1, final_config);
    fwrite(&n_protofilaments, sizeof(int), 1, final_config);
@@ -274,9 +272,8 @@ int main(int argc, char *argv[])
    }
    //fflush(final_config);
    fclose(final_config);
-*/
 
-/*
+   /*
    final_config = gfopen("all.config", "wb");
    final_config2 = gfopen("diff.config", "wb");
    double all, diff;
@@ -297,7 +294,7 @@ int main(int argc, char *argv[])
    //printf("%d\n", microtubule_final[(int)(n_steps/pickup_time)][0][0][0]);
    fclose(final_config);
    fclose(final_config2);
-*/   
+   */
 
    finish = clock();
 
@@ -306,9 +303,9 @@ int main(int argc, char *argv[])
    stream = fopen("time_main.dat","w");
    fprintf(stream, "%f seconds\n", duration);
    fclose(stream);
-  /* stream = fopen("pseudo_end.dat","w");
+   stream = fopen("pseudo_end.dat","w");
    fprintf(stream, "%d %d\n", pseudo_end[0], pseudo_end[1]);
    fclose(stream);
-*/
+
    return 0;
 }

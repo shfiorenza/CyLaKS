@@ -8,6 +8,8 @@ typedef struct {
 	int n_steps;			/* number of simulation steps per run */
 
 	int data_threshold;	 	/* step after which data recording begins */
+	
+	int n_datapoints;		/* number of data points to sample during sim run */
 
 	double delta_t; 		/* how much time passes in one time step (s) */
 

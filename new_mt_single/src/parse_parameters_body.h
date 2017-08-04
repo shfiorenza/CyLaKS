@@ -6,6 +6,10 @@ else if (strcmp(param_name, "n_steps") == 0) {
 	parameters -> n_steps = atoi(param_value);
 	fprintf(stdout, "   n_steps = %i\n", parameters -> n_steps);
 }
+else if (strcmp(param_name, "n_datapoints") == 0) {
+	parameters -> n_datapoints = atoi(param_value);
+	fprintf(stdout, "   n_datapoints = %i\n", parameters -> n_datapoints);
+}
 else if (strcmp(param_name, "data_threshold") == 0) {
 	parameters -> data_threshold = atoi(param_value);
 	fprintf(stdout, "   data_threshold = %i\n", parameters -> data_threshold);
@@ -24,7 +28,7 @@ else if (strcmp(param_name, "length_of_microtubule") == 0){
 }
 else if (strcmp(param_name, "k_on") == 0){
 	parameters -> k_on = atof(param_value);
-	fprintf(stdout, "   k_on = %g\n", parameters -> k_on);
+	fprintf(stdout, "   k_on = %g\n\n", parameters -> k_on);
 }
 else if (strcmp(param_name, "c_motor") == 0){
 	parameters -> c_motor = atoi(param_value);
@@ -36,7 +40,7 @@ else if (strcmp(param_name, "k_off") == 0){
 }
 else if (strcmp(param_name, "motor_speed") == 0){
 	parameters -> motor_speed = atof(param_value);
-	fprintf(stdout, "   motor_speed  = %g\n\n", parameters -> motor_speed);
+	fprintf(stdout, "   motor_speed  = %g\n", parameters -> motor_speed);
 }
 else if (strcmp(param_name, "switch_rate") == 0){
 	parameters -> switch_rate = atof(param_value);

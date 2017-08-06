@@ -5,7 +5,7 @@ type of file access (type)
 
 Output: pointer to file (return value) */
 
-#include "master_header.h"
+#include <iostream>
 
 /* Graceful fopen routine. */
 FILE *gfopen(const char *file_name, const char *type)

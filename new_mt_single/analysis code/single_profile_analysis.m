@@ -1,14 +1,13 @@
 clear all
-n_timesteps = 10000;
+n_timesteps = 100000;
 length_of_microtubule = 1000;
 
 temp_one = zeros([length_of_microtubule 1]);
-mt_one = zeros([length_of_microtubule 1]);
-final_data = zeros([length_of_microtubule 1]);
+final_mt = zeros([length_of_microtubule 1]);
 
 polarityArray = {'Plus-end on right'};
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_overlap/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_single/%s';
 fileName = 'test.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
@@ -20,15 +19,13 @@ raw_data((raw_data == 2) | (raw_data ~= 0)) = 1;
 
 for i=1:1:n_timesteps
     temp_one(:, 1) = raw_data(:, i);
-    mt_one(:, 1) = mt_one(:, 1) + double(temp_one(:, 1)./n_timesteps);
+    final_mt(:, 1) = final_mt(:, 1) + double(temp_one(:, 1)./n_timesteps);
 end
-
-final_data(:, 1) = mt_one(:, 1);
 
 %%plot fig%%
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
-plot(linspace(0, 1, length_of_microtubule), final_data);
+plot(linspace(0, 1, length_of_microtubule), final_mt);
 
 %%style stuff%%
 grid on

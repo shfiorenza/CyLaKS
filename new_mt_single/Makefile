@@ -131,16 +131,14 @@ endif
 # Now we have to figure out which we are building of the program list, since that matters
 # for things like not compiling more than one main
 SIM_SRC = $(SRCDIR)/sim.cpp
-BUILD_MTS_SRC = $(SRCDIR)/build_mts.cpp
 
-MAIN_SOURCES = $(SIM_SRC) $(BUILD_MTS_SRC)
+MAIN_SOURCES = $(SIM_SRC)
 
 # These are the common sources
 SRCS = $(filter-out $(MAIN_SOURCES) $(EXCLUDE_SOURCES), $(SOURCES))
 
 OBJECTS = $(SRCS:$(SRCDIR)/%.$(SRCEXT)=$(OBJDIR)/%.o)
 SIM_OBJ = $(SIM_SRC:$(SRCDIR)/%.$(SRCEXT)=$(OBJDIR)/%.o)
-BUILD_MTS_OBJ = $(BUILD_MTS_SRC:$(SRCDIR)/%.$(SRCEXT)=$(OBJDIR)/%.o)
 DEPS = $(OBJECTS:.o=.d)
 
 .PHONY: dirs
@@ -159,11 +157,8 @@ clean-output :
 	*.checkpoint.* *.checkpoint *.thermo_ext sphero.crosslinks.* test-log
 
 sim: dirs $(BINDIR)/sim; cp $(BINDIR)/sim sim
-build_mts: dirs $(BINDIR)/build_mts; cp $(BINDIR)/build_mts build_mts
 
 $(BINDIR)/sim: $(OBJECTS) $(SIM_OBJ)
-	$(CXX) $^ -o $@ $(LDFLAGS) $(LIBS)
-$(BINDIR)/build_mts: $(OBJECTS) $(BUILD_MTS_OBJ)
 	$(CXX) $^ -o $@ $(LDFLAGS) $(LIBS)
 
 # add dependencies

@@ -1,4 +1,4 @@
-/*Main file for overlap simulation*/
+/*Main simulation*/
 
 #include "master_header.h"
 
@@ -6,14 +6,13 @@ int main(int argc, char *argv[]){
 
 	long seed;
 	int length_of_microtubule, n_microtubules, n_steps, data_threshold, range_of_data, pickup_time, n_datapoints, equil_milestone;
-	double delta_t, duration, k_on, c_motor, k_off, switch_rate, motor_speed, motor_speed_eff;
-	long double p_bind, p_unbind, p_switch, p_move;
+	double delta_t, duration, k_on, c_motor, k_off, switch_rate, motor_speed, p_mutant, motor_speed_eff, p_bind, p_unbind, p_switch, p_move;
 
 	char param_file[160];
 	system_parameters parameters;
 
 	clock_t start, finish;
-	FILE *f_config, *output_file, *stream; 
+	FILE *output_file, *ID_file, *stream; 
 
 	// Initialize and set generator type for RNG
 	const gsl_rng_type *generator_type; 
@@ -21,13 +20,14 @@ int main(int argc, char *argv[]){
 	gsl_rng *rng; 
 
 	// Get command-line input
-	if(argc != 3){
+	if(argc != 4){
 		fprintf(stderr, "Wrong number of command-line arguments in main\n");
-		fprintf(stderr, "Usage: %s parameters.yaml output_file.file\n", argv[0]);
+		fprintf(stderr, "Usage: %s parameters.yaml main_output.file ID_output.file\n", argv[0]);
 		exit(1);
 	}
 	strcpy(param_file, argv[1]);
 	output_file = gfopen(argv[2], "w");
+	ID_file = gfopen(argv[3], "w");
 
 	start = clock();
 
@@ -50,7 +50,9 @@ int main(int argc, char *argv[]){
 	k_off = parameters.k_off;										// Unbinding rate in units of 1/second
 	switch_rate = parameters.switch_rate;							// Switch rate in units of 1/second
 	motor_speed = parameters.motor_speed;							// Motor speed in units of micrometers/second
-	motor_speed_eff = motor_speed;								// Convert units to sites/second (each site is ~8nm long)
+	motor_speed_eff = motor_speed;									// Convert units to sites/second (each site is ~8nm long)
+
+	p_mutant = parameters.p_mutant;									// Probability that any given tubulin dimer is a mutant
 
 	p_bind = k_on*c_motor*delta_t;									// Probability to bind per unit timestep 
 	p_unbind = k_off*delta_t;										// Probability to unbind per unit timestep
@@ -66,17 +68,17 @@ int main(int argc, char *argv[]){
 	gsl_rng_set(rng, seed);
 
 	// Output parameters in "sim units"  
-	printf("Motor velocity: %Lg sites per timestep\n", p_move);
-	printf("Motor switching frequency: %Lg per timestep\n", p_switch);
-	printf("Motor binding frequency: %Lg per timestep\n", p_bind);
-	printf("Motor unbinding frequency: %Lg per timestep\n", p_unbind);
+	printf("Motor velocity: %g sites per timestep\n", p_move);
+	printf("Motor switching frequency: %g per timestep\n", p_switch);
+	printf("Motor binding frequency: %g per timestep\n", p_bind);
+	printf("Motor unbinding frequency: %g per timestep\n", p_unbind);
 	printf("Total simulation duration: %g seconds\n", delta_t*n_steps);
 	printf("Timestep duration: %g seconds\n\n", delta_t);
 	fflush(stdout);
 
-	// Array of microtubules that acts as experimental stage
+	// Array of microtubules that acts as the experimental stage
 	microtubule mt_array[n_microtubules];	
-	// Populate the array and initialize microtubules
+	// Initialize individual parameters based on polarity
 	for(int i_mt = 0; i_mt < n_microtubules; i_mt++){
 		if(i_mt % 2 == 0){
 			mt_array[i_mt].polarity = 0;
@@ -93,38 +95,47 @@ int main(int argc, char *argv[]){
 			mt_array[i_mt].mt_index_adj = i_mt - 1;		// only allows switching between PAIRS; fix
 		}
 		mt_array[i_mt].length = length_of_microtubule;
-		mt_array[i_mt].coord = 0;
-		mt_array[i_mt].n_bound = 0;
-		mt_array[i_mt].track.resize(length_of_microtubule, nullptr);
+		// Populate lattice with tubulin sites
+		for(int i_site = 0; i_site < length_of_microtubule; i_site++){
+			tubulin new_site;
+			new_site.mt_index = i_mt;
+			new_site.site_coord = i_site;
+			// Insert mutated tubulin sites with probability p_mutant
+			double ran = gsl_rng_uniform(rng);
+			if(ran < p_mutant){
+				new_site.mutant = true;
+			}
+			else{
+				new_site.mutant = false;
+			}
+			mt_array[i_mt].lattice.push_back(new_site);	
+		}
 	}
-
 	// List of motors that acts as a resevoir throughout simulation
 	std::vector<motor> motor_list;
 	// Populate motor_list with new motors, each having its own unique ID
 	for(int i_motor = 0; i_motor < n_microtubules*length_of_microtubule; i_motor++){
 		motor new_motor;
 		new_motor.ID = i_motor; 
-		new_motor.global_coord = i_motor;	// Initially 'ID' and 'global_coord' correspond, but global_coord will be shuffled around; ID is static
 		motor_list.push_back(new_motor);
 	}
-
-	// List of pointers that stores the memory addresses of bound motors
-	std::vector<motor*> bound_list;
-
-	// List of integers that stores raw coordinates of unoccupied sites
-	std::vector<int> unbound_list;
-	// Populate unbound_list (exclude boundary sites)
+	// List that stores pointers to unbound tubulin sites
+	std::vector<tubulin*> unbound_list;
+	// Populate unbound_list with pointers to all tubulin sites (excluding boundaries) to set initial conditions 
 	for(int i_mt = 0; i_mt < n_microtubules; i_mt++){
-		for(int i_site = 1; i_site < length_of_microtubule - 1; i_site++){      // Sites in range [0, length_of_mt) correspond to first MT; sites in
-			unbound_list.push_back((i_mt*length_of_microtubule) + i_site);      // range [length_of_mt, 2*length_of_mt) correspond to second MT, etc.
+		for(int i_site = 1; i_site < length_of_microtubule - 1; i_site++){
+			tubulin *site_address = &mt_array[i_mt].lattice[i_site];	
+			unbound_list.push_back(site_address);
 		}
 	}
+	// List that stores pointers to bound motors
+	std::vector<motor*> bound_list;
 
-	// Main kMC loop 
+	// Begin main simulation loop
 	for(int i_step = 0; i_step < n_steps; i_step++){
 
-		double n_avg;
 		int n_unoccupied, n_to_bind, n_bound, n_to_unbind, n_switchable, n_to_switch, n_movable, n_to_move, n_events, i_mt_adj;
+		double n_avg;
 
 		// Find total number of unoccupied sites on all microtubules (excludes boundary sites by design)
 		n_unoccupied = unbound_list.size();
@@ -139,24 +150,24 @@ int main(int argc, char *argv[]){
 		for(int i_mt = 0; i_mt < n_microtubules; i_mt++){
 			
 			int plus_end = mt_array[i_mt].plus_end;
-			if(mt_array[i_mt].track[plus_end] != NULL){
+			if(mt_array[i_mt].lattice[plus_end].occupant != NULL){
 				n_bound--;
 			}
 			int minus_end = mt_array[i_mt].minus_end;
-			if(mt_array[i_mt].track[minus_end] != NULL){
+			if(mt_array[i_mt].lattice[minus_end].occupant != NULL){
 				n_bound--;
 			}
 		}
 		// Sample binomial distribution and determine exact number of unbinding events to execute during this timestep
 		n_to_unbind = gsl_ran_binomial(rng, p_unbind, n_bound);
 
-		// Run through the bound list and determine how many motors are capable of stepping/switching at the start of this timestep
+		// Iterate through bound_list and determine how many motors are capable of stepping/switching at the start of this timestep
 		n_switchable = 0;
 		n_movable = 0;
-		for(int entry = 0; entry < bound_list.size(); entry++){
-			// Pick motor from the bound list; get its site coord and MT index
-			int site_coord = bound_list[entry]->site_coord;
-			int mt_index = bound_list[entry]->mt_index;
+		for(int index = 0; index < bound_list.size(); index++){
+			// Pick motor from bound_list; get its site coord and MT index
+			int site_coord = bound_list[index]->site_coord;
+			int mt_index = bound_list[index]->mt_index;
 
 			// Get relevant parameters from microtubule 
 			int delta_x = mt_array[mt_index].delta_x;
@@ -164,26 +175,27 @@ int main(int argc, char *argv[]){
 			int plus_end = mt_array[mt_index].plus_end;
 			int minus_end = mt_array[mt_index].minus_end;
 
-			// Make sure everything is fine and dandy in the bound list
-			if(mt_array[mt_index].track[site_coord] == NULL){
+			// Make sure everything is fine and dandy in bound_list
+			if(mt_array[mt_index].lattice[site_coord].occupant == NULL){
 				printf("Error with bound_list in main loop!!\n");
 				exit(1);
 			}
 
-			// Exclude the minus end from switching statistics; switching occurs in bulk only
+			// Exclude the minus end from switching statistics (switching occurs in bulk only)
 			if(site_coord == minus_end){
-				if(mt_array[mt_index].track[minus_end + delta_x] == NULL){
+				if(mt_array[mt_index].lattice[minus_end + delta_x].occupant == NULL){
 					n_movable++;
 				}
 			}		
-			// Exclude the plus end altogether; end-pausing prevents stepping 
+			// Exclude the plus end all together (end-pausing prevents stepping at plus_end) 
 			else if(site_coord != plus_end){
-				// Count motor as switchable if the site coordinate on the adjacent MT isn't occupied
-				if(mt_array[mt_index_adj].track[site_coord] == NULL){
+/*				// Count motor as switchable if the site coordinate on the adjacent MT isn't occupied
+				if(mt_array[mt_index_adj].lattice[site_coord].occupant = NULL){
 					n_switchable++;
 				}
+*/
 				// Count motor as movable if the adjacent site coordinate on the same MT isn't occupied
-				if(mt_array[mt_index].track[site_coord + delta_x] == NULL){
+				if(mt_array[mt_index].lattice[site_coord + delta_x].occupant == NULL){
 					n_movable++;
 				}
 			}
@@ -230,7 +242,7 @@ int main(int argc, char *argv[]){
 							break;
 					}
 					case 2:{
-							motors_switch(&parameters, mt_array, motor_list, bound_list, unbound_list, rng);
+//							motors_switch(&parameters, mt_array, motor_list, bound_list, unbound_list, rng);
 							break;
 					}
 					case 3:{
@@ -238,12 +250,12 @@ int main(int argc, char *argv[]){
 							break;
 					}
 				}
-				motors_boundaries(&parameters, mt_array, motor_list, bound_list, unbound_list, rng, n_events);
+				motors_boundaries(&parameters, mt_array, motor_list, bound_list, rng, n_events);
 			}
 		}
 		// Still update boundary conditions even if no kMC events occured
 		else if(n_events == 0){
-			motors_boundaries(&parameters, mt_array, motor_list, bound_list, unbound_list, rng, 1);
+			motors_boundaries(&parameters, mt_array, motor_list, bound_list, rng, 1);
 		}
 
 		// Give updates on equilibration process (every 5%)
@@ -258,12 +270,13 @@ int main(int argc, char *argv[]){
 			if(delta%pickup_time == 0){
 				printf("Step %d\n", (i_step));
 //				print_microtubules(&parameters, mt_array);
-				output_data(&parameters, mt_array, output_file);	
+				output_data(&parameters, mt_array, output_file, ID_file);	
 				fflush(stdout);
 			}
 		}
 	}
 	fclose(output_file);
+	fclose(ID_file);
 
 	finish = clock();
 	duration = (double)(finish-start)/CLOCKS_PER_SEC;

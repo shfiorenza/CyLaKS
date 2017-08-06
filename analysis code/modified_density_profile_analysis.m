@@ -1,3 +1,4 @@
+%rehauled analysis code (by Shane)
 clear all;
 n_timesteps = 10000;   
 mt_length = 1000;

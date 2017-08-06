@@ -9,7 +9,6 @@
 // Same as above but added by ya boi Shane 
 #include <iostream>
 #include <string>
-#include <vector>
 #include <random>
 #include <algorithm>
 
@@ -17,12 +16,13 @@
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
+/* Include custom classes */
+#include "motor.h"
+#include "tubulin.h"
+#include "microtubule.h"
+
 /* Include parameters structure. */
 #include "parameters.h"
-
-// Include classes 
-#include "microtubule.h"
-#include "motor.h"
 
 /* Include function prototypes. */
 #include "prototypes.h"

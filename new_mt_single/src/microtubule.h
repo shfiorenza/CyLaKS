@@ -1,6 +1,7 @@
+#ifndef _MICROTUBULE_H
+#define _MICROTUBULE_H
+#include "tubulin.h"
 #include <vector>
-
-class motor; 
 
 class microtubule
 {
@@ -18,7 +19,6 @@ public:
 	int n_bound;
 	int coord;
 	
-	std::vector<motor*> track;
-
-private:
+	std::vector<tubulin> lattice;
 };
+#endif

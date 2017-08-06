@@ -14,7 +14,7 @@ final_data = zeros([length_of_microtubule 2]);
 
 polarityArray = {'Plus-end on right', 'Plus end on left'};
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_overlap/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_single/%s';
 fileName = 'test.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));

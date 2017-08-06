@@ -23,7 +23,7 @@ typedef struct {
 
 	double k_off;			/* motor unbinding rate (1/s) */
 
-	double motor_speed;		/* motor velocity (micrometer/s) */
+	double motor_speed;		/* motor velocity (micrometers/s) */
 
 	double switch_rate;		/* motor switching frequency (1/s) */
 	
@@ -31,6 +31,7 @@ typedef struct {
 
 	double beta;			/* motor flux OUT OF overlap region */
 
+	double p_mutant; 		/* probability of tubulin sites being mutant */
 
 } system_parameters;
 #endif

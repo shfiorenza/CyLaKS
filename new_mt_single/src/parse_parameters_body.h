@@ -52,6 +52,9 @@ else if (strcmp(param_name, "alpha") == 0){
 }
 else if (strcmp(param_name, "beta") == 0){
 	parameters -> beta = atof(param_value);
-	fprintf(stdout, "   beta = %g\n", parameters -> beta);
+	fprintf(stdout, "   beta = %g\n\n", parameters -> beta);
 }
-
+else if (strcmp(param_name, "p_mutant") == 0){
+	parameters -> p_mutant = atof(param_value);
+	fprintf(stdout, "   p_mutant = %g\n", parameters -> p_mutant);
+}

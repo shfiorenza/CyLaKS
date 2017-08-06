@@ -8,7 +8,6 @@
    Output: the values of parameters referenced in the parameter file are
            modified on output */
 #include <yaml-cpp/yaml.h>
-
 #include "master_header.h"
 
 void parse_parameters(char *param_file, system_parameters *parameters) {

@@ -20,11 +20,11 @@ else if (strcmp(param_name, "delta_t") == 0){
 }
 else if (strcmp(param_name, "n_microtubules") == 0){
 	parameters -> n_microtubules = atof(param_value);
-	fprintf(stdout, "   n_microtubules = %i\n", parameters -> n_microtubules);
+	fprintf(stdout, "   n_microtubules = %i\n\n", parameters -> n_microtubules);
 }
 else if (strcmp(param_name, "length_of_microtubule") == 0){
 	parameters -> length_of_microtubule = atof(param_value);
-	fprintf(stdout, "   length_of_microtubule = %i\n\n", parameters -> length_of_microtubule);
+	fprintf(stdout, "   length_of_microtubule = %i\n", parameters -> length_of_microtubule);
 }
 else if (strcmp(param_name, "k_on") == 0){
 	parameters -> k_on = atof(param_value);
@@ -42,19 +42,19 @@ else if (strcmp(param_name, "motor_speed") == 0){
 	parameters -> motor_speed = atof(param_value);
 	fprintf(stdout, "   motor_speed  = %g\n", parameters -> motor_speed);
 }
-else if (strcmp(param_name, "switch_rate") == 0){
-	parameters -> switch_rate = atof(param_value);
-	fprintf(stdout, "   switch_rate = %g\n", parameters -> switch_rate);
-}
 else if (strcmp(param_name, "alpha") == 0){
 	parameters -> alpha = atof(param_value);
 	fprintf(stdout, "   alpha = %g\n", parameters -> alpha);
 }
 else if (strcmp(param_name, "beta") == 0){
 	parameters -> beta = atof(param_value);
-	fprintf(stdout, "   beta = %g\n\n", parameters -> beta);
+	fprintf(stdout, "   beta = %g\n", parameters -> beta);
 }
 else if (strcmp(param_name, "p_mutant") == 0){
 	parameters -> p_mutant = atof(param_value);
 	fprintf(stdout, "   p_mutant = %g\n", parameters -> p_mutant);
+}
+else if (strcmp(param_name, "mutant_affinity") == 0){
+	parameters -> mutant_affinity = atof(param_value);
+	fprintf(stdout, "   mutant_affinity = %g\n\n", parameters -> mutant_affinity);
 }

@@ -24,14 +24,14 @@ typedef struct {
 	double k_off;			/* motor unbinding rate (1/s) */
 
 	double motor_speed;		/* motor velocity (micrometers/s) */
-
-	double switch_rate;		/* motor switching frequency (1/s) */
 	
 	double alpha;			/* motor flux INTO overlap region */
 
 	double beta;			/* motor flux OUT OF overlap region */
 
-	double p_mutant; 		/* probability of tubulin sites being mutant */
+	double p_mutant; 		/* probability of a tubulin site being mutant */
+	
+	double mutant_affinity;	/* binding affinity of mutant tubulin relative to normal */
 
 } system_parameters;
 #endif

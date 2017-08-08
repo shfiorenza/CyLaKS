@@ -45,7 +45,7 @@ for index=1:1:length_of_microtubule
     
     site = index/length_of_microtubule;
     
-    plot([site site], [0 tubulin_dist(index)], ':r', 'LineWidth', 1.0);
+    plot([site site], [0 tubulin_dist(index)], ':r', 'LineWidth', 0.25);
 end 
 
 %%style stuff%%

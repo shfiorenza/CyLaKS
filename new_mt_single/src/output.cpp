@@ -45,15 +45,53 @@ void print_microtubules(system_parameters *parameters, microtubule *mt_array){
 	int n_microtubules = parameters->n_microtubules;
 	int length_of_microtubule = parameters->length_of_microtubule;
 
-	for (int i_mt = 0; i_mt < n_microtubules; i_mt++){
-		for (int i_site = 0; i_site < length_of_microtubule; i_site++){
+	for(int i_mt = 0; i_mt < n_microtubules; i_mt++){
+		// Print occupancy of MTs
+		for(int i_site = 0; i_site < length_of_microtubule; i_site++){
 			if(mt_array[i_mt].lattice[i_site].occupant == NULL)
-				printf("=");
+				printf("=");	// '=' means tubulin site is empty
 			else
-				printf("M");
+				printf("M");	// 'M' means a motor is at that site
 		}
+		// Polarity cuz why not
 		printf(" %i", mt_array[i_mt].polarity);
 		printf("\n");
 		fflush(stdout);
+		// Print 'genotype' of each individual tubulin site on MT
+		for(int i_site = 0; i_site < length_of_microtubule; i_site++){
+			if(mt_array[i_mt].lattice[i_site].mutant == true)
+				printf("X");	// 'X' means the tubulin site is mutant
+			else
+				printf("_");	// '_' means the tubulin site is normal (i.e. wildtype)
+		}
+		printf("\n");
+		// Print tubulin sites incides underneath them for easy diagnostics; only print every five so
+		// that there is enough space to fit 2/3/4-digit indices and stay aligned with the actual sites
+		int extra_digits = 0;
+		for(int i_site = 0; i_site < length_of_microtubule; i_site++){
+			if(extra_digits > 0)
+				extra_digits--;
+			else if(i_site%5 == 0){
+				printf("%i", i_site);
+				if(i_site < 10)
+					extra_digits = 0;
+				else if(i_site < 100)
+					extra_digits = 1;
+				else if(i_site < 1000)
+					extra_digits = 2;
+				else if(i_site < 10000)
+					extra_digits = 3;
+				else
+					printf("what the fuck are u doing bro. why do you need more than 10,000 sites??\n");
+			}
+			else if(i_site == length_of_microtubule - 1)
+				printf("%i", i_site);
+			else
+				printf(" ");
+
+
+		}
+		printf("\n");
 	}
+	printf("\n");
 }

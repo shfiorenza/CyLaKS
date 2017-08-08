@@ -74,18 +74,17 @@ int main(int argc, char *argv[]){
 	gsl_rng_set(rng, seed);
 
 	// Output parameters in "sim units"  
+	printf("Simulation elapses %i seconds overall; each timestep is %g seconds.\n", (int)(delta_t*n_steps), delta_t);
+	printf("Microtubules have %i tubulin sites each; ~%i percent of sites are mutant.\n", length_of_microtubule, (int)(100*p_mutant));
+	printf("Mutant tubulin is assumed to have %g the binding affinity of normal tubulin.\n\n", mutant_affinity);
 	printf("Motor binding frequency: %f per timestep for normal tubulin\n", p_bind_n);
-	printf("			 %f per timestep for mutant tubulin\n", p_bind_m);
-	printf("Motor unbinding frequency: %f per timestep for motors on normal tubulin\n", p_unbind_n);
-	printf("			   %f per timestep for motors on mutant tubulin\n", p_unbind_m);
+	printf("			 %f per timestep for mutant tubulin\n\n", p_bind_m);
+	printf("Motor unbinding frequency: %f per timestep on normal tubulin\n", p_unbind_n);
+	printf("			   %f per timestep on mutant tubulin\n\n", p_unbind_m);
 	printf("Motor velocity: %f sites per timestep for normal->normal steps\n", p_move_nn);
 	printf("		%f sites per timestep for normal->mutant steps\n", p_move_nm);
 	printf("		%f sites per timestep for mutant->normal steps\n", p_move_mn);
-	printf("		%f sites per timestep for mutant->mutant steps\n", p_move_mm);
-	printf("Total simulation duration: %i seconds\n", (int)(delta_t*n_steps));
-	printf("Timestep duration: %g seconds\n\n", delta_t);
-	printf("Of the %i tubulin sites, approximately %i percent will be mutants.\n", length_of_microtubule, (int)(100*p_mutant));
-	printf("These mutants will have %g the overall binding affinity of normal tubulin.\n\n", mutant_affinity);
+	printf("		%f sites per timestep for mutant->mutant steps\n\n", p_move_mm);
 	fflush(stdout);
 
 	// Array of microtubules that acts as the experimental stage
@@ -105,27 +104,39 @@ int main(int argc, char *argv[]){
 			mt_array[i_mt].delta_x = -1;
 		}
 		mt_array[i_mt].length = length_of_microtubule;
-		// Populate lattice with tubulin sites
+		// Populate lattice with tubulin sites; also store tubulin
+		// site type in array that will later be used to write to file
+		int tubulin_distribution[length_of_microtubule];
+		int *array_ptr = tubulin_distribution;
 		for(int i_site = 0; i_site < length_of_microtubule; i_site++){
 			tubulin new_site;
 			new_site.mt_index = i_mt;
 			new_site.site_coord = i_site;
 			// Ensure boundary sites are normal tubulin 
-			if(i_site == 0 || i_site == length_of_microtubule - 1){
+			if(i_site == 0 || i_site == (length_of_microtubule - 1)){
 				new_site.mutant = false;
+				tubulin_distribution[i_site] = 0;			// "0" corresponds to normal tubulin
 			}
 			// In bulk, insert mutant tubulin sites with probability p_mutant
 			else{
 				double ran = gsl_rng_uniform(rng);
 				if(ran < p_mutant){
 					new_site.mutant = true;
+					tubulin_distribution[i_site] = 1;		// "1" corresponds to mutant tubulin
 				}
 				else{
 					new_site.mutant = false;
+					tubulin_distribution[i_site] = 0;		// "0" corresponds to normal tubulin
 				}
 			}
 			mt_array[i_mt].lattice.push_back(new_site);	
 		}
+		// Generate a tubulin_distribution for each MT in the simulation
+		char file_name[160];
+		sprintf(file_name, "tubulin_distribution_%i.file", i_mt);
+		stream = fopen(file_name, "w");
+		fwrite(array_ptr, sizeof(int), length_of_microtubule, stream);
+		fclose(stream);
 	}
 	// List of motors that acts as a resevoir throughout simulation
 	std::vector<motor> motor_list;
@@ -147,6 +158,9 @@ int main(int argc, char *argv[]){
 			}
 			else if(mt_array[i_mt].lattice[i_site].mutant == false){
 				normal_unbound_list.push_back(site_address);
+			}	
+			else{
+				printf("what.\n");
 			}
 		}
 	}
@@ -192,10 +206,10 @@ int main(int argc, char *argv[]){
 		// Iterate through normal_bound_list and determine how many motors are capable of stepping at the start of this timestep
 		n_movable_n = 0;
 		n_movable_m = 0;
-		for(int index = 0; index < normal_bound_list.size(); index++){
+		for(int normal_index = 0; normal_index < normal_bound_list.size(); normal_index++){
 			// Pick motor from normal_bound_list; get its site coord and MT index
-			int site_coord = normal_bound_list[index]->site_coord;
-			int mt_index = normal_bound_list[index]->mt_index;
+			int site_coord = normal_bound_list[normal_index]->site_coord;
+			int mt_index = normal_bound_list[normal_index]->mt_index;
 			// Get relevant parameters from microtubule 
 			int delta_x = mt_array[mt_index].delta_x;
 			int plus_end = mt_array[mt_index].plus_end;
@@ -275,6 +289,7 @@ int main(int argc, char *argv[]){
 		n_events = n_to_bind + n_to_unbind + n_to_move_m + n_to_move_n;
 		m_events = m_to_bind + m_to_unbind + m_to_move_n + m_to_move_m;		
 
+
 		// Store the number of expected kMC events in a 1-D array for shuffling; type of event is encoded in integer value
 		int kmc_list[n_events + m_events];
 		// Even kMC events correspond to normal tubulin
@@ -304,16 +319,30 @@ int main(int argc, char *argv[]){
 			kmc_list[i_list] = 7;		// "7" corresponds to the kMC event of stepping from mutant tubulin to mutant tubulin
 		}
 
-/*		print_microtubules(&parameters, mt_array);
-		printf("%i:___%i_%i\n", n_events, n_to_bind, n_to_unbind);
-		printf("%i:___%i_%i\n", m_events, m_to_bind, m_to_unbind);
-		printf("%i_%i\n", mutant_bound_list.size(), mutant_unbound_list.size());
+/*		printf("STATISTICS FOR STEP %i:\n", i_step);
+		printf("  Normal: %i events; %i binds, %i unbinds, %i (out of %i) n->m steps, %i (out of %i) n->n steps || %lu bound, %lu unbound\n", 
+				n_events, n_to_bind, n_to_unbind, n_to_move_m, n_movable_m, n_to_move_n, n_movable_n, normal_bound_list.size(), normal_unbound_list.size());
+		printf("    Normal portion of kmc_list: ");
+		for(int i_list = 0; i_list < n_events; i_list++){
+			printf("%i", kmc_list[i_list]);
+		}
 		printf("\n");
+		printf("  Mutant: %i events; %i binds, %i unbinds, %i (out of %i) m->n steps, %i (out of %i) m->m steps || %lu bound, %lu unbound\n", 
+				m_events, m_to_bind, m_to_unbind, m_to_move_n, m_movable_n, m_to_move_m, m_movable_m, mutant_bound_list.size(), mutant_unbound_list.size());
+		printf("    Mutant portion of kmc_list: ");
+		for (int i_list = n_events; i_list < n_events + m_events; i_list++){
+			printf("%i", kmc_list[i_list]);
+		}
+		printf("\n");
+		printf("Initial state:\n");
+		print_microtubules(&parameters, mt_array);
 */
-		// Shuffle kmc_list and run corresponding algorithms if at least one kMC event occured
+
+		// If one or more kMC events occur, execute them accordingly
 		if((n_events + m_events) > 0){
+			// Shuffle kmc_list to randomize event order
 			gsl_ran_shuffle(rng, kmc_list, (n_events + m_events), sizeof(int));
-			// Iterate through kmc_list and execute the expected number of events 
+			// Iterate through kmc_list and perform appropriate algorithms  
 			for(int list_entry = 0; list_entry < (n_events + m_events); list_entry++){
 
 				int kmc_index = kmc_list[list_entry];
@@ -321,29 +350,67 @@ int main(int argc, char *argv[]){
 				switch(kmc_index){
 					case 0:{
 							motors_bind(&parameters, mt_array, motor_list, normal_bound_list, normal_unbound_list, rng);
+/*							printf("After normal binding event:\n");
+							print_microtubules(&parameters, mt_array);
+*/	
 							break;
 					}
 					case 1:{
 							motors_bind(&parameters, mt_array, motor_list, mutant_bound_list, mutant_unbound_list, rng);
+/*							printf("After mutant binding event:\n");
+							print_microtubules(&parameters, mt_array);
+*/	
 							break;
 					}
 					case 2:{
 							motors_unbind(&parameters, mt_array, motor_list, normal_bound_list, normal_unbound_list, rng);
+/*							printf("After normal unbinding event:\n");
+							print_microtubules(&parameters, mt_array);
+*/	
 							break;
 					}
 					case 3:{
 							motors_unbind(&parameters, mt_array, motor_list, mutant_bound_list, mutant_unbound_list, rng);
+/*							printf("After mutant unbinding event:\n");
+							print_microtubules(&parameters, mt_array);
+*/
 							break;
 					}
 					case 4:{
-//							motors_move(&parameters, mt_array, motor_list, normal_bound_list, normal_unbound_list, rng);
+							motors_move(&parameters, mt_array, motor_list, normal_bound_list, normal_unbound_list, 
+										 mutant_bound_list, mutant_unbound_list, true, rng);
+/*							printf("After n->m stepping event:\n");
+							print_microtubules(&parameters, mt_array);
+*/	
+							break;
+					}
+					case 5:{
+							motors_move(&parameters, mt_array, motor_list, mutant_bound_list, mutant_unbound_list, 
+										 normal_bound_list, normal_unbound_list, false, rng);
+/*							printf("After m->n stepping event:\n");
+							print_microtubules(&parameters, mt_array);
+*/							
+							break;
+					}
+					case 6:{
+							motors_move(&parameters, mt_array, motor_list, normal_bound_list, normal_unbound_list, false, rng);
+/*							printf("After n->n stepping event:\n");
+							print_microtubules(&parameters, mt_array);
+*/
+							break;
+					}
+					case 7:{
+							motors_move(&parameters, mt_array, motor_list, mutant_bound_list, mutant_unbound_list, true, rng);
+/*							printf("After m->m stepping event:\n");
+							print_microtubules(&parameters, mt_array);
+*/
 							break;
 					}
 				}
 				motors_boundaries(&parameters, mt_array, motor_list, normal_bound_list, rng, (n_events + m_events));
 			}
 		}
-		// Still update boundary conditions even if no kMC events occured
+		// If no kMC events occur, simply update boundary conditions
 		else if((n_events + m_events) == 0){
 			motors_boundaries(&parameters, mt_array, motor_list, normal_bound_list, rng, 1);
 		}
@@ -367,6 +434,9 @@ int main(int argc, char *argv[]){
 				printf("Data collection is %i percent complete (step number %i)\n", (int)(delta/data_milestone)*10, i_step);
 				fflush(stdout);
 			}
+		}
+		else if(i_step == n_steps){
+			printf("Done!\n");	
 		}
 	}
 	fclose(output_file);

@@ -111,74 +111,8 @@ void motors_unbind(system_parameters *parameters, microtubule *mt_array, std::ve
 		}
 	}
 }
-/*
-void motors_switch(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, std::vector<tubulin*> &unbound_list, gsl_rng *rng){
-	
-	int n_microtubules = parameters->n_microtubules;
-	int length_of_microtubule = parameters->length_of_microtubule;
 
-	if(bound_list.empty() != true){
-
-		// Randomly pick a list entry and get the corresponding bound motor coordinates
-		int bound_index, site_coord, mt_index, mt_index_adj;
-
-		int n_attempts = 0;
-		bool failure = false;
-		// Ensures (within reason) that we obtain the index of a switchable motor that isn't on the boundary
-		do{	if(n_attempts > 2*bound_list.size()){
-				failure = true;
-				break;
-			}
-			bound_index = gsl_rng_uniform_int(rng, bound_list.size());
-			site_coord = bound_list[bound_index]->site_coord;
-			mt_index = bound_list[bound_index]->mt_index;
-			mt_index_adj = mt_array[mt_index].mt_index_adj;
-			n_attempts++;
-
-		}while(mt_array[mt_index_adj].lattice[site_coord] != NULL || site_coord == 0 || (site_coord == length_of_microtubule - 1));
-		
-		// Only attempt to switch if a suitable motor was found
-		if(failure != true){
-			// Verifies there is a motor capable of switching
-			if(mt_array[mt_index].lattice[site_coord] == NULL){
-				printf("Error in motor switching code at site %i on microtubule %i.\n", site_coord, mt_index);
-				exit(1);
-			}
-			// Verifies that neighbor site on adjacent MT is empty
-			if(mt_array[mt_index_adj].lattice[site_coord] != NULL){
-				printf("Error in motor switching code (type two) at site %i on microtubule %i.\n", site_coord, mt_index);
-				exit(1);
-			}
-
-			// Find motor list entry that corresponds to this motor
-			int motor_index = bound_list[bound_index]->motor_index;
-			// Get old global coordinate of motor
-			int old_global_coord = motor_list[motor_index].global_coord;
-			// Calculate new global coordinate of motor
-			int new_global_coord = mt_index_adj*length_of_microtubule + site_coord;
-			// Update motor
-			motor_list[motor_index].mt_index = mt_index_adj;
-			motor_list[motor_index].global_coord = new_global_coord;
-			// Update microtubules
-			mt_array[mt_index].lattice[site_coord] = NULL;
-			mt_array[mt_index].n_bound--;
-			mt_array[mt_index_adj].lattice[site_coord] = &motor_list[motor_index];
-			mt_array[mt_index_adj].n_bound++;
-			// Remove new global coordinate from unbound_list
-			auto unbound_entry = std::find(unbound_list.begin(), unbound_list.end(), new_global_coord);
-			int unbound_index = std::distance(unbound_list.begin(), unbound_entry);
-			unbound_list.erase(unbound_list.begin() + unbound_index);
-			// Add old global coordinate to unbound_list
-			unbound_list.push_back(old_global_coord);
-		}
-		// Announce if an eligible site index was NOT found
-		else{
-			printf("gnarly bro; failed to switch @ %i_%i!\n", mt_index, site_coord);
-		}
-	}
-}
-*/ 
-void motors_move(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, std::vector<tubulin*> &unbound_list, gsl_rng *rng){
+void motors_move(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, std::vector<tubulin*> &unbound_list, bool target_mutant_status, gsl_rng *rng){
 
 	int n_microtubules = parameters->n_microtubules;
 	int length_of_microtubule = parameters->length_of_microtubule;
@@ -202,7 +136,7 @@ void motors_move(system_parameters *parameters, microtubule *mt_array, std::vect
 			delta_x = mt_array[mt_index].delta_x;
 			n_attempts++;
 			// Ensure (within reason) that the plus_end is not included (i.e. enforce end-pausing)
-			while(site_coord == plus_end){
+			while(site_coord == plus_end || mt_array[mt_index].lattice[site_coord + delta_x].mutant != target_mutant_status){
 				if(n_attempts > 3*bound_list.size()){
 					failure = true;
 					break;
@@ -215,7 +149,7 @@ void motors_move(system_parameters *parameters, microtubule *mt_array, std::vect
 				delta_x = mt_array[mt_index].delta_x;
 				n_attempts++;
 			}
-		}while(mt_array[mt_index].lattice[site_coord + delta_x].occupant != NULL);
+		}while(mt_array[mt_index].lattice[site_coord + delta_x].occupant != NULL || mt_array[mt_index].lattice[site_coord + delta_x].mutant != target_mutant_status);
 		
 		if(failure != true){
 			// Verify that there is a motor capable of stepping 
@@ -226,6 +160,11 @@ void motors_move(system_parameters *parameters, microtubule *mt_array, std::vect
 			// Verify that the selected motor is not blocked
 			if(mt_array[mt_index].lattice[site_coord+delta_x].occupant != NULL){
 				printf("Error in motor stepping code (type two) at site %i on microtubule %i.\n", site_coord, mt_index);
+				exit(1);
+			}
+			// Verify that the target site has the correct mutant type
+			if(mt_array[mt_index].lattice[site_coord+delta_x].mutant != target_mutant_status){
+				printf("Error in motor stepping code (type three) at site %i on microtubule %i.\n", site_coord, mt_index);
 				exit(1);
 			}
 
@@ -253,9 +192,98 @@ void motors_move(system_parameters *parameters, microtubule *mt_array, std::vect
 		}
 		// Announce if an eligible site index was NOT found
 		else if(failure == true){
-			printf("gnarly bro; failed to move @ %i_%i\n", mt_index, site_coord);
+//			printf("gnarly bro; failed to move @ %i_%i - %s\n", mt_index, site_coord, target_mutant_status?"true":"false");
 		}
 	}
+}
+void motors_move(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &source_bound_list, std::vector<tubulin*> &source_unbound_list, std::vector<motor*> &target_bound_list, std::vector<tubulin*> &target_unbound_list, bool target_mutant_status, gsl_rng *rng){
+
+	int n_microtubules = parameters->n_microtubules;
+	int length_of_microtubule = parameters->length_of_microtubule;
+
+	if(source_bound_list.empty() != true){
+
+		int source_bound_index, site_coord, mt_index, plus_end, minus_end, delta_x;
+		
+		int n_attempts = 0;
+		bool failure = false;
+		// Ensure (within reason) that a motor capable of stepping is found
+		do{ if(n_attempts > 3*source_bound_list.size()){
+				failure = true;
+				break;
+			}
+			source_bound_index = gsl_rng_uniform_int(rng, source_bound_list.size());
+			site_coord = source_bound_list[source_bound_index]->site_coord;
+			mt_index = source_bound_list[source_bound_index]->mt_index;
+			plus_end = mt_array[mt_index].plus_end;
+			minus_end = mt_array[mt_index].minus_end;
+			delta_x = mt_array[mt_index].delta_x;
+			n_attempts++;
+			// Ensure (within reason) that the plus_end is not included (i.e. enforce end-pausing)
+			while(site_coord == plus_end || mt_array[mt_index].lattice[site_coord+delta_x].mutant != target_mutant_status){
+				if(n_attempts > 3*source_bound_list.size()){
+					failure = true;
+					break;
+				}
+				source_bound_index = gsl_rng_uniform_int(rng, source_bound_list.size());
+				site_coord = source_bound_list[source_bound_index]->site_coord;
+				mt_index = source_bound_list[source_bound_index]->mt_index;
+				plus_end = mt_array[mt_index].plus_end;
+				minus_end = mt_array[mt_index].minus_end;
+				delta_x = mt_array[mt_index].delta_x;
+				n_attempts++;
+			}
+		}while(mt_array[mt_index].lattice[site_coord+delta_x].occupant != NULL || mt_array[mt_index].lattice[site_coord+delta_x].mutant != target_mutant_status);
+	
+		if(failure != true){
+			// Verify that there is a motor capable of stepping 
+			if(mt_array[mt_index].lattice[site_coord].occupant == NULL){
+				printf("Error in CROSS motor stepping code at site %i on microtubule %i.\n", site_coord, mt_index);
+				exit(1);
+			}
+			// Verify that the selected motor is not blocked
+			if(mt_array[mt_index].lattice[site_coord+delta_x].occupant != NULL){
+				printf("Error in CROSS motor stepping code (type two) at site %i on microtubule %i.\n", site_coord, mt_index);
+				exit(1);
+			}
+			// Verify that the target site has the correct genotype
+			if(mt_array[mt_index].lattice[site_coord+delta_x].mutant != target_mutant_status){
+				printf("Error in CROSS motor stepping code (type three) at site %i on microtubule %i.\n", site_coord, mt_index);
+				exit(1);
+			}
+
+			// Get the index of motor_list that corresponds to this motor
+			int motor_index = mt_array[mt_index].lattice[site_coord].occupant->motor_index;
+			// Update motor details
+			motor_list[motor_index].site_coord = site_coord + delta_x;
+			// Update microtubule details
+			mt_array[mt_index].lattice[site_coord].occupant = NULL;
+			mt_array[mt_index].lattice[site_coord + delta_x].occupant = &motor_list[motor_index];
+			// Add motor to target_bound_list
+			motor *motor_address = &motor_list[motor_index];
+			target_bound_list.push_back(motor_address);
+			// Check if new site corresponds to the plus end, in which case its pointer is already absent from unbound_list 
+			if(site_coord + delta_x != plus_end){
+				// Find entry in target_unbound_list that points to new site, then remove it
+				tubulin *new_site_address = &mt_array[mt_index].lattice[site_coord + delta_x];
+				auto target_unbound_entry = std::find(target_unbound_list.begin(), target_unbound_list.end(), new_site_address);
+				int target_unbound_index = std::distance(target_unbound_list.begin(), target_unbound_entry);
+				target_unbound_list.erase(target_unbound_list.begin() + target_unbound_index);
+			}
+			// Remove motor from source_bound_list
+			source_bound_list.erase(source_bound_list.begin() + source_bound_index);
+			// Check if old site corresponds to the minus end, in which case its pointer should be suppressed from unbound_list
+			if(site_coord != minus_end){
+				// Get pointer to old site, then add it to source_unbound_list
+				tubulin *old_site_address = &mt_array[mt_index].lattice[site_coord];
+				source_unbound_list.push_back(old_site_address);
+			}
+		}
+		// Announce if an eligible site index was NOT found
+		else if(failure == true){
+//			printf("gnarly bro; failed to cross move @ %i_%i - %s\n", mt_index, site_coord, target_mutant_status?"true":"false");
+		}
+	}	
 }
 
 void motors_boundaries(system_parameters *parameters, microtubule *mt_array, std::vector<motor> &motor_list, std::vector<motor*> &bound_list, gsl_rng *rng, int n_events){

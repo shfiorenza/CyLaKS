@@ -34,8 +34,11 @@ void motors_bind(system_parameters *parameters, microtubule *mt_array, std::vect
 				exit(1); 
 			}
 			// Find a motor to bind
-			int motor_index = 0;
+			int motor_index = gsl_rng_uniform_int(rng, motor_list.size());
 			while(motor_list[motor_index].bound == true){
+				if(motor_index == motor_list.size() - 1){
+					motor_index = 0;
+				}
 				motor_index++;
 			}
 			// Update motor details
@@ -317,8 +320,11 @@ void motors_boundaries(system_parameters *parameters, microtubule *mt_array, std
 		// If minus end is unoccupied, insert a motor onto the microtubule lattice with probability alpha_eff
 		if(mt_array[mt_index].lattice[minus_end].occupant == NULL && ran1 < alpha_eff){
 			// Find motor to bind
-			int motor_index = 0;
+			int motor_index = gsl_rng_uniform_int(rng, motor_list.size());
 			while(motor_list[motor_index].bound == true){
+				if(motor_index == motor_list.size() - 1){
+					motor_index = 0;
+				}
 				motor_index++;
 			}
 			// Update motor details

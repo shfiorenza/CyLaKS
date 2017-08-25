@@ -12,7 +12,7 @@ void Microtubule::Initialize(system_parameters *parameters,
 	index_ = i_mt;
 
 	SetParameters();
-	PopulateLattice();
+	GenerateLattice();
 }
 
 void Microtubule::SetParameters(){
@@ -35,10 +35,10 @@ void Microtubule::SetParameters(){
 	}
 }
 
-void Microtubule::PopulateLattice(){
+void Microtubule::GenerateLattice(){
 
-	lattice.resize(n_sites_);
+	lattice_.resize(n_sites_);
 	for(int i_site = 0; i_site < n_sites_; i_site++){
-		lattice[i_site].Initialize(parameters_, properties_, this, i_site);
+		lattice_[i_site].Initialize(parameters_, properties_, this, i_site);
 	}
 }

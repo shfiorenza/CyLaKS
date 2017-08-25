@@ -1,8 +1,7 @@
 #ifndef _KINESIN_MANAGEMENT_H
 #define _KINESIN_MANAGEMENT_H
 
-#include "kinesin.h"
-#include <vector>
+#include "kinesin.h"	// Also includes <vector> lib
 #ifndef _PARAMETERS_H
 typedef struct system_parameters system_parameters;
 #endif
@@ -14,8 +13,8 @@ class KinesinManagement{
 	private:
 
 	public:
-		int n_tot_;			// Total number in simulation
-		int	n_bound_; 		// Total number of bound kinesin
+		int n_motors_tot_ = 0;			// Total number in simulation
+		int	n_bound_ = 0; 		// Total number of bound kinesin
 
 		double p_bind_;
 		double p_unbind_;
@@ -28,7 +27,8 @@ class KinesinManagement{
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 		
-		std::vector<Kinesin> reservoir_; 
+		std::vector<Kinesin> motor_list_; 
+		std::vector<Kinesin*> bound_list_;
 		std::vector<int> kmc_list_;
 	private:
 
@@ -40,9 +40,12 @@ class KinesinManagement{
 		void SetParameters();
 		void GenerateMotors();
 
-		void UnboundCheck(int ID);
-		void BoundCheck(int ID);
-		bool BoundaryCheck(Kinesin *motor);
+		void UnboundCheck(Kinesin *motor);
+		void BoundCheck(Kinesin *motor);
+
+		bool OnBoundarySite(Kinesin *motor);
+
+		void UpdateBoundList();
 
 		void GenerateKMCList();
 		int GetNumToBind();

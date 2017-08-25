@@ -36,13 +36,15 @@ void Curator::OutputSimDetails(){
 void Curator::PrintMicrotubules(){
 
     int n_mts = parameters_->n_microtubules;
-    int n_sites = parameters_->length_of_microtubule;
+    int mt_length = parameters_->length_of_microtubule;
     for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		Microtubule *mt = &properties_->microtubules.active_mts[i_mt];
-        for(int i_site = 0; i_site < n_sites; i_site++){
-            if(mt->lattice[i_site].occupant == NULL)
+		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+        for(int i_site = 0; i_site < mt_length; i_site++){
+            if(mt->lattice_[i_site].occupied_ == false)
                 printf("=");
-            else
+			else if(mt->lattice_[i_site].xlink_ != nullptr)
+				printf("X");
+            else if(mt->lattice_[i_site].motor_ != nullptr)
                 printf("M");
         }
 		printf(" %i\n", mt->polarity_);
@@ -53,27 +55,33 @@ void Curator::PrintMicrotubules(){
 void Curator::OutputData(FILE *occupancy_file, FILE *ID_file){
 	
 	int n_mts = parameters_->n_microtubules;
-	int n_sites = parameters_->length_of_microtubule;
+	int mt_length = parameters_->length_of_microtubule;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		Microtubule *mt = &properties_->microtubules.active_mts[i_mt];
-		int occupancy_array[n_sites], ID_array[n_sites];
+		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+		int occupancy_array[mt_length];
 		int *occupancy_ptr = occupancy_array;
+		int ID_array[mt_length];
 		int *ID_ptr = ID_array;
-		for(int i_site = 0; i_site < n_sites; i_site++){
-			Tubulin *site = &mt->lattice[i_site];
-			// If occupied, save the species ID and raw ID of the occupant
-			if(site->occupant != nullptr){
-				occupancy_array[i_site] = site->occupant->speciesID_;
-				ID_array[i_site] = site->occupant->ID_;
-			}
-			// If unoccupied, save the site's species ID and raw ID of -1 (null)
-			else{
-				occupancy_array[i_site] = site->speciesID_;
+		for(int i_site = 0; i_site < mt_length; i_site++){
+			Tubulin *site = &mt->lattice_[i_site];
+			// If unoccupied, save occupancy of '0' and ID of -1 (null)
+			if(site->occupied_ == false){
+				occupancy_array[i_site] = 0;
 				ID_array[i_site] = -1;
+			}
+			// If occupied by xlink, save occupancy of '1' and ID of the xlink
+			else if(site->xlink_ != nullptr){
+				occupancy_array[i_site] = 1;
+//				ID_array[i_site] = site->xlink_->ID_;
+			}
+			// If occupied by motor, save occupancy of '2' and ID of motor
+			else if(site->motor_ != nullptr){
+				occupancy_array[i_site] = 2;
+				ID_array[i_site] = site->motor_->ID_;
 			}
 		}
 		// Write the data to respective files one microtubule at a time
-		fwrite(occupancy_ptr, sizeof(int), n_sites, occupancy_file);
-		fwrite(ID_ptr, sizeof(int), n_sites, ID_file);
+		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
+		fwrite(ID_ptr, sizeof(int), mt_length, ID_file);
 	}	
 }

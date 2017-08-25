@@ -8,12 +8,12 @@ length_of_microtubule: 1000
 
 seed : 3298615
 
-switch_rate : 0.5
+switch_rate : 0.1
 motor_speed : 62.5
 c_motor : 200
 k_on : 0.00027
 k_off : 0.169
 
-alpha: 0.3
-beta: 0.1
+alpha: 0.05
+beta: 0.9
 

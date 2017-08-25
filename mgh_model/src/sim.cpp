@@ -46,7 +46,12 @@ int main(int argc, char *argv[]){
 	// Main kinetic Monte Carlo (KMC) simulation
 	for(int i_step = 0; i_step < n_steps; i_step++){
 
+//		printf("VVVVV STEP %i VVVVV\n", i_step);
+		properties.current_step_ = i_step;
 		properties.kinesin4.RunKMC();
+//		printf("%g_%g\n", properties.p_bind_cum_, properties.p_unbind_cum_);
+//		printf("%i_%i\n", properties.n_binds_, properties.n_unbinds_);
+//		properties.wallace.PrintMicrotubules();
 
 		//TODO: let wallace do the below
 		// Give updates on equilibrium process (every 10%)
@@ -71,6 +76,13 @@ int main(int argc, char *argv[]){
 	}
 	fclose(occupancy_file);
 	fclose(ID_file);
+
+	double p_bind_avg = properties.p_bind_cum_/properties.n_binds_/parameters.delta_t;
+	double p_unbind_avg = properties.p_unbind_cum_/properties.n_unbinds_/parameters.delta_t;
+	double ratio = properties.n_binds_/(double)properties.n_unbinds_;
+	printf("Average binding probability: %g\n", p_bind_avg);
+	printf("Average unbinding probability: %g\n", p_unbind_avg);
+	printf("%g bind event(s) [%i] for every unbind event [%i].\n", ratio, properties.n_binds_, properties.n_unbinds_);
 
 	// TODO: let wallace track sim duation
 	finish = clock();

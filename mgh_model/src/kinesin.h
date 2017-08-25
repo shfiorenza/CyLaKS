@@ -1,5 +1,6 @@
 #ifndef _KINESIN_H
 #define _KINESIN_H
+#include <vector>
 
 #ifndef _PARAMETERS_H
 typedef struct system_parameters system_parameters;
@@ -19,16 +20,15 @@ class Kinesin{
 		int ID_;						// Unique ID of this kinesin in resevoir
 		int speciesID_ = 2;				// Unique ID of this species (kinesin)
 
-		bool bound_ = false; 			/* Is this motor bound to a microtubule? (i.e. are
-										   the heads of this motor bound to tubulin sites?) */
-		bool tethered_ = false; 		// Is the tail of this motor bound to a prc1 protein?
+		bool bound_ = false; 	
+		bool tethered_ = false;
 
-		Microtubule *mt_ = nullptr; 		// Microtubule this kinesin is bound to
-		Tubulin *front_site_ = nullptr; 	// Site the front head of this kinesin is bound to
-		Tubulin *rear_site_ = nullptr; 		// Site the rear head of this kinesin is bound to
-//		AssociatedProtein *anchor_ = nullptr; 	// PRC1 protein this kinesin is tethered to
+		Microtubule *mt_ = nullptr; 		
+		Tubulin *front_site_ = nullptr; 
+		Tubulin *rear_site_ = nullptr; 		
+		AssociatedProtein *xlink_ = nullptr; 
 
-//		std::vector<AssociatedProtein*> neighbor_proteins;
+//		std::vector<AssociatedProtein*> neighbor_xlinks;
 //		std::vector<Tubulin*> neighbor_sites;
 
 		system_parameters *parameters_ = nullptr;

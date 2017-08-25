@@ -11,5 +11,5 @@ void Tubulin::Initialize(system_parameters *parameters,
 	properties_ = properties;
 	index_ = i_site;
 	coord_ = i_site;
-	parent = mt;
+	mt_ = mt;
 }

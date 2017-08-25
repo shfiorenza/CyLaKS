@@ -14,8 +14,8 @@ final_data = zeros([length_of_microtubule 2]);
 
 polarityArray = {'Plus-end on right', 'Plus end on left'};
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_overlap/%s';
-fileName = 'Hn.file';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileName = 'test.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [length_of_microtubule, 2*n_timesteps], '*int');

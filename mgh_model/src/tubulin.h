@@ -10,6 +10,7 @@ typedef struct system_properties system_properties;
 
 class Microtubule;
 class Kinesin;
+class AssociatedProtein;
 
 class Tubulin{
 	private:
@@ -19,11 +20,14 @@ class Tubulin{
 		int coord_;		// Absolute coord of tubulin site
 		int speciesID_ = 0;
 
+		bool occupied_ = false;
+
+		Microtubule *mt_ = nullptr;
+		Kinesin *motor_ = nullptr; 
+		AssociatedProtein *xlink_ = nullptr;
+
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
-
-		Microtubule *parent = nullptr;
-		Kinesin *occupant = nullptr; 
 	private:
 
 	public:

@@ -8,10 +8,28 @@ typedef struct system_parameters system_parameters;
 typedef struct system_properties system_properties;
 #endif
 
-class Kinesin;
+class Microtubule;
 class Tubulin;
+class Kinesin;
 
-class Associated_Protein{
+class AssociatedProtein{
+	private:
 
+	public:
+		int ID_;
+
+		bool bound_ = false;
+		bool tethered_ = false;
+
+		Microtubule *mt_ = nullptr;
+		Tubulin *site_ = nullptr;
+		Kinesin *motor_ = nullptr;
+
+		system_parameters *parameters_ = nullptr;
+		system_properties *properties_ = nullptr;
+	private:
+
+	public:
+		AssociatedProtein();
 };
 #endif

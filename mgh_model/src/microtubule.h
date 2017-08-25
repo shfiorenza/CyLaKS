@@ -23,11 +23,11 @@ class Microtubule{
 
 		int n_sites_;		// Number of tubulin sites on MT
 		int coord_;			// Absolute coordinate of left-most edge of MT
+	
+		std::vector<Tubulin> lattice_;	// All tubulin sites 
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
-	
-		std::vector<Tubulin> lattice;	// All tubulin sites 
 	private:
 
 	public:
@@ -36,6 +36,6 @@ class Microtubule{
 			system_properties *properties, int i_mt);
 
 		void SetParameters();
-		void PopulateLattice();
+		void GenerateLattice();
 };
 #endif

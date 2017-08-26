@@ -37,7 +37,7 @@ void KinesinManagement::GenerateMotors(){
 	int n_sites = parameters_->length_of_microtubule;
 	// Since each kinesin occupies two sites, the most that will ever
 	// be needed (all sites occupied) is half the total number of sites 
-	n_motors_tot_ = n_mts*n_sites/2;
+	n_motors_tot_ = n_mts*n_sites; // /2; FIXME
 	motor_list_.resize(n_motors_tot_);
 	for(int ID = 0; ID < n_motors_tot_; ID++){
 		motor_list_[ID].Initialize(parameters_, properties_, ID);
@@ -49,15 +49,15 @@ void KinesinManagement::GenerateMotors(){
 void KinesinManagement::UnboundCheck(Kinesin *motor){
 
 	// Check motor
-	if(motor->front_site_ != nullptr || motor->rear_site_ != nullptr){
+	if(motor->front_site_ != nullptr){// || motor->rear_site_ != nullptr){
 		printf("Error with motor #%i: classified as unbound, but", motor->ID_);
 		printf(" at least one of its heads is attached to tubulin\n");
 		exit(1);
 	}
 	// Check motor_list
 	int ID = motor->ID_;
-	if(motor_list_[ID].front_site_ != nullptr
-	|| motor_list_[ID].rear_site_ != nullptr){
+	if(motor_list_[ID].front_site_ != nullptr){
+//	|| motor_list_[ID].rear_site_ != nullptr){
 		printf("Error: motor #%i is out of sync with motor_list\n", ID);
 		exit(1);
 	}
@@ -66,15 +66,15 @@ void KinesinManagement::UnboundCheck(Kinesin *motor){
 void KinesinManagement::BoundCheck(Kinesin *motor){
 
 	// Check motor
-	if(motor->front_site_ == nullptr || motor->rear_site_ == nullptr){
+	if(motor->front_site_ == nullptr){// || motor->rear_site_ == nullptr){
 		printf("Error with motor #%i: classified as bound, but" , motor->ID_);
 		printf(" at least one of its heads is not attached to tubulin\n");
 		exit(1);
 	}
 	// Check motor_list
 	int ID = motor->ID_;
-	if(motor_list_[ID].front_site_ == nullptr
- 	|| motor_list_[ID].rear_site_ == nullptr){
+	if(motor_list_[ID].front_site_ == nullptr){
+ //	|| motor_list_[ID].rear_site_ == nullptr){
 		printf("Error: motor #%i is out of sync with motor_list\n", ID);
 		exit(1);
 	}
@@ -84,7 +84,8 @@ bool KinesinManagement::OnBoundarySite(Kinesin *motor){
 
 	bool boundary_status; 
 	if(motor->front_site_->index_ == motor->mt_->plus_end_
-	|| motor->rear_site_->index_ == motor->mt_->minus_end_){
+	|| motor->front_site_->index_ == motor->mt_->minus_end_){
+//	|| motor->rear_site_->index_ == motor->mt_->minus_end_){
 		boundary_status = true;
 	}
 	else{
@@ -149,10 +150,12 @@ int KinesinManagement::GetNumToBind(){
 //	double n_avg = p_bind_*n_unoccupied_pairs;
 	properties_->microtubules.UpdateNumUnoccupied();
 	int n_unoccupied = properties_->microtubules.n_unoccupied_;
-	double n_avg = p_bind_*n_unoccupied_pairs;
+	double n_avg = p_bind_*n_unoccupied;
 	int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
-	if(n_unoccupied_pairs > 0){
-		double p_bind = n_to_bind/(double)n_unoccupied_pairs;
+	if(n_unoccupied > 0){
+//	if(n_unoccupied_pairs > 0){
+//		double p_bind = n_to_bind/(double)n_unoccupied_pairs;
+		double p_bind = n_to_bind/(double)n_unoccupied;
 		properties_->p_bind_cum_ += p_bind;
 		properties_->n_binds_++;
 	}
@@ -184,11 +187,11 @@ int KinesinManagement::GetNumToSwitch(){
 			int i_adj = mt->mt_index_adj_;
 			Microtubule *mt_adj = &properties_->microtubules.mt_list_[i_adj];
 			int i_front_site = motor->front_site_->index_;
-			int i_rear_site = motor->rear_site_->index_;
+//			int i_rear_site = motor->rear_site_->index_;
 			// Exclude boundary sites from statistics (no switching there)
-			if(i_front_site != plus_end && i_rear_site != minus_end){
-				if(mt_adj->lattice_[i_front_site].occupied_ == false
-				&& mt_adj->lattice_[i_rear_site].occupied_ == false){
+			if(i_front_site != plus_end){// && i_rear_site != minus_end){
+				if(mt_adj->lattice_[i_front_site].occupied_ == false){
+//				&& mt_adj->lattice_[i_rear_site].occupied_ == false){
 					n_switchable++;
 				}
 			}
@@ -276,21 +279,24 @@ void KinesinManagement::RunKMC_Bind(){
 			motor = &motor_list_[i_motor];
 		}
 		UnboundCheck(motor);
-		properties_->microtubules.UpdateUnoccupiedPairsList();
-		if(properties_->microtubules.n_unoccupied_pairs_ > 0){
+		properties_->microtubules.UpdateUnoccupiedList();
+		if(properties_->microtubules.n_unoccupied_ > 0){
+//		properties_->microtubules.UpdateUnoccupiedPairsList();
+//		if(properties_->microtubules.n_unoccupied_pairs_ > 0){
 			// Find unoccupied pair of sites to bind to
-			Tubulin *rear_site = properties_->microtubules.GetUnoccupiedPair_1();
-			Tubulin *front_site = properties_->microtubules.GetUnoccupiedPair_2(rear_site);
-			Microtubule *mt = rear_site->mt_;
+			Tubulin *front_site = properties_->microtubules.GetUnoccupiedSite();
+//			Tubulin *rear_site = properties_->microtubules.GetUnoccupiedPair_1();
+//			Tubulin *front_site = properties_->microtubules.GetUnoccupiedPair_2(rear_site);
+			Microtubule *mt = front_site->mt_;
 			// Place motor on sites
-			rear_site->motor_ = motor;
-			rear_site->occupied_ = true;
+//			rear_site->motor_ = motor;
+//			rear_site->occupied_ = true;
 			front_site->motor_ = motor;
 			front_site->occupied_ = true;
 			// Update motor details
 			motor->bound_ = true;
 			motor->mt_ = mt;
-			motor->rear_site_ = rear_site;
+//			motor->rear_site_ = rear_site;
 			motor->front_site_ =  front_site;
 			// Update statistics
 			n_bound_++;
@@ -332,13 +338,13 @@ void KinesinManagement::RunKMC_Unbind(){
 			// Remove motor from sites
 			motor->front_site_->motor_ = nullptr;
 			motor->front_site_->occupied_ = false;
-			motor->rear_site_->motor_ = nullptr;
-			motor->rear_site_->occupied_ = false;
+//			motor->rear_site_->motor_ = nullptr;
+//			motor->rear_site_->occupied_ = false;
 			// Update motor details
 			motor->bound_ = false;
 			motor->mt_ = nullptr;
 			motor->front_site_ = nullptr;
-			motor->rear_site_ = nullptr;
+//			motor->rear_site_ = nullptr;
 			// Update statistics
 			n_bound_--;
 		}
@@ -421,7 +427,7 @@ void KinesinManagement::RunKMC_Step(){
 			motor = bound_list_[i_entry];
 			BoundCheck(motor);
 			front_site = motor->front_site_;
-			rear_site = motor->rear_site_;
+//			rear_site = motor->rear_site_;
 			i_plus_end = motor->mt_->plus_end_;
 			delta_x = motor->mt_->delta_x_;
 			n_attempts++;
@@ -435,7 +441,7 @@ void KinesinManagement::RunKMC_Step(){
 				motor = bound_list_[i_entry];
 				BoundCheck(motor);
 				front_site = motor->front_site_;
-				rear_site = motor->rear_site_;
+//				rear_site = motor->rear_site_;
 				i_plus_end = motor->mt_->plus_end_;
 				delta_x = motor->mt_->delta_x_;
 				n_attempts++;
@@ -444,28 +450,29 @@ void KinesinManagement::RunKMC_Step(){
 		// Make sure an eligible motor was found
 		if(failure == false){
 			Tubulin *old_front_site = front_site;
-			Tubulin *old_rear_site = rear_site;
+//			Tubulin *old_rear_site = rear_site;
 			properties_->microtubules.OccupiedCheck(old_front_site);
-			properties_->microtubules.OccupiedCheck(old_rear_site);
+//			properties_->microtubules.OccupiedCheck(old_rear_site);
 			Tubulin *new_front_site = &motor->mt_->lattice_[old_front_site->index_ + delta_x];
-			Tubulin *new_rear_site = old_front_site;
+//			Tubulin *new_rear_site = old_front_site;
 			properties_->microtubules.UnoccupiedCheck(new_front_site);
 			// Take rear motor head off of old rear site; place it on old front site
-			old_rear_site->motor_ = nullptr;
-			old_rear_site->occupied_ = false;
-			motor->rear_site_ = old_front_site;
+			old_front_site->motor_ = nullptr;
+			old_front_site->occupied_ = false;
+//			old_rear_site->motor_ = nullptr;
+//			old_rear_site->occupied_ = false;
+//			motor->rear_site_ = old_front_site;
 			// Take front motor head off of old front site; place it on new front site
 			motor->front_site_ = new_front_site;
 			new_front_site->motor_ = motor;
 			new_front_site->occupied_ = true;
-			// Update motor details
 		}
 		else{
 			int ID = motor->ID_;
 			int i_mt = motor->mt_->index_;
 			int i_front = motor->front_site_->index_;
-			int i_rear = motor->rear_site_->index_;
-			printf("Motor %i failed to step @ %i_%i/%i\n", ID, i_mt, i_front, i_rear);
+//			int i_rear = motor->rear_site_->index_;
+			printf("Motor %i failed to step @ %i_%i\n", ID, i_mt, i_front);//, i_rear); //FIXME
 		}
 	}
 	else{
@@ -486,15 +493,15 @@ void KinesinManagement::RunKMC_Boundaries(int n_events){
 		int i_minus_end = mt->minus_end_;
 		int delta_x = mt->delta_x_;
 		Tubulin *minus_end = &mt->lattice_[i_minus_end];
-		Tubulin *minus_neighbor = &mt->lattice_[i_minus_end + delta_x];
+//		Tubulin *minus_neighbor = &mt->lattice_[i_minus_end + delta_x];
 		Tubulin *plus_end = &mt->lattice_[i_plus_end];
-		Tubulin *plus_neighbor = &mt->lattice_[i_plus_end - delta_x];
+//		Tubulin *plus_neighbor = &mt->lattice_[i_plus_end - delta_x];
 		double ran1 = properties_->gsl.GetRanProb();
 		double ran2 = properties_->gsl.GetRanProb();
 		// Insert motors onto minus_end with probability alpha_eff	
 		if(ran1 < alpha_eff
-		&& minus_end->occupied_ == false 
-		&& minus_neighbor->occupied_ == false){
+		&& minus_end->occupied_ == false){ 
+//		&& minus_neighbor->occupied_ == false){
 			// Start at random point in motor_list, then scan for unbound motor
         	int i_motor = properties_->gsl.GetRanInt(n_motors_tot_);
         	Kinesin *motor = &motor_list_[i_motor];
@@ -508,33 +515,34 @@ void KinesinManagement::RunKMC_Boundaries(int n_events){
 			// Place motor on sites
 			minus_end->motor_ = motor;
 			minus_end->occupied_ = true;
-			minus_neighbor->motor_ = motor;
-			minus_neighbor->occupied_ = true;
+//			minus_neighbor->motor_ = motor;
+//			minus_neighbor->occupied_ = true;
 			// Update motor details
 			motor->bound_ = true;
 			motor->mt_ = minus_end->mt_;
-			motor->rear_site_ = minus_end;
-			motor->front_site_ =  minus_neighbor;
+//			motor->rear_site_ = minus_end;
+			motor->front_site_ = minus_end;
+//			motor->front_site_ =  minus_neighbor;
 			// Update statistics
 			n_bound_++;
 		}
 		// Remove motors from plus_end with probability beta_eff
 		if(ran2 < beta_eff
-		&& plus_end->occupied_ == true
-		&& plus_neighbor->occupied_ == true){
+		&& plus_end->occupied_ == true){
+//		&& plus_neighbor->occupied_ == true){
 			// Get motor bound to minus_end
 			Kinesin *motor = plus_end->motor_;
 			BoundCheck(motor);
 			// Remove motor from sites
 			plus_end->motor_ = nullptr;
 			plus_end->occupied_ = false;
-			plus_neighbor->motor_ = nullptr;
-			plus_neighbor->occupied_ = false;
+//			plus_neighbor->motor_ = nullptr;
+//			plus_neighbor->occupied_ = false;
 			// Update motor details
 			motor->bound_ = false;
 			motor->mt_ = nullptr;
 			motor->front_site_ = nullptr;
-			motor->rear_site_ = nullptr;
+//			motor->rear_site_ = nullptr;
 			// Update statistics
 			n_bound_--;
 		} 

@@ -1,6 +1,6 @@
 clear all
 n_timesteps = 100000;
-length_of_microtubule = 1000;
+length_of_microtubule = 160;
 
 n_l = 0;
 n_l_temp = 0;

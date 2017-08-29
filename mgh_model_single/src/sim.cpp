@@ -46,6 +46,7 @@ int main(int argc, char *argv[]){
 	// Main kinetic Monte Carlo (KMC) simulation
 	for(int i_step = 0; i_step < n_steps; i_step++){
 
+//		printf("VVVVV STEP %i VVVVV\n", i_step);
 		properties.current_step_ = i_step;
 		properties.kinesin4.RunKMC();
 //		printf("%g_%g\n", properties.p_bind_cum_, properties.p_unbind_cum_);

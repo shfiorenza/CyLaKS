@@ -4,9 +4,9 @@ n_datapoints = 100000;
 length_of_microtubule = 1000;
 
 % Directory in which sim files are contained
-fileFormat = '/home/shane/Desktop/sims/%dmil/%d/%s.file';
+fileFormat = '/home/shane/Desktop/sims/100mil/1000c/%s.file';
 % Names of the different mode files
-modes = {'LHLH', 'Hn', 'Hx', 'LHx', 'M', 'Ln', 'LHn', 'Lx'}; 
+modes = {'LHLH', 'Hn', 'LHx','M', 'Ln', 'LHn'};%'Hx', 'LHx', 'M', 'Ln', 'LHn', 'Lx'}; 
 n_modes = numel(modes);
 
 % Set color order so that mode colors correspond with Hui-Shun's
@@ -22,7 +22,7 @@ for i=1:1:n_modes
     temp_one = zeros([length_of_microtubule 1]);
     
 	% Accesses simulation file that corresponds to appropriate mode
-	file_name = sprintf(fileFormat, n_timesteps, length_of_microtubule, modes{i});
+	file_name = sprintf(fileFormat, modes{i});
 	data_file = fopen(file_name);
 	raw_data = fread(data_file, [length_of_microtubule, 2*n_datapoints], '*int');
 	fclose(data_file);

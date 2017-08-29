@@ -1,14 +1,14 @@
-data_threshold: 400000
-n_steps: 1200000
+data_threshold: 200000
+n_steps: 600000
 n_datapoints: 100000
-delta_t : 0.5
+delta_t : 1
 
 length_of_microtubule: 1000
 n_microtubules: 1
 
 seed : 4284326
 
-p_mutant: 0.00
+p_mutant: 1
 mutant_affinity: 0.4
 
 motor_speed : 1.0

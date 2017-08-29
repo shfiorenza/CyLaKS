@@ -6,7 +6,7 @@ ID = 358;
 
 final_trajectory = zeros([n_datapoints 1]);
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_overlap/%s';
 fileName = 'testID.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));

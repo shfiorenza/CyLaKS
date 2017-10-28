@@ -4,7 +4,7 @@ n_datapoints: 100000
 delta_t : 0.1
 
 n_microtubules: 2
-length_of_microtubule: 1000
+length_of_microtubule: 160
 
 seed : 3299515
 

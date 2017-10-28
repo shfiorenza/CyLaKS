@@ -9,22 +9,14 @@
 typedef struct system_properties{
 
 	Curator wallace;
-
 	RandomNumberManagement gsl; 
-
 	MicrotubuleManagement microtubules;
-
 	KinesinManagement kinesin4; 
-
 	AssociatedProteinManagement prc1; 
 	
 	int current_step_;
+	FILE *occupancy_file_, *motor_ID_file_, *xlink_ID_file_;
 	
-	int n_binds_ = 0;
-	double p_bind_cum_= 0;
-	int n_unbinds_ = 0;
-	double p_unbind_cum_ = 0;
-
 } system_properties;
 #endif
 

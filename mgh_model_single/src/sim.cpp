@@ -2,7 +2,6 @@
 
 int main(int argc, char *argv[]){
 
-	long seed;
 	int n_steps, data_threshold, n_datapoints, range_of_data, n_pickup, equil_milestone, data_milestone;
 	double duration;
 	char param_file[160];
@@ -25,7 +24,6 @@ int main(int argc, char *argv[]){
 
 	// Parse parameters and set local variables
 	parse_parameters(param_file, &parameters);
-	seed = parameters.seed;											// Seed for the RNG
 	n_steps = parameters.n_steps;									// Total number of steps in one run
 	data_threshold = parameters.data_threshold;						// Step at which data collection starts 
 	n_datapoints = parameters.n_datapoints;							// Number of data points per MT to be written to file during sim
@@ -39,7 +37,7 @@ int main(int argc, char *argv[]){
 	properties.wallace.Initialize(&parameters, &properties);
 	properties.wallace.OutputSimDetails();
 	// Initialize "experimental stage" for simulation
-	properties.gsl.Initialize(seed);
+	properties.gsl.Initialize(parameters.seed);
 	properties.microtubules.Initialize(&parameters, &properties);
 	properties.kinesin4.Initialize(&parameters, &properties); 
 

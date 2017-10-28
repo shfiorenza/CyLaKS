@@ -13,11 +13,15 @@ class KinesinManagement{
 	private:
 
 	public:
-		int n_motors_tot_ = 0;			// Total number in simulation
-		int	n_bound_ = 0; 		// Total number of bound kinesin
+		int n_motors_ = 0;		
+	 	int	n_single_bound_ = 0;
+		int n_double_bound_ = 0;
+		int n_unbound_but_tethered_ = 0;
 
 		double p_bind_;
+		double p_bind_tethered_;
 		double p_unbind_;
+		double p_tether_unbound_;
 		double p_switch_;
 		double p_step_;
 
@@ -29,6 +33,7 @@ class KinesinManagement{
 		
 		std::vector<Kinesin> motor_list_; 
 		std::vector<Kinesin*> bound_list_;
+		std::vector<Kinesin*> unbound_but_tethered_list_;
 		std::vector<int> kmc_list_;
 	private:
 
@@ -36,28 +41,38 @@ class KinesinManagement{
 		KinesinManagement();
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
-
 		void SetParameters();
 		void GenerateMotors();
 
 		void UnboundCheck(Kinesin *motor);
 		void BoundCheck(Kinesin *motor);
+		bool BoundaryStatus(Kinesin *motor);
 
-		bool OnBoundarySite(Kinesin *motor);
+		void UpdateLists();
+		
+		Kinesin* GetUnboundMotor();
 
-		void UpdateBoundList();
+		void RunDiffusion();
 
 		void GenerateKMCList();
-		int GetNumToBind();
-		int GetNumToUnbind();
+		int GetNumToBind_I();
+		int GetNumToBind_I_Tethered();
+		int GetNumToUnbind_I();
+		int GetNumToUnbind_II();
+		int GetNumToTether_Unbound();
+		int GetNumToTether_Bound();
 		int GetNumToSwitch(); 
 		int GetNumToStep();
 
 		void RunKMC();
-		void RunKMC_Bind();
-		void RunKMC_Unbind();
-		void RunKMC_Switch();
-		void RunKMC_Step();
-		void RunKMC_Boundaries(int n_events);
+		void KMC_Bind_I();
+		void KMC_Bind_I_Tethered();
+		void KMC_Bind_II();
+		void KMC_Unbind_I();
+		void KMC_Unbind_II();
+		void KMC_Tether_Unbound();
+		void KMC_Switch();
+		void KMC_Step();
+		void KMC_Boundaries(int n_events);
 };
 #endif

@@ -19,17 +19,17 @@ class Kinesin{
 	public:
 		int ID_;						// Unique ID of this kinesin in resevoir
 		int speciesID_ = 2;				// Unique ID of this species (kinesin)
+		int heads_active_ = 0;
 
-		bool bound_ = false; 	
+		bool bound_ = false;
 		bool tethered_ = false;
 
 		Microtubule *mt_ = nullptr; 		
-		Tubulin *front_site_ = nullptr; 
-		Tubulin *rear_site_ = nullptr; 		
+		Tubulin *front_site_ = nullptr;
+		Tubulin *rear_site_ = nullptr;
 		AssociatedProtein *xlink_ = nullptr; 
 
-//		std::vector<AssociatedProtein*> neighbor_xlinks;
-//		std::vector<Tubulin*> neighbor_sites;
+		std::vector<AssociatedProtein*> neighbor_xlinks_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -37,6 +37,7 @@ class Kinesin{
 
 	public:
 		Kinesin();
+//		Kinesin() : front_site_(nullptr), rear_site_(nullptr) {}
 		void Initialize(system_parameters *parameters, 
 			system_properties *properties, int ID);
 

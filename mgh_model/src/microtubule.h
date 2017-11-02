@@ -19,10 +19,13 @@ class Microtubule{
 		int plus_end_;		// Index of plus_end in lattice
 		int minus_end_;		// Index of minus_end in lattice
 		int delta_x_;		// Direction motors step (+/- 1)
+
 		int mt_index_adj_;	// Index of adjacent microtubule
 
 		int n_sites_;		// Number of tubulin sites on MT
 		int coord_;			// Absolute coordinate of left-most edge of MT
+
+		Microtubule *neighbor_ = nullptr; //FIXME for 1+ neighbors 
 	
 		std::vector<Tubulin> lattice_;	// All tubulin sites 
 

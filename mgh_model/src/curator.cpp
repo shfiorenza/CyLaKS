@@ -52,13 +52,33 @@ void Curator::PrintMicrotubules(){
 
     int n_mts = parameters_->n_microtubules;
     int mt_length = parameters_->length_of_microtubule;
+	// Figure out which MT is the farthest left 
+	int leftmost_coord = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		int mt_coord = properties_->microtubules.mt_list_[i_mt].coord_;
+		if(mt_coord < leftmost_coord)
+			leftmost_coord = mt_coord;
+	}
+	// Print out MTs
     for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+		int mt_coord = mt->coord_;
+		int delta = mt_coord - leftmost_coord;
+		for(int i_entry = 0; i_entry < delta; i_entry++){
+			printf(" ");
+		}
         for(int i_site = 0; i_site < mt_length; i_site++){
             if(mt->lattice_[i_site].occupied_ == false)
                 printf("=");
 			else if(mt->lattice_[i_site].xlink_ != nullptr)
-				printf("X");
+				if(mt->lattice_[i_site].xlink_->heads_active_ == 1)
+					printf("I");
+				else if(mt->lattice_[i_site].xlink_->heads_active_ == 2)
+					printf("X");
+				else{
+					printf("no sunny. look in wallace's print\n"); //wow i am so sorry
+					exit(1);
+				}
             else if(mt->lattice_[i_site].motor_ != nullptr){
 				int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
 				int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;

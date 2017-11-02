@@ -23,6 +23,27 @@ double RandomNumberManagement::GetRanProb(){
 	return gsl_rng_uniform(rng);
 }
 
+int RandomNumberManagement::SampleNormalDist(double sigma){
+
+	/*  recall, for a binomial distribution:
+
+		mean = n * p, N is no. of trials, p is probability for success
+		sigma^2 = n * p * (1 - p) 
+	
+	This is intended to sample the normal distribution around 0 */
+
+	double p = 0.0001;
+	double n = sigma*sigma/(p*(1 - p));
+	double avg = p*n;
+	int sample = SampleBinomialDist(p, n);
+	int result;
+	if(sample > avg)
+		result = sample - avg;
+	else
+		result = avg - sample;
+	return result;
+}
+
 int RandomNumberManagement::SampleBinomialDist(double p, int n){
 	return gsl_ran_binomial(rng, p, n);
 }

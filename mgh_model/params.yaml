@@ -1,10 +1,10 @@
-data_threshold: 400000
-n_steps: 1000000
+data_threshold: 4000000
+n_steps: 10000000
 n_datapoints: 100000
-delta_t : 0.05
+delta_t : 0.005
 
 n_microtubules: 2
-length_of_microtubule: 160
+length_of_microtubule: 50
 
 seed : 3299515
 

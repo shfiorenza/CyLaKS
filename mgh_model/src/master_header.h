@@ -15,7 +15,8 @@
 #include <gsl/gsl_randist.h>
 
 /* Include custom structures. */
-#include "structures.h"
+#include "system_parameters.h"
+#include "system_properties.h"
 
 /* Include function prototypes. */
 #include "prototypes.h"

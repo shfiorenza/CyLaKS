@@ -46,7 +46,7 @@ void KinesinManagement::GenerateMotors(){
 	}
 	// Also resize bound_list_ here since there's no other good place to do it
 	bound_list_.resize(n_motors_);
-	unbound_but_tethered_list_.resize(n_motors_);
+	tethered_unbound_list_.resize(n_motors_);
 }
 
 void KinesinManagement::UnboundCheck(Kinesin *motor){
@@ -108,7 +108,7 @@ void KinesinManagement::UpdateLists(){
 			i_bound++;		
 		}
 		else if(motor->tethered_ == true){
-			unbound_but_tethered_list_[i_tethered] = motor;
+			tethered_unbound_list_[i_tethered] = motor;
 			i_tethered++;
 			n_unbound++;
 		}
@@ -204,7 +204,7 @@ void KinesinManagement::RunDiffusion(){
 
 void KinesinManagement::GenerateKMCList(){
 
-	int n_bind_i = GetNumToBind_I();
+	int n_bind_i = GetNumToBind_I_Free();
 	int n_bind_i_tethered = GetNumToBind_I_Tethered();
 	int n_unbind_i = GetNumToUnbind_I();
 	int n_tether_unbound = GetNumToTether_Unbound();
@@ -244,7 +244,7 @@ void KinesinManagement::GenerateKMCList(){
 	}
 }
 
-int KinesinManagement::GetNumToBind_I(){
+int KinesinManagement::GetNumToBind_I_Free(){
 
 	properties_->microtubules.UpdateNumUnoccupiedPairs();
 	int n_unoccupied_pairs = properties_->microtubules.n_unoccupied_pairs_;
@@ -257,8 +257,8 @@ int KinesinManagement::GetNumToBind_I_Tethered(){
 	
 	int n_avg = 0;
 	int n_to_bind_i_tethered = 0;
-	for(int i_motor = 0; i_motor > n_unbound_but_tethered_; i_motor++){
-		Kinesin *motor = unbound_but_tethered_list_[i_motor];
+	for(int i_motor = 0; i_motor > n_tethered_unbound_; i_motor++){
+		Kinesin *motor = tethered_unbound_list_[i_motor];
 		AssociatedProtein *xlink = motor->xlink_;
 //		int i_anchor = xlink->GetAnchorIndex();
 		int i_anchor;
@@ -287,7 +287,7 @@ int KinesinManagement::GetNumToBind_I_Tethered(){
 			i_anchor = (i_first + i_second)/2; 
 		}
 		// Calculate this xlink's contribution to expected binds via tethers
-		int n_entries = xlink->n_neighbors_tethering_;
+		int n_entries = xlink->n_neighbor_motors_;
 		for(int i_entry = 0; i_entry < n_entries; i_entry++){
 
 		}
@@ -311,6 +311,7 @@ int KinesinManagement::GetNumToTether_Unbound(){
 
 int KinesinManagement::GetNumToSwitch(){
 
+	int mt_length = parameters_->length_of_microtubule;
 	int n_to_switch;
 	int n_switchable = 0;
 	int n_unbound = 0;
@@ -318,19 +319,28 @@ int KinesinManagement::GetNumToSwitch(){
 		if(motor_list_[i_motor].bound_ == true){
 			Kinesin *motor = &motor_list_[i_motor];
 			Microtubule *mt = motor->mt_;
-			int plus_end = mt->plus_end_;
-			int minus_end = mt->minus_end_;	
-			int i_adj = mt->mt_index_adj_;
-			Microtubule *mt_adj = &properties_->microtubules.mt_list_[i_adj];
+			Microtubule *mt_adj = mt->neighbor_; //define neighb u idiot
+			int mt_coord = mt->coord_;
+			int mt_adj_coord = mt_adj->coord_;
+			int offset = mt_adj_coord - mt_coord;
 			int i_front_site = motor->front_site_->index_;
+			int i_rear_site_adj = i_front_site - offset;
 			int i_rear_site = motor->rear_site_->index_;
+			int i_front_site_adj = i_rear_site - offset;
 			// Exclude boundary sites from statistics (no switching there)
-			if(i_front_site != plus_end && i_rear_site != minus_end){
-				if(mt_adj->lattice_[i_front_site].occupied_ == false
-				&& mt_adj->lattice_[i_rear_site].occupied_ == false){
+			// and non-overlapping microtubule segments
+			if((i_front_site != mt->plus_end_ && i_rear_site != mt->minus_end_)
+			&& (i_front_site_adj > 0 && i_front_site_adj < mt_length - 1)
+			&& (i_rear_site_adj > 0 && i_rear_site_adj < mt_length - 1)){
+				if(mt_adj->lattice_[i_front_site_adj].occupied_ == false
+				&& mt_adj->lattice_[i_rear_site_adj].occupied_ == false){
 					n_switchable++;
-				}
+/*					printf("%i_%i/%i; %i_%i/%i\n", mt->index_, 
+					i_front_site, i_rear_site, mt_adj->index_, 
+					i_front_site_adj, i_rear_site_adj);
+*/				}
 			}
+
 		}
 		else{
 			n_unbound++;
@@ -341,6 +351,7 @@ int KinesinManagement::GetNumToSwitch(){
 		exit(1);
 	}
 	n_to_switch = properties_->gsl.SampleBinomialDist(p_switch_, n_switchable);
+//	printf("%i (out of %i)\n", n_to_switch, n_switchable);
 	return n_to_switch;
 }
 
@@ -384,7 +395,7 @@ void KinesinManagement::RunKMC(){
 		for(int i_event; i_event < n_events; i_event++){
 			int kmc_event = kmc_list_[i_event];
 			switch(kmc_event){
-				case 0:	KMC_Bind_I();
+				case 0:	KMC_Bind_I_Free();
 						break;
 				case 1: KMC_Bind_I_Tethered();
 						break;
@@ -405,7 +416,7 @@ void KinesinManagement::RunKMC(){
 	}
 }
 
-void KinesinManagement::KMC_Bind_I(){
+void KinesinManagement::KMC_Bind_I_Free(){
 
 	// Make sure that at least one unbound motor exists
 	if(n_double_bound_ != n_motors_){
@@ -503,7 +514,7 @@ void KinesinManagement::KMC_Tether_Unbound(){
 			xlink->tethered_ = true;
 			xlink->motor_ = motor; 	
 			// Update statistics 
-			n_unbound_but_tethered_++;
+			n_tethered_unbound_++;
 			properties_->prc1.n_tethered_++;
 			properties_->prc1.n_untethered_--;
 		}
@@ -516,16 +527,18 @@ void KinesinManagement::KMC_Tether_Unbound(){
 
 void KinesinManagement::KMC_Switch(){
 
+	int mt_length = parameters_->length_of_microtubule;
 	// Make sure there is at least one bound motor
 	if(n_double_bound_ > 0){
 		UpdateLists();
-		int i_entry, i_mt_adj;
+		int i_entry, offset, i_front_new, i_rear_new;
 		Kinesin *motor;
 		Tubulin *old_front_site, *old_rear_site, 
 				*new_front_site, *new_rear_site;
-		Microtubule *adjacent_mt;
+		Microtubule *mt, *mt_adj;
 		int n_attempts = 0;
 		bool failure = false;
+		bool flag = false;
 		// Ensure that blocked motors and motors on the plus end are excluded
 		do{	
 			if(n_attempts > 2*n_double_bound_){
@@ -537,10 +550,31 @@ void KinesinManagement::KMC_Switch(){
 			BoundCheck(motor);
 			old_front_site = motor->front_site_;
 			old_rear_site = motor->rear_site_;
-			i_mt_adj = motor->mt_->mt_index_adj_;
-			adjacent_mt = &properties_->microtubules.mt_list_[i_mt_adj];
-			new_front_site = &adjacent_mt->lattice_[old_rear_site->index_];
-			new_rear_site = &adjacent_mt->lattice_[old_front_site->index_];
+			mt = motor->mt_;
+			mt_adj = mt->neighbor_;
+			offset = mt_adj->coord_ - mt->coord_;
+			i_front_new = old_rear_site->index_ - offset;
+			i_rear_new = old_front_site->index_ - offset;
+			while((i_front_new <= 0 || i_front_new >= mt_length - 1)
+			|| (i_rear_new <= 0 || i_rear_new >= mt_length - 1)){
+				if(n_attempts > 2*n_double_bound_){
+					failure = true;
+					break;
+				}
+				i_entry = properties_->gsl.GetRanInt(n_double_bound_);
+				motor = bound_list_[i_entry];
+				BoundCheck(motor);
+				old_front_site = motor->front_site_;
+				old_rear_site = motor->rear_site_;
+				mt = motor->mt_;
+				mt_adj = mt->neighbor_;
+				offset = mt_adj->coord_ - mt->coord_;
+				i_front_new = old_rear_site->index_ - offset;
+				i_rear_new = old_front_site->index_ - offset;
+				n_attempts++;
+			}
+			new_front_site = &mt_adj->lattice_[i_front_new];
+			new_rear_site = &mt_adj->lattice_[i_rear_new];
 			n_attempts++;
 		}while(BoundaryStatus(motor) == true
 		    || new_front_site->occupied_ == true
@@ -563,7 +597,7 @@ void KinesinManagement::KMC_Switch(){
 			// Update motor details
 			motor->front_site_ = new_front_site;
 			motor->rear_site_ = new_rear_site;
-			motor->mt_ = adjacent_mt;
+			motor->mt_ = mt_adj;
 		}	
 		else{
 			int ID = motor->ID_;

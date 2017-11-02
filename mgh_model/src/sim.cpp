@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]){
 
-	char param_file[160], occupancy_file[160], motor_ID_file[160], xlink_ID_file[160];
+	char param_file[160], occupancy_file[160], motor_ID_file[160], xlink_ID_file[160], MT_coord_file[160];
 	system_parameters parameters;
 	system_properties properties;
 
@@ -13,10 +13,10 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Usage: %s parameters.yaml sim_name\n\n", argv[0]);
 		exit(1);
 	}
-
 	strcpy(param_file, argv[1]);
 	// Generate names of output files based on the input simulation name
-	sprintf(occupancy_file, "%s.file", argv[2]);
+	sprintf(occupancy_file, "%s_occupancy.file", argv[2]);
+	sprintf(MT_coord_file, "%s_MTcoord.file", argv[2]);	//FIXME add elsewhere ...like to wallace's output data
 	sprintf(motor_ID_file, "%s_motorID.file", argv[2]);
 	sprintf(xlink_ID_file, "%s_xlinkID.file", argv[2]);	
 	// Parse through input parameter file and copy values to sim's internal parameter structure
@@ -28,6 +28,7 @@ int main(int argc, char *argv[]){
 	// Open xlink ID file, which does the same as the motor ID file but for xlinks
 	properties.xlink_ID_file_ = gfopen(xlink_ID_file, "w");
 
+
 	// Initialize the experimental curator, Wallace; he does things such as output data, print ASCII models of microtubules, etc.
 	properties.wallace.Initialize(&parameters, &properties);
 	// Initialize the general science library (gsl) class; just an easy way of sampling distributions and referencing the RNG
@@ -37,17 +38,21 @@ int main(int argc, char *argv[]){
 	properties.kinesin4.Initialize(&parameters, &properties); 
 	properties.prc1.Initialize(&parameters, &properties);
 
+	properties.microtubules.mt_list_[1].coord_ = 25;	//XXX lol not perm
+
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
+		if(i_step%500 == 0)
+			properties.microtubules.RunDiffusion();
 		if(i_step%400 == 0)
 			properties.kinesin4.RunDiffusion();
 		if(i_step%100 == 0)
 			properties.prc1.RunDiffusion();
 //		if(i_step%10 == 0)
-//			properties.wallace.PrintMicrotubules(0.5);
+			properties.wallace.PrintMicrotubules(0.03);
 	}
 	properties.wallace.CleanUp();
 	properties.wallace.OutputSimDuration();

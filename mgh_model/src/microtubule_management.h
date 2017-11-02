@@ -43,6 +43,8 @@ class MicrotubuleManagement{
 		void OccupiedCheck(Tubulin *site);
 		void OccupiedCheck(int i_mt, int i_site);
 
+		void UpdateNeighbors();
+
 		void UpdateNumUnoccupied();
 		void UpdateUnoccupiedList();
 
@@ -53,7 +55,6 @@ class MicrotubuleManagement{
 		Tubulin* GetUnoccupiedPair_1();
 		Tubulin* GetUnoccupiedPair_2(Tubulin* first_site);
 
-		void RemoveFromUnoccupiedList(Tubulin* site);
-		void AddToUnoccupiedList(Tubulin* site);
+		void RunDiffusion();
 };
 #endif

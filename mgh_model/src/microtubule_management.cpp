@@ -13,6 +13,7 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 
 	SetParameters();
 	GenerateMicrotubules();
+	UpdateNeighbors();
 	UpdateUnoccupiedList();
 	UpdateUnoccupiedPairsList();
 }
@@ -70,6 +71,18 @@ void MicrotubuleManagement::OccupiedCheck(int i_mt, int i_site){
 		printf("Error @ site %i_%i: should be occupied\n", i_mt, i_site);
 		exit(1);
 	}
+}
+
+void MicrotubuleManagement::UpdateNeighbors(){
+
+	int n_mts = parameters_->n_microtubules;
+	for(int i_mt = 0; i_mt < n_mts; i_mt+=2){
+		Microtubule *mt = &mt_list_[i_mt];
+		Microtubule *mt_adj = &mt_list_[i_mt+1];
+		mt->neighbor_ = mt_adj;
+		mt_adj->neighbor_ = mt;
+	}
+
 }
 
 void MicrotubuleManagement::UpdateNumUnoccupied(){
@@ -274,4 +287,25 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedPair_2(Tubulin* first_site){
 		exit(1);
 	}
 
+}
+
+void MicrotubuleManagement::RunDiffusion(){
+
+	int n_mts = parameters_->n_microtubules;
+	int n_half = n_mts/2;
+	// List of step directions for all MTs 
+	int step_dir[n_mts];
+	for(int i_entry = 0; i_entry < n_half; i_entry++){
+		// First half steps backward
+		step_dir[i_entry] = -1;
+	}
+	for(int i_entry = n_half; i_entry < n_mts; i_entry++){
+		// Second half steps forward
+		step_dir[i_entry] = 1;
+	}
+	gsl_ran_shuffle(properties_->gsl.rng, step_dir, n_mts, sizeof(int));	
+	// Run thru mt_list and step accordingly
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		mt_list_[i_mt].coord_ += step_dir[i_mt];
+	}	
 }

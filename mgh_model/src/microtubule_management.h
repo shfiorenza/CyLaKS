@@ -1,16 +1,9 @@
 #ifndef _MICROTUBULE_MANAGEMENT_H
 #define _MICROTUBULE_MANAGEMENT_H
-
 #include "microtubule.h" 	// Includes <vector> lib as well
-//#include <iostream>
-#ifndef _PARAMETERS_H
-typedef struct system_parameters system_parameters;
-#endif
-#ifndef _SYSTEM_PROPERTIES_H
-typedef struct system_properties system_properties;
-#endif
-
 class Tubulin;
+struct system_parameters;
+struct system_properties;
 
 class MicrotubuleManagement{
 	private:
@@ -20,6 +13,8 @@ class MicrotubuleManagement{
 		int n_unoccupied_ = 0;
 		int n_unoccupied_pairs_ = 0;
 		int n_pair_entries_ = 0;
+
+		double tau_ = 0; // FIXME
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;

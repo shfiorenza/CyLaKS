@@ -21,6 +21,7 @@ class RandomNumberManagement{
 		double GetRanProb();
 
 		int SampleNormalDist(double sigma);
+		int SampleNormalDist(double sigma, int center); 
 		int SampleBinomialDist(double p, int n);
 		int SamplePoissonDist(double n_avg);
 };

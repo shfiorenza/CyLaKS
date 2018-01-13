@@ -44,6 +44,22 @@ int RandomNumberManagement::SampleNormalDist(double sigma){
 	return result;
 }
 
+int RandomNumberManagement::SampleNormalDist(double sigma, int center){
+
+	/* Same as above, but centered around some input value */
+
+	double p = 0.0001;
+	double n = sigma*sigma/(p*(1-p));
+	double avg = p*n;
+	int sample = SampleBinomialDist(p, n);
+	int result;
+	if(sample > avg)
+		result = sample - avg + center;
+	else
+		result = avg - sample + center;
+	return result;
+}
+
 int RandomNumberManagement::SampleBinomialDist(double p, int n){
 	return gsl_ran_binomial(rng, p, n);
 }

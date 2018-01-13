@@ -1,13 +1,8 @@
 #ifndef _CURATOR_H
 #define _CURATOR_H
-
 #include <iostream>
-#ifndef _PARAMETERS_H
-typedef struct system_parameters system_parameters;
-#endif
-#ifndef _SYSTEM_PROPERTIES_H
-typedef struct system_properties system_properties;
-#endif
+struct system_parameters;
+struct system_properties;
 
 class Curator{
 	private:

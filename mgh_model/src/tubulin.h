@@ -1,16 +1,11 @@
 #ifndef _TUBULIN_H
 #define _TUBULIN_H
 
-#ifndef _PARAMETERS_H
-typedef struct system_parameters system_parameters;
-#endif
-#ifndef _SYSTEM_PROPERTIES_H
-typedef struct system_properties system_properties;
-#endif
-
 class Microtubule;
 class Kinesin;
 class AssociatedProtein;
+struct system_parameters;
+struct system_properties;
 
 class Tubulin{
 	private:

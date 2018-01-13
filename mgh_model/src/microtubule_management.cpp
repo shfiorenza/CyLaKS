@@ -291,6 +291,8 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedPair_2(Tubulin* first_site){
 
 void MicrotubuleManagement::RunDiffusion(){
 
+	int i_step = properties_->current_step_;
+	int i_tau = (int)(tau_/parameters_->delta_t);
 	int n_mts = parameters_->n_microtubules;
 	int n_half = n_mts/2;
 	// List of step directions for all MTs 

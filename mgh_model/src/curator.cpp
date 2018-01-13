@@ -71,28 +71,53 @@ void Curator::PrintMicrotubules(){
             if(mt->lattice_[i_site].occupied_ == false)
                 printf("=");
 			else if(mt->lattice_[i_site].xlink_ != nullptr)
-				if(mt->lattice_[i_site].xlink_->heads_active_ == 1)
-					printf("I");
+				if(mt->lattice_[i_site].xlink_->heads_active_ == 1){
+					if(mt->lattice_[i_site].xlink_->tethered_ == false)
+						printf("I");
+					else
+						printf("T");
+				}
 				else if(mt->lattice_[i_site].xlink_->heads_active_ == 2)
-					printf("X");
+					if(mt->lattice_[i_site].xlink_->tethered_ == false){
+//						printf("X");			
+						printf("%i", mt->lattice_[i_site].xlink_->extension_);
+					}	
+					else
+						printf("C");
 				else{
-					printf("no sunny. look in wallace's print\n"); //wow i am so sorry
+					printf("no sunny. look in wallace's print\n");
 					exit(1);
 				}
             else if(mt->lattice_[i_site].motor_ != nullptr){
-				int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
-				int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;
-				if(i_front > i_rear){
-					if(i_site == i_rear)
-						printf("(");
-					if(i_site == i_front)
-						printf(")");
+			    int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
+			    int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;
+			    if(i_front > i_rear){
+					if(i_site == i_rear){
+						if(mt->lattice_[i_site].motor_->tethered_ == false)
+							printf("(");
+						else
+							printf("[");
+					}
+					if(i_site == i_front){
+						if(mt->lattice_[i_site].motor_->tethered_ == false)
+							printf(")");
+						else
+							printf("]");
+					}
 				} 
 				if(i_front < i_rear){
-					if(i_site == i_front)
-						printf("(");
-					if(i_site == i_rear)
-						printf(")");
+					if(i_site == i_front){	
+						if(mt->lattice_[i_site].motor_->tethered_ == false)
+							printf("(");
+						else
+							printf("[");
+					}
+					if(i_site == i_rear){
+						if(mt->lattice_[i_site].motor_->tethered_ == false)
+							printf(")");
+						else
+							printf("]");
+					}
 				}
            	}
         }
@@ -113,11 +138,14 @@ void Curator::OutputData(){
 	FILE *occupancy_file = properties_->occupancy_file_;
 	FILE *motor_ID_file = properties_->motor_ID_file_;
 	FILE *xlink_ID_file = properties_->xlink_ID_file_;
+	FILE *MT_coord_file = properties_->MT_coord_file_;
 	int n_mts = parameters_->n_microtubules;
 	int mt_length = parameters_->length_of_microtubule;
+	int MT_coord_array[n_mts];
+	int *MT_coord_ptr = MT_coord_array;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
-		int occupancy_array[mt_length], 
+		int occupancy_array[mt_length],
 			motor_ID_array[mt_length],
 			xlink_ID_array[mt_length];
 		int *occupancy_ptr = occupancy_array, 
@@ -147,11 +175,14 @@ void Curator::OutputData(){
 				xlink_ID_array[i_site] = -1;
 			}
 		}
+		MT_coord_array[i_mt] = mt->coord_; 
 		// Write the data to respective files one microtubule at a time
 		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
 		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
-		fwrite(xlink_ID_array, sizeof(int), mt_length, xlink_ID_file);
+		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
 	}	
+	// Write the coord of each MT one timestep at a time
+	fwrite(MT_coord_ptr, sizeof(int), n_mts, MT_coord_file);
 }
 
 void Curator::UpdateTimestep(int i_step){
@@ -160,7 +191,7 @@ void Curator::UpdateTimestep(int i_step){
 	// Give updates on equilibrium process (every 10%)
 	if(i_step < data_threshold_ && i_step%equil_milestone_ == 0){
 		printf("Equilibration is %i percent complete (step number %i)\n", 
-							  (int)(i_step/equil_milestone_)*10, i_step);
+		(int)(i_step/equil_milestone_)*10, i_step);
 	}
 	// Start data collection at appropriate step threshold
 	else if(i_step >= data_threshold_){
@@ -170,8 +201,8 @@ void Curator::UpdateTimestep(int i_step){
 			OutputData();
 		}
 		if(delta%data_milestone_ == 0){
-			printf("Data collection is %i percent complete (step number %i)\n",
-					    		      (int)(delta/data_milestone_)*10, i_step);
+			printf("Data collection is %i percent complete (step # %i)\n",
+					(int)(delta/data_milestone_)*10, i_step);
 		}
 		else if(delta == range_of_data_ - 1){
 			printf("Done!");
@@ -200,6 +231,7 @@ void Curator::OutputSimDuration(){
 void Curator::CleanUp(){
 
 	fclose(properties_->occupancy_file_);
+	fclose(properties_->MT_coord_file_);
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);
 }

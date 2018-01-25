@@ -40,17 +40,17 @@ int main(int argc, char *argv[]){
 	properties.prc1.Initialize(&parameters, &properties);
 
 	// Temporary way of starting MTs with an offset (in sites)
-	properties.microtubules.mt_list_[1].coord_ = 5;
+	properties.microtubules.mt_list_[1].coord_ = 10;
 
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
 		properties.wallace.UpdateTimestep(i_step);
-//		properties.kinesin4.RunKMC();
+		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
 //		properties.microtubules.RunDiffusion();
 //		properties.kinesin4.RunDiffusion();
-		properties.prc1.RunDiffusion();
-		properties.wallace.PrintMicrotubules(0.1);
+//		properties.prc1.RunDiffusion();
+//		properties.wallace.PrintMicrotubules(0.0001);
 	}
 	properties.wallace.OutputSimDuration();
 	properties.wallace.CleanUp();

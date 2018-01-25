@@ -248,7 +248,7 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 		return site;
 	}
 	else{
-		printf("Error: GetUnoccupiedSite() called, but no unoccupied sites\n");
+		printf("Error: GetUnoccupiedSite called, but no unoccupied sites\n");
 		exit(1);
 	}
 }

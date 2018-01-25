@@ -17,9 +17,9 @@ class Kinesin{
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
 
-		double x_dist_doubled_ = 0;	// in no. of sites; can only be 0 or pos. 
-		double rest_dist_ = 14.5;	// x_dist at which spring extension is ~0
+		int x_dist_doubled_ = 0;	// in no. of sites 
 		int dist_cutoff_ = 18;	// max value x_dist_ can reach
+		double rest_dist_ = 15;	// spring extension is ~0 for this
 
 		double kbT_ = 4.114; 		// in pN * nm
 		double site_size_ = 8;		// tubulin dimer size in nm
@@ -57,15 +57,16 @@ class Kinesin{
 		void PopulateTetheringLookupTable();
 		void PopulateBindingLookupTable();
 
-		void UpdateNeighborXLinks();
+		void UpdateNeighborXlinks();
 		bool NeighborXlinkExists(int x_dist_doubled);
 		void UpdateNeighborSites();
 		bool NeighborSiteExists(int x_dist_doubled); 
 
 		void UpdateExtension();
-		void ForceUntether();
+		void ForceUntether(int x_dub_pre);
 
-		double GetStalkCoordinate(); // Stalk is where tail originates from
+		int SampleTailExtensionDoubled();
+		double GetStalkCoordinate(); // tail originates from stalk
 		double GetTetheringWeight(AssociatedProtein *xlink);
 		double GetBindingWeight(Tubulin *site);
 		Tubulin* GetActiveHeadSite();

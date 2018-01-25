@@ -73,56 +73,93 @@ void Curator::PrintMicrotubules(){
 			else if(mt->lattice_[i_site].xlink_ != nullptr)
 				if(mt->lattice_[i_site].xlink_->heads_active_ == 1){
 					if(mt->lattice_[i_site].xlink_->tethered_ == false)
-						printf("I");
+						printf("i");
 					else
-						printf("T");
+						printf("I");
 				}
 				else if(mt->lattice_[i_site].xlink_->heads_active_ == 2)
 					if(mt->lattice_[i_site].xlink_->tethered_ == false){
-//						printf("X");			
-						printf("%i", mt->lattice_[i_site].xlink_->extension_);
+						printf("x");			
+//						printf("%i", mt->lattice_[i_site].xlink_->x_dist_);
 					}	
 					else
-						printf("C");
+						printf("X");
 				else{
 					printf("no sunny. look in wallace's print\n");
 					exit(1);
 				}
-            else if(mt->lattice_[i_site].motor_ != nullptr){
-			    int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
-			    int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;
-			    if(i_front > i_rear){
-					if(i_site == i_rear){
-						if(mt->lattice_[i_site].motor_->tethered_ == false)
-							printf("(");
-						else
-							printf("[");
-					}
-					if(i_site == i_front){
-						if(mt->lattice_[i_site].motor_->tethered_ == false)
-							printf(")");
-						else
-							printf("]");
-					}
-				} 
-				if(i_front < i_rear){
-					if(i_site == i_front){	
-						if(mt->lattice_[i_site].motor_->tethered_ == false)
-							printf("(");
-						else
-							printf("[");
-					}
-					if(i_site == i_rear){
-						if(mt->lattice_[i_site].motor_->tethered_ == false)
-							printf(")");
-						else
-							printf("]");
+			else if(mt->lattice_[i_site].motor_ != nullptr){
+				if(mt->lattice_[i_site].motor_->heads_active_ == 1){
+					if(mt->lattice_[i_site].motor_->tethered_ == false)
+						printf("m");
+					else
+						printf("M");
+				}
+				else if(mt->lattice_[i_site].motor_->heads_active_ == 2){
+					int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
+					int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;
+					if(i_front > i_rear){
+						if(i_site == i_rear){
+							if(mt->lattice_[i_site].motor_->tethered_ == false)
+								printf("(");
+							else
+								printf("[");
+						}
+						if(i_site == i_front){
+							if(mt->lattice_[i_site].motor_->tethered_ == false)
+								printf(")");
+							else
+								printf("]");
+						}
+					} 
+					if(i_front < i_rear){
+						if(i_site == i_front){	
+							if(mt->lattice_[i_site].motor_->tethered_ == false)
+								printf("(");
+							else
+								printf("[");
+						}
+						if(i_site == i_rear){
+							if(mt->lattice_[i_site].motor_->tethered_ == false)
+								printf(")");
+							else
+								printf("]");
+						}
 					}
 				}
-           	}
-        }
+			}
+		}
 		printf(" %i\n", mt->polarity_);
-    }   
+	}   
+/*	int mt1_coord = properties_->microtubules.mt_list_[0].coord_;
+	int mt2_coord = properties_->microtubules.mt_list_[1].coord_;
+	int greater_coord = 0;
+	if(mt1_coord > mt2_coord)
+		greater_coord = mt1_coord;
+	else
+		greater_coord = mt2_coord;
+	int extra_digits = 0;
+	for(int i_site = 0; i_site < mt_length + greater_coord; i_site++){
+		if(extra_digits > 0)
+			extra_digits--;
+		else if(i_site%5 == 0){
+			printf("%i", i_site);
+			if(i_site < 10)
+				extra_digits = 0;
+			else if(i_site < 100)
+				extra_digits = 1;
+			else if(i_site < 1000)
+				extra_digits = 2;
+			else if(i_site < 10000)
+				extra_digits = 3;
+			else
+				printf("what the fuck are u doing bro. why do you need more than 10,000 sites??\n");
+		}
+		else if(i_site == (mt_length + greater_coord) - 1)
+			printf("%i", i_site);
+		else
+			printf(" ");
+	}*/
 	printf("\n");
 }
 
@@ -146,8 +183,8 @@ void Curator::OutputData(){
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		int occupancy_array[mt_length],
-			motor_ID_array[mt_length],
-			xlink_ID_array[mt_length];
+		motor_ID_array[mt_length],
+		xlink_ID_array[mt_length];
 		int *occupancy_ptr = occupancy_array, 
 			*motor_ID_ptr = motor_ID_array, 
 			*xlink_ID_ptr = xlink_ID_array;

@@ -36,14 +36,15 @@ void AssociatedProtein::UpdateNeighborSites(){
 	int i_site = site->index_;
 	Microtubule *mt = site->mt_;
 	Microtubule *adj_mt = mt->neighbor_;
-	int offset = adj_mt->coord_ - mt->coord_;
+	int site_coord = mt->coord_ + i_site; 
 	// Scan through all potential neighbor sites; only add unoccupied to list 
 	int i_entry = 0;
-	for(int distance = -dist_cutoff_; distance <= dist_cutoff_; distance++){
-		int i_neighbor = i_site + distance - offset;
+//	printf("for %i: ", i_site);
+	for(int dist = -dist_cutoff_; dist <= dist_cutoff_; dist++){
+		int i_neighbor = (site_coord - adj_mt->coord_) + dist;
 		// Start index at first bulk site (1) if i_neighbor is 0 or  negative
 		if(i_neighbor <= 0){
-			distance -= i_neighbor;
+			dist -= i_neighbor - 1;
 		}
 		// End scan once last bulk site (mt_length - 2) has been checked
 		else if(i_neighbor >= mt_length - 1){
@@ -52,14 +53,14 @@ void AssociatedProtein::UpdateNeighborSites(){
 		else{
 			Tubulin *neighbor = &adj_mt->lattice_[i_neighbor];
 			if(neighbor->occupied_ == false){
-//				printf("site: %i, neighb: %i   ", i_site, i_neighbor);
-//				printf("boop %i\n", i_entry);
+//				printf("%i ", i_neighbor);
 				n_neighbor_sites_++;
 				neighbor_sites_[i_entry] = neighbor;
 				i_entry++;
 			}
 		}
 	}
+//	printf("\n");
 }
 
 bool AssociatedProtein::NeighborExists(int x_dist){
@@ -73,11 +74,33 @@ bool AssociatedProtein::NeighborExists(int x_dist){
 
 void AssociatedProtein::UpdateExtension(){
 
-	double r_y = 35;		// static as of now
-	double r_x = site_size_*x_dist_;
-	double r = sqrt(r_y*r_y + r_x*r_x);
-	double extension = r - r_0_; 
-	extension_ = extension;
+	if(heads_active_ == 2){
+		// Calculate first head's coordinate
+		int i_head_one = site_one_->index_;
+		int mt_coord_one = site_one_->mt_->coord_;
+		int coord_one = mt_coord_one + i_head_one;
+		// Calculate second head's coordinate
+		int i_head_two = site_two_->index_;
+		int mt_coord_two = site_two_->mt_->coord_;
+		int coord_two = mt_coord_two + i_head_two;
+		// Calculate x_distance in # of sites
+		int x_dist = abs(coord_one - coord_two);	
+		if(x_dist <= dist_cutoff_){
+			x_dist_ = x_dist; 
+			double r_y = 35;					// static as of now
+			double r_x = site_size_*x_dist_;
+			double r = sqrt(r_y*r_y + r_x*r_x);
+			double extension = r - r_0_; 
+			extension_ = extension;
+		}
+		else{
+			ForceUnbind();
+		}
+	}
+	else if(heads_active_ == 1){
+		x_dist_ = 0;
+		extension_ = 0;
+	}
 }
 
 void AssociatedProtein::ForceUnbind(){
@@ -86,9 +109,12 @@ void AssociatedProtein::ForceUnbind(){
 	if(ran < 0.5){
 		// Remove xlink head from site
 		site_one_->xlink_ = nullptr;
-	   	site_one_->occupied_ = false;
+		site_one_->occupied_ = false;
 		// Update xlink details
 		site_one_ = nullptr;
+		heads_active_--;
+		x_dist_ = 0;
+		extension_ = 0; 
 	}
 	else{
 		// Remove xlink head from site
@@ -96,9 +122,10 @@ void AssociatedProtein::ForceUnbind(){
 		site_two_->occupied_ = false;
 		// Update xlink details	
 		site_two_ = nullptr;	
+		heads_active_--;
+		x_dist_ = 0;
+		extension_ = 0;
 	}
-	extension_ = 0;
-	heads_active_--;
 }
 
 double AssociatedProtein::GetAnchorCoordinate(){
@@ -167,14 +194,16 @@ Tubulin* AssociatedProtein::GetActiveHeadSite(){
 Tubulin* AssociatedProtein::GetNeighborSite(int x_dist){
 	
 	Tubulin *bound_site = GetActiveHeadSite();
+	Microtubule *mt = bound_site->mt_;
 	for(int i_entry = 0; i_entry < n_neighbor_sites_; i_entry++){
-		Tubulin *neighbor_site = neighbor_sites_[i_entry];
-		int offset = neighbor_site->mt_->coord_ - bound_site->mt_->coord_;
-		int i_site = bound_site->index_;
-		int i_neighb = neighbor_site->index_;
-		int neighb_dist = abs(i_neighb - i_site + offset);
-		if(neighb_dist == x_dist)
-			return neighbor_site;
+		Tubulin *neighb_site = neighbor_sites_[i_entry];
+		Microtubule *neighb_mt = neighb_site->mt_;
+		int neighb_coord = neighb_mt->coord_ + neighb_site->index_;
+		int site_coord = mt->coord_ + bound_site->index_;
+		int neighb_dist = abs(neighb_coord - site_coord);
+		if(neighb_dist == x_dist){
+			return neighb_site;
+		}
 	}
 	return nullptr; 
 }

@@ -1,6 +1,5 @@
 #ifndef _RNG_MANAGEMENT_H
 #define _RNG_MANAGEMENT_H
-
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 
@@ -10,6 +9,7 @@ class RandomNumberManagement{
 	public:
 		const gsl_rng_type *generator_type_;
 		gsl_rng *rng;		
+		
 	private:
 	
 	public:

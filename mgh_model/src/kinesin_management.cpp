@@ -36,37 +36,93 @@ void KinesinManagement::SetParameters(){
     double switch_rate = parameters_->switch_rate;
     double motor_speed = parameters_->motor_speed;
     double delta_t = parameters_->delta_t;
-    p_bind_i_free_ = k_on*c_motor*delta_t;
-    p_bind_i_tethered_ = p_bind_i_free_ * 4;
+	// Statistics for diffusion
+	p_diffuse_fwd_untethered_ = 0.5 * delta_t / tau_;
+	p_diffuse_bck_untethered_ = 0.5 * delta_t / tau_; 
+	// Generate stepping rates based on extension of tether: rates are 
+	// increased if stepping towards rest length, and reduced if stepping
+	// away from it and increasing tether extension as a result
+	dist_cutoff_ = (int) motor_list_[0].dist_cutoff_;
+	p_diffuse_to_tether_.resize(2*dist_cutoff_ + 1);
+	p_diffuse_from_tether_.resize(2*dist_cutoff_ + 1);
+	double site_size = motor_list_[0].site_size_;
+	double r_0 = motor_list_[0].r_0_;
+	double kbT = motor_list_[0].kbT_;
+	double k_spring = motor_list_[0].k_spring_;
+	double k_eff_slack = motor_list_[0].k_eff_slack_;
+	double r_y = 17.5;		// in nm; from MT to midpoint of prc1
+	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
+		// Calculate tether length for this x_dist as well as +/- 1 it
+		double r_x = x_dist_dub * site_size / 2;
+		double r_x_fwd = (x_dist_dub + 1) *  site_size / 2;
+		double r_x_bck = (x_dist_dub - 1) * site_size / 2;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double r_fwd = sqrt(r_y*r_y + r_x_fwd*r_x_fwd);
+		double r_bck = sqrt(r_y*r_y + r_x_bck*r_x_bck);
+		// Calculate extension of tether for given x_dist_dub
+		double dr = r - r_0; 
+		// Calculate extension if motor diffuses toward xlink
+		double dr_toward = r_bck - r_0;
+		// Calculate extension if motor diffuses away from xlink
+		double dr_from = r_fwd - r_0;
+		// use k_spring if extension is positive
+		if(dr >= 0){
+			// Get the corresponding changes in potential energy
+			double dU_to = (k_spring/2)*(dr_toward*dr_toward - dr*dr);
+			double dU_from = (k_spring/2)*(dr_from*dr_from - dr*dr);
+			// Weights according to Lanksy et al. 
+			double weight_towards = exp(-dU_to/(2*kbT));
+			double weight_away = exp(-dU_from/(2*kbT));
+			double p_to = weight_towards * 0.5 * delta_t / tau_;
+			double p_from = weight_away * 0.5 * delta_t / tau_;
+			p_diffuse_to_tether_[x_dist_dub] = p_to;
+			if(x_dist_dub < 2*dist_cutoff_)
+				p_diffuse_from_tether_[x_dist_dub] = p_from;
+			else
+				p_diffuse_from_tether_[x_dist_dub] = 0;
+		}
+		// otherwise, use k_eff to model 'slack' in the tether
+		else{
+			// Get the corresponding changes in potential energy
+			double dU_to = (k_eff_slack/2)*(dr_toward*dr_toward - dr*dr);
+			double dU_from = (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
+			// Weights according to Lanksy et al.
+			double weight_towards = exp(-dU_to/(2*kbT));
+			double weight_away = exp(-dU_from/(2*kbT));
+			double p_to = weight_towards * 0.5 * delta_t / tau_;
+			double p_from = weight_away * 0.5 * delta_t / tau_;
+			p_diffuse_from_tether_[x_dist_dub] = p_from;
+			p_diffuse_to_tether_[x_dist_dub] = p_to;
+		}
+	}
+	// Statistics for KMC
+	p_bind_i_free_ = k_on*c_motor*delta_t;
+	p_bind_i_tethered_ = p_bind_i_free_ * 4;
 	p_bind_ii_ = 0.05; 				// FIXME should be like ~ tau/delta_t
-    p_unbind_untethered_ = k_off * delta_t;
+	p_unbind_untethered_ = k_off * delta_t;
 	p_unbind_tethered_ = p_unbind_untethered_ / 2; 
 	p_unbind_pseudo_ = 0.005;		// FIXME
-    p_tether_free_ = p_bind_i_free_;  				//FIXME
+	p_tether_free_ = p_bind_i_free_;  	
 	p_untether_free_ = p_unbind_untethered_ / 2;
 	p_step_untethered_ = motor_speed*delta_t;
 	p_switch_ = switch_rate*delta_t;
-   	// Generate untethering and stepping rates for all tether extensions	
+	// Generate untethering and stepping rates for all tether extensions	
 	// Everything is 2*dist_cutoff to allow for half-integer distances, 
 	// so the 3rd entry will correspond to a distance of 1.5, etc. 
-	dist_cutoff_ = (int) motor_list_[0].dist_cutoff_;
 	p_untether_bound_.resize(2*dist_cutoff_ + 1);
 	p_step_tethered_.resize(2*dist_cutoff_ + 1);
+	double stall_force = motor_list_[0].stall_force_;		// in pN
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
-		double site_size = motor_list_[0].site_size_;
-		double r_0 = motor_list_[0].r_0_;
-		double kbT = motor_list_[0].kbT_;
-		double k_spring = motor_list_[0].k_spring_;
 		double r_x = x_dist_dub*site_size/2;
-		double r_y = 17.5;		// in nm; from MT to midpoint of prc1
 		double r = sqrt(r_y*r_y + r_x*r_x);
 		double dr = r - r_0;
-		double stall_force = 5; 	// in pN
 		// If extension is positive, treat tether like a spring
 		if(dr >= 0){
-			// Untether probability is same as xlink unbinding
-			double k_untether = exp(dr*dr*k_spring/(2*kbT));
-			p_untether_bound_[x_dist_dub] = k_untether*delta_t;
+			// Calculate spring potential energy (PE) for this x_dist
+			double U_teth = (k_spring/2)*dr*dr;
+			// Get untethering weight for this PE
+			double unteth_weight = exp(U_teth/(2*kbT));
+			p_untether_bound_[x_dist_dub] = p_untether_free_*unteth_weight;
 			// Stepping probability has force-dependent relation
 			double force = dr*k_spring;
 			if(force < stall_force){
@@ -79,15 +135,25 @@ void KinesinManagement::SetParameters(){
 				p_step_tethered_[x_dist_dub] = 0;
 			}
 		}
+		// Otherwise, use k_eff for slack
 		else{
-			p_untether_bound_[x_dist_dub] = p_untether_free_;
-			p_step_tethered_[x_dist_dub] = p_step_untethered_;
+			double U_teth = (k_eff_slack/2)*dr*dr;
+			double unteth_weight = exp(U_teth/(2*kbT));
+			p_untether_bound_[x_dist_dub] = p_untether_free_*unteth_weight;
+			double force = dr*k_eff_slack;
+			if(force < stall_force){
+				double cosine = r_x/r;
+				double coeff = 1 - cosine*(force/stall_force);
+				p_step_tethered_[x_dist_dub] = coeff*p_step_untethered_;
+			}
+			else{
+				p_step_tethered_[x_dist_dub] = 0;
+			}
 		}
 	}
-    alpha_ = parameters_->alpha;
-    beta_ = parameters_->beta;
+	alpha_ = parameters_->alpha;
+	beta_ = parameters_->beta;
 }
-
 void KinesinManagement::InitiateLists(){
 
 	// One dimensional stuff
@@ -221,6 +287,7 @@ void KinesinManagement::UpdateEligiblePseudoList(){
 	}
 }
 
+/*
 void KinesinManagement::UpdateBoundList(){
 	
 	int i_entry = 0;
@@ -239,6 +306,7 @@ void KinesinManagement::UpdateBoundList(){
 		exit(1);
 	}
 }
+*/
 
 void KinesinManagement::UpdateBoundUntetheredList(){
 
@@ -404,30 +472,6 @@ void KinesinManagement::UpdateStepableUntetheredList(){
 	}
 }
 
-void KinesinManagement::UpdateExtensions(){
-
-	for(int i_motor = 0; i_motor < n_motors_; i_motor++){
-		Kinesin *motor = &motor_list_[i_motor];
-		if(motor->heads_active_ == 2
-		&& motor->tethered_ == true){
-//			int x_dub_pre = motor->x_dist_doubled_;
-			motor->UpdateExtension();
-/*			int x_dub_post = motor->x_dist_doubled_;
-			// If an untethering event is forced, update statistics
-			if(motor->tethered_ == false){
-				n_bound_untethered_++;
-				n_bound_tethered_tot_--; 
-			}
-			// Update statistics if x distance has changed
-			else if(x_dub_pre != x_dub_post){
-				n_bound_tethered_[x_dub_pre]--;
-				n_bound_tethered_[x_dub_post]++;
-				printf("\nheyooooooooooooooooooooooooooo\n");
-			}*/
-		}
-	}
-}
-
 Kinesin* KinesinManagement::GetFreeMotor(){
 
 	// Randomly pick a motor from the reservoir
@@ -450,81 +494,265 @@ Kinesin* KinesinManagement::GetFreeMotor(){
 	return motor;
 }
 
-void KinesinManagement::RunDiffusion(){
+void KinesinManagement::GenerateDiffusionList(){
 
-	// XXX divide probabiity by tau instead
-	int i_step = properties_->current_step_;
-	// FIXME currently only valid for delta_t = 0.0005 FIXME
-	int i_tau_bound = 12;
-	if(i_step % i_tau_bound == 0){
-		RunDiffusion_Bound();
+	int n_events = 0; 
+	// Untethered statistics
+	UpdateBoundUntetheredList();
+	int n_fwd_unteth = GetNumToStepForward_Unteth();
+	int n_bck_unteth = GetNumToStepBackward_Unteth();
+	while(n_fwd_unteth + n_bck_unteth > n_bound_untethered_){
+		double ran = properties_->gsl.GetRanProb();
+		if(ran < 0.5)
+			n_fwd_unteth--;
+		else
+			n_bck_unteth--;
 	}
-	UpdateExtensions();	
+	n_events += n_fwd_unteth;
+	n_events += n_bck_unteth;
+	// Tethered statistics
+	UpdateBoundTetheredTable();
+	int n_toward_rest[2*dist_cutoff_ + 1];
+	int n_from_rest[2*dist_cutoff_ + 1];
+	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
+		n_toward_rest[x_dist_dub] = GetNumToStepTowardRest(x_dist_dub);
+		n_from_rest[x_dist_dub] = GetNumToStepFromRest(x_dist_dub);
+		int n_to = n_toward_rest[x_dist_dub];
+		int n_from = n_from_rest[x_dist_dub];
+		int n_tethered = n_bound_tethered_[x_dist_dub];
+		while(n_to + n_from > n_tethered){
+			double ran = properties_->gsl.GetRanProb();
+			double p_to = p_diffuse_to_tether_[x_dist_dub];
+			double p_from = p_diffuse_from_tether_[x_dist_dub];
+			double tot_prob = p_to + p_from;  // XXX is this correct? XXX
+			if(ran < p_to/tot_prob){
+				n_toward_rest[x_dist_dub]--;
+				n_to = n_toward_rest[x_dist_dub];
+			}
+			else{
+				n_from_rest[x_dist_dub]--;
+				n_to = n_from_rest[x_dist_dub];
+			}
+		}
+		n_events += n_toward_rest[x_dist_dub];
+		n_events += n_from_rest[x_dist_dub];
+	}
+	// Only generate list if we have more than zero diffusion events
+	if(n_events > 0){
+		int pre_list[n_events];
+		int diff_index = 0;
+		for(int i_event = 0; i_event < n_fwd_unteth; i_event++){
+			pre_list[diff_index] = 10;
+			diff_index++;
+		}
+		for(int i_event = 0; i_event < n_bck_unteth; i_event++){
+			pre_list[diff_index] = 20;
+			diff_index++;
+		}
+		for(int x_dist_dub = 0; x_dist_dub < 2*dist_cutoff_; x_dist_dub++){
+			int n_step_to = n_toward_rest[x_dist_dub];
+			for(int i_event = 0; i_event < n_step_to; i_event++){
+				pre_list[diff_index] = 300 + x_dist_dub;
+				diff_index++;
+			}
+			int n_step_from = n_from_rest[x_dist_dub];
+			for(int i_event = 0; i_event < n_step_from; i_event++){
+				pre_list[diff_index] = 400 + x_dist_dub;
+				diff_index++;
+			}
+		}
+		RandomNumberManagement *gsl = &properties_->gsl;
+		gsl_ran_shuffle(gsl->rng, pre_list, n_events, sizeof(int));
+		diffusion_list_.resize(n_events);
+		for(int i_event = 0; i_event < n_events; i_event++){
+			diffusion_list_[i_event] = pre_list[i_event];
+		}
+	}
+	else
+		diffusion_list_.clear();
 }
 
-void KinesinManagement::RunDiffusion_Bound(){
+int KinesinManagement::GetNumToStepForward_Unteth(){
 
-    UpdateBoundList();
-	// XXX diffusion should also be extension-dependent 
-    int mt_length = parameters_->length_of_microtubule;
-    // List of step directions for all motors (will be shuffled)
-    int step_dir [n_bound_];
-    if(n_bound_ > 1){
-        int n_half = (int) (n_bound_/2);
-        // First half steps backwards
-        for(int i = 0; i < n_half; i++){
-            step_dir[i] = -1;
-        }
-        // Second half steps forwards
-        for(int i = n_half; i < n_bound_; i++){
-            step_dir[i] = 1;
-        }
-        gsl_ran_shuffle(properties_->gsl.rng, step_dir, n_bound_, sizeof(int));
-    }
-	else if(n_bound_ > 0){
-		double ran = properties_->gsl.GetRanProb();
-		if(ran > 0.5)
-			step_dir[0] = 1;
-		else
-			step_dir[0] = -1;
+	int n_bound = n_bound_untethered_;
+	double p_step = p_diffuse_fwd_untethered_;
+	double n_step_avg = n_bound * p_step;
+	int n_to_step = properties_->gsl.SamplePoissonDist(n_step_avg);
+	return n_to_step;
+}
+
+int KinesinManagement::GetNumToStepBackward_Unteth(){
+
+	int n_bound = n_bound_untethered_;
+	double p_step = p_diffuse_bck_untethered_;
+	double n_step_avg = n_bound * p_step;
+	int n_to_step = properties_->gsl.SamplePoissonDist(n_step_avg);
+	return n_to_step;
+}
+
+int KinesinManagement::GetNumToStepTowardRest(int x_dist_doubled){
+
+	int n_bound = n_bound_tethered_[x_dist_doubled];
+	double p_step = p_diffuse_to_tether_[x_dist_doubled];
+	double n_step_avg = n_bound * p_step;
+	int n_to_step = properties_->gsl.SamplePoissonDist(n_step_avg);
+	return n_to_step;
+}
+
+int KinesinManagement::GetNumToStepFromRest(int x_dist_doubled){
+
+	int n_bound = n_bound_tethered_[x_dist_doubled];
+	double p_step = p_diffuse_from_tether_[x_dist_doubled];
+	double n_step_avg = n_bound * p_step;
+	int n_to_step = properties_->gsl.SamplePoissonDist(n_step_avg);
+	return n_to_step;
+}
+
+void KinesinManagement::RunDiffusion(){
+
+	GenerateDiffusionList();
+	if(diffusion_list_.empty() == false){
+		int n_events = diffusion_list_.size();
+		int x_dist_dub = 0;
+		for(int i_event = 0; i_event < n_events; i_event++){
+			int diff_event = diffusion_list_[i_event];
+			if(diff_event >= 300 && diff_event < 400){
+				x_dist_dub = diff_event	% 100;
+				diff_event = 30;
+			}
+			if(diff_event >= 400 && diff_event < 500){
+				x_dist_dub = diff_event % 100;
+				diff_event = 40;
+			}
+			switch(diff_event){
+				case 10:
+					printf("unteth step fwd\n");
+					RunDiffusion_Forward_Untethered();
+					break;	
+				case 20:
+					printf("unteth step bck\n");
+					RunDiffusion_Backward_Untethered();
+					break;
+				case 30:
+					printf("teth step to\n");
+					RunDiffusion_Toward_Tether(x_dist_dub);
+					break;
+				case 40:
+					printf("teth step from\n");
+					RunDiffusion_From_Tether(x_dist_dub);
+					break;
+			}
+		}
 	}
-    // Run through bound_list and step all motors appropriately 
-    for(int i_motor = 0; i_motor < n_bound_; i_motor++){
-        Kinesin *motor = bound_list_[i_motor];
-        int dx = step_dir[i_motor];
-        int i_front = motor->front_site_->index_;
-        int i_rear = motor->rear_site_->index_;
-        // Don't let motors step off boundaries and into the void
-        if(!((i_front == 0 || i_rear == 0) && dx == -1)
-        && !((i_rear == mt_length - 1 || i_front == mt_length - 1) && dx == 1)){
-            Tubulin *old_front_site = motor->front_site_;
-            Tubulin *old_rear_site = motor->rear_site_;
-            if(dx == motor->mt_->delta_x_){
-                Tubulin *new_front_site = &motor->mt_->lattice_[i_front + dx];
-                Tubulin *new_rear_site = old_front_site;
-                if(new_front_site->occupied_ == false){
-                    old_rear_site->motor_ = nullptr;
-                    old_rear_site->occupied_ = false;
-                    new_front_site->motor_ = motor;
-                    new_front_site->occupied_ = true;
-                    motor->front_site_ = new_front_site;
-                    motor->rear_site_ = new_rear_site;
-                }
-            }
-            else{
-                Tubulin *new_front_site = old_rear_site;
-                Tubulin *new_rear_site = &motor->mt_->lattice_[i_rear + dx];
-                if(new_rear_site->occupied_ == false){
-                    old_front_site->motor_ = nullptr;
-                    old_front_site->occupied_ = false;
-                    new_rear_site->motor_ = motor;
-                    new_rear_site->occupied_ = true;
-                    motor->front_site_ = new_front_site;
-                    motor->rear_site_ = new_rear_site;
-                }
-            }
-        }
-    }
+}
+
+void KinesinManagement::RunDiffusion_Forward_Untethered(){
+
+	UpdateBoundUntetheredList();
+	int n_bound = n_bound_untethered_;
+	if(n_bound > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_bound);
+		Kinesin *motor = bound_untethered_list_[i_entry];
+		Microtubule *mt = motor->mt_;
+		int i_front = motor->front_site_->index_; 
+		int dx = mt->delta_x_;
+		int plus_end = mt->plus_end_;
+		if(i_front != plus_end){
+			if(mt->lattice_[i_front + dx].occupied_ == false){
+				// Get new sites
+				Tubulin *new_front = &mt->lattice_[i_front + dx];
+				Tubulin *new_rear = motor->front_site_;
+				Tubulin *old_rear = motor->rear_site_;
+				// Update new site
+				new_front->motor_ = motor;
+				new_front->occupied_ = true;
+				// Update old site
+				old_rear->motor_ = nullptr;
+				old_rear->occupied_ = false;
+				// Update motor
+				motor->front_site_ = new_front;
+				motor->rear_site_ = new_rear;
+
+			}
+			else{
+				printf("oh well fwd\n");
+			}
+		}
+		else{
+			printf("cant diffuse outta this one brotha\n");
+		}
+	}
+	else{
+		printf("ya blew it. we failed to step untethered motor fwd\n");
+		exit(1);
+	}
+
+}
+
+void KinesinManagement::RunDiffusion_Backward_Untethered(){
+
+	UpdateBoundUntetheredList();
+	int n_bound = n_bound_untethered_;
+	if(n_bound > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_bound);
+		Kinesin *motor = bound_untethered_list_[i_entry];
+		Microtubule *mt = motor->mt_;
+		int i_rear = motor->rear_site_->index_; 
+		int dx = mt->delta_x_;
+		int minus_end = mt->minus_end_;
+		if(i_rear != minus_end){
+			if(mt->lattice_[i_rear - dx].occupied_ == false){
+				// Get new sites
+				Tubulin *new_rear = &mt->lattice_[i_rear - dx];
+				Tubulin *new_front = motor->rear_site_;
+				Tubulin *old_front = motor->front_site_;
+				// Update new site
+				new_rear->motor_ = motor;
+				new_rear->occupied_ = true;
+				// Update old site
+				old_front->motor_ = nullptr;
+				old_front->occupied_ = false;
+				// Update motor
+				motor->front_site_ = new_front;
+				motor->rear_site_ = new_rear;
+
+			}
+			else{
+				printf("oh well bck\n");
+			}
+		}
+		else{
+			printf("cant diffuse outta this one brotha\n");
+		}
+
+	}
+	else{
+		printf("ya blew it. we failed to step untethered motor bck\n");
+		exit(1);
+	}
+}
+
+void KinesinManagement::RunDiffusion_Toward_Tether(int x_dist_doubled){
+	
+	UpdateBoundTetheredTable();
+	int n_bound = n_bound_tethered_[x_dist_doubled];
+	if(n_bound > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_bound);
+		Kinesin *motor = bound_tethered_table_[x_dist_doubled][i_entry];
+		Microtubule *mt = motor->mt_;
+		Tubulin *near_site = motor->GetSiteCloserToXlink();
+		Tubulin *far_site = motor->GetSiteFartherFromXlink();
+
+
+	}
+	else{
+		printf("ya blew it. we failed to step tethered motor towards\n");
+		exit(1);
+	}
+}
+
+void KinesinManagement::RunDiffusion_From_Tether(int x_dist_doubled){
+
 }
 
 void KinesinManagement::GenerateKMCList(){
@@ -691,7 +919,7 @@ void KinesinManagement::GenerateKMCList(){
 			for(int i_event = 0; i_event < n_unteth_b; i_event++){
 //				printf("n_events: %i, index: %i, 2x: %i\n", 
 //						n_events, kmc_index, x_dist_dub);
-				fflush(stdout);
+//				fflush(stdout);
 				pre_list[kmc_index] = 500 + x_dist_dub; 	
 				printf("%i\n", 500 + x_dist_dub);
 				kmc_index++;
@@ -847,11 +1075,11 @@ int KinesinManagement::GetNumToStep_Untethered(){
 
 void KinesinManagement::RunKMC(){
 
-	int x_dist_doubled = 0;
 //	printf(" *** START OF KMC CYCLE ***\n");
     GenerateKMCList();
     if(kmc_list_.empty() == false){
         int n_events = kmc_list_.size();
+		int x_dist_doubled = 0;
         for(int i_event = 0; i_event < n_events; i_event++){
             int kmc_event = kmc_list_[i_event];
 			if(kmc_event >= 500 && kmc_event < 600){
@@ -908,7 +1136,7 @@ void KinesinManagement::RunKMC(){
 						printf("motor switched\n");
 						fflush(stdout);
 						KMC_Switch();
-//						properties_->wallace.PrintMicrotubules(1.5);
+						properties_->wallace.PrintMicrotubules(1.5);
                         break;
 				case 50:
 						printf("free motor untethered\n");

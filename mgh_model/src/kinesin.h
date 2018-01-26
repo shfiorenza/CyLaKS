@@ -21,11 +21,13 @@ class Kinesin{
 		int dist_cutoff_ = 18;	// max value x_dist_ can reach
 		double rest_dist_ = 15;	// spring extension is ~0 for this
 
-		double kbT_ = 4.114; 		// in pN * nm
-		double site_size_ = 8;		// tubulin dimer size in nm
-		double r_0_ = 120;			// in nm
-		double k_spring_ = 0.3;		// in pN / nm
-		double extension_ = 0;		// in nm
+		double kbT_ = 4.114; 			// in pN * nm
+		double site_size_ = 8;			// tubulin dimer size in nm
+		double r_0_ = 120;				// in nm
+		double k_spring_ = 0.3;			// in pN / nm
+		double k_eff_slack_ = 0.02;		// for when tether is 'compressed'
+		double stall_force_ = 5;		// in pN
+		double extension_ = 0;			// in nm
 	
 		bool tethered_ = false;
 
@@ -66,10 +68,13 @@ class Kinesin{
 		void ForceUntether(int x_dub_pre);
 
 		int SampleTailExtensionDoubled();
+		int GetDirectionTowardXlink();
 		double GetStalkCoordinate(); // tail originates from stalk
 		double GetTetheringWeight(AssociatedProtein *xlink);
 		double GetBindingWeight(Tubulin *site);
 		Tubulin* GetActiveHeadSite();
+		Tubulin* GetSiteCloserToXlink();
+		Tubulin* GetSiteFartherFromXlink();
 		Tubulin* GetNeighborSite(int x_dist_doubled);
 		AssociatedProtein* GetNeighborXlink(int x_dist_doubled);
 };

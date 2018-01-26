@@ -25,11 +25,14 @@ class KinesinManagement{
 		int dist_cutoff_ = 18;			// see kinesin header
 		double rest_dist_ = 14.5; 		// see kinesin header
 
+		double p_diffuse_fwd_untethered_; 
+		double p_diffuse_bck_untethered_;
+		// Diffusing away FROM xlink means the extension increases, 
+		// whereas diffusing TO xlink means extension is decreasing
+		std::vector<double> p_diffuse_to_tether_;
+		std::vector<double> p_diffuse_from_tether_;
+
 		double tau_ = 0.006; 	// from weird paper on desktop (lol)
-		
-		double alpha_;			// Prob. to insert onto the minus end
-		double beta_;			// Prob. to remove from the plus end
-		double c_eff_ = 10; 	// Used in partition function for tethering
 		
 		double p_bind_i_free_;
 		double p_bind_i_tethered_;
@@ -47,6 +50,10 @@ class KinesinManagement{
 		std::vector<double> p_step_tethered_;		// One for each extension
 		double p_step_untethered_; 
 
+		double alpha_;			// Prob. to insert onto the minus end
+		double beta_;			// Prob. to remove from the plus end
+		double c_eff_ = 10; 	// Used in partition function for tethering
+		
 		std::vector<Kinesin> motor_list_; 
 		std::vector<Kinesin*> free_tethered_list_;
 		std::vector<Kinesin*> pseudo_bound_list_;		// Only 1 head bound
@@ -61,6 +68,7 @@ class KinesinManagement{
 		std::vector< std::vector<Kinesin*> > stepable_tethered_table_;
 		std::vector<Kinesin*> stepable_untethered_list_; 
 
+		std::vector<int> diffusion_list_;
 		std::vector<int> kmc_list_;
 
 		system_parameters *parameters_ = nullptr;
@@ -89,13 +97,20 @@ class KinesinManagement{
 		void UpdateSwitchableList();
 		void UpdateStepableTetheredTable();
 		void UpdateStepableUntetheredList();
-
-		void UpdateExtensions();
 		
 		Kinesin* GetFreeMotor();
 
+		void GenerateDiffusionList();
+		int GetNumToStepForward_Unteth();
+		int GetNumToStepBackward_Unteth();
+		int GetNumToStepTowardRest(int x_dist_doubled);
+		int GetNumToStepFromRest(int x_dist_doubled); 
+
 		void RunDiffusion();
-		void RunDiffusion_Bound();
+		void RunDiffusion_Forward_Untethered();
+		void RunDiffusion_Backward_Untethered();
+		void RunDiffusion_Toward_Tether(int x_dist_doubled);
+		void RunDiffusion_From_Tether(int x_dist_doubled);
 
 		void GenerateKMCList();
 		int GetNumToBind_I_Free();

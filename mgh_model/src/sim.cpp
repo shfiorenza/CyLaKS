@@ -46,9 +46,9 @@ int main(int argc, char *argv[]){
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
-		properties.prc1.RunKMC();
+//		properties.prc1.RunKMC();
 //		properties.microtubules.RunDiffusion();
-//		properties.kinesin4.RunDiffusion();
+		properties.kinesin4.RunDiffusion();
 //		properties.prc1.RunDiffusion();
 //		properties.wallace.PrintMicrotubules(0.0001);
 	}

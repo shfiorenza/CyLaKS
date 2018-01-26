@@ -37,13 +37,15 @@ void Kinesin::PopulateTetheringLookupTable(){
 		if(dr >= 0){
 			weight = exp(-dr*dr*k_spring_/(2*kbT_));
 		}
+		else
+			weight = exp(-dr*dr*k_eff_slack_/(2*kbT_));
 		// For compression, assume tail is floppy enough so that it just
 		// bends slightly and barely affects binding weight vs rest length
-		else if(dr >= (-r_0_/6)){
-			weight = 0.25;
+/*		else if(dr >= (-r_0_/6)){
+			weight = 0.80;
 		}	
 		else if(dr >= (-r_0_/3)){
-			weight = 0.20;
+			weight = 0.25;
 		}
 		else if(dr >= (-r_0_/2)){
 			weight = 0.15;
@@ -52,12 +54,13 @@ void Kinesin::PopulateTetheringLookupTable(){
 			weight = 0.10;
 		}
 		else if(dr >= (-5*r_0_/6)){
-			weight = 0.05;
-		}
-		else{
 			weight = 0.005;
 		}
+		else{
+			weight = 0.0;
+		}*/
 		tethering_weight_lookup_[i_dist] = weight;
+//		printf("TETH_ #%i_ r: %g, dr: %g, weight: %g\n", i_dist, r, dr, weight);
 	}
 }
 
@@ -77,7 +80,9 @@ void Kinesin::PopulateBindingLookupTable(){
 		}
 		// For compression, assume tail is floppy enough so that it just
 		// bends slightly and barely affects binding weight vs rest length
-		else if(dr >= (-r_0_/6)){
+		else
+			weight = exp(-dr*dr*k_eff_slack_/(2*kbT_));
+/*		else if(dr >= (-r_0_/6)){
 			weight = 0.5;
 		}	
 		else if(dr >= (-r_0_/3)){
@@ -94,9 +99,9 @@ void Kinesin::PopulateBindingLookupTable(){
 		}
 		else{
 			weight = 0.00005;
-		}
+		}*/
 		binding_weight_lookup_[i_dist] = weight;
-//		printf("#%i_ r: %g, dr: %g, weight: %g\n", i_dist, r, dr, weight);
+//		printf("BIND_ #%i_ r: %g, dr: %g, weight: %g\n", i_dist, r, dr, weight);
 	}
 }
 
@@ -250,6 +255,7 @@ void Kinesin::UpdateExtension(){
 
 void Kinesin::ForceUntether(int x_dub_pre){
 
+	// Update statistics
 	if(xlink_->heads_active_ == 1){
 		properties_->prc1.n_sites_single_untethered_++;
 		properties_->prc1.n_sites_single_tethered_--;
@@ -258,6 +264,11 @@ void Kinesin::ForceUntether(int x_dub_pre){
 		properties_->prc1.n_sites_double_untethered_ += 2;
 		properties_->prc1.n_sites_double_tethered_ -= 2;
 	}
+	properties_->kinesin4.n_bound_untethered_++;
+	properties_->kinesin4.n_bound_tethered_tot_--;
+	properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
+	properties_->prc1.n_untethered_++;
+	properties_->prc1.n_tethered_--;
 	// Update motor	
 	tethered_ = false;
 	x_dist_doubled_ = 0;
@@ -266,12 +277,6 @@ void Kinesin::ForceUntether(int x_dub_pre){
 	xlink_->motor_ = nullptr;
 	xlink_->tethered_ = false; 
 	xlink_ = nullptr;
-	// Update statistics
-	properties_->kinesin4.n_bound_untethered_++;
-	properties_->kinesin4.n_bound_tethered_tot_--;
-	properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
-	properties_->prc1.n_untethered_++;
-	properties_->prc1.n_tethered_--;
 }	
 
 int Kinesin::SampleTailExtensionDoubled(){
@@ -288,27 +293,58 @@ int Kinesin::SampleTailExtensionDoubled(){
 			ext_weight += tethering_weight_lookup_[x_dist_dub];
 	}
 	double tot_weight = ext_weight + slack_weight;
-	// Roll a random probability to determine which side of the profile we sample
+	// Roll to determine which side of the profile we sample
+	RandomNumberManagement* gsl = &properties_->gsl;
 	double ran = properties_->gsl.GetRanProb();
 	// Sample a normal distribution around rest length if we get extension
 	if(ran < ext_weight/tot_weight){
-		double sigma = ((double)dist_cutoff_)/3; 
-		int x_dist_dub = properties_->gsl.SampleNormalDist(sigma, rest_dist_dub);
+		double sigma = ((double)dist_cutoff_)/3;
+		int extension = gsl->SampleNormalDist(sigma);
+		int x_dist_dub = rest_dist_dub + extension;
 		if(x_dist_dub > 2*dist_cutoff_)
 			x_dist_dub = 2*dist_cutoff_;
 		return x_dist_dub; 
 	}
-	// Otherwise, select for 'slack' based on relative weights
+	// Otherwise, select for 'slack' based on different sigma
 	else{
-		double ran2 = properties_->gsl.GetRanProb();
+		double sigma = dist_cutoff_;
+		int compression = gsl->SampleNormalDist(sigma);
+		int x_dist_dub = rest_dist_dub - compression;
+		if(x_dist_dub < 1)
+			x_dist_dub = 1;
+		return x_dist_dub;
+
+	/*	double ran2 = properties_->gsl.GetRanProb();
 		double cum_weight = 0;
 		for(int x_dist_dub = 0; x_dist_dub < rest_dist_dub; x_dist_dub++){
 			cum_weight += tethering_weight_lookup_[x_dist_dub] / slack_weight;
 			if(cum_weight >= ran2)
 				return x_dist_dub; 
 		}
+	*/	
 	}
 
+}
+
+int Kinesin::GetDirectionTowardXlink(){
+
+	if(tethered_ == true
+	&& heads_active_ == 2){
+		double stalk_coord = GetStalkCoordinate();
+		double anchor_coord = xlink_->GetAnchorCoordinate();
+		if(stalk_coord > anchor_coord)
+			return -1;
+		else if(stalk_coord < anchor_coord)
+			return 1;
+		else{
+			printf("ummmm ... get dir xlink?? (motor)\n");
+			exit(1);
+		}
+	}
+	else{
+		printf("error in get dir. toward xlink\n");
+		exit(1);
+	}
 }
 
 double Kinesin::GetStalkCoordinate(){
@@ -370,6 +406,46 @@ Tubulin* Kinesin::GetActiveHeadSite(){
 	}
 	else{
 		printf("how am i supposed to find an ACTIVE KINESIN HEAD?!\n");
+		exit(1);
+	}
+}
+
+Tubulin* Kinesin::GetSiteCloserToXlink(){
+
+	if(tethered_ == true
+	&& heads_active_ == 2){
+		double anchor_coord = xlink_->GetAnchorCoordinate();
+		int site_one_coord = front_site_->index_ + mt_->coord_;
+		int site_two_coord = rear_site_->index_ + mt_->coord_;
+		double dist_one = abs(anchor_coord - site_one_coord);
+		double dist_two = abs(anchor_coord - site_two_coord);
+		if(dist_one < dist_two)
+			return front_site_;
+		else
+			return rear_site_;
+	}
+	else{
+		printf("Error in getting site closest to xlink (motor)\n");
+		exit(1);
+	}
+}
+
+Tubulin* Kinesin::GetSiteFartherFromXlink(){
+
+	if(tethered_ == true
+	&& heads_active_ == 2){
+		double anchor_coord = xlink_->GetAnchorCoordinate();
+		int site_one_coord = front_site_->index_ + mt_->coord_;
+		int site_two_coord = rear_site_->index_ + mt_->coord_;	
+		double dist_one = abs(anchor_coord - site_one_coord);
+		double dist_two = abs(anchor_coord - site_two_coord);
+		if(dist_one > dist_two)
+			return front_site_;
+		else
+			return rear_site_;
+	}
+	else{
+		printf("Error in getting site farthest xlink (motor)\n");
 		exit(1);
 	}
 }

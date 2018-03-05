@@ -19,9 +19,10 @@ class RandomNumberManagement{
 
 		int GetRanInt(int n);
 		double GetRanProb();
+		double GetGaussianNoise(double sigma);
 
 		int SampleNormalDist(double sigma);
-		int SampleNormalDist(double sigma, int center); 
+		int SampleAbsNormalDist(double sigma);
 		int SampleBinomialDist(double p, int n);
 		int SamplePoissonDist(double n_avg);
 };

@@ -15,7 +15,6 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 	GenerateMicrotubules();
 	UpdateNeighbors();
 	UpdateUnoccupiedList();
-	UpdateUnoccupiedPairsList();
 }
 
 void MicrotubuleManagement::SetParameters(){
@@ -23,7 +22,8 @@ void MicrotubuleManagement::SetParameters(){
 	int n_mts = parameters_->n_microtubules;
 	int mt_length = parameters_->length_of_microtubule;
 	n_sites_tot_ = n_mts*mt_length;
-	int n_sites_bulk = n_sites_tot_ - 2*n_mts;
+	// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
+	int n_sites_bulk = n_sites_tot_; // - 2*n_mts;
 	unoccupied_list_.resize(n_sites_bulk);
 	unoccupied_pairs_list_.resize(n_sites_bulk);
 }
@@ -93,8 +93,9 @@ void MicrotubuleManagement::UpdateNumUnoccupied(){
 	int mt_length = parameters_->length_of_microtubule;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
+		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
 		// Exclude boundary sites
-		for(int i_site = 1; i_site < mt_length - 1; i_site++){
+		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
 				n_unoccupied_++;
@@ -106,7 +107,7 @@ void MicrotubuleManagement::UpdateNumUnoccupied(){
 		}
 	}	
 	// Verify that statistics didn't go all wonky 
-	int n_sites_bulk = n_sites_tot_ - 2*n_mts;
+	int n_sites_bulk = n_sites_tot_; // - 2*n_mts;
 	if(n_unoccupied_ + n_occupied != n_sites_bulk){
 		printf("something wrong in update_n_unoccupied\n");
 		exit(1);
@@ -121,8 +122,9 @@ void MicrotubuleManagement::UpdateUnoccupiedList(){
 	int mt_length = parameters_->length_of_microtubule;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
+		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
 		// Exclude boundary sites
-		for(int i_site = 1; i_site < mt_length - 1; i_site++){
+		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
 				unoccupied_list_[i_unoccupied] = site;
@@ -133,106 +135,6 @@ void MicrotubuleManagement::UpdateUnoccupiedList(){
 	if(i_unoccupied != n_unoccupied_){
 		printf("something awful in update_unoccupied_list bruh:\n");
 		printf("  %i != %i\n", i_unoccupied, n_unoccupied_);
-		exit(1);
-	}
-}
-
-void MicrotubuleManagement::UpdateNumUnoccupiedPairs(){
-
-	n_unoccupied_pairs_ = 0;
-	int n_unoccupied_singles = 0;
-	int n_occupied_singles = 0;
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
-	bool pair_flag = false;
-//	printf("boing 1\n");
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-//		printf("boing 2\n");
-		Microtubule *mt = &mt_list_[i_mt];
-		// Exclude boundary sites as either member of a pair
-		for (int i_site = 1; i_site < mt_length - 1; i_site++){
-			Tubulin *site = &mt->lattice_[i_site];
-			// If site is unoccupied, check for an adjacent unoccupied site to pair it with
-			if(site->occupied_ == false){
-				// If pair_flag is active, pair this site with the site behind it
-				if(pair_flag == true){
-/*					if(properties_->current_step_ > 30000){
-						printf("CHURCH @ %i (%i)\n", i_site, properties_->current_step_);
-						properties_->wallace.PrintMicrotubules();
-					}
-*/					n_unoccupied_pairs_++;
-					pair_flag = false;
-				}
-				// If this site is the last one on the MT, do not attempt to pair it
-				else if(i_site == mt_length - 2){
-/*					if(properties_->current_step_ > 30000){
-						printf("the end @ %i (%i)\n", i_site, properties_->current_step_);
-						properties_->wallace.PrintMicrotubules();
-					}
-*/					n_unoccupied_singles++;
-				}
-				// Otherwise, activate pair_flag for the next site in the FOR loop
-				else{
-/*					if(properties_->current_step_ > 30000){
-						printf("chargin' @ %i (%i)\n", i_site, properties_->current_step_);
-						properties_->wallace.PrintMicrotubules();
-					}
-*/					pair_flag = true;	
-				}
-			}
-			// If this site is occupied, simply update pair_flag and related statistics
-			else if(site->occupied_ == true){
-				n_occupied_singles++;
-				if(pair_flag == true){
-					n_unoccupied_singles++;
-					pair_flag = false;
-				}
-			}
-		}
-	}
-	// Verify that statistics didn't go all wonky
-	int n_singles = n_occupied_singles + n_unoccupied_singles;
-	int n_sites_bulk = n_sites_tot_ - 2*n_mts;
-	if(n_singles + 2*n_unoccupied_pairs_ != n_sites_bulk){
-		printf("something terrible in update_num_unoccupied_pairs:\n");
-		printf("  %i + 2*%i != %i\n", n_singles, n_unoccupied_pairs_, n_sites_bulk);
-		exit(1);
-	}
-}
-
-void MicrotubuleManagement::UpdateUnoccupiedPairsList(){
-
-	UpdateNumUnoccupiedPairs();
-	n_pair_entries_ = 0;
-	int i_pair = 0;
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		Microtubule *mt = &mt_list_[i_mt];
-		// Exclude boundary sites as either member of a pair
-		for(int i_site = 1; i_site < mt_length - 2; i_site++){
-			Tubulin *first_site = &mt->lattice_[i_site];
-			if(first_site->occupied_ == false){
-				Tubulin *second_site = &mt->lattice_[i_site + 1];
-				if(second_site->occupied_ == false){
-					// Only store a pointer to the pair's rear-most site
-					if(i_mt%2 == 0){
-						unoccupied_pairs_list_[i_pair] = first_site;
-						i_pair++;
-						n_pair_entries_++;
-					}
-					else{
-						unoccupied_pairs_list_[i_pair] = second_site;
-						i_pair++;
-						n_pair_entries_++;
-					}
-				}
-			}
-		}
-	}
-	if(n_pair_entries_ > 2*n_unoccupied_pairs_){
-		printf("something awful in update_unoccupied_pairs_list bruh:\n");
-		printf("  %i > 2*%i\n", i_pair, n_unoccupied_pairs_);
 		exit(1);
 	}
 }
@@ -253,61 +155,143 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 	}
 }
 
-Tubulin* MicrotubuleManagement::GetUnoccupiedPair_1(){
-
-	// Make sure at least one pair of unoccupied sites exists
-	if(n_unoccupied_pairs_ > 0){
-		int i_entry = properties_->gsl.GetRanInt(n_pair_entries_);
-		Tubulin *site = unoccupied_pairs_list_[i_entry];
-		UnoccupiedCheck(site);
-		return site;
-	}
-	else{
-		printf("Error: GetUnoccupiedPair_1 called, but no unoccupied pairs\n");
-		exit(1);
-	}
-}
-
-Tubulin* MicrotubuleManagement::GetUnoccupiedPair_2(Tubulin* first_site){
-
-	if(first_site->occupied_ == false){
-		int i_mt = first_site->mt_->index_;
-		int i_site = first_site->index_;
-		int delta_x = first_site->mt_->delta_x_;
-		Tubulin *site = &mt_list_[i_mt].lattice_[i_site + delta_x];
-		UnoccupiedCheck(site);
-		if(site->index_ != first_site->index_ + delta_x){
-			printf("error in GUP_2\n");
-			exit(1);
-		}
-		return site;
-	}
-	else{
-		printf("Error: GetUnoccupiedPair_2 called, but first site occupied\n");
-		exit(1);
-	}
-
-}
-
 void MicrotubuleManagement::RunDiffusion(){
 
-	int i_step = properties_->current_step_;
-	int i_tau = (int)(tau_/parameters_->delta_t);
 	int n_mts = parameters_->n_microtubules;
-	int n_half = n_mts/2;
-	// List of step directions for all MTs 
-	int step_dir[n_mts];
-	for(int i_entry = 0; i_entry < n_half; i_entry++){
-		// First half steps backward
-		step_dir[i_entry] = -1;
-	}
-	for(int i_entry = n_half; i_entry < n_mts; i_entry++){
-		// Second half steps forward
-		step_dir[i_entry] = 1;
-	}
-	gsl_ran_shuffle(properties_->gsl.rng, step_dir, n_mts, sizeof(int));	
-	// Run thru mt_list and step accordingly
+	int n_sites = parameters_->length_of_microtubule;
+	double forces_summed[n_mts];
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		mt_list_[i_mt].coord_ += step_dir[i_mt];
-	}	
+		forces_summed[i_mt] = 0;
+		for(int i_site = 0; i_site < n_sites; i_site++){
+			Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
+			// Check if site is occupied by a motor
+			if(site->motor_ != nullptr){
+				Kinesin *motor = site->motor_;
+				// Motors can only exert forces if they're tethered
+				if(motor->tethered_ == true){
+					AssociatedProtein *xlink = motor->xlink_;
+					// If xlink is single bound, only add force if
+					// it's on a different microtubule
+					if(xlink->heads_active_ == 1){
+						Tubulin *xlink_site = xlink->GetActiveHeadSite();
+						if(site->mt_ != xlink_site->mt_){
+							if(motor->heads_active_ == 1){
+								forces_summed[i_mt] += 
+									motor->GetTetherForce(site);
+							}
+							else if(site == motor->front_site_){
+								forces_summed[i_mt] += 
+									motor->GetTetherForce(site); 
+//								printf("%g from motor\n", motor->
+//										GetTetherForce(site));
+							}
+						}
+					}
+					// If xlink is double bound, add force
+					else if(xlink->heads_active_ == 2){
+						if(motor->heads_active_ == 1){
+							forces_summed[i_mt] += 
+										motor->GetTetherForce(site);
+						}
+						// Only count force from 1st foot (no double counting)
+						else if(site == motor->front_site_){
+							forces_summed[i_mt] += 
+										motor->GetTetherForce(site); 
+						}
+					}
+				}
+			}
+			// Otherwise, check if site is occupied by an xlink
+			else if(site->xlink_ != nullptr){
+				AssociatedProtein *xlink = site->xlink_;
+				// Xlinks can only exert forces if they're double bound
+				if(xlink->heads_active_ == 2){
+					forces_summed[i_mt] += xlink->GetExtensionForce(site);
+				}
+				// Motors tethered to this xlink can also exert forces
+				if(xlink->tethered_ == true){
+					Kinesin *motor = xlink->motor_;
+					// To avoid double counting, make sure xlink's motor
+					// is on a different microtubule when double bound
+					if(site->mt_ != motor->mt_
+					&& motor->heads_active_ > 0){
+						forces_summed[i_mt] += 
+							motor->GetTetherForce(site);
+					}
+				}
+			}
+		}
+	}
+	// Check for symmetry
+	double tolerance = 0.0001; 
+	for(int i_mt = 0; i_mt < n_mts; i_mt += 2){
+		double delta = abs(forces_summed[i_mt] + forces_summed[i_mt + 1]);
+		if(delta > tolerance){
+				printf("aw man in MT diffusion\n");
+				printf("for mt %i: %g, for mt %i: %g\n", 
+						i_mt, forces_summed[i_mt], 
+						i_mt + 1, - forces_summed[i_mt + 1]);
+				exit(1);
+		}
+	}
+	// Calculate MT displacements for this timestep 
+	double kbT = mt_list_[0].kbT_;
+	double site_size = mt_list_[0].site_size_;
+	double delta_t = parameters_->delta_t;
+	double gamma = mt_list_[0].gamma_;
+	// variance of the gaussian to be sampled below
+	double sigma = sqrt(2 * kbT * delta_t / gamma);
+	double displacement[n_mts];
+//	printf("amp: %g\n", amplitude);
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		double velocity = forces_summed[i_mt] / gamma;
+		// gaussian noise is added into the calculated displacement
+		double noise = properties_->gsl.GetGaussianNoise(sigma);
+		double raw_displacement = velocity * delta_t + noise;
+//		printf("dx: %g (%g noise) nm / s\n", raw_displacement, 
+//				noise);
+//		printf("gamma be %g\n", gamma);
+		double site_displacement = (raw_displacement) / site_size;
+//		printf("%g sites\n", site_displacement);
+		// Get number of sites MT is expected to move
+		int n_sites = (int) site_displacement;
+		// Use leftover as a probability to roll for another step
+		double leftover = abs(site_displacement - n_sites);
+		double ran = properties_->gsl.GetRanProb();
+		if(ran < leftover
+		&& n_sites > 0)
+			n_sites++;
+		else if(ran < leftover
+		&& n_sites < 0)
+			n_sites--;
+		else if(ran < leftover
+		&& n_sites == 0
+		&& site_displacement > 0)
+			n_sites++;
+		else if(ran < leftover
+		&& n_sites == 0
+		&& site_displacement < 0)
+			n_sites--;
+		// Store value in array
+		displacement[i_mt] = n_sites;
+//		if(n_sites > 0)
+//			printf("MT diffusion for #%i: %i\n", i_mt, n_sites);
+	}
+	// Run through MT list and update displacements
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		Microtubule *mt = &mt_list_[i_mt];
+		int n_steps = displacement[i_mt];
+		int dx = 0;
+		if(n_steps > 0)
+			dx = 1;
+		else if(n_steps < 0){
+			dx = -1;
+			n_steps = abs(n_steps);
+		}
+		for(int i_step = 0; i_step < n_steps; i_step++){
+			mt->coord_ += dx; 
+			mt->UpdateExtensions();
+		}
+	}
 }
+

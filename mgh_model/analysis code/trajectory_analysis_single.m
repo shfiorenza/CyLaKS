@@ -1,59 +1,68 @@
 clear all
-n_datapoints = 2000;
-n_mts = 2;
+n_mts = 1;
 length_of_microtubule = 1000;
-ID = 358;
+n_datapoints = 100000;
 
-final_trajectory = zeros([n_datapoints 1]);
+starting_point = 00001;
+n_steps = 100000;
+ID = 657;
+
+final_trajectory = zeros([n_steps 1]);
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'testID.file';
+fileName = 'YES_TW_motorID.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 mt_array = fread(data_file, [n_mts*length_of_microtubule, n_datapoints], '*int');
 fclose(data_file);
 
-start = false; 
-for t=1:1:n_datapoints 
-    for site=1:1:n_mts*length_of_microtubule
-        % Only show data AFTER the motor's first bind event
-        if start == false
-            if mt_array(site, t) == ID
-                % Convert raw site % to normalized index
-                site_adj = mod(site, length_of_microtubule);
-                final_trajectory(t, 1) = site_adj;
-                n_start = t; 
-                start = true;
-                break;
-            elseif site == n_mts*length_of_microtubule
-                n_datapoints = n_datapoints + 1;
-            end
-        elseif start == true
-            if mt_array(site, t) == ID
+% Find where motor
+n_start = 1;
+done = false;
+for n = starting_point:1:n_datapoints
+   for site = 1:1:n_mts*length_of_microtubule
+       if done == false
+         if mt_array(site, n) == ID
+            n_start = n;
+            done = true;
+         end
+       end
+   end
+end
+n_end = n_start + n_steps - 1;
+if(n_end > n_datapoints)
+    n_end = n_datapoints;
+end 
+
+% Collect desire amount of datapoints
+step_index = 1;
+for n = n_start:1:n_end 
+    for site = 1:1:n_mts*length_of_microtubule
+            if mt_array(site, n) == ID
                 % Convert raw site # to normalized index
                 site_adj = mod(site, length_of_microtubule);
-                final_trajectory(t, 1) = site_adj;
+                final_trajectory(step_index, 1) = site_adj;
+                step_index = step_index + 1; 
                 break;
             % If not found, put coord that won't show up on graph
             elseif site == n_mts*length_of_microtubule
-                final_trajectory(t, 1) = -5;
+                final_trajectory(step_index, 1) = -5;
+                step_index = step_index + 1;
             end
-        end
     end
 end
 
-data_range = n_datapoints - (n_start - 1);
 %%plot fig%%
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 3*480, 3*270])
-plot1 = plot(linspace(n_start, n_datapoints, data_range), final_trajectory, ':ob');
+plot1 = plot(linspace(n_start, n_end, n_steps), final_trajectory, ':ob');
 
 %%style stuff%%
 plot1.MarkerSize = 2;
 plot1.LineWidth = 1;
 axis = gca;
 axis.YLim = [0 length_of_microtubule];
-axis.XLim = [n_start n_datapoints];
+axis.XLim = [n_start n_end];
 axis.TickDir = 'out';
 axis.Box = 'off';
 axis.GridLineStyle = '-';

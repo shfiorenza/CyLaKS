@@ -16,21 +16,39 @@ class AssociatedProteinManagement{
 		int n_tethered_ = 0;
 		int n_untethered_ = 0;
 		
-		int dist_cutoff_ = 6;			// for stage2 binding; in sites
+		// Only one population
+        int n_sites_i_untethered_ = 0;
+		// Population for each xlink extension
+		std::vector<int> n_sites_ii_untethered_;
+		// Population for each tether extension
+		std::vector<int> n_sites_i_tethered_;
+		// Population for each teth AND each xlink extension
+		std::vector< std::vector<int> > n_sites_ii_tethered_;
+		std::vector< std::vector<int> > n_sites_ii_tethered_same_; 
+		std::vector< std::vector<int> > n_sites_ii_tethered_oppo_; 
+		// Only need different populations for each tether extension
+		std::vector<int> n_sites_ii_tethered_self_rest_;
 
-		int n_sites_single_tethered_ = 0;
-        int n_sites_double_tethered_ = 0;
-        int n_sites_single_untethered_ = 0;
-        int n_sites_double_untethered_ = 0;
+		int dist_cutoff_;		// see assoc. protein header
+		int rest_dist_;			// see assoc. protein header
 
-        // all in seconds; from sci adv supp
-		// suffix syntax is (binding stage)_(kinesin tether status)
-		double tau_single_tethered_ = 0.00192;
-		double tau_double_tethered_ = 0.0288;	
-		double tau_single_untethered_ = 0.00032;
-		double tau_double_untethered_ = 0.00480;
+		// Diffusion of xlinks
+		double p_diffuse_i_fwd_;
+		double p_diffuse_i_bck_;
+		std::vector<double> p_diffuse_ii_to_rest_;
+		std::vector<double> p_diffuse_ii_from_rest_;
+		// Diffusion that is tether-dependent (below)
+		std::vector<double> p_diffuse_i_to_teth_rest_;
+		std::vector<double> p_diffuse_i_from_teth_rest_;
+		std::vector< std::vector<double> > p_diffuse_ii_to_both_rest_;
+		std::vector< std::vector<double> > p_diffuse_ii_from_both_rest_;
+		std::vector< std::vector<double> > p_diffuse_ii_to_self_from_teth_;
+		std::vector< std::vector<double> > p_diffuse_ii_from_self_to_teth_;
 
-		double c_eff_ = 100;				// unitless 	(educated guess)
+		double tau_i_;	
+		double tau_ii_;		
+
+		double c_eff_;				// unitless 	(educated guess)
 		double p_bind_i_;			
 		double p_unbind_i_;		
 		std::vector<double> p_unbind_ii_;	// One for each extension
@@ -41,11 +59,17 @@ class AssociatedProteinManagement{
 		std::vector<AssociatedProtein*> untethered_list_;
 
 		// The following lists all refer to sites of active xlinks
-		std::vector<Tubulin*> single_tethered_sites_;
-		std::vector<Tubulin*> double_tethered_sites_;
 		std::vector<Tubulin*> single_untethered_sites_;
-		std::vector<Tubulin*> double_untethered_sites_;
+		std::vector< std::vector<Tubulin*> > double_untethered_sites_;
+		std::vector< std::vector<Tubulin*> > single_tethered_sites_;
+		// 'opposite' refers to tether rest and xlink rest being 
+		// on opposite sides of the site; likewise for 'same' 
+		std::vector< std::vector< std::vector<Tubulin*> > >
+			double_tethered_sites_oppo_;
+		std::vector< std::vector< std::vector<Tubulin*> > >
+			double_tethered_sites_same_;	
 
+		std::vector<int> diffusion_list_;
 		std::vector<int> kmc_list_;
 
 		system_parameters *parameters_ = nullptr;
@@ -67,20 +91,40 @@ class AssociatedProteinManagement{
 		void UpdateDoubleBoundList();
 		void UpdateUntetheredList();
 		
-		void UpdateSingleTetheredSites();
-		void UpdateDoubleTetheredSites();
 		void UpdateSingleUntetheredSites();
 		void UpdateDoubleUntetheredSites();
-
-		void UpdateExtensions();
+		void UpdateSingleTetheredSites();
+		void UpdateDoubleTetheredSites();
 
 		AssociatedProtein* GetUntetheredXlink();
 
+		void GenerateDiffusionList();
+		int GetNumToStepI_Forward();
+		int GetNumToStepI_Backward();
+		int GetNumToStepII_ToRest(int x_dist);
+		int GetNumToStepII_FromRest(int x_dist);
+		// Tether extensions taken into account for the below
+		// x_dist_dub refers to tether extension, and is double its
+		// real value (can have half-integer values). x_dist is the 
+		// actual extension of the crosslink in no of x-sites
+		int GetNumToStepI_ToTethRest(int x_dist_dub);
+		int GetNumToStepI_FromTethRest(int x_dist_dub);
+		int GetNumToStepII_ToBothRest(int x_dist_dub, int x_dist);
+		int GetNumToStepII_FromBothRest(int x_dist_dub, int x_dist);
+		int GetNumToStepII_ToSelf_FromTeth(int x_dist_dub, int x_dist);
+		int GetNumToStepII_FromSelf_ToTeth(int x_dist_dub,int x_dist);
+
 		void RunDiffusion();
-		void RunDiffusion_Single_Tethered();
-		void RunDiffusion_Double_Tethered();
-		void RunDiffusion_Single_Untethered();
-		void RunDiffusion_Double_Untethered();
+		void RunDiffusionI_Forward();
+		void RunDiffusionI_Backward();
+		void RunDiffusionII_ToRest(int x_dist);
+		void RunDiffusionII_FromRest(int x_dist);
+		void RunDiffusionI_ToTethRest(int x_dist_dub);
+		void RunDiffusionI_FromTethRest(int x_dist_dub);
+		void RunDiffusionII_ToBothRest(int x_dist_dub, int x_dist);
+		void RunDiffusionII_FromBothRest(int x_dist_dub, int x_dist);
+		void RunDiffusionII_ToSelf_FromTeth(int x_dist_dub, int x_dist);
+		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
 
 		void GenerateKMCList();
 		int GetNumToBind_I();

@@ -29,22 +29,22 @@ void Curator::SetParameters(){
 void Curator::OutputSimDetails(){
 
 	int n_steps = parameters_->n_steps;
-	double k_on = parameters_->k_on;
-	double c_motor = parameters_->c_motor;
-	double k_off = parameters_->k_off;
-	double switch_rate = parameters_->switch_rate;
-	double motor_speed = parameters_->motor_speed;
+//	double k_on = parameters_->k_on;
+//	double c_motor = parameters_->c_motor;
+//	double k_off = parameters_->k_off;
+//	double switch_rate = parameters_->switch_rate;
+//	double motor_speed = parameters_->motor_speed;
 	double delta_t = parameters_->delta_t;
-	double p_bind = k_on*c_motor*delta_t;
-	double p_unbind = k_off*delta_t;
-	double p_switch = switch_rate*delta_t;
-	double p_step = motor_speed*delta_t;
+//	double p_bind = k_on*c_motor*delta_t;
+//	double p_unbind = k_off*delta_t;
+//	double p_switch = switch_rate*delta_t;
+//	double p_step = motor_speed*delta_t;
     printf("Total simulation duration: %g seconds\n", delta_t*n_steps);
     printf("Timestep duration: %g seconds\n\n", delta_t);
-    printf("Motor binding frequency: %g per timestep\n", p_bind);
-    printf("Motor unbinding frequency: %g per timestep\n", p_unbind);
-    printf("Motor switching frequency: %g per timestep\n", p_switch);
-    printf("Motor stepping frequency: %g sites per timestep\n\n", p_step);
+ //   printf("Motor binding frequency: %g per timestep\n", p_bind);
+//    printf("Motor unbinding frequency: %g per timestep\n", p_unbind);
+//    printf("Motor switching frequency: %g per timestep\n", p_switch);
+//    printf("Motor stepping frequency: %g sites per timestep\n\n", p_step);
     fflush(stdout);
 }
 
@@ -56,7 +56,9 @@ void Curator::PrintMicrotubules(){
 	int leftmost_coord = 0;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		int mt_coord = properties_->microtubules.mt_list_[i_mt].coord_;
-		if(mt_coord < leftmost_coord)
+		if(i_mt == 0)
+			leftmost_coord = mt_coord;	
+		else if(mt_coord < leftmost_coord)
 			leftmost_coord = mt_coord;
 	}
 	// Print out MTs
@@ -64,6 +66,10 @@ void Curator::PrintMicrotubules(){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		int mt_coord = mt->coord_;
 		int delta = mt_coord - leftmost_coord;
+		if(delta < 0){
+			printf("wat\n");
+			exit(1);
+		}
 		for(int i_entry = 0; i_entry < delta; i_entry++){
 			printf(" ");
 		}
@@ -107,9 +113,9 @@ void Curator::PrintMicrotubules(){
 						}
 						if(i_site == i_front){
 							if(mt->lattice_[i_site].motor_->tethered_ == false)
-								printf(")");
+								printf("%i)", mt->lattice_[i_site].motor_->ID_);
 							else
-								printf("]");
+								printf("%i]", mt->lattice_[i_site].motor_->ID_);
 						}
 					} 
 					if(i_front < i_rear){
@@ -121,9 +127,9 @@ void Curator::PrintMicrotubules(){
 						}
 						if(i_site == i_rear){
 							if(mt->lattice_[i_site].motor_->tethered_ == false)
-								printf(")");
+								printf("%i)", mt->lattice_[i_site].motor_->ID_);
 							else
-								printf("]");
+								printf("%i]", mt->lattice_[i_site].motor_->ID_);
 						}
 					}
 				}
@@ -131,7 +137,10 @@ void Curator::PrintMicrotubules(){
 		}
 		printf(" %i\n", mt->polarity_);
 	}   
-/*	int mt1_coord = properties_->microtubules.mt_list_[0].coord_;
+
+/* site coordinate printout below */
+	/*
+	int mt1_coord = properties_->microtubules.mt_list_[0].coord_;
 	int mt2_coord = properties_->microtubules.mt_list_[1].coord_;
 	int greater_coord = 0;
 	if(mt1_coord > mt2_coord)
@@ -152,14 +161,17 @@ void Curator::PrintMicrotubules(){
 				extra_digits = 2;
 			else if(i_site < 10000)
 				extra_digits = 3;
-			else
+			else{
 				printf("what the fuck are u doing bro. why do you need more than 10,000 sites??\n");
+				exit(1);
+			}
 		}
 		else if(i_site == (mt_length + greater_coord) - 1)
 			printf("%i", i_site);
 		else
 			printf(" ");
-	}*/
+	}
+	*/
 	printf("\n");
 }
 
@@ -182,12 +194,12 @@ void Curator::OutputData(){
 	int *MT_coord_ptr = MT_coord_array;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
-		int occupancy_array[mt_length],
-		motor_ID_array[mt_length],
-		xlink_ID_array[mt_length];
-		int *occupancy_ptr = occupancy_array, 
-			*motor_ID_ptr = motor_ID_array, 
-			*xlink_ID_ptr = xlink_ID_array;
+		int motor_ID_array[mt_length],
+			xlink_ID_array[mt_length], 
+			occupancy_array[mt_length];
+		int	*motor_ID_ptr = motor_ID_array, 
+			*xlink_ID_ptr = xlink_ID_array, 
+			*occupancy_ptr = occupancy_array;
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			// If unoccupied, store the speciesID of tubulin to occupancy file
@@ -227,7 +239,7 @@ void Curator::UpdateTimestep(int i_step){
 	properties_->current_step_ = i_step;
 	// Give updates on equilibrium process (every 10%)
 	if(i_step < data_threshold_ && i_step%equil_milestone_ == 0){
-		printf("Equilibration is %i percent complete (step number %i)\n", 
+		printf("Equilibration is %i percent complete (step # %i)\n", 
 		(int)(i_step/equil_milestone_)*10, i_step);
 	}
 	// Start data collection at appropriate step threshold

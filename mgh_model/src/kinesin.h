@@ -16,18 +16,22 @@ class Kinesin{
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
+		
+		// x_dist_dub is used to index the tether extension of motors, e.g.
+		// an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
+		int x_dist_doubled_;		// in no. of sites 
+		int dist_cutoff_ = 18;			// max value x_dist (not 2x) can be
+		int comp_cutoff_ = 1;			// min value x_dist (not 2x) can be
+		double rest_dist_ = 14.5;		// spring extension is ~0 for this
 
-		int x_dist_doubled_ = 0;	// in no. of sites 
-		int dist_cutoff_ = 18;	// max value x_dist_ can reach
-		double rest_dist_ = 15;	// spring extension is ~0 for this
-
-		double kbT_ = 4.114; 			// in pN * nm
-		double site_size_ = 8;			// tubulin dimer size in nm
-		double r_0_ = 120;				// in nm
-		double k_spring_ = 0.3;			// in pN / nm
-		double k_eff_slack_ = 0.02;		// for when tether is 'compressed'
-		double stall_force_ = 5;		// in pN
-		double extension_ = 0;			// in nm
+		double kbT_; 
+		double site_size_;		// tubulin dimer size in nm
+		double r_0_;			
+		double k_spring_;
+		double k_eff_slack_;
+		double stall_force_; 
+		double extension_;		// in nm
+		double cosine_;			// of motor tether angle w.r.t. horizontal
 	
 		bool tethered_ = false;
 
@@ -45,7 +49,6 @@ class Kinesin{
 		// e.g. ...lookup_[1] is an x-dist of 1/2 of a site
 		std::vector<double> tethering_weight_lookup_;
 		std::vector<double> binding_weight_lookup_;
-		std::vector<double> spring_force_lookup_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -55,6 +58,7 @@ class Kinesin{
 		Kinesin();
 		void Initialize(system_parameters *parameters, 
 			system_properties *properties, int ID);
+		void SetParameters();
 		void InitiateNeighborLists();
 		void PopulateTetheringLookupTable();
 		void PopulateBindingLookupTable();
@@ -67,14 +71,18 @@ class Kinesin{
 		void UpdateExtension();
 		void ForceUntether(int x_dub_pre);
 
+		bool AtCutoff();
+
 		int SampleTailExtensionDoubled();
-		int GetDirectionTowardXlink();
+		int GetDirectionTowardRest();
+		double GetRestLengthCoordinate(); 	// coord where ext ~ 0 when bound
 		double GetStalkCoordinate(); // tail originates from stalk
 		double GetTetheringWeight(AssociatedProtein *xlink);
 		double GetBindingWeight(Tubulin *site);
+		double GetTetherForce(Tubulin *site);
 		Tubulin* GetActiveHeadSite();
-		Tubulin* GetSiteCloserToXlink();
-		Tubulin* GetSiteFartherFromXlink();
+		Tubulin* GetSiteCloserToRest();
+		Tubulin* GetSiteFartherFromRest();
 		Tubulin* GetNeighborSite(int x_dist_doubled);
 		AssociatedProtein* GetNeighborXlink(int x_dist_doubled);
 };

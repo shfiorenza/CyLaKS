@@ -23,7 +23,24 @@ double RandomNumberManagement::GetRanProb(){
 	return gsl_rng_uniform(rng);
 }
 
+double RandomNumberManagement::GetGaussianNoise(double sigma){
+
+	double noise = gsl_ran_gaussian(rng, sigma);
+	return noise; 
+}
+
 int RandomNumberManagement::SampleNormalDist(double sigma){
+
+	double p = 0.00001;
+	double n = sigma*sigma/(p*(1 - p));
+	double avg = p*n;
+	int sample = SampleBinomialDist(p, n);
+	int result = sample - avg;
+//	printf("sample: %i, avg: %g\n", sample, avg);
+	return result;
+}
+
+int RandomNumberManagement::SampleAbsNormalDist(double sigma){
 
 	/*  recall, for a binomial distribution:
 
@@ -44,9 +61,10 @@ int RandomNumberManagement::SampleNormalDist(double sigma){
 	return result;
 }
 
+/*
 int RandomNumberManagement::SampleNormalDist(double sigma, int center){
 
-	/* Same as above, but centered around some input value */
+	// Same as above, but centered around some input value 
 
 	double p = 0.0001;
 	double n = sigma*sigma/(p*(1-p));
@@ -59,6 +77,7 @@ int RandomNumberManagement::SampleNormalDist(double sigma, int center){
 		result = avg - sample + center;
 	return result;
 }
+*/
 
 int RandomNumberManagement::SampleBinomialDist(double p, int n){
 	return gsl_ran_binomial(rng, p, n);

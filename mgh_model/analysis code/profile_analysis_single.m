@@ -1,40 +1,79 @@
 clear all
-n_timesteps = 100000;
-length_of_microtubule = 1000;
+n_datapoints = 100000;
+length_of_microtubule = 1250;
+species_ID = 2;
+k_off_frac = 1;
+k_on = 0.015;
 
 temp_one = zeros([length_of_microtubule 1]);
 final_mt = zeros([length_of_microtubule 1]);
 
 polarityArray = {'Plus-end on right'};
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/new_mt_single/%s';
-fileName = 'test.file';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileName = '0.50_2.5_1250_occupancy.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
-raw_data = fread(data_file, [length_of_microtubule, n_timesteps], '*int');
+raw_data = fread(data_file, [length_of_microtubule, n_datapoints], '*int');
 fclose(data_file);
 
-raw_data((raw_data ~= 2) | (raw_data == 0)) = 0;
-raw_data((raw_data == 2) | (raw_data ~= 0)) = 1;
+raw_data((raw_data ~= species_ID) | (raw_data == 0)) = 0;
+raw_data((raw_data == species_ID) | (raw_data ~= 0)) = 1;
 
-for i=1:1:n_timesteps
+% Read in and average occupancy data over all datapoints
+for i=1:1:n_datapoints
     temp_one(:, 1) = raw_data(:, i);
-    final_mt(:, 1) = final_mt(:, 1) + double(temp_one(:, 1)./n_timesteps);
+    final_mt(:, 1) = final_mt(:, 1) + double(temp_one(:, 1)./n_datapoints);
+end
+
+
+smoothed_final_mt = smoothdata(final_mt);
+smoothed_final_mt = final_mt;
+
+
+% Read through MT to find approx end-tag position (where the intensity
+% [really occupancy in our case] is 0.5 of it's maxmium [1])
+% alt method: highest slope
+highest_slope = 0;
+for i=1:1:length_of_microtubule
+    site_occupancy = smoothed_final_mt(i, 1);
+    if(i == 1)
+        prev_site_occupancy = 0;
+    else
+        prev_site_occupancy = smoothed_final_mt(i - 1, 1);
+    end
+ %   slope = site_occupancy - prev_site_occupancy;
+  %  if(slope > highest_slope && site_occupancy > 0.4)
+   %     highest_slope = slope;
+    %    endtag_site = i;
+    %end 
+    if(site_occupancy > 0.5)
+        endtag_site =  i;
+        break;
+    end
 end
 
 %%plot fig%%
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
-plot(linspace(0, 1, length_of_microtubule), final_mt);
+plot(linspace(0, length_of_microtubule*0.008, length_of_microtubule), smoothed_final_mt);
+% Put vertical red line where endtag starting position is
+hold on
+endtag_pos = endtag_site * 0.008;
+plot([endtag_pos endtag_pos], [0 1], ':r', 'LineWidth', 0.1);
 
 %%style stuff%%
 grid on
 grid minor
-xlabel({'Fractional length of microtubule', sprintf('(N Sites = %d)', length_of_microtubule)});
+title(sprintf('%g micron endtag for %g micron MT\n k on = %g s^-^1, k off (stalled) = k off / %i', ...
+    (length_of_microtubule - endtag_site) * 0.008, length_of_microtubule * 0.008, k_on, k_off_frac));
+
+xlabel({'Distance along microtubule (microns)'}); %, sprintf('(%d microns)', ...
+    %length_of_microtubule * 8 / 1000)});
 ylabel('Fraction of the time occupied');
 axis = gca;
 axis.YLim = [0 1];
-axis.XLim = [0 1];
+axis.XLim = [0 length_of_microtubule*0.008];
 axis.TickDir = 'out';
 axis.Box = 'off';
 axis.GridLineStyle = '-';

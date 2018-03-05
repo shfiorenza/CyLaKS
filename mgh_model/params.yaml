@@ -1,19 +1,41 @@
-data_threshold: 400000
-n_steps: 1000000
+seed: 329951224
+n_steps: 30000000
 n_datapoints: 100000
-delta_t : 0.00005
-
-n_microtubules: 2
-length_of_microtubule: 140
-
-seed : 3299515
-
-switch_rate : 0.1
-motor_speed : 62.5
-c_motor : 200
-k_on : 0.00027
-k_off : 0.169
-
-alpha: 0.0
-beta: 0.0
-
+data_threshold: 5000000
+delta_t: 0.0001
+kbT: 4.114
+eta_inverse: 1000
+n_microtubules: 1
+length_of_microtubule: 1250
+mt_radius: 12.5
+mt_height: 50
+site_size: 8
+k_on_motor: 0.015
+c_motor: 1.5
+c_eff_motor_bind: 1500
+k_off_motor: 0.25
+k_off_pseudo: 100
+k_off_ratio: 2500
+motor_speed: 300
+failstep_rate: 50
+D_motor: 0.0024
+k_tether_free: 0.00027
+c_eff_motor: 1000
+k_untether: 0.068
+k_untether_free: 0.034
+r_0_motor: 120
+k_spring_motor: 0.3
+k_slack_motor: 0.005
+stall_force: 5
+switch_rate: 0
+alpha: 0
+beta: 0
+k_on_xlink: 0.01096
+c_xlink: 0.34
+k_off_xlink_i: 0.08333
+k_off_xlink_ii: 0.08333
+D_xlink_i: 0.1
+D_xlink_ii: 0.0029
+c_eff_xlink: 1000
+r_0_xlink: 32
+k_spring_xlink: 0.207

@@ -29,5 +29,11 @@ class Tubulin{
 		Tubulin();
 		void Initialize(system_parameters *parameters, 
 			system_properties *properties, Microtubule *mt, int i_site);
+
+		// 'springs' refer to prc1 xlinker as well as the kinesin 4
+		// tether that attaches to it; the equilibrium position of these 
+		// two springs are what we're checking to see if they're on the 
+		// same side of the site or not 
+		bool SpringEquilOnSameSide();
 };
 #endif

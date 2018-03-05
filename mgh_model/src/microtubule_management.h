@@ -14,8 +14,6 @@ class MicrotubuleManagement{
 		int n_unoccupied_pairs_ = 0;
 		int n_pair_entries_ = 0;
 
-		double tau_ = 0; // FIXME
-
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 
@@ -43,12 +41,7 @@ class MicrotubuleManagement{
 		void UpdateNumUnoccupied();
 		void UpdateUnoccupiedList();
 
-		void UpdateNumUnoccupiedPairs();
-		void UpdateUnoccupiedPairsList();
-
 		Tubulin* GetUnoccupiedSite();
-		Tubulin* GetUnoccupiedPair_1();
-		Tubulin* GetUnoccupiedPair_2(Tubulin* first_site);
 
 		void RunDiffusion();
 };

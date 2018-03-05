@@ -25,6 +25,15 @@ class Microtubule{
 		int n_sites_;		// Number of tubulin sites on MT
 		int coord_;			// Absolute coordinate of left-most edge of MT
 
+		double kbT_;
+		double radius_;
+		double height_;
+		double eta_inverse_;	
+		double site_size_; 
+		double big_l_;				// in nm, overall length of MT
+		double gamma_;				// in units of pN / nm ???
+
+
 		Microtubule *neighbor_ = nullptr; //FIXME for 1+ neighbors 
 	
 		std::vector<Tubulin> lattice_;	// All tubulin sites 
@@ -40,5 +49,7 @@ class Microtubule{
 
 		void SetParameters();
 		void GenerateLattice();
+
+		void UpdateExtensions();
 };
 #endif

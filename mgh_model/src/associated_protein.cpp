@@ -286,7 +286,7 @@ double AssociatedProtein::GetExtensionForce(Tubulin *site){
 			if(site_coord < anchor_coord)
 				force = force_mag * cosine_;
 			else
-				force = -1 * force_mag * cosine_; 
+				force = -1 * force_mag * cosine_;
 			return force; 
 		}
 	}

@@ -82,6 +82,8 @@ void AssociatedProteinManagement::SetParameters(){
 				p_diffuse_ii_to_rest_[x_dist] = p_to;
 				p_diffuse_ii_from_rest_[x_dist] = p_from;
 			}
+			printf("for x of %i (to): %g\n", x_dist, p_diffuse_ii_to_rest_[x_dist]);
+			printf("for x of %i (from): %g\n", x_dist, p_diffuse_ii_from_rest_[x_dist]);
 		}
 		else{
 			printf("woah mayne. xlink set parameters \n");

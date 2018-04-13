@@ -1,6 +1,6 @@
 clear all
 n_datapoints = 100000;
-length_of_microtubule = 1250;
+length_of_microtubule = 250;
 species_ID = 2;
 k_off_frac = 1;
 k_on = 0.015;
@@ -10,8 +10,10 @@ final_mt = zeros([length_of_microtubule 1]);
 
 polarityArray = {'Plus-end on right'};
 
+%fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = '0.50_2.5_1250_occupancy.file';
+fileName = 'test21_occupancy.file';
+%fileName = '5_50.000_100.00_1250_occupancy.file'
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [length_of_microtubule, n_datapoints], '*int');
@@ -35,6 +37,7 @@ smoothed_final_mt = final_mt;
 % [really occupancy in our case] is 0.5 of it's maxmium [1])
 % alt method: highest slope
 highest_slope = 0;
+endtag_site = length_of_microtubule;
 for i=1:1:length_of_microtubule
     site_occupancy = smoothed_final_mt(i, 1);
     if(i == 1)
@@ -47,6 +50,7 @@ for i=1:1:length_of_microtubule
    %     highest_slope = slope;
     %    endtag_site = i;
     %end 
+
     if(site_occupancy > 0.5)
         endtag_site =  i;
         break;

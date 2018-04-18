@@ -51,12 +51,11 @@ xlink_raw_data = fread(xlink_data_file, [n_mts * mt_length * n_datapoints], '*in
 fclose(xlink_data_file);
 xlink_data = reshape(xlink_raw_data, mt_length, n_mts, n_datapoints);
 
-%{
 teth_data_file = fopen(tethFile);
 teth_raw_data = fread(teth_data_file, [n_mts * mt_length * n_datapoints], '*double');
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, mt_length, n_mts, n_datapoints);
-%}
+
 % Run through all datapoints; each one is a frame in our movie
 for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
     

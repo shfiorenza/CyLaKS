@@ -74,17 +74,19 @@ void Curator::PrintMicrotubules(){
 			printf(" ");
 		}
         for(int i_site = 0; i_site < mt_length; i_site++){
-            if(mt->lattice_[i_site].occupied_ == false)
+			Tubulin *site = &mt->lattice_[i_site];
+            if(site->occupied_ == false)
                 printf("=");
-			else if(mt->lattice_[i_site].xlink_ != nullptr)
-				if(mt->lattice_[i_site].xlink_->heads_active_ == 1){
-					if(mt->lattice_[i_site].xlink_->tethered_ == false)
+			else if(site->xlink_ != nullptr){
+				AssociatedProtein *xlink = site->xlink_;
+				if(xlink->heads_active_ == 1){
+					if(xlink->tethered_ == false)
 						printf("i");
 					else
 						printf("I");
 				}
-				else if(mt->lattice_[i_site].xlink_->heads_active_ == 2)
-					if(mt->lattice_[i_site].xlink_->tethered_ == false){
+				else if(xlink->heads_active_ == 2)
+					if(xlink->tethered_ == false){
 						printf("x");			
 //						printf("%i", mt->lattice_[i_site].xlink_->x_dist_);
 					}	
@@ -94,43 +96,49 @@ void Curator::PrintMicrotubules(){
 					printf("no sunny. look in wallace's print\n");
 					exit(1);
 				}
-			else if(mt->lattice_[i_site].motor_ != nullptr){
-				if(mt->lattice_[i_site].motor_->heads_active_ == 1){
-					if(mt->lattice_[i_site].motor_->tethered_ == false)
+			}
+			else if(site->motor_ != nullptr){
+				Kinesin *motor = site->motor_; 
+				if(motor->heads_active_ == 1){
+					if(motor->tethered_ == false)
 						printf("m");
 					else
 						printf("M");
 				}
-				else if(mt->lattice_[i_site].motor_->heads_active_ == 2){
-					int i_front = mt->lattice_[i_site].motor_->front_site_->index_;
-					int i_rear = mt->lattice_[i_site].motor_->rear_site_->index_;
+				else if(motor->heads_active_ == 2){
+					int i_front = motor->front_site_->index_;
+					int i_rear = motor->rear_site_->index_;
 					if(i_front > i_rear){
 						if(i_site == i_rear){
-							if(mt->lattice_[i_site].motor_->tethered_ == false)
+							if(motor->tethered_ == false)
 								printf("(");
 							else
 								printf("[");
 						}
 						if(i_site == i_front){
-							if(mt->lattice_[i_site].motor_->tethered_ == false)
-								printf("%i)", mt->lattice_[i_site].motor_->ID_);
+							if(motor->tethered_ == false)
+								printf("%i)", motor->ID_);
 							else
-								printf("%i]", mt->lattice_[i_site].motor_->ID_);
+								printf("%i]", motor->ID_);
 						}
 					} 
-					if(i_front < i_rear){
+					else if(i_front < i_rear){
 						if(i_site == i_front){	
-							if(mt->lattice_[i_site].motor_->tethered_ == false)
+							if(motor->tethered_ == false)
 								printf("(");
 							else
 								printf("[");
 						}
 						if(i_site == i_rear){
-							if(mt->lattice_[i_site].motor_->tethered_ == false)
-								printf("%i)", mt->lattice_[i_site].motor_->ID_);
+							if(motor->tethered_ == false)
+								printf("%i)", motor->ID_);
 							else
-								printf("%i]", mt->lattice_[i_site].motor_->ID_);
+								printf("%i]", motor->ID_);
 						}
+					}
+					else{
+						printf("error in print MT\n");
+						exit(1);
 					}
 				}
 			}
@@ -188,10 +196,11 @@ void Curator::OutputData(){
 	FILE *motor_ID_file = properties_->motor_ID_file_;
 	FILE *xlink_ID_file = properties_->xlink_ID_file_;
 	FILE *MT_coord_file = properties_->MT_coord_file_;
+	FILE *tether_coord_file = properties_->tether_coord_file_;
 	int n_mts = parameters_->n_microtubules;
 	int mt_length = parameters_->length_of_microtubule;
-	int MT_coord_array[n_mts];
-	int *MT_coord_ptr = MT_coord_array;
+	double MT_coord_array[n_mts];
+	double *MT_coord_ptr = MT_coord_array;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		int motor_ID_array[mt_length],
@@ -200,6 +209,8 @@ void Curator::OutputData(){
 		int	*motor_ID_ptr = motor_ID_array, 
 			*xlink_ID_ptr = xlink_ID_array, 
 			*occupancy_ptr = occupancy_array;
+		double tether_coord_array[mt_length];
+		double *tether_coord_ptr = tether_coord_array;
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			// If unoccupied, store the speciesID of tubulin to occupancy file
@@ -208,6 +219,7 @@ void Curator::OutputData(){
 				occupancy_array[i_site] = site->speciesID_;
 				motor_ID_array[i_site] = -1;
 				xlink_ID_array[i_site] = -1;
+				tether_coord_array[i_site] = -1;
 			}
 			// If occupied by xlink, store its species ID to occupancy_file,
 			// its unique ID to the xlink ID file, and -1 to motor ID file
@@ -215,6 +227,7 @@ void Curator::OutputData(){
 				occupancy_array[i_site] = site->xlink_->speciesID_;
 				motor_ID_array[i_site] = -1;
 				xlink_ID_array[i_site] = site->xlink_->ID_;
+				tether_coord_array[i_site] = -1;
 			}
 			// If occupied by motor, store its species ID to occupancy_file, 
 			// its unique ID to the motor ID file, and -1 to xlink ID file
@@ -222,16 +235,24 @@ void Curator::OutputData(){
 				occupancy_array[i_site] = site->motor_->speciesID_;
 				motor_ID_array[i_site] = site->motor_->ID_;
 				xlink_ID_array[i_site] = -1;
+				if(site->motor_->tethered_ == true){
+					double anchor_coord = site->motor_->xlink_->GetAnchorCoordinate();
+					tether_coord_array[i_site] = anchor_coord; 
+				}
+				else{
+					tether_coord_array[i_site] = -1;
+				}
 			}
 		}
-		MT_coord_array[i_mt] = mt->coord_; 
+		MT_coord_array[i_mt] = (double)mt->coord_; 
 		// Write the data to respective files one microtubule at a time
 		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
 		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
 		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
+		fwrite(tether_coord_ptr, sizeof(double), mt_length, tether_coord_file); 
 	}	
 	// Write the coord of each MT one timestep at a time
-	fwrite(MT_coord_ptr, sizeof(int), n_mts, MT_coord_file);
+	fwrite(MT_coord_ptr, sizeof(double), n_mts, MT_coord_file);
 }
 
 void Curator::UpdateTimestep(int i_step){
@@ -280,7 +301,8 @@ void Curator::OutputSimDuration(){
 void Curator::CleanUp(){
 
 	fclose(properties_->occupancy_file_);
-	fclose(properties_->MT_coord_file_);
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);
+	fclose(properties_->tether_coord_file_);
+	fclose(properties_->MT_coord_file_);
 }

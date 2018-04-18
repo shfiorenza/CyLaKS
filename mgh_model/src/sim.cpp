@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]){
 
-	char param_file[160], occupancy_file[160], motor_ID_file[160], xlink_ID_file[160], MT_coord_file[160];
+	char param_file[160], occupancy_file[160], motor_ID_file[160], xlink_ID_file[160], tether_coord_file[160], MT_coord_file[160];
 	system_parameters parameters;
 	system_properties properties;
 
@@ -18,6 +18,7 @@ int main(int argc, char *argv[]){
 	sprintf(occupancy_file, "%s_occupancy.file", argv[2]);
 	sprintf(motor_ID_file, "%s_motorID.file", argv[2]);
 	sprintf(xlink_ID_file, "%s_xlinkID.file", argv[2]);	
+	sprintf(tether_coord_file, "%s_tether_coord.file", argv[2]);
 	sprintf(MT_coord_file, "%s_MTcoord.file", argv[2]);
 	// Parse through input parameter file and copy values to sim's internal parameter structure
 	parse_parameters(param_file, &parameters);
@@ -27,6 +28,8 @@ int main(int argc, char *argv[]){
 	properties.motor_ID_file_ = gfopen(motor_ID_file, "w");
 	// Open xlink ID file, which does the same as the motor ID file but for xlinks
 	properties.xlink_ID_file_ = gfopen(xlink_ID_file, "w");
+	// Open tether coord file, which stores the coordinates of the anchor points of tethered motors
+	properties.tether_coord_file_ = gfopen(tether_coord_file, "w");
 	// Open MT coord file, which stores the coordinates of the left-most edge of each microtubule during DCS
 	properties.MT_coord_file_ = gfopen(MT_coord_file, "w");
 
@@ -40,7 +43,7 @@ int main(int argc, char *argv[]){
 	properties.prc1.Initialize(&parameters, &properties);
 
 	// Temporary way of starting MTs with an offset (in sites)
-	properties.microtubules.mt_list_[1].coord_ = 60;
+	properties.microtubules.mt_list_[1].coord_ = 450;
 
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
@@ -53,10 +56,10 @@ int main(int argc, char *argv[]){
 //		properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-		properties.microtubules.RunDiffusion();
+		properties.microtubules.RunDiffusion();  // XXX fix to let both MTs move
 		// Some good ole-fashioned ASCII printout
 //		if(i_step % 1000 == 0)
-//			properties.wallace.PrintMicrotubules(0.0005);
+//			properties.wallace.PrintMicrotubules(0.000);
 	}
 	properties.wallace.OutputSimDuration();
 	properties.wallace.CleanUp();

@@ -1,6 +1,8 @@
 clear all
 n_datapoints = 100000;
-length_of_microtubule = 250;
+starting_point = 30000;
+active_datapoints = n_datapoints - starting_point;
+length_of_microtubule = 1750;
 species_ID = 2;
 k_off_frac = 1;
 k_on = 0.015;
@@ -12,7 +14,7 @@ polarityArray = {'Plus-end on right'};
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'test21_occupancy.file';
+fileName = 'pres6b_occupancy.file';
 %fileName = '5_50.000_100.00_1250_occupancy.file'
 
 data_file = fopen(sprintf(fileDirectory, fileName));
@@ -23,9 +25,9 @@ raw_data((raw_data ~= species_ID) | (raw_data == 0)) = 0;
 raw_data((raw_data == species_ID) | (raw_data ~= 0)) = 1;
 
 % Read in and average occupancy data over all datapoints
-for i=1:1:n_datapoints
+for i=starting_point:1:n_datapoints
     temp_one(:, 1) = raw_data(:, i);
-    final_mt(:, 1) = final_mt(:, 1) + double(temp_one(:, 1)./n_datapoints);
+    final_mt(:, 1) = final_mt(:, 1) + double(temp_one(:, 1)./active_datapoints);
 end
 
 
@@ -51,7 +53,7 @@ for i=1:1:length_of_microtubule
     %    endtag_site = i;
     %end 
 
-    if(site_occupancy > 0.5)
+    if(site_occupancy > 0.75)
         endtag_site =  i;
         break;
     end
@@ -69,8 +71,8 @@ plot([endtag_pos endtag_pos], [0 1], ':r', 'LineWidth', 0.1);
 %%style stuff%%
 grid on
 grid minor
-title(sprintf('%g micron endtag for %g micron MT\n k on = %g s^-^1, k off (stalled) = k off / %i', ...
-    (length_of_microtubule - endtag_site) * 0.008, length_of_microtubule * 0.008, k_on, k_off_frac));
+title(sprintf('%g micron endtag for %g micron MT', ... % \n k on = %g s^-^1, k off (stalled) = k off / %i', ...
+    (length_of_microtubule - endtag_site) * 0.008, length_of_microtubule * 0.008)); % k_on, k_off_frac));
 
 xlabel({'Distance along microtubule (microns)'}); %, sprintf('(%d microns)', ...
     %length_of_microtubule * 8 / 1000)});

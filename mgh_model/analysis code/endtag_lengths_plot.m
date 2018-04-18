@@ -5,12 +5,12 @@ mt_lengths = [2, 4, 6, 8, 10, 14];
 n_datapoints = length(mt_lengths);
 
 final_data_short = [n_datapoints 1];
-final_data_short(1, :) = 1.16;
-final_data_short(2, :) = 1.752;
-final_data_short(3, :) = 2.056;
-final_data_short(4, :) = 2.12;
-final_data_short(5, :) = 2.024;
-final_data_short(6, :) = 2.075;
+final_data_short(1, :) = 1.2;
+final_data_short(2, :) = 1.792;
+final_data_short(3, :) = 1.96;
+final_data_short(4, :) = 1.952;
+final_data_short(5, :) = 2.08;
+final_data_short(6, :) = 1.896;
 
 final_data_long = [n_datapoints 1];
 

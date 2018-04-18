@@ -44,7 +44,6 @@ void Microtubule::SetParameters(){
 	double delta_t = parameters_->delta_t;
 	double numerator = 2 * 3.14159 * big_l_ / (eta_inverse_ * 1000000);;
 	double denom = log(2 * height_ / radius_);
-	// XXX divide by delta_t to make units work??
 	gamma_ = (numerator / denom);
 	printf("gamma: %g = (%g / %g) / %g\n", gamma_, numerator, denom, delta_t);
 }
@@ -61,8 +60,10 @@ void Microtubule::UpdateExtensions(){
 
 	KinesinManagement *kinesin4 = &properties_->kinesin4;
 	AssociatedProteinManagement *prc1 = &properties_->prc1;
-	int n_sites = parameters_->length_of_microtubule;
+	int n_sites = n_sites_;
+//	printf("length is %i\n", n_sites);
 	for(int i_site = 0; i_site < n_sites; i_site++){
+//		printf("hoi #%i\n", i_site);
 		Tubulin *site = &lattice_[i_site]; 
 		if(site->motor_ != nullptr){
 			Kinesin *motor = site->motor_;
@@ -95,7 +96,7 @@ void Microtubule::UpdateExtensions(){
 				}
 			}
 		}
-		else if(site->xlink_ != nullptr){
+		if(site->xlink_ != nullptr){
 			AssociatedProtein *xlink = site->xlink_;
 			if(xlink->heads_active_ == 2){
 				int x_pre = xlink->x_dist_;

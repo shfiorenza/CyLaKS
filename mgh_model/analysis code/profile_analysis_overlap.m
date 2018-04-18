@@ -1,7 +1,7 @@
 clear all
-n_datapoints = 10000;
-length_of_microtubule = 10;
-raw_overlap_length = 0;
+n_datapoints = 100000;
+length_of_microtubule = 250;
+raw_overlap_length = 125;
 overlap_length = abs(raw_overlap_length);
 delta = length_of_microtubule - overlap_length;
 if(overlap_length == 0)
@@ -22,7 +22,7 @@ final_data = zeros([(length_of_microtubule + delta) 2]);
 polarityArray = {'Plus-end on right', 'Plus end on left'};
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'test2_occupancy.file';
+fileName = 'presXL5_occupancy.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [length_of_microtubule, 2*n_datapoints], '*int');
@@ -74,11 +74,11 @@ plot(linspace(0, length_of_microtubule + delta, length_of_microtubule + delta), 
 grid on
 grid minor
 axis = gca;
-axis.YLim = [0.001 1];
+axis.YLim = [0 1];
 axis.XLim = [0 length_of_microtubule + delta];
 axis.TickDir = 'out';
 axis.Box = 'off';
 axis.GridLineStyle = '-';
-xlabel({'Coordinate', sprintf('(%d sites on each MTZ)', length_of_microtubule)});
+xlabel({'Coordinate', sprintf('(%d sites on each MT)', length_of_microtubule)});
 ylabel('Fraction of the time occupied');
 legend(polarityArray, 'Location', 'northeastoutside');

@@ -21,7 +21,7 @@ void AssociatedProteinManagement::GenerateXLinks(){
 	int n_sites = parameters_->length_of_microtubule;
 	// Since only one head has to be bound, the sim will at most
 	// as many xlinks as sites in the bulk (all single-bound)
-	n_xlinks_ = n_mts*(n_sites - 2);
+	n_xlinks_ = n_mts*n_sites;
 	xlink_list_.resize(n_xlinks_);
 	for(int ID = 0; ID < n_xlinks_; ID++){
 		xlink_list_[ID].Initialize(parameters_, properties_, ID);
@@ -38,8 +38,8 @@ void AssociatedProteinManagement::SetParameters(){
 	double x_squared = (site_size/1000)*(site_size/1000); // in um^2
 	tau_i_ = x_squared / (2 * D_const_i);
 	tau_ii_ = x_squared / (2 * D_const_ii);
-	p_diffuse_i_fwd_ = 0.5 * delta_t / tau_i_;
-	p_diffuse_i_bck_ = 0.5 * delta_t / tau_i_;
+	p_diffuse_i_fwd_ = delta_t / tau_i_;
+	p_diffuse_i_bck_ = delta_t / tau_i_;
 	// Generate different stepping rates based on changes in
 	// potential energy (dU) associated with that step
 	dist_cutoff_ = xlink_list_[0].dist_cutoff_;
@@ -68,8 +68,8 @@ void AssociatedProteinManagement::SetParameters(){
 			// Weights according to Lanksy et al.
 			double weight_to = exp(-dU_to_rest/(2*kbT));
 			double weight_from = exp(-dU_from_rest/(2*kbT));
-			double p_to = weight_to * 0.5 * delta_t / tau_ii_; //XXX
-			double p_from = weight_from * 0.5 * delta_t / tau_ii_;
+			double p_to = weight_to * delta_t / tau_ii_; //XXX
+			double p_from = weight_from * delta_t / tau_ii_;
 			if(x_dist == rest_dist_){
 				p_diffuse_ii_to_rest_[x_dist] = 0;
 				p_diffuse_ii_from_rest_[x_dist] = 2*p_from;
@@ -160,8 +160,8 @@ void AssociatedProteinManagement::SetParameters(){
 			weight_from_teth = exp(-dU_from_teth/(2*kbT));
 		else
 			weight_from_teth = 0; 
-		double p_to_teth_i = weight_to_teth * 0.5 * delta_t / tau_i_;
-		double p_from_teth_i = weight_from_teth * 0.5 * delta_t / tau_i_;
+		double p_to_teth_i = weight_to_teth * delta_t / tau_i_;
+		double p_from_teth_i = weight_from_teth * delta_t / tau_i_;
 		// Input probabilities for stage_i / tethered xlinks
 		p_diffuse_i_to_teth_rest_[x_dist_dub] = p_to_teth_i;
 		p_diffuse_i_from_teth_rest_[x_dist_dub] = p_from_teth_i;
@@ -198,13 +198,13 @@ void AssociatedProteinManagement::SetParameters(){
 				}
 				// Convolve these bitches
 				p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist]
-					= weight_to * weight_to_teth * 0.5 * delta_t / tau_ii_;
+					= weight_to * weight_to_teth * delta_t / tau_ii_;
 				p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist]
-					= weight_to * weight_from_teth * 0.5 * delta_t / tau_ii_;
+					= weight_to * weight_from_teth * delta_t / tau_ii_;
 				p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist]
-					= weight_from * weight_to_teth * 0.5 * delta_t / tau_ii_;
+					= weight_from * weight_to_teth * delta_t / tau_ii_;
 				p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist]
-					= weight_from * weight_from_teth * 0.5 * delta_t / tau_ii_;
+					= weight_from * weight_from_teth * delta_t / tau_ii_;
 			}
 			else{
 				printf("woah mayne. xlink set parameters TWOO \n");
@@ -1287,12 +1287,12 @@ void AssociatedProteinManagement::RunDiffusion(){
 				case 30:
 //						printf("unteth_ii step to rest (%i)[%i avail]\n", 
 //							x_dist, n_sites_ii_untethered_[x_dist]);
-//					RunDiffusionII_ToRest(x_dist);
+					RunDiffusionII_ToRest(x_dist);
 					break;
 				case 40:
 //					printf("unteth_ii step from rest (%i)[%i avail]\n", 
 //							x_dist, n_sites_ii_untethered_[x_dist]);
-//					RunDiffusionII_FromRest(x_dist);
+					RunDiffusionII_FromRest(x_dist);
 					break;
 				case 50:
 //					printf("teth_i step to rest (%i)\n", x_dist_dub);
@@ -2150,7 +2150,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 	}
 	else{
 		printf("Error in RunKMC_BindFirst: no unoccupied sites\n");
-		exit(1);
+//		exit(1);
 	}
 }
 

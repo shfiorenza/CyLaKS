@@ -4,31 +4,29 @@ clear all
 n_datapoints = 100000;
 motor_ID = 2;
 mt_length = 250;
-n_mts = 2;
+n_mts = 1;
 xlink_cutoff = 7;
 
 % File info
-simName = 'presXL5';
+simName = 'pres1b';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_MTcoord.file';
 motorFileName = '%s_motorID.file';
 xlinkFileName = '%s_xlinkID.file';
-tethFileName = '%s_tether_coord.file';
 mtFile = sprintf(fileDirectory, sprintf(mtFileName, simName));
 motorFile = sprintf(fileDirectory, sprintf(motorFileName, simName));
 xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
-tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 10000;
+frames_per_plot = 100;
 start_frame = 001;
 site_height = 1;
 site_width = 1;
 
 % Videowriter details
-v = VideoWriter('newfile5.avi');
-v.FrameRate = (n_frames / frames_per_plot) / 25;
+v = VideoWriter('newfile4.avi');
+v.FrameRate = n_frames / 25;
 open(v);
 frame_box = [0 0 1545 200];
 
@@ -51,18 +49,21 @@ xlink_raw_data = fread(xlink_data_file, [n_mts * mt_length * n_datapoints], '*in
 fclose(xlink_data_file);
 xlink_data = reshape(xlink_raw_data, mt_length, n_mts, n_datapoints);
 
-%{
-teth_data_file = fopen(tethFile);
-teth_raw_data = fread(teth_data_file, [n_mts * mt_length * n_datapoints], '*double');
-fclose(teth_data_file);
-teth_data = reshape(teth_raw_data, mt_length, n_mts, n_datapoints);
-%}
 % Run through all datapoints; each one is a frame in our movie
 for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
     
     % Clear figure so that it only displays figures from current datapoint
-    clf;        
-
+    clf;        if(n_mts > 1)
+            if(mod(i_mt, 2) == 0)
+                neighb_IDs = xlink_data(:, i_mt - 1, i_data);
+                neighb_mt_pos = mt_data(i_mt - 1, i_data)*site_width;
+                neighb_mt_height = 8*(i_mt - 2)*site_height;
+            else
+                neighb_IDs = xlink_data(:, i_mt + 1, i_data);
+                neighb_mt_pos = mt_data(i_mt + 1, i_data)*site_width;
+                neighb_mt_height = 8*(i_mt)*site_height;
+            end
+        end
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.01 0.12 0.98 0.76]);
     ax.XLim = [0 (mt_length + 1)];
@@ -81,14 +82,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         
         mt_pos = mt_data(i_mt, i_data)*site_width;
         first_pos = mt_data(1, i_data)*site_width;
-        second_pos = mt_data(2, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         
-        if(first_pos < second_pos)
-            ax.XLim = [first_pos first_pos + (3/2)*mt_length];
-        else
-            ax.XLim = [second_pos second_pos + (3/2)*mt_length];
-        end
+        %ax.XLim = [first_pos first_pos + 2*mt_length];
         
         rectangle('Position', [mt_pos mt_height (mt_length + 1) site_height], ...
             'FaceColor', [0.8 0.8 0.8], 'Curvature', [0 0]);
@@ -242,7 +238,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
    
     %}
     
-    frame = getframe(fig1); %, frame_box);
+    frame = getframe(fig1, frame_box);
     writeVideo(v, frame);
 end
 

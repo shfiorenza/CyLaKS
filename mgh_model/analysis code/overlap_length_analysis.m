@@ -1,27 +1,31 @@
 clear all
 n_mts = 2;
-n_sites = 625;
-length = 625 * 8;
+n_sites = 500;
+length = n_sites * 0.008;
 n_datapoints = 100000;
 starting_point = 0000;
 delta_t = 0.00001;
-end_time = n_datapoints * delta_t * 200;
-start_time = starting_point * delta_t * 200;
+end_time = n_datapoints * delta_t * 500 / 60;
+start_time = starting_point * delta_t * 500 / 60;
 
 final_data = zeros([n_datapoints 1]);
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'YES_MTcoord.file';
+fileName = 'presS2_MTcoord.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
-raw_data = fread(data_file, [n_mts, n_datapoints], '*int');
+raw_data = fread(data_file, [n_mts, n_datapoints], 'double');
 fclose(data_file);
 
 for i=starting_point+1:1:n_datapoints;
     mt_coord_one = raw_data(1, i);
     mt_coord_two = raw_data(2, i);
-    delta = (mt_coord_two - mt_coord_one) * 8;
-    overlap_length = length - delta;
+    delta = (mt_coord_two - mt_coord_one) * 0.008;
+    if(delta > 0)
+        overlap_length = length - delta;
+    else
+        overlap_length = length + delta;
+    end
     final_data(i, 1) = overlap_length; 
 end
 
@@ -34,6 +38,6 @@ grid minor
 title(...
         sprintf('Overlap Length Over Time (%g microns or %d sites in length)', ...
         n_sites * 8 / 1000, n_sites));
-xlabel('Time (s)');
-ylabel('Overlap length (nm)');
+xlabel('Time (min)');
+ylabel('Overlap length (microns)');
 xlim([start_time end_time])

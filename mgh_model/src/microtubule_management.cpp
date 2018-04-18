@@ -159,6 +159,7 @@ void MicrotubuleManagement::RunDiffusion(){
 
 	int n_mts = parameters_->n_microtubules;
 	int n_sites = parameters_->length_of_microtubule;
+//	printf("length is %i\n", n_sites);
 	double forces_summed[n_mts];
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		forces_summed[i_mt] = 0;
@@ -223,14 +224,14 @@ void MicrotubuleManagement::RunDiffusion(){
 		}
 	}
 	// Check for symmetry
-	double tolerance = 0.0001; 
+	double tolerance = 0.000001; 
 	for(int i_mt = 0; i_mt < n_mts; i_mt += 2){
-/*		if(forces_summed[i_mt] != 0){
-		printf("for mt # %i: %g\n", i_mt, forces_summed[i_mt]);
-		printf("for mt # %i: %g\n", i_mt + 1, forces_summed[i_mt + 1]);
-		properties_->wallace.PrintMicrotubules(0.1);
-		}
-*/
+//		if(forces_summed[i_mt] != 0){
+//		printf("for mt # %i: %g\n", i_mt, forces_summed[i_mt]);
+//		printf("for mt # %i: %g\n", i_mt + 1, forces_summed[i_mt + 1]);
+//		properties_->wallace.PrintMicrotubules(0.1);
+//		}
+
 		double delta = abs(forces_summed[i_mt] + forces_summed[i_mt + 1]);
 		if(delta > tolerance){
 				printf("aw man in MT diffusion\n");
@@ -247,50 +248,43 @@ void MicrotubuleManagement::RunDiffusion(){
 	double gamma = mt_list_[0].gamma_;
 	// variance of the gaussian to be sampled below
 	double sigma = sqrt(2 * kbT * delta_t / gamma);
-	double displacement[n_mts];
+//	printf("sigma is %g\n", sigma);
+	int displacement[n_mts];
 //	printf("amp: %g\n", amplitude);
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		double velocity = forces_summed[i_mt] / gamma;
+//		printf("forces for mt %i is %g\n", i_mt, forces_summed[i_mt]);
 		// gaussian noise is added into the calculated displacement
 		double noise = properties_->gsl.GetGaussianNoise(sigma);
 //		printf("noise for mt-%i is %g\n", i_mt, noise);
 		double raw_displacement = velocity * delta_t + noise;
-//		printf("dx: %g (%g noise) nm / s\n", raw_displacement, 
-//				noise);
+//		printf("dx: %g (%g noise) nm / s\n", raw_displacement, noise);
 //		printf("gamma be %g\n", gamma);
 		double site_displacement = (raw_displacement) / site_size;
 //		printf("%g sites\n", site_displacement);
 		// Get number of sites MT is expected to move
-		int n_sites = (int) site_displacement;
+		int n_steps = (int) site_displacement;
 //		if(forces_summed[i_mt] > 0)
 //			printf("n_sites: %i\n", n_sites);
 		// Use leftover as a probability to roll for another step
-		double leftover = abs(site_displacement - n_sites);
+		double leftover = fabs(site_displacement - n_steps);
 //		if(forces_summed[i_mt] > 0)
 //			printf("leftover: %g\n", leftover);
 		double ran = properties_->gsl.GetRanProb();
-		if(ran < leftover)
-			n_sites++;
-		/*
-		else if(ran < leftover
-		&& n_sites < 0)
-			n_sites--;
-		else if(ran < leftover
-		&& n_sites == 0
+		if(ran < leftover
 		&& site_displacement > 0)
-			n_sites++;
+			n_steps++;
 		else if(ran < leftover
-		&& n_sites == 0
 		&& site_displacement < 0)
-			n_sites--;
-		*/
+			n_steps--;
 		// Store value in array
-		displacement[i_mt] = n_sites;
-//		if(n_sites > 0)
-//			printf("MT diffusion for #%i: %i\n", i_mt, n_sites);
+		displacement[i_mt] = n_steps;
+//			printf("yo we got %i steps\n", displacement[i_mt]);
+//		if(n_steps > 0)
+//			printf("MT diffusion for #%i: %i\n", i_mt, n_steps);
 	}
 	// Run through MT list and update displacements
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){ 
 		Microtubule *mt = &mt_list_[i_mt];
 		int n_steps = displacement[i_mt];
 		int dx = 0;

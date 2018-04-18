@@ -522,9 +522,11 @@ double Kinesin::GetTetherForce(Tubulin *site){
 Tubulin* Kinesin::GetActiveHeadSite(){
 
 	if(heads_active_ == 1){
-		if(front_site_ != nullptr)
+		if(front_site_ != nullptr
+		&& rear_site_ == nullptr)
 			return front_site_;
-		else if(rear_site_ != nullptr)
+		else if(rear_site_ != nullptr
+		&& front_site_ == nullptr)
 			return rear_site_;
 		else{
 			printf("bad error in kinesin head tracking\n");

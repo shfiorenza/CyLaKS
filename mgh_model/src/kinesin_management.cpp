@@ -22,6 +22,7 @@ void KinesinManagement::GenerateMotors(){
     // Since only one head has to be bound, the most that will ever
     // be needed (all single-bound) is the total number of sites 
     n_motors_ = n_mts*n_sites;
+	printf("%i motors\n", n_motors_);
     motor_list_.resize(n_motors_);
     for(int ID = 0; ID < n_motors_; ID++){
         motor_list_[ID].Initialize(parameters_, properties_, ID);
@@ -37,8 +38,8 @@ void KinesinManagement::SetParameters(){
 	double D_const = parameters_->D_motor;
 	double x_squared = (site_size/1000)*(site_size/1000); // convert to um^2
 	tau_ = x_squared / (2 * D_const);
-	p_diffuse_fwd_untethered_ = 0.5 * delta_t / tau_;
-	p_diffuse_bck_untethered_ = 0.5 * delta_t / tau_; 
+	p_diffuse_fwd_untethered_ = delta_t / tau_;
+	p_diffuse_bck_untethered_ = delta_t / tau_; 
 	// Generate stepping rates based on extension of tether: rates are 
 	// increased if stepping towards rest length, and reduced if stepping
 	// away from rest length (which increases tether extension)
@@ -109,8 +110,8 @@ void KinesinManagement::SetParameters(){
 			else
 		   		weight_from = exp(-dU_from/(2*kbT));
 		}
-		double p_to = weight_to * 0.5 * delta_t / tau_;
-		double p_from = weight_from * 0.5 * delta_t / tau_;
+		double p_to = weight_to * delta_t / tau_;
+		double p_from = weight_from * delta_t / tau_;
 		p_diffuse_from_tether_rest_[x_dist_dub] = p_from;
 		p_diffuse_to_tether_rest_[x_dist_dub] = p_to;
 	}
@@ -349,17 +350,31 @@ void KinesinManagement::UpdateEligiblePseudoList(){
 
 	n_eligible_pseudo_ = 0; 
 	int i_entry = 0; 
-	int mt_length = parameters_->length_of_microtubule; 
 	for(int i_motor = 0; i_motor < n_motors_; i_motor++){
 		Kinesin *motor = &motor_list_[i_motor]; 
 		if(motor->heads_active_ == 1){
 			Microtubule *mt = motor->mt_;
 			Tubulin *bound_site = motor->GetActiveHeadSite();
 			int i_site = bound_site->index_;
+			int i_plus = mt->plus_end_;
+			int i_minus = mt->minus_end_;
 			int dx = mt->delta_x_;
 			// Don't access lattice sites that don't exist (or boundaries)
-			if(!(i_site <= 0 && dx == -1)
-			&& !(i_site >= mt_length - 1 && dx == 1)){
+			if(i_site == i_plus){
+				if(mt->lattice_[i_site - dx].occupied_ == false){
+					eligible_pseudo_list_[i_entry] = motor;
+					i_entry++;
+					n_eligible_pseudo_++;
+				}
+			}
+			else if(i_site == i_minus){
+				if(mt->lattice_[i_site + dx].occupied_ == false){
+					eligible_pseudo_list_[i_entry] = motor;
+					i_entry++;
+					n_eligible_pseudo_++;
+				}
+			}
+			else{
 				// Add motor if it has an unoccupied site to either side
 				if(mt->lattice_[i_site + dx].occupied_ == false
 				|| mt->lattice_[i_site - dx].occupied_ == false){
@@ -387,7 +402,7 @@ void KinesinManagement::UpdateBoundUntetheredList(){
 	}
 	if(n_entries != n_bound_untethered_){
 		printf("something wrong in update_unteth_list (motors 1D)");
-		printf(" %in statistics, %i entries tho\n", n_bound_untethered_, 
+		printf(" %i in statistics, %i entries tho\n", n_bound_untethered_, 
 				n_entries);
 		exit(1);
 	}
@@ -746,8 +761,8 @@ void KinesinManagement::RunDiffusion_Forward_Untethered(){
 		Microtubule *mt = motor->mt_;
 		int i_front = motor->front_site_->index_; 
 		int dx = mt->delta_x_;
-		int plus_end = mt->plus_end_;
-		if(i_front != plus_end){
+		int i_plus = mt->plus_end_;
+		if(i_front != i_plus){
 			if(mt->lattice_[i_front + dx].occupied_ == false){
 				// Get new sites
 				Tubulin *new_front = &mt->lattice_[i_front + dx];
@@ -789,8 +804,8 @@ void KinesinManagement::RunDiffusion_Backward_Untethered(){
 		Microtubule *mt = motor->mt_;
 		int i_rear = motor->rear_site_->index_; 
 		int dx = mt->delta_x_;
-		int minus_end = mt->minus_end_;
-		if(i_rear != minus_end){
+		int i_minus = mt->minus_end_;
+		if(i_rear != i_minus){
 			if(mt->lattice_[i_rear - dx].occupied_ == false){
 				// Get new sites
 				Tubulin *new_rear = &mt->lattice_[i_rear - dx];
@@ -1003,9 +1018,9 @@ void KinesinManagement::GenerateKMCList(){
 	int n_events = 0;
     int n_bind_i_free = GetNumToBind_I_Free();
 	n_events += n_bind_i_free;
-//	UpdateFreeTetheredList();
-//  int n_bind_i_tethered = GetNumToBind_I_Tethered();
-//	n_events += n_bind_i_tethered;
+	UpdateFreeTetheredList();
+  	int n_bind_i_tethered = GetNumToBind_I_Tethered();
+	n_events += n_bind_i_tethered;
 	UpdateEligiblePseudoList();
 	int n_bind_ii = GetNumToBind_II();
 	n_events += n_bind_ii;
@@ -1035,9 +1050,9 @@ void KinesinManagement::GenerateKMCList(){
 	}
 	n_events += n_unbind_stalled_ut;
 	n_events += n_failstep_ut;
-//	UpdateBoundTetheredList();
-//	int n_unbind_t = GetNumToUnbind_Tethered();
-//	n_events += n_unbind_t;
+	UpdateBoundTetheredList();
+	int n_unbind_t = GetNumToUnbind_Tethered();
+	n_events += n_unbind_t;
 	UpdatePseudoBoundList();
 	int n_unbind_p = GetNumToUnbind_Pseudo();
 	while(n_unbind_p + n_bind_ii > n_pseudo_bound_){
@@ -1060,16 +1075,17 @@ void KinesinManagement::GenerateKMCList(){
 		}
 	}
 */
-/*	int n_tether_free = GetNumToTether_Free();
+	int n_tether_free = GetNumToTether_Free();
 	n_events += n_tether_free;
 	UpdateBoundUntetheredList();
 	int n_tether_bound = GetNumToTether_Bound();
 	n_events += n_tether_bound;
-*/	
+	
 // XXX HARD CODE DISABLE OF SWITCHING;XXX DO NOT FORGET ABOUT!! XXX
 /*	UpdateSwitchableList();
     int n_switch = 0; //GetNumToSwitch();	
 	n_events += n_switch;
+*/	
 	int n_untether_free = GetNumToUntether_Free();
 	while(n_untether_free + n_bind_i_tethered > n_free_tethered_){
 			if(n_bind_i_tethered > 0){
@@ -1081,7 +1097,7 @@ void KinesinManagement::GenerateKMCList(){
 			}
 	}
 	n_events += n_untether_free;
-*/	
+	
 	// XXX BELOW IS BOTCHED/INCOMPLETE; CAUTION WHEN UNCOMMENTING
 /*
 		double p_mobile = p_unbind_unteth_mobile_;
@@ -1109,7 +1125,7 @@ void KinesinManagement::GenerateKMCList(){
 */
 	// XXX END BOTCHED WARNING HERE XXX
 	// Handle the statistics of differnt tether extensions separately 
-/*	UpdateStepableTetheredTables();
+	UpdateStepableTetheredTables();
 	UpdateBoundTetheredTable();
 	int n_untether_bound[2*dist_cutoff_ + 1];
 	int n_step_to_rest[2*dist_cutoff_ + 1];
@@ -1162,7 +1178,7 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_step_to_rest[x_dist_dub];
 		n_events += n_step_from_rest[x_dist_dub];
 	}
-	*/
+	
 //	printf("n_events: %i \n", n_events);
     if(n_events > 0){
         int pre_list[n_events];
@@ -1172,12 +1188,12 @@ void KinesinManagement::GenerateKMCList(){
 			pre_list[kmc_index] = 10;
 			kmc_index++;
 		}
-/*		for(int i_event = 0; i_event < n_bind_i_tethered; i_event++){
+		for(int i_event = 0; i_event < n_bind_i_tethered; i_event++){
 //			printf("11\n");
 			pre_list[kmc_index] = 11;
 			kmc_index++;
 		}
-*/		
+		
 		for(int i_event = 0; i_event < n_bind_ii; i_event++){
 //			printf("12\n");
 			pre_list[kmc_index] = 12;
@@ -1193,18 +1209,18 @@ void KinesinManagement::GenerateKMCList(){
 			pre_list[kmc_index] = 21;
 			kmc_index++;
 		}
-/*		for(int i_event = 0; i_event < n_unbind_t; i_event++){
+		for(int i_event = 0; i_event < n_unbind_t; i_event++){
 //			printf("21\n");
 			pre_list[kmc_index] = 22;
 			kmc_index++;
 		}
-*/		
+		
 		for(int i_event = 0; i_event < n_unbind_p; i_event++){
 //			printf("22\n");
 			pre_list[kmc_index] = 23;
 			kmc_index++;
 		}
-/*		for(int i_event = 0; i_event < n_tether_free; i_event++){
+		for(int i_event = 0; i_event < n_tether_free; i_event++){
 //			printf("30\n");
 			pre_list[kmc_index] = 30;
 			kmc_index++;
@@ -1214,18 +1230,18 @@ void KinesinManagement::GenerateKMCList(){
 			pre_list[kmc_index] = 31;
 			kmc_index++;
 		}
-		for(int i_event = 0; i_event < n_switch; i_event++){
+/*		for(int i_event = 0; i_event < n_switch; i_event++){
 //			printf("40\n");
 			pre_list[kmc_index] = 40;
 			kmc_index++;
 		}
-		
+*/		
 		for(int i_event = 0; i_event < n_untether_free; i_event++){
 //			printf("50\n");
 			pre_list[kmc_index] = 50;
 			kmc_index++;
 		}
-*/
+
 		for(int i_event = 0; i_event < n_step_ut; i_event++){
 //			printf("60\n");
 			pre_list[kmc_index] = 60;
@@ -1235,7 +1251,7 @@ void KinesinManagement::GenerateKMCList(){
 			pre_list[kmc_index] = 61;
 			kmc_index++;
 		}
-/*		for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
+		for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
 			int n_unteth_b = n_untether_bound[x_dist_dub];
 //			printf("n_unteth_b: %i (ext %i)\n", n_unteth_b, x_dist_dub);
 			for(int i_event = 0; i_event < n_unteth_b; i_event++){
@@ -1259,7 +1275,7 @@ void KinesinManagement::GenerateKMCList(){
 				kmc_index++;
 			}
 		}
-*/		
+		
 		RandomNumberManagement *gsl = &properties_->gsl;
         gsl_ran_shuffle(gsl->rng, pre_list, n_events, sizeof(int));
         kmc_list_.resize(n_events);
@@ -1471,12 +1487,13 @@ void KinesinManagement::RunKMC(){
 //						printf("pseudo motor bound\n");
 						KMC_Bind_II();
 						break;
+			
 				case 20:
-//						printf("untethered motor unbound\n");
+//						printf("untethered stepable motor unbound\n");
 						KMC_Unbind_Stepable_Untethered();
                         break;
 				case 21:
-
+//						printf("untethered stalled motor unbound\n");
 						KMC_Unbind_Stalled_Untethered();
 						break;
                 case 22:
@@ -1512,9 +1529,12 @@ void KinesinManagement::RunKMC(){
 //						printf("untethered motor stepped\n");
 						KMC_Step_Untethered();
 						break;
+						
 				case 61:
+//						printf("motor failstepped\n");
 						KMC_Failstep_Untethered();
 						break;
+						
 				case 62:
 //						printf("tethered motor (ext %i) stepped\n", 
 //								x_dist_doubled);
@@ -1648,9 +1668,47 @@ void KinesinManagement::KMC_Bind_II(){
 		Tubulin *bound_site = motor->GetActiveHeadSite();
 		int i_site = bound_site->index_;
 		int dx = mt->delta_x_;
+		int i_plus = mt->plus_end_;
+		int i_minus = mt->minus_end_;
 		Tubulin *front_site,
 				*rear_site; 
-		if(mt->lattice_[i_site + dx].occupied_ == false){
+		if(motor->heads_active_ != 1){
+			printf("nope in pseudos\n");
+			exit(1);
+		}
+		if(i_site == i_plus){
+			if(mt->lattice_[i_site - dx].occupied_ == false){
+				front_site = bound_site;
+				rear_site = &mt->lattice_[i_site - dx];	
+			}
+			else{
+				printf("something wrong in eligible pseudo list\n");
+				exit(1);
+			}
+		}
+		else if(i_site == i_minus){
+			if(mt->lattice_[i_site + dx].occupied_ == false){
+				front_site = &mt->lattice_[i_site + dx];
+				rear_site = bound_site;
+			}
+			else{
+				printf("something wrong in eligible pseudo list\n");
+				exit(1);
+			}
+		}
+		else if(mt->lattice_[i_site + dx].occupied_ == false
+			 && mt->lattice_[i_site - dx].occupied_ == false){
+			double ran = properties_->gsl.GetRanProb();
+			if(ran < 0.5){
+				front_site = &mt->lattice_[i_site + dx];
+				rear_site = bound_site;
+			}
+			else{
+				front_site = bound_site;
+				rear_site = &mt->lattice_[i_site - dx];
+			}
+		}
+		else if(mt->lattice_[i_site + dx].occupied_ == false){
 			front_site = &mt->lattice_[i_site + dx];
 			rear_site = bound_site;
 		}
@@ -1786,18 +1844,18 @@ void KinesinManagement::KMC_Failstep_Untethered(){
 	UpdateStalledUntetheredList();
     if(n_stalled_untethered_ > 0){
         // Randomly pick a bound motor (that's not on the boundary)
-		int i_entry = 0;
-		i_entry = properties_->gsl.GetRanInt(n_stalled_untethered_);
+		int i_entry = properties_->gsl.GetRanInt(n_stalled_untethered_);
 		Kinesin *motor = stalled_untethered_list_[i_entry];
 		// Update site details
 		motor->rear_site_->motor_ = nullptr;
 		motor->rear_site_->occupied_ = false;
 		// Update motor details
-		motor->heads_active_ = 1;
+		motor->heads_active_--;
 		motor->rear_site_ = nullptr;
 		// Update statistics
 		n_bound_untethered_--; 
 		n_pseudo_bound_++;
+		
 	}
 	else{
 		printf("Error in Failstep_UT: no stalled untethered motors!\n");

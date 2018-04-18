@@ -15,7 +15,8 @@ struct system_properties{
 	AssociatedProteinManagement prc1; 
 	
 	int current_step_;
-	FILE *occupancy_file_, *motor_ID_file_, *xlink_ID_file_, *MT_coord_file_; 
+	FILE *occupancy_file_, *motor_ID_file_, *xlink_ID_file_, 
+		 *tether_coord_file_, *MT_coord_file_; 
 	
 };
 #endif

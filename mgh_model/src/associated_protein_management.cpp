@@ -686,8 +686,8 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	int n_ii_from[dist_cutoff_ + 1];
 	// Handle statistics for each xlink extension separately
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		n_ii_to[x_dist] = GetNumToStepII_ToRest(x_dist);
-		n_ii_from[x_dist] = GetNumToStepII_FromRest(x_dist);
+		n_ii_to[x_dist] = 0; //GetNumToStepII_ToRest(x_dist);
+		n_ii_from[x_dist] = 0; //GetNumToStepII_FromRest(x_dist);
 		int n_to = n_ii_to[x_dist];
 		int n_from = n_ii_from[x_dist];
 		int n_avail = n_sites_ii_untethered_[x_dist];
@@ -1114,53 +1114,83 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 int AssociatedProteinManagement::GetNumToStepI_Forward(){
 
 	int n_bound = n_sites_i_untethered_;
-	double p_step = p_diffuse_i_fwd_;
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_i_fwd_;
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepI_Backward(){
-	
+
 	int n_bound = n_sites_i_untethered_;
-	double p_step = p_diffuse_i_bck_;
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_i_bck_;
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_ToRest(int x_dist){
 
 	int n_bound = n_sites_ii_untethered_[x_dist];
-	double p_step = p_diffuse_ii_to_rest_[x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_to_rest_[x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_FromRest(int x_dist){
 
 	int n_bound = n_sites_ii_untethered_[x_dist];
-	double p_step = p_diffuse_ii_from_rest_[x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_from_rest_[x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepI_ToTethRest(int x_dist_dub){
-	
+
 	int n_bound = n_sites_i_tethered_[x_dist_dub];
-	double p_step = p_diffuse_i_to_teth_rest_[x_dist_dub];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_i_to_teth_rest_[x_dist_dub];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepI_FromTethRest(int x_dist_dub){
 
 	int n_bound = n_sites_i_tethered_[x_dist_dub];
-	double p_step = p_diffuse_i_from_teth_rest_[x_dist_dub];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_i_from_teth_rest_[x_dist_dub];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_ToBothRest(int x_dist_dub, 
-														   int x_dist){
+		int x_dist){
 
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	int n_bound;
@@ -1171,13 +1201,18 @@ int AssociatedProteinManagement::GetNumToStepII_ToBothRest(int x_dist_dub,
 	else{
 		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
 	}
-	double p_step = p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_FromBothRest(int x_dist_dub, 
-															 int x_dist){
+		int x_dist){
 
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	int n_bound;
@@ -1188,13 +1223,18 @@ int AssociatedProteinManagement::GetNumToStepII_FromBothRest(int x_dist_dub,
 	else{
 		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
 	}
-	double p_step = p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_ToSelf_FromTeth
-									(int x_dist_dub, int x_dist){
+(int x_dist_dub, int x_dist){
 
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	int n_bound;
@@ -1205,9 +1245,14 @@ int AssociatedProteinManagement::GetNumToStepII_ToSelf_FromTeth
 	else{
 		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
 	}
-	double p_step = p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 int AssociatedProteinManagement::GetNumToStepII_FromSelf_ToTeth
@@ -1222,9 +1267,14 @@ int AssociatedProteinManagement::GetNumToStepII_FromSelf_ToTeth
 	else{
 		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
 	}
-	double p_step = p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist];
-	int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-	return n_to_step;
+	if(n_bound > 0){
+		double p_step = p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist];
+		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
+		return n_to_step;
+	}
+	else{
+		return 0;
+	}
 }
 
 void AssociatedProteinManagement::RunDiffusion(){

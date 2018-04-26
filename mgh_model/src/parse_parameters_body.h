@@ -34,6 +34,18 @@ else if (strcmp(param_name, "length_of_microtubule") == 0){
 	parameters -> length_of_microtubule = atoi(param_value);
 	fprintf(stdout, "   length_of_microtubule = %i\n", parameters -> length_of_microtubule);
 }
+else if (strcmp(param_name, "top_mt_start_coord") == 0){
+	parameters -> top_mt_start_coord = atoi(param_value);
+	fprintf(stdout, "   top_mt_start_coord = %i\n", parameters -> top_mt_start_coord);
+}
+else if (strcmp(param_name, "bot_mt_start_coord") == 0){
+	parameters -> bot_mt_start_coord = atoi(param_value);
+	fprintf(stdout, "   bot_mt_start_coord = %i\n", parameters -> bot_mt_start_coord);
+}
+else if (strcmp(param_name, "top_mt_imposed_velocity") == 0){
+	parameters -> top_mt_imposed_velocity = atof(param_value);
+	fprintf(stdout, "   top_mt_imposed_velocity = %g\n", parameters -> top_mt_imposed_velocity);
+}
 else if (strcmp(param_name, "mt_radius") == 0){
 	parameters -> mt_radius = atof(param_value);
 	fprintf(stdout, "   mt_radius = %g\n", parameters -> mt_radius);

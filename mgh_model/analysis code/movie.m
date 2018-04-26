@@ -8,7 +8,7 @@ n_mts = 2;
 xlink_cutoff = 7;
 
 % File info
-simName = 'presXL5';
+simName = 'test3';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_MTcoord.file';
 motorFileName = '%s_motorID.file';
@@ -21,13 +21,13 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 10000;
+frames_per_plot = 1;
 start_frame = 001;
 site_height = 1;
 site_width = 1;
 
 % Videowriter details
-v = VideoWriter('newfile5.avi');
+v = VideoWriter('overlap_expansion.avi');
 v.FrameRate = (n_frames / frames_per_plot) / 25;
 open(v);
 frame_box = [0 0 1545 200];
@@ -84,9 +84,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         mt_height = 8*(i_mt - 1)*site_height;
         
         if(first_pos < second_pos)
-            ax.XLim = [first_pos first_pos + (3/2)*mt_length];
+            ax.XLim = [first_pos first_pos + (8/7)*mt_length];
         else
-            ax.XLim = [second_pos second_pos + (3/2)*mt_length];
+            ax.XLim = [second_pos second_pos + (8/7)*mt_length];
         end
         
         rectangle('Position', [mt_pos mt_height (mt_length + 1) site_height], ...
@@ -223,6 +223,27 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                         'FaceColor', 'cyan', 'Curvature', [0.5 0.5]);
                 end
             end
+        end
+        
+        % Array of tether coords for this MT
+        teth_coords = teth_data(:, i_mt, i_data);
+        for i_teth=1:1:mt_length - 1
+            if(teth_coords(i_teth) ~= -1)
+                end_height = mt_height + neighb_mt_height / 2;
+                start_height = mt_height + 5*site_height/2;
+                
+                %if(teth_coords(i_teth) ~= teth_coords(i_teth + 1))
+                    start_pos = i_teth*site_width + site_width;
+                    end_pos = teth_coords(i_teth);
+                    xa = start_pos; ya = start_height;
+                    xb = start_pos; yb = end_pos;
+                    ne = 12; a = 10*site_height; ro = 1;
+                    [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
+                    plot(xs,ys,'LineWidth',2, 'Color', 'b');
+               % end
+            end
+            
+            
         end
     end
     %{

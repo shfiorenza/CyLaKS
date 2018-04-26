@@ -22,7 +22,7 @@ final_data = zeros([(length_of_microtubule + delta) 2]);
 polarityArray = {'Plus-end on right', 'Plus end on left'};
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'presXL5_occupancy.file';
+fileName = 'test4_nodiffu_occupancy.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [length_of_microtubule, 2*n_datapoints], '*int');
@@ -69,6 +69,7 @@ fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
 plot(linspace(0, length_of_microtubule + delta, length_of_microtubule + delta), ...
     final_data, 'LineWidth', 1.5);
+hold on
 
 %%style stuff%%
 grid on

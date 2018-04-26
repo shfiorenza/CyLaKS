@@ -5,13 +5,13 @@ length = n_sites * 0.008;
 n_datapoints = 100000;
 starting_point = 0000;
 delta_t = 0.00001;
-end_time = n_datapoints * delta_t * 500 / 60;
-start_time = starting_point * delta_t * 500 / 60;
+end_time = n_datapoints * delta_t * 50 / 60;
+start_time = starting_point * delta_t * 50 / 60;
 
 final_data = zeros([n_datapoints 1]);
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'presS2_MTcoord.file';
+fileName = 'presXLS7_MTcoord.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [n_mts, n_datapoints], 'double');

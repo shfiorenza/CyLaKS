@@ -43,7 +43,9 @@ int main(int argc, char *argv[]){
 	properties.prc1.Initialize(&parameters, &properties);
 
 	// Temporary way of starting MTs with an offset (in sites)
-	properties.microtubules.mt_list_[1].coord_ = 450;
+	properties.microtubules.mt_list_[0].coord_ = parameters.bot_mt_start_coord;
+	if(parameters.n_microtubules > 1)
+		properties.microtubules.mt_list_[1].coord_ = parameters.top_mt_start_coord;
 
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]){
 //		properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-		properties.microtubules.RunDiffusion();  // XXX fix to let both MTs move
+//		properties.microtubules.RunDiffusion();  // XXX fix to let both MTs move
 		// Some good ole-fashioned ASCII printout
 //		if(i_step % 1000 == 0)
 //			properties.wallace.PrintMicrotubules(0.000);

@@ -19,6 +19,9 @@ struct system_parameters{
 	// Microtubule parameters
 	int n_microtubules;     /* Number of individual microtubules */
 	int length_of_microtubule;		/* Length of MT in number of sites */ 
+	int top_mt_start_coord; /* starting coord of top (i = 1) microtubule */
+	int bot_mt_start_coord; /* starting coord of bot (i = 0) microtubule */
+	double top_mt_imposed_velocity; /* opposes normal sliding; nm/s */
 	double mt_radius;		/* For 13 protofilaments; in nm */
 	double mt_height;		/* Used in diffusion (dist. from wall); in nm */
 	double site_size;		/* Length of tubulin dimer (1 site) in nm */

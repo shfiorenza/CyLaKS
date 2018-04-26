@@ -1,12 +1,15 @@
 seed: 329951224
 n_steps: 5000000
 n_datapoints: 100000
-data_threshold: 0
-delta_t: 0.00001
+data_threshold: 1000000
+delta_t: 0.01
 kbT: 4.114
 eta_inverse: 1000
 n_microtubules: 2
-length_of_microtubule: 500
+length_of_microtubule: 250
+top_mt_start_coord: 0
+bot_mt_start_coord: 125
+top_mt_imposed_velocity: 80
 mt_radius: 12.5
 mt_height: 50
 site_size: 8
@@ -36,6 +39,6 @@ k_off_xlink_i: 0.09091
 k_off_xlink_ii: 0.0455
 D_xlink_i: 0.0058
 D_xlink_ii: 0.0029
-c_eff_xlink: 500
+c_eff_xlink: 1000
 r_0_xlink: 32
 k_spring_xlink: 0.207

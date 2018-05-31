@@ -62,7 +62,7 @@ void Curator::PrintMicrotubules(){
 			leftmost_coord = mt_coord;
 	}
 	// Print out MTs
-    for(int i_mt = 0; i_mt < n_mts; i_mt++){
+    for(int i_mt = n_mts - 1; i_mt >= 0; i_mt--){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		int mt_coord = mt->coord_;
 		int delta = mt_coord - leftmost_coord;
@@ -192,17 +192,40 @@ void Curator::PrintMicrotubules(double pause_duration){
 
 void Curator::OutputData(){
 
+	int n_mts = parameters_->n_microtubules;
+	int mt_length = parameters_->length_of_microtubule;
+	// Get file pointers from system properties
 	FILE *occupancy_file = properties_->occupancy_file_;
 	FILE *motor_ID_file = properties_->motor_ID_file_;
 	FILE *xlink_ID_file = properties_->xlink_ID_file_;
-	FILE *MT_coord_file = properties_->MT_coord_file_;
 	FILE *tether_coord_file = properties_->tether_coord_file_;
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
-	double MT_coord_array[n_mts];
-	double *MT_coord_ptr = MT_coord_array;
+	FILE *mt_coord_file = properties_->mt_coord_file_;
+	FILE *motor_extension_file = properties_->motor_extension_file_;
+	FILE *xlink_extension_file = properties_->xlink_extension_file_;
+	FILE *motor_force_file = properties_->motor_force_file_;
+	FILE *xlink_force_file = properties_->xlink_force_file_;
+	FILE *total_force_file = properties_->total_force_file_;
+	// Create arrays to store data at each timestep; ptrs to write it to file 
+	double mt_coord_array[n_mts];
+	double *mt_coord_ptr = mt_coord_array;
+	// For extension statistics, data is on a per-extension basis
+	int motor_ext_cutoff = properties_->kinesin4.dist_cutoff_;
+	int motor_extension_array[2*motor_ext_cutoff + 1];
+	int *motor_extension_ptr = motor_extension_array; 
+	int xlink_ext_cutoff = properties_->prc1.dist_cutoff_; 
+	int xlink_extension_array[xlink_ext_cutoff + 1];
+	int *xlink_extension_ptr = xlink_extension_array; 
+	// Back to normal per-MT array format
+	double motor_force_array[n_mts];
+	double *motor_force_ptr = motor_force_array;
+	double xlink_force_array[n_mts];
+	double *xlink_force_ptr = xlink_force_array;
+	double total_force_array[n_mts];
+	double *total_force_ptr = total_force_array;	
+	// Run through all MTs and get data for each
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+		// Create arrays & ptrs for intraMT data 
 		int motor_ID_array[mt_length],
 			xlink_ID_array[mt_length], 
 			occupancy_array[mt_length];
@@ -210,7 +233,8 @@ void Curator::OutputData(){
 			*xlink_ID_ptr = xlink_ID_array, 
 			*occupancy_ptr = occupancy_array;
 		double tether_coord_array[mt_length];
-		double *tether_coord_ptr = tether_coord_array;
+		double *teth_coord_ptr = tether_coord_array;
+		// Run through all sites on this particular MT
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			// If unoccupied, store the speciesID of tubulin to occupancy file
@@ -236,7 +260,8 @@ void Curator::OutputData(){
 				motor_ID_array[i_site] = site->motor_->ID_;
 				xlink_ID_array[i_site] = -1;
 				if(site->motor_->tethered_ == true){
-					double anchor_coord = site->motor_->xlink_->GetAnchorCoordinate();
+					AssociatedProtein* xlink = site->motor_->xlink_;
+					double anchor_coord = xlink->GetAnchorCoordinate();
 					tether_coord_array[i_site] = anchor_coord; 
 				}
 				else{
@@ -244,15 +269,37 @@ void Curator::OutputData(){
 				}
 			}
 		}
-		MT_coord_array[i_mt] = (double)mt->coord_; 
+		mt_coord_array[i_mt] = mt->coord_; 
+		motor_force_array[i_mt] = mt->GetNetForce_Motors();
+		xlink_force_array[i_mt] = mt->GetNetForce_Xlinks();
+		total_force_array[i_mt] = mt->GetNetForce();
 		// Write the data to respective files one microtubule at a time
 		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
 		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
 		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
-		fwrite(tether_coord_ptr, sizeof(double), mt_length, tether_coord_file); 
+		fwrite(teth_coord_ptr, sizeof(double), mt_length, tether_coord_file); 
 	}	
-	// Write the coord of each MT one timestep at a time
-	fwrite(MT_coord_ptr, sizeof(double), n_mts, MT_coord_file);
+	// Scan through kinesin4/prc1 statistics to get extension occupancies 
+	for(int i_ext = 0; i_ext <= 2*motor_ext_cutoff; i_ext++){
+		KinesinManagement *kinesin4 = &properties_->kinesin4; 
+		motor_extension_array[i_ext] = kinesin4->n_bound_tethered_[i_ext];
+	}
+	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
+		AssociatedProteinManagement *prc1 = &properties_->prc1; 
+		xlink_extension_array[i_ext] = prc1->n_double_bound_[i_ext]; 
+	}
+	// Write the data to respective files one timestep at a time 
+	fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);
+	fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
+	fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
+	fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
+	fwrite(motor_extension_ptr, sizeof(int), 2*motor_ext_cutoff + 1, 
+			motor_extension_file);
+	fwrite(xlink_extension_ptr, sizeof(int), xlink_ext_cutoff + 1, 
+			xlink_extension_file);
+	fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
+	fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
+	fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
 }
 
 void Curator::UpdateTimestep(int i_step){
@@ -292,9 +339,10 @@ void Curator::OutputSimDuration(){
 
 	finish_ = clock();
 	sim_duration_ = (double)(finish_ - start_)/CLOCKS_PER_SEC;
-	stream_ = fopen("sim_duration.dat", "w");
+/*	stream_ = fopen("sim_duration.dat", "w");
 	fprintf(stream_, "Time to execute sim: %f seconds.\n", sim_duration_);
 	fclose(stream_);
+*/	
 	printf(" Time to execute: %f seconds.\n\n", sim_duration_);
 }
 
@@ -304,5 +352,11 @@ void Curator::CleanUp(){
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);
 	fclose(properties_->tether_coord_file_);
-	fclose(properties_->MT_coord_file_);
+	fclose(properties_->mt_coord_file_);
+	fclose(properties_->motor_extension_file_);
+	fclose(properties_->xlink_extension_file_);
+	fclose(properties_->motor_force_file_);
+	fclose(properties_->xlink_force_file_);
+	fclose(properties_->total_force_file_);
+
 }

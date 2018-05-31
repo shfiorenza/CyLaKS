@@ -14,17 +14,20 @@ struct system_parameters{
 	// Physical constants
 	double kbT;				/* boltzmann constant * temp, in pN * nM */
 	double eta_inverse;		/* Inverse viscosity; in [(pN/um^2)*s]^-1 */
+	double mt_radius;		/* For 13 protofilaments; in nm */
+	double mt_height;		/* Used in diffusion (dist. from wall); in nm */
+	double site_size;		/* Length of tubulin dimer (1 site) in nm */
 
 
 	// Microtubule parameters
 	int n_microtubules;     /* Number of individual microtubules */
+	bool mt_printout;		/* Toggles real-time ASCII printout of MTs */
 	int length_of_microtubule;		/* Length of MT in number of sites */ 
-	int top_mt_start_coord; /* starting coord of top (i = 1) microtubule */
 	int bot_mt_start_coord; /* starting coord of bot (i = 0) microtubule */
+	int top_mt_start_coord; /* starting coord of top (i = 1) microtubule */
 	double top_mt_imposed_velocity; /* opposes normal sliding; nm/s */
-	double mt_radius;		/* For 13 protofilaments; in nm */
-	double mt_height;		/* Used in diffusion (dist. from wall); in nm */
-	double site_size;		/* Length of tubulin dimer (1 site) in nm */
+	bool bot_mt_pinned; 	/* Toggles immobilization of 1st MT */ 
+	double top_mt_pinned_until; /* 2nd MT immobilized until this time (s) */
 
 
 	// Crosslink parameters

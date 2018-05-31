@@ -82,8 +82,6 @@ void AssociatedProteinManagement::SetParameters(){
 				p_diffuse_ii_to_rest_[x_dist] = p_to;
 				p_diffuse_ii_from_rest_[x_dist] = p_from;
 			}
-			printf("for x of %i (to): %g\n", x_dist, p_diffuse_ii_to_rest_[x_dist]);
-			printf("for x of %i (from): %g\n", x_dist, p_diffuse_ii_from_rest_[x_dist]);
 		}
 		else{
 			printf("woah mayne. xlink set parameters \n");
@@ -115,8 +113,10 @@ void AssociatedProteinManagement::SetParameters(){
 		double r_x_teth_fwd = (x_dist_dub + 1) * site_size / 2;
 		// Calc total r values 
 		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
-		double r_teth_bck = sqrt(r_x_teth_bck*r_x_teth_bck + r_y_teth*r_y_teth);
-		double r_teth_fwd = sqrt(r_x_teth_fwd*r_x_teth_fwd+ r_y_teth*r_y_teth);
+		double r_teth_bck = sqrt(r_x_teth_bck*r_x_teth_bck 
+								 + r_y_teth*r_y_teth);
+		double r_teth_fwd = sqrt(r_x_teth_fwd*r_x_teth_fwd 
+								 + r_y_teth*r_y_teth);
 		// Calc tether extensions for current dist and stepping to/from rest
 		double dr_teth = r_teth - r_0_teth;	
 		double dr_teth_to, 
@@ -173,7 +173,7 @@ void AssociatedProteinManagement::SetParameters(){
 			double r = sqrt(r_x*r_x + r_y*r_y);
 			double r_to = sqrt(r_x_to*r_x_to + r_y*r_y);
 			double r_from = sqrt(r_x_from*r_x_from + r_y*r_y);
-			// Get extension for current dist and steps to/from spring rest
+			// Get extension for current dist and steps to/from rest
 			double dr = r - r_0;
 			double dr_to = r_to -  r_0;
 			double dr_from = r_from - r_0;
@@ -686,8 +686,8 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	int n_ii_from[dist_cutoff_ + 1];
 	// Handle statistics for each xlink extension separately
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		n_ii_to[x_dist] = 0; //GetNumToStepII_ToRest(x_dist);
-		n_ii_from[x_dist] = 0; //GetNumToStepII_FromRest(x_dist);
+		n_ii_to[x_dist] = GetNumToStepII_ToRest(x_dist);
+		n_ii_from[x_dist] = GetNumToStepII_FromRest(x_dist);
 		int n_to = n_ii_to[x_dist];
 		int n_from = n_ii_from[x_dist];
 		int n_avail = n_sites_ii_untethered_[x_dist];
@@ -813,7 +813,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 				n_to_one = n_ii_to_both[x_dist_dub][x_dist];
 				n_from_one = n_ii_from_both[x_dist_dub][x_dist];
 				n_avail_one = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites w/ oppo equil
+				// Make sure there aren't more events than sites w/ op equil
 				while((n_to_one + n_from_one) > n_avail_one){
 //					printf("yah for to/from both_ext (2x: %i, x: %i)\n", 
 //							x_dist_dub, x_dist);
@@ -927,7 +927,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 				n_to_one = n_ii_to_both[x_dist_dub][x_dist];
 				n_from_one = n_ii_from_both[x_dist_dub][x_dist];
 				n_avail_one = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites w/ same equil
+				// Make sure there arent more events than sites w/ same equil
 				while((n_to_one + n_from_one) > n_avail_one){
 //					printf("yah for to/from both_ext (2x: %i, x: %i)\n", 
 //							x_dist_dub, x_dist);
@@ -2218,7 +2218,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 		// Sample normal distribution for x-dist of xlink to insert 
 		int x_dist = xlink->SampleSpringExtension();
 //		printf("x_dist be %i\n", x_dist);
-		double ran = properties_->gsl.GetRanProb();
+//		double ran = properties_->gsl.GetRanProb();
 //		x_dist = 0;
 //		if(ran < 0.5)
 //			x_dist = -1;

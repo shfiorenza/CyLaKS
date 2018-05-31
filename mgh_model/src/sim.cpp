@@ -3,7 +3,12 @@
 
 int main(int argc, char *argv[]){
 
-	char param_file[160], occupancy_file[160], motor_ID_file[160], xlink_ID_file[160], tether_coord_file[160], MT_coord_file[160];
+	char param_file[160], occupancy_file[160], 
+		 motor_ID_file[160], xlink_ID_file[160], 
+		 tether_coord_file[160], mt_coord_file[160], 
+		 motor_extension_file[160], xlink_extension_file[160],
+		 motor_force_file[160], xlink_force_file[160], total_force_file[160];
+
 	system_parameters parameters;
 	system_properties properties;
 
@@ -19,7 +24,12 @@ int main(int argc, char *argv[]){
 	sprintf(motor_ID_file, "%s_motorID.file", argv[2]);
 	sprintf(xlink_ID_file, "%s_xlinkID.file", argv[2]);	
 	sprintf(tether_coord_file, "%s_tether_coord.file", argv[2]);
-	sprintf(MT_coord_file, "%s_MTcoord.file", argv[2]);
+	sprintf(mt_coord_file, "%s_mt_coord.file", argv[2]);
+	sprintf(motor_extension_file, "%s_motor_extension.file", argv[2]);
+	sprintf(xlink_extension_file, "%s_xlink_extension.file", argv[2]);
+	sprintf(motor_force_file, "%s_motor_force.file", argv[2]);
+	sprintf(xlink_force_file, "%s_xlink_force.file", argv[2]);
+	sprintf(total_force_file, "%s_total_force.file", argv[2]);
 	// Parse through input parameter file and copy values to sim's internal parameter structure
 	parse_parameters(param_file, &parameters);
 	// Open occupancy file, which stores the species ID of each occupant (or -1 for none) for all MT sites during data collection stage (DCS)
@@ -30,8 +40,18 @@ int main(int argc, char *argv[]){
 	properties.xlink_ID_file_ = gfopen(xlink_ID_file, "w");
 	// Open tether coord file, which stores the coordinates of the anchor points of tethered motors
 	properties.tether_coord_file_ = gfopen(tether_coord_file, "w");
-	// Open MT coord file, which stores the coordinates of the left-most edge of each microtubule during DCS
-	properties.MT_coord_file_ = gfopen(MT_coord_file, "w");
+	// Open mt coord file, which stores the coordinates of the left-most edge of each microtubule during DCS
+	properties.mt_coord_file_ = gfopen(mt_coord_file, "w");
+	// Open motor extension file, which stores the number of motors with a certain tether extension for all possible extensions
+	properties.motor_extension_file_ = gfopen(motor_extension_file, "w");
+	// Open xlink extension file, which stores the number of stage-2 xlinks at a certain extension for all possible extensions
+	properties.xlink_extension_file_ = gfopen(xlink_extension_file, "w");
+	// Open motor force file, which stores the sum of forces coming from motor tether extensions
+	properties.motor_force_file_ = gfopen(motor_force_file, "w");
+	// Open xlink force file, which stores the sum of forces coming from xlink extensions
+	properties.xlink_force_file_ = gfopen(xlink_force_file, "w");
+	// Open total force file, which stores the sum of ALL forces coming from xlink and motor tether extensions
+	properties.total_force_file_ = gfopen(total_force_file, "w");
 
 	// Initialize the experimental curator, Wallace; he does things such as output data, print ASCII models of microtubules, etc.
 	properties.wallace.Initialize(&parameters, &properties);
@@ -42,26 +62,22 @@ int main(int argc, char *argv[]){
 	properties.kinesin4.Initialize(&parameters, &properties); 
 	properties.prc1.Initialize(&parameters, &properties);
 
-	// Temporary way of starting MTs with an offset (in sites)
-	properties.microtubules.mt_list_[0].coord_ = parameters.bot_mt_start_coord;
-	if(parameters.n_microtubules > 1)
-		properties.microtubules.mt_list_[1].coord_ = parameters.top_mt_start_coord;
-
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
 		// Wallace keeps track of outputting data, etc
 		properties.wallace.UpdateTimestep(i_step);
 		// Explicit KMC actions (binding, stepping, etc)
-//		properties.kinesin4.RunKMC();
+		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
 		// Diffusion
-//		properties.kinesin4.RunDiffusion();
+		properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-//		properties.microtubules.RunDiffusion();  // XXX fix to let both MTs move
+		properties.microtubules.RunDiffusion();  // XXX fix to let both MTs move
 		// Some good ole-fashioned ASCII printout
-//		if(i_step % 1000 == 0)
-//			properties.wallace.PrintMicrotubules(0.000);
+		if(parameters.mt_printout == true)
+			if(i_step % 1000 == 0)
+				properties.wallace.PrintMicrotubules(0.5);
 	}
 	properties.wallace.OutputSimDuration();
 	properties.wallace.CleanUp();

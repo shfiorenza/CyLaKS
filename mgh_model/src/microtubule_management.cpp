@@ -94,7 +94,6 @@ void MicrotubuleManagement::UpdateNumUnoccupied(){
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
 		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
-		// Exclude boundary sites
 		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
@@ -123,7 +122,6 @@ void MicrotubuleManagement::UpdateUnoccupiedList(){
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
 		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
-		// Exclude boundary sites
 		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
@@ -158,70 +156,11 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 void MicrotubuleManagement::RunDiffusion(){
 
 	int n_mts = parameters_->n_microtubules;
-	int n_sites = parameters_->length_of_microtubule;
-//	printf("length is %i\n", n_sites);
+/*	Sum up all forces exerted on the MTs 	*/
 	double forces_summed[n_mts];
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		forces_summed[i_mt] = 0;
-		for(int i_site = 0; i_site < n_sites; i_site++){
-			Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
-			// Check if site is occupied by a motor
-			if(site->motor_ != nullptr){
-				Kinesin *motor = site->motor_;
-				// Motors can only exert forces if they're tethered
-				if(motor->tethered_ == true){
-					AssociatedProtein *xlink = motor->xlink_;
-					// If xlink is single bound, only add force if
-					// it's on a different microtubule
-					if(xlink->heads_active_ == 1){
-						Tubulin *xlink_site = xlink->GetActiveHeadSite();
-						if(site->mt_ != xlink_site->mt_){
-							if(motor->heads_active_ == 1){
-								forces_summed[i_mt] += 
-									motor->GetTetherForce(site);
-							}
-							else if(site == motor->front_site_){
-								forces_summed[i_mt] += 
-									motor->GetTetherForce(site); 
-//								printf("%g from motor\n", motor->
-//										GetTetherForce(site));
-							}
-						}
-					}
-					// If xlink is double bound, add force
-					else if(xlink->heads_active_ == 2){
-						if(motor->heads_active_ == 1){
-							forces_summed[i_mt] += 
-										motor->GetTetherForce(site);
-						}
-						// Only count force from 1st foot (no double counting)
-						else if(site == motor->front_site_){
-							forces_summed[i_mt] += 
-										motor->GetTetherForce(site); 
-						}
-					}
-				}
-			}
-			// Otherwise, check if site is occupied by an xlink
-			else if(site->xlink_ != nullptr){
-				AssociatedProtein *xlink = site->xlink_;
-				// Xlinks can only exert forces if they're double bound
-				if(xlink->heads_active_ == 2){
-					forces_summed[i_mt] += xlink->GetExtensionForce(site);
-				}
-				// Motors tethered to this xlink can also exert forces
-				if(xlink->tethered_ == true){
-					Kinesin *motor = xlink->motor_;
-					// To avoid double counting, make sure xlink's motor
-					// is on a different microtubule when double bound
-					if(site->mt_ != motor->mt_
-					&& motor->heads_active_ > 0){
-						forces_summed[i_mt] += 
-							motor->GetTetherForce(site);
-					}
-				}
-			}
-		}
+		Microtubule *mt = &mt_list_[i_mt]; 
+		forces_summed[i_mt] = mt->GetNetForce();
 	}
 	// Check for symmetry
 	double tolerance = 0.000001; 
@@ -231,7 +170,6 @@ void MicrotubuleManagement::RunDiffusion(){
 //		printf("for mt # %i: %g\n", i_mt + 1, forces_summed[i_mt + 1]);
 //		properties_->wallace.PrintMicrotubules(0.1);
 //		}
-
 		double delta = abs(forces_summed[i_mt] + forces_summed[i_mt + 1]);
 		if(delta > tolerance){
 				printf("aw man in MT diffusion\n");
@@ -241,35 +179,31 @@ void MicrotubuleManagement::RunDiffusion(){
 				exit(1);
 		}
 	}
-	// Calculate MT displacements for this timestep 
+/*	Calculate MT displacements for this timestep */
 	double kbT = mt_list_[0].kbT_;
 	double site_size = mt_list_[0].site_size_;
 	double delta_t = parameters_->delta_t;
 	double gamma = mt_list_[0].gamma_;
 	// variance of the gaussian to be sampled below
 	double sigma = sqrt(2 * kbT * delta_t / gamma);
-//	printf("sigma is %g\n", sigma);
+	//	Imposed velocity on top MT (being pulled against dir. it slides)
+	double imposed_vel = parameters_->top_mt_imposed_velocity;
+	// step in KMC sim at which top MT will be free to slide
+	int step_unpin = parameters_->top_mt_pinned_until / delta_t; 
+	int cur_step = properties_->current_step_;
 	int displacement[n_mts];
-//	printf("amp: %g\n", amplitude);
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		double velocity = forces_summed[i_mt] / gamma;
-//		printf("forces for mt %i is %g\n", i_mt, forces_summed[i_mt]);
 		// gaussian noise is added into the calculated displacement
 		double noise = properties_->gsl.GetGaussianNoise(sigma);
-//		printf("noise for mt-%i is %g\n", i_mt, noise);
 		double raw_displacement = velocity * delta_t + noise;
-//		printf("dx: %g (%g noise) nm / s\n", raw_displacement, noise);
-//		printf("gamma be %g\n", gamma);
+//		printf("dx: %g (%g noise) sites for mt #%i\n", 
+//				raw_displacement / site_size, noise / site_size, i_mt);
 		double site_displacement = (raw_displacement) / site_size;
-//		printf("%g sites\n", site_displacement);
 		// Get number of sites MT is expected to move
 		int n_steps = (int) site_displacement;
-//		if(forces_summed[i_mt] > 0)
-//			printf("n_sites: %i\n", n_sites);
 		// Use leftover as a probability to roll for another step
 		double leftover = fabs(site_displacement - n_steps);
-//		if(forces_summed[i_mt] > 0)
-//			printf("leftover: %g\n", leftover);
 		double ran = properties_->gsl.GetRanProb();
 		if(ran < leftover
 		&& site_displacement > 0)
@@ -279,13 +213,36 @@ void MicrotubuleManagement::RunDiffusion(){
 			n_steps--;
 		// Store value in array
 		displacement[i_mt] = n_steps;
-//			printf("yo we got %i steps\n", displacement[i_mt]);
-//		if(n_steps > 0)
-//			printf("MT diffusion for #%i: %i\n", i_mt, n_steps);
+		// Add imposed velocity to top MT only
+		if(i_mt == 1){
+			if(imposed_vel != 0
+			&& cur_step >= step_unpin){
+				double imposed_disp = delta_t * imposed_vel / site_size; 
+				int step_dir = mt_list_[i_mt].delta_x_; 
+				double ran = properties_->gsl.GetRanProb();
+				if(ran < imposed_disp)
+					displacement[i_mt] += step_dir;
+			}
+			if(cur_step < step_unpin){
+				displacement[i_mt] = 0;
+			}
+		}
 	}
-	// Run through MT list and update displacements
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){ 
+/*  Run through MT list and update displacementsi */
+	int i_mt_start;
+	if(parameters_->bot_mt_pinned == true){
+		i_mt_start = 1;
+	}	
+	else{
+		i_mt_start = 0;
+	}
+	for(int i_mt = i_mt_start; i_mt < n_mts; i_mt++){ 
 		Microtubule *mt = &mt_list_[i_mt];
+		Microtubule *neighb_mt; 
+		if(n_mts > 1){
+			int i_neighb_mt = 1 - i_mt; 
+			neighb_mt = &mt_list_[i_neighb_mt];
+		}
 		int n_steps = displacement[i_mt];
 		int dx = 0;
 		if(n_steps > 0)
@@ -297,6 +254,7 @@ void MicrotubuleManagement::RunDiffusion(){
 		for(int i_step = 0; i_step < n_steps; i_step++){
 			mt->coord_ += dx; 
 			mt->UpdateExtensions();
+			neighb_mt->UpdateExtensions();
 		}
 	}
 }

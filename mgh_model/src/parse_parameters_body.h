@@ -30,6 +30,20 @@ else if (strcmp(param_name, "n_microtubules") == 0){
 	parameters -> n_microtubules = atoi(param_value);
 	fprintf(stdout, "   n_microtubules = %i\n", parameters -> n_microtubules);
 }
+else if (strcmp(param_name, "mt_printout") == 0){
+	if (strcmp(param_value, "true") == 0){
+		parameters -> mt_printout = true;
+		fprintf(stdout, "   mt_printout = true\n");
+	}
+	else if(strcmp(param_value, "false") == 0){
+		parameters -> mt_printout = false;
+		fprintf(stdout, "   mt_printout = false\n");
+	}
+	else{
+		fprintf(stdout, "Error. mt_printout must be true or false.\n");
+		exit(1);
+	}
+}
 else if (strcmp(param_name, "length_of_microtubule") == 0){
 	parameters -> length_of_microtubule = atoi(param_value);
 	fprintf(stdout, "   length_of_microtubule = %i\n", parameters -> length_of_microtubule);
@@ -45,6 +59,24 @@ else if (strcmp(param_name, "bot_mt_start_coord") == 0){
 else if (strcmp(param_name, "top_mt_imposed_velocity") == 0){
 	parameters -> top_mt_imposed_velocity = atof(param_value);
 	fprintf(stdout, "   top_mt_imposed_velocity = %g\n", parameters -> top_mt_imposed_velocity);
+}
+else if (strcmp(param_name, "bot_mt_pinned") == 0){
+	if (strcmp(param_value, "true") == 0){
+		parameters -> bot_mt_pinned = true;
+		fprintf(stdout, "   bot_mt_pinned = true\n");
+	}
+	else if(strcmp(param_value, "false") == 0){
+		parameters -> bot_mt_pinned = false;
+		fprintf(stdout, "   bot_mt_pinned = false\n");
+	}
+	else{
+		fprintf(stdout, "Error. bot_mt_pinned must be true or false.\n");
+		exit(1);
+	}
+}
+else if (strcmp(param_name, "top_mt_pinned_until") == 0){
+	parameters -> top_mt_pinned_until = atof(param_value);
+	fprintf(stdout, "   top_mt_pinned_until = %g\n", parameters -> top_mt_pinned_until);
 }
 else if (strcmp(param_name, "mt_radius") == 0){
 	parameters -> mt_radius = atof(param_value);

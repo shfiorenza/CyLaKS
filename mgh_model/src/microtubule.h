@@ -23,7 +23,7 @@ class Microtubule{
 		int mt_index_adj_;	// Index of adjacent microtubule
 
 		int n_sites_;		// Number of tubulin sites on MT
-		int coord_;			// Absolute coordinate of left-most edge of MT
+		double coord_;		// Absolute coordinate of left-most edge of MT
 
 		double kbT_;
 		double radius_;
@@ -51,5 +51,9 @@ class Microtubule{
 		void GenerateLattice();
 
 		void UpdateExtensions();
+
+		double GetNetForce();
+		double GetNetForce_Motors();
+		double GetNetForce_Xlinks();
 };
 #endif

@@ -53,16 +53,31 @@ void AssociatedProtein::UpdateNeighborSites(){
 	//	printf("for %i: ", i_site);
 		for(int dist = -dist_cutoff_; dist <= dist_cutoff_; dist++){
 			int i_neighbor = (site_coord - adj_mt->coord_) + dist;
+/*			printf("\nraw dist is %i\n", dist);
+			printf("site coord is %i\n", site_coord);
+			printf("site index is %i\n", i_site);
+			printf("raw i_neighb is %i\n", i_neighbor);
+*/			
 			// Start index at first bulk site (1) if i_neighb is 0 or neg
 			// XXX BOUNDARIES CURRENTLY ACCESSED--DISABLE FOR ALPHA/BETA XXX
 			if(i_neighbor < 0){
-				dist -= i_neighbor - 1;
+//				printf("dist is %i\n", dist);
+				dist -= i_neighbor + 1; // - 1;
+//				printf("i_neighb is %i\n", i_neighbor);
+//				printf("dist is %i\n", dist);
 			}
 			// End scan once last bulk site (mt_length - 2) has been checked
 			else if(i_neighbor > mt_length - 1){
+//				printf("BOINK\n");
 				break;
 			} 
 			else{
+/*				if(i_neighbor == 0){
+					printf("ADDED BRO\n");
+					properties_->wallace.PauseSim(1);
+				}
+*/
+//				printf("added bro\n");
 				Tubulin *neighbor = &adj_mt->lattice_[i_neighbor];
 				if(neighbor->occupied_ == false){
 	//				printf("%i ", i_neighbor);

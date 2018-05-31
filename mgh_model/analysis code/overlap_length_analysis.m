@@ -1,4 +1,4 @@
-clear all
+clear all;
 n_mts = 2;
 n_sites = 500;
 length = n_sites * 0.008;
@@ -11,7 +11,7 @@ start_time = starting_point * delta_t * 50 / 60;
 final_data = zeros([n_datapoints 1]);
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'presXLS7_MTcoord.file';
+fileName = 'testy4b_MTcoord.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [n_mts, n_datapoints], 'double');
@@ -32,6 +32,7 @@ end
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
 plot(linspace(0, end_time, n_datapoints), final_data);
+hold on
 
 grid on
 grid minor

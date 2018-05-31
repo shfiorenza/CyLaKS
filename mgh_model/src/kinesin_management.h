@@ -45,6 +45,7 @@ class KinesinManagement{
 		double p_unbind_stalled_untethered_;
 		double p_unbind_tethered_;
 		double p_tether_free_;
+		double p_tether_bound_;
 		// Indices refer to double the x_distance (in no. of sites)
 		// between the stalk of a motor and the anchor of an xlink
 		// e.g. p_untether_bound_[23] is for an x_dist of 11.5 sites

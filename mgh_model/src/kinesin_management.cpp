@@ -22,7 +22,7 @@ void KinesinManagement::GenerateMotors(){
     // Since only one head has to be bound, the most that will ever
     // be needed (all single-bound) is the total number of sites 
     n_motors_ = n_mts*n_sites;
-	printf("%i motors\n", n_motors_);
+//	printf("%i motors\n", n_motors_);
     motor_list_.resize(n_motors_);
     for(int ID = 0; ID < n_motors_; ID++){
         motor_list_[ID].Initialize(parameters_, properties_, ID);
@@ -119,7 +119,8 @@ void KinesinManagement::SetParameters(){
     double k_on = parameters_->k_on_motor;
     double c_motor = parameters_->c_motor;
 	p_bind_i_free_ = k_on * c_motor * delta_t;
-	p_bind_i_tethered_ = p_bind_i_free_ * 4;
+	double c_eff_motor_teth = parameters_->c_eff_motor_teth; 
+	p_bind_i_tethered_ = k_on * c_eff_motor_teth * delta_t; 
 	double c_eff_motor_bind = parameters_->c_eff_motor_bind;
 	p_bind_ii_ = k_on * c_eff_motor_bind * delta_t;
 	double k_off_pseudo = parameters_->k_off_pseudo; 
@@ -132,6 +133,7 @@ void KinesinManagement::SetParameters(){
 	c_eff_ = parameters_->c_eff_motor_teth;
 	double k_tether_free = parameters_->k_tether_free;
 	p_tether_free_ = k_tether_free * c_motor * delta_t;
+	p_tether_bound_ = k_tether_free * c_eff_motor_teth * delta_t;
 	double k_untether_free = parameters_->k_untether_free;
 	p_untether_free_ = k_untether_free * delta_t;
     double motor_speed = parameters_->motor_speed;
@@ -1265,13 +1267,13 @@ void KinesinManagement::GenerateKMCList(){
 			int n_step_to = n_step_to_rest[x_dist_dub];
 			for(int i_event = 0; i_event < n_step_to; i_event++){
 				pre_list[kmc_index] = 600 + x_dist_dub;
-				printf("%i\n", 600 + x_dist_dub);
+	//			printf("%i\n", 600 + x_dist_dub);
 				kmc_index++;
 			}
 			int n_step_from = n_step_from_rest[x_dist_dub];
 			for(int i_event = 0; i_event < n_step_from; i_event++){
 				pre_list[kmc_index] = 700 + x_dist_dub;
-				printf("%i\n", 700 + x_dist_dub);
+	//			printf("%i\n", 700 + x_dist_dub);
 				kmc_index++;
 			}
 		}
@@ -1314,8 +1316,7 @@ int KinesinManagement::GetNumToBind_I_Tethered(){
             weights_summed += weight;
         }
     }
-	double n_equil = c_eff_ * weights_summed;
-	double n_avg = p_bind_i_free_ * n_equil;
+	double n_avg = p_bind_i_tethered_ * weights_summed;
 	int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
 	return n_to_bind;
 }
@@ -1383,8 +1384,7 @@ int KinesinManagement::GetNumToTether_Bound(){
 			weights_summed += weight;
 		}
 	}
-	double n_equil = c_eff_ * weights_summed;  
-	double n_avg = p_tether_free_ * n_equil;
+	double n_avg = p_tether_bound_ * weights_summed;
 	int n_to_teth = properties_->gsl.SamplePoissonDist(n_avg);
 	return n_to_teth;
 }

@@ -1,7 +1,7 @@
 clear all
 % Often-changed variables
-n_sites = 1250;
-simName = 'e_c00_5';
+n_sites = 250;
+simName = 'e_c0_2';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

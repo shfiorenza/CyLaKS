@@ -7,10 +7,6 @@ n_sites = 1000;
 n_mts = 2;
 xlink_cutoff = 7;
 
-% Colors
-blue = [30 144 255] / 255;
-purple = [128 0 128] / 255;
-
 % File info
 simName = 'slide2e';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -24,9 +20,9 @@ xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
-n_frames = 1;
-frames_per_plot = 10000;
-start_frame = 14750;
+n_frames = 100000;
+frames_per_plot = 100;
+start_frame = 001;
 site_height = 1;
 site_width = 1;
 
@@ -89,9 +85,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos + 900) (first_pos + 1050)];
+                ax.XLim = [(first_pos + n_sites /2 ) second_pos + n_sites + 1];
             else
-                ax.XLim = [(second_pos + 900) (second_pos + 1050)];
+                ax.XLim = [second_pos first_pos + n_sites + 1];
             end
         end
         
@@ -120,7 +116,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                 if i_motor == 1
                     if motor_IDs(i_motor) == motor_IDs(i_motor + 1)
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', blue, 'Curvature', [1 1]);
+                            'FaceColor', 'g', 'Curvature', [1 1]);
                         line([motor_center_x, anchor_x], [motor_center_y, anchor_y],  ...
                             'LineWidth', 1.5, 'Color', 'black');
                     else
@@ -134,7 +130,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                 elseif i_motor == n_sites
                     if motor_IDs(i_motor) == motor_IDs(i_motor - 1)
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', blue, 'Curvature', [1 1]);
+                            'FaceColor', 'g', 'Curvature', [1 1]);
                         line([motor_center_x - site_width/2, anchor_x - site_width/2], ...
                             [anchor_y, motor_center_y], 'LineWidth', 1.5, 'Color', 'black');
                     else
@@ -148,12 +144,12 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                 else
                     if motor_IDs(i_motor) == motor_IDs(i_motor + 1)
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', blue, 'Curvature', [1 1]);
+                            'FaceColor', 'g', 'Curvature', [1 1]);
                         line([motor_center_x, anchor_x], [motor_center_y, anchor_y],  ...
                             'LineWidth', 1.5, 'Color', 'black');
                     elseif motor_IDs(i_motor) == motor_IDs(i_motor - 1)
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', blue, 'Curvature', [1 1]);
+                            'FaceColor', 'g', 'Curvature', [1 1]);
                         line([motor_center_x - site_width/2, anchor_x - site_width/2], ...
                             [anchor_y, motor_center_y], 'LineWidth', 1.5, 'Color', 'black');
                     else
@@ -217,16 +213,16 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                             xb = neighb_center_x; yb = neighb_height - site_height;
                             ne = 6; a = 6; ro = 1;
                             [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
-                            plot(xs,ys,'LineWidth', 1, 'Color', purple);
+                            plot(xs,ys,'LineWidth', 1, 'Color', 'm');
                         end
                         double_bound = true;
                         rectangle('Position', [xlink_pos xlink_height site_width site_height], ...
-                            'FaceColor', purple, 'Curvature', [0.5 0.5]);
+                            'FaceColor', 'm', 'Curvature', [0.5 0.5]);
                     end
                 end
                 if(double_bound == false)
                     rectangle('Position', [xlink_pos xlink_height site_width site_height], ...
-                        'FaceColor', 'm', 'Curvature', [0.5 0.5]);
+                        'FaceColor', 'cyan', 'Curvature', [0.5 0.5]);
                     xa = xlink_center_x; ya = xlink_height + site_height;
                     xb = xlink_center_x; yb = xlink_height + 4*site_height;
                     if(mod(i_mt, 2) == 0)
@@ -235,7 +231,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                     end
                     ne = 3; a = 3; ro = 1;
                     [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
-                    plot(xs,ys,'LineWidth', 1, 'Color', 'm');
+                    plot(xs,ys,'LineWidth', 1, 'Color', 'c');
                 end
             end
         end

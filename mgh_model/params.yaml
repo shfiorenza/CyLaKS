@@ -9,7 +9,7 @@ mt_radius: 12.5
 mt_height: 50
 site_size: 8
 
-length_of_microtubule: 1250
+length_of_microtubule: 250
 n_microtubules: 1
 mt_printout: false               # Toggles real-time ASCII printout
 bot_mt_start_coord: 0           # 'First' MT; plus-end on right
@@ -40,7 +40,7 @@ alpha: 0
 beta: 0
 
 k_on_xlink: 0.01136
-c_xlink: 0.0
+c_xlink: 0.4
 k_off_xlink_i: 0.09091  
 k_off_xlink_ii: 0.0455   
 D_xlink_i: 0.0058

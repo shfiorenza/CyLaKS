@@ -4,13 +4,14 @@
 Curator::Curator(){
 }
 
-void Curator::Initialize(system_parameters *parameters, 
-						 system_properties *properties){
+void Curator::InitializeSimulation(system_parameters *parameters, 
+								   system_properties *properties){
 
 	parameters_ = parameters;
 	properties_ = properties;
 	start_ = clock();
 	SetParameters();
+	SetExperimentalStage();
 	OutputSimDetails();
 }
 
@@ -19,33 +20,104 @@ void Curator::SetParameters(){
 	int n_steps = parameters_->n_steps;
 	int n_datapoints = parameters_->n_datapoints;
 	data_threshold_ = parameters_->data_threshold;
-
 	range_of_data_ = n_steps - data_threshold_;
 	n_pickup_ = range_of_data_/n_datapoints;
 	equil_milestone_ = data_threshold_/10;
 	data_milestone_ = range_of_data_/10;
 }
 
+void Curator::SetExperimentalStage(){
+
+	// Initialize the general science library (gsl) class; 
+	// just an easy way of sampling distributions and referencing the RNG
+	properties_->gsl.Initialize(parameters_->seed);
+	// Initialize microtubules, kinesin4, and prc1 classes 
+	properties_->microtubules.Initialize(parameters_, properties_);
+	properties_->kinesin4.Initialize(parameters_, properties_); 
+	properties_->prc1.Initialize(parameters_, properties_);
+}
+
 void Curator::OutputSimDetails(){
 
 	int n_steps = parameters_->n_steps;
-//	double k_on = parameters_->k_on;
-//	double c_motor = parameters_->c_motor;
-//	double k_off = parameters_->k_off;
-//	double switch_rate = parameters_->switch_rate;
-//	double motor_speed = parameters_->motor_speed;
 	double delta_t = parameters_->delta_t;
-//	double p_bind = k_on*c_motor*delta_t;
-//	double p_unbind = k_off*delta_t;
-//	double p_switch = switch_rate*delta_t;
-//	double p_step = motor_speed*delta_t;
     printf("Total simulation duration: %g seconds\n", delta_t*n_steps);
     printf("Timestep duration: %g seconds\n\n", delta_t);
- //   printf("Motor binding frequency: %g per timestep\n", p_bind);
-//    printf("Motor unbinding frequency: %g per timestep\n", p_unbind);
-//    printf("Motor switching frequency: %g per timestep\n", p_switch);
-//    printf("Motor stepping frequency: %g sites per timestep\n\n", p_step);
     fflush(stdout);
+}
+
+void Curator::OpenFiles(char* sim_name){
+
+	char occupancy_file[160], 
+		 motor_ID_file[160], xlink_ID_file[160], 
+		 tether_coord_file[160], mt_coord_file[160], 
+		 motor_extension_file[160], xlink_extension_file[160],
+		 motor_force_file[160], xlink_force_file[160], total_force_file[160];
+	// Generate names of output files based on the input simulation name
+	sprintf(occupancy_file, "%s_occupancy.file", sim_name);
+	sprintf(motor_ID_file, "%s_motorID.file", sim_name);
+	sprintf(xlink_ID_file, "%s_xlinkID.file", sim_name);	
+	sprintf(tether_coord_file, "%s_tether_coord.file", sim_name);
+	sprintf(mt_coord_file, "%s_mt_coord.file", sim_name);
+	sprintf(motor_extension_file, "%s_motor_extension.file", sim_name);
+	sprintf(xlink_extension_file, "%s_xlink_extension.file", sim_name);
+	sprintf(motor_force_file, "%s_motor_force.file", sim_name);
+	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
+	sprintf(total_force_file, "%s_total_force.file", sim_name);
+	// Check to see if sim files already exist
+	if (FileExists(occupancy_file)){
+
+		printf("Simulation file with this name already exists!\n");
+		printf("Do you wish to overwrite? y/n\n");
+		std::string response; 
+		bool response_unacceptable = true;
+		while(response_unacceptable){
+			std::getline(std::cin, response);
+			if(response == "n"){
+				printf("Simulation terminated.\n");
+				exit(1); 
+			}
+			else if(response == "y"){
+				printf("Very well.");
+			   	printf(" Overwriting data for sim '%s'\n\n", sim_name);
+				response_unacceptable = false; 
+			}
+			else{
+				printf("bro I said y or n. try again plz\n");
+			}
+		}
+
+	}
+	// Open occupancy file, which stores the species ID of each occupant 
+	// (or -1 for none) for all MT sites during data collection (DC)
+	properties_->occupancy_file_ = gfopen(occupancy_file, "w");
+	// Open motor ID file, which stores the unique ID of all bound motors 
+	// (unbound not tracked) and their respective site indices during DC
+	properties_->motor_ID_file_ = gfopen(motor_ID_file, "w");
+	// Open xlink ID file, which does the same 
+	// as the motor ID file but for xlinks
+	properties_->xlink_ID_file_ = gfopen(xlink_ID_file, "w");
+	// Open tether coord file, which stores the coordinates 
+	// of the anchor points of tethered motors
+	properties_->tether_coord_file_ = gfopen(tether_coord_file, "w");
+	// Open mt coord file, which stores the coordinates 
+	// of the left-most edge of each microtubule during DC
+	properties_->mt_coord_file_ = gfopen(mt_coord_file, "w");
+	// Open motor extension file, which stores the number of motors 
+	// with a certain tether extension for all possible extensions
+	properties_->motor_extension_file_ = gfopen(motor_extension_file, "w");
+	// Open xlink extension file, which stores the number of stage-2 
+	// xlinks at a certain extension for all possible extensions
+	properties_->xlink_extension_file_ = gfopen(xlink_extension_file, "w");
+	// Open motor force file, which stores the sum 
+	// of forces coming from motor tether extensions
+	properties_->motor_force_file_ = gfopen(motor_force_file, "w");
+	// Open xlink force file, which stores the sum
+	// of forces coming from xlink extensions
+	properties_->xlink_force_file_ = gfopen(xlink_force_file, "w");
+	// Open total force file, which stores the sum of ALL 
+	// forces coming from xlink and motor tether extensions
+	properties_->total_force_file_ = gfopen(total_force_file, "w");
 }
 
 void Curator::PrintMicrotubules(){
@@ -358,5 +430,10 @@ void Curator::CleanUp(){
 	fclose(properties_->motor_force_file_);
 	fclose(properties_->xlink_force_file_);
 	fclose(properties_->total_force_file_);
+}
 
+bool Curator::FileExists(std::string file_name){
+
+	struct stat buffer;
+	return (stat(file_name.c_str(), &buffer) != -1);
 }

@@ -1,6 +1,7 @@
 #ifndef _CURATOR_H
 #define _CURATOR_H
 #include <iostream>
+#include <sys/stat.h>
 struct system_parameters;
 struct system_properties;
 
@@ -24,11 +25,14 @@ class Curator{
 	
 	public:
 		Curator();
-		void Initialize(system_parameters *parameters, 
-						system_properties *properties);
+		void InitializeSimulation(system_parameters *parameters, 
+								  system_properties *properties);
 		void SetParameters();
-
+		void SetExperimentalStage();
 		void OutputSimDetails();
+
+		void OpenFiles(char *sim_name);
+
 		void PrintMicrotubules();
 		void PrintMicrotubules(double pause_duration);
 		void OutputData();
@@ -36,5 +40,7 @@ class Curator{
 		void PauseSim(double duration); 
 		void OutputSimDuration();
 		void CleanUp();
+
+		bool FileExists(std::string file_name);
 };
 #endif

@@ -175,55 +175,54 @@ void MicrotubuleManagement::RunDiffusion(){
 		}
 	}
 /*	Calculate MT displacements for this timestep */
+	int displacement[n_mts];
 	double delta_t = parameters_->delta_t;
-	double kbT = mt_list_[0].kbT_;
-	double site_size = mt_list_[0].site_size_;
-	double gamma = mt_list_[0].gamma_;
-	// variance of the gaussian to be sampled below
-	double sigma = sqrt(2 * kbT * delta_t / gamma);
-	//	Imposed velocity on top MT (being pulled against dir. it slides)
-	double imposed_vel = parameters_->top_mt_imposed_velocity;
 	// step in KMC sim at which top MT will be free to slide
 	int step_unpin = parameters_->top_mt_pinned_until / delta_t; 
 	int cur_step = properties_->current_step_;
-	int displacement[n_mts];
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		double velocity = forces_summed[i_mt] / gamma;
-		// gaussian noise is added into the calculated displacement
-		double noise = properties_->gsl.GetGaussianNoise(sigma);
-		double raw_displacement = velocity * delta_t + noise;
-//		printf("dx: %g (%g noise) sites for mt #%i\n", 
-//				raw_displacement / site_size, noise / site_size, i_mt);
-		double site_displacement = (raw_displacement) / site_size;
-		// Get number of sites MT is expected to move
-		int n_steps = (int) site_displacement;
-		// Use leftover as a probability to roll for another step
-		double leftover = fabs(site_displacement - n_steps);
-		double ran = properties_->gsl.GetRanProb();
-		if(ran < leftover
-		&& site_displacement > 0)
-			n_steps++;
-		else if(ran < leftover
-		&& site_displacement < 0)
-			n_steps--;
-		// Store value in array
-		displacement[i_mt] = n_steps;
-		// Add imposed velocity to top MT only
-		if(i_mt == 1){
-			if(imposed_vel != 0
-			&& cur_step >= step_unpin){
+	// Only calculate displacements if top MT is unpinned 
+	// (assume bot MT is pinned if top MT is) 
+	if(cur_step >= step_unpin){
+		double kbT = mt_list_[0].kbT_;
+		double site_size = mt_list_[0].site_size_;
+		double gamma = mt_list_[0].gamma_;
+		// variance of the gaussian to be sampled below
+		double sigma = sqrt(2 * kbT * delta_t / gamma);
+		// Imposed velocity on top MT (being pulled against dir. it slides)
+		double imposed_vel = parameters_->top_mt_imposed_velocity;
+		for(int i_mt = 0; i_mt < n_mts; i_mt++){
+			double velocity = forces_summed[i_mt] / gamma;
+			// gaussian noise is added into the calculated displacement
+			double noise = properties_->gsl.GetGaussianNoise(sigma);
+			double raw_displacement = velocity * delta_t + noise;
+//			printf("dx: %g (%g noise) sites for mt #%i\n", 
+//					raw_displacement / site_size, noise / site_size, i_mt);
+			double site_displacement = (raw_displacement) / site_size;
+			// Get number of sites MT is expected to move
+			int n_steps = (int) site_displacement;
+			// Use leftover as a probability to roll for another step
+			double leftover = fabs(site_displacement - n_steps);
+			double ran = properties_->gsl.GetRanProb();
+			if(ran < leftover
+					&& site_displacement > 0)
+				n_steps++;
+			else if(ran < leftover
+					&& site_displacement < 0)
+				n_steps--;
+			// Store value in array
+			displacement[i_mt] = n_steps;
+			// Add imposed velocity to top MT only
+			if(i_mt == 1
+			&& imposed_vel != 0){
 				double imposed_disp = delta_t * imposed_vel / site_size; 
 				int step_dir = mt_list_[i_mt].delta_x_; 
 				double ran = properties_->gsl.GetRanProb();
 				if(ran < imposed_disp)
 					displacement[i_mt] += step_dir;
 			}
-			if(cur_step < step_unpin){
-				displacement[i_mt] = 0;
-			}
 		}
 	}
-/*  Run through MT list and update displacementsi */
+	/*  Run through MT list and update displacementsi */
 	int i_mt_start;
 	if(parameters_->bot_mt_pinned == true){
 		i_mt_start = 1;

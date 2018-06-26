@@ -2,7 +2,7 @@ seed: 329951224
 n_steps: 2000000
 n_datapoints: 100000
 data_threshold: 0   # dont rly use this anymore; want all steps for movie
-delta_t: 0.0005   #0.000005
+delta_t: 0.00005   #0.000005
 kbT: 4.114
 eta_inverse: 1000
 mt_radius: 12.5

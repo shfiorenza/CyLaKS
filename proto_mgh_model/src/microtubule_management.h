@@ -10,16 +10,13 @@ class MicrotubuleManagement{
 
 	public:
 		int n_sites_tot_ = 0;
-		int n_unoccupied_ = 0;
-		int n_unoccupied_pairs_ = 0;
-		int n_pair_entries_ = 0;
+		int n_unoccupied_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 
 		std::vector<Microtubule> mt_list_;
 		std::vector<Tubulin*> unoccupied_list_;
-		std::vector<Tubulin*> unoccupied_pairs_list_;
 	private:
 	
 	public:
@@ -38,7 +35,6 @@ class MicrotubuleManagement{
 
 		void UpdateNeighbors();
 
-		void UpdateNumUnoccupied();
 		void UpdateUnoccupiedList();
 
 		Tubulin* GetUnoccupiedSite();

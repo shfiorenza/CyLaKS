@@ -18,18 +18,15 @@ void Kinesin::Initialize(system_parameters *parameters,
 
 void Kinesin::SetParameters(){
 
-	kbT_ = parameters_->kbT;
-	site_size_ = parameters_->site_size;
-	r_0_ = parameters_->r_0_motor;
-	k_spring_ = parameters_->k_spring_motor;
-	k_eff_slack_ = parameters_->k_slack_motor;
-	stall_force_ = parameters_->stall_force;
+	r_0_ = parameters_->motors.r_0;
+	k_spring_ = parameters_->motors.k_spring;
+	k_slack_ = parameters_->motors.k_slack;
 }
 
 void Kinesin::InitiateNeighborLists(){
 
 	neighbor_xlinks_.resize(2*dist_cutoff_ + 1);
-	int n_mts = parameters_->n_microtubules; 
+	int n_mts = parameters_->microtubules.count; 
 	// Serialize this bitch so we just roll one random number 
 	neighbor_sites_.resize(n_mts*(2*dist_cutoff_ + 1));
 }
@@ -38,9 +35,11 @@ void Kinesin::InitiateNeighborLists(){
 void Kinesin::PopulateTetheringLookupTable(){
 
 	double r_y = 17.5;
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
 	tethering_weight_lookup_.resize(2*dist_cutoff_ + 1);
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
-		double r_x = x_dist_dub * site_size_ / 2;
+		double r_x = x_dist_dub * site_size / 2;
 		double r = sqrt(r_x*r_x + r_y*r_y);
 		double dr = r - r_0_;
 		double weight = 0;
@@ -49,11 +48,11 @@ void Kinesin::PopulateTetheringLookupTable(){
 		}
 		// For compression, assume the tail can bend, lowering its k_spring
 		else if(dr < 0){
-			weight = exp(-dr*dr*k_eff_slack_/(2*kbT_));
+			weight = exp(-dr*dr*k_slack_/(2*kbT));
 		}
 		// For extension, treat tail as a spring
 		else{
-			weight = exp(-dr*dr*k_spring_/(2*kbT_));
+			weight = exp(-dr*dr*k_spring_/(2*kbT));
 		}
 		tethering_weight_lookup_[x_dist_dub] = weight;
 //		printf("TETH_ #%i_ r: %g, dr: %g, weight: %g\n", 
@@ -64,10 +63,12 @@ void Kinesin::PopulateTetheringLookupTable(){
 void Kinesin::PopulateBindingLookupTable(){
 
 	double r_y = 17.5;		// dist from either MT to midpoint of prc1
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
 	// Use 2*dist_cutoff because we can have half-integer distances
 	binding_weight_lookup_.resize(2*dist_cutoff_ + 1);	
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
-		double r_x = x_dist_dub * site_size_ / 2;
+		double r_x = x_dist_dub * site_size / 2;
 		double r = sqrt(r_x*r_x + r_y*r_y);
 		double dr = r - r_0_;
 		double weight = 0;
@@ -76,11 +77,11 @@ void Kinesin::PopulateBindingLookupTable(){
 		}
 		// For compression, assume the tail can bend, lowering its k_spring
 		else if(dr < 0){
-			weight = exp(-dr*dr*k_eff_slack_/(2*kbT_));
+			weight = exp(-dr*dr*k_slack_/(2*kbT));
 		}
 		// For extension, treat tail as a spring
 		else{
-			weight = exp(-dr*dr*k_spring_/(2*kbT_));
+			weight = exp(-dr*dr*k_spring_/(2*kbT));
 		}
 		binding_weight_lookup_[x_dist_dub] = weight;
 //		printf("BIND_ #%i_ r: %g, dr: %g, weight: %g\n", 
@@ -91,8 +92,8 @@ void Kinesin::PopulateBindingLookupTable(){
 void Kinesin::UpdateNeighborXlinks(){
 
 	n_neighbor_xlinks_ = 0;
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
+	int n_mts = parameters_->microtubules.count;
+	int mt_length = parameters_->microtubules.length;
 	double stalk_coord = GetStalkCoordinate();
 	// Scan through all potential neighbor sites; add only untethered xlinks
 	int i_entry = 0;
@@ -154,8 +155,8 @@ void Kinesin::UpdateNeighborSites(){
 	if(tethered_ == true
 	&& heads_active_ == 0){
 		n_neighbor_sites_ = 0;
-		int n_mts = parameters_->n_microtubules;
-		int mt_length = parameters_->length_of_microtubule;
+		int n_mts = parameters_->microtubules.count;
+		int mt_length = parameters_->microtubules.length;
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		// FIXME this only works for two MTs as of now FIXME
 		// Scan through all potential neighbor sites; add unoccupied to list 
@@ -202,6 +203,7 @@ bool Kinesin::NeighborSiteExists(int x_dist_doubled){
 
 void Kinesin::UpdateExtension(){
 
+	double site_size = parameters_->microtubules.site_size;
 	if(heads_active_ == 0
 	|| tethered_ == false){
 		x_dist_doubled_ = 0;
@@ -223,7 +225,7 @@ void Kinesin::UpdateExtension(){
 		}
 		else{
 			double r_y = 17.5;
-			double r_x = site_size_ * x_dist_doubled_ / 2;
+			double r_x = site_size * x_dist_doubled_ / 2;
 			double r = sqrt(r_x*r_x + r_y*r_y);
 			double extension = r - r_0_;
 			extension_ = extension;
@@ -247,7 +249,7 @@ void Kinesin::UpdateExtension(){
 		else{
 			// Calculate new extension
 			double r_y = 17.5;
-			double r_x = site_size_*x_dist_doubled_/2;
+			double r_x = site_size * x_dist_doubled_/2;
 			double r = sqrt(r_y*r_y + r_x*r_x);
 			double extension = r - r_0_; 
 			extension_ = extension;
@@ -303,6 +305,8 @@ bool Kinesin::AtCutoff(){
 
 int Kinesin::SampleTailExtensionDoubled(){
 
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
 	int rest_dist_dub = 2*rest_dist_;
 	// Total weight of extension 'side' of energy profile
 	double ext_weight = 0;
@@ -320,7 +324,7 @@ int Kinesin::SampleTailExtensionDoubled(){
 	double ran = properties_->gsl.GetRanProb();
 	// Sample a normal distribution around rest length if we get extension
 	if(ran < ext_weight/tot_weight){
-		double sigma = sqrt(kbT_ / k_spring_) / site_size_;
+		double sigma = sqrt(kbT / k_spring_) / site_size;
 		int extension = gsl->SampleAbsNormalDist(sigma);
 		int x_dist_dub = rest_dist_dub + extension;
 		if(x_dist_dub > 2*dist_cutoff_)
@@ -329,7 +333,7 @@ int Kinesin::SampleTailExtensionDoubled(){
 	}
 	// Otherwise, select for 'slack' based on different sigma
 	else{
-		double sigma = sqrt(kbT_ / k_eff_slack_) / site_size_;
+		double sigma = sqrt(kbT / k_slack_) / site_size;
 		int compression = gsl->SampleAbsNormalDist(sigma);
 		int x_dist_dub = rest_dist_dub - compression;
 		if(x_dist_dub < 2*comp_cutoff_)
@@ -494,7 +498,7 @@ double Kinesin::GetTetherForce(Tubulin *site){
 		if(tethered_ == true){
 			double force_mag;
 			if(x_dist_doubled_ <= 2*rest_dist_)
-				force_mag = extension_ * k_eff_slack_;
+				force_mag = extension_ * k_slack_;
 			else
 				force_mag = extension_ * k_spring_; 
 			double stalk_coord = GetStalkCoordinate();

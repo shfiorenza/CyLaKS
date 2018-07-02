@@ -22,8 +22,6 @@ class AssociatedProtein{
 		int dist_cutoff_  = 7;		// maximum value x_dist_ can have
 		int rest_dist_ = 0;			// x_dist at which spring extension is ~0
 	
-		double kbT_;			
-        double site_size_;	
 		double r_0_;		
         double k_spring_;
 		double extension_ ;		// current extension of xlink in nm

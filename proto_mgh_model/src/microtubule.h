@@ -3,12 +3,8 @@
 #include "tubulin.h"
 #include <vector>
 
-#ifndef _PARAMETERS_H
-typedef struct system_parameters system_parameters;
-#endif
-#ifndef _SYSTEM_PROPERTIES_H
-typedef struct system_properties system_properties;
-#endif
+struct system_parameters;
+struct system_properties;
 
 class Microtubule{
 	private:
@@ -25,12 +21,6 @@ class Microtubule{
 		int n_sites_;		// Number of tubulin sites on MT
 		double coord_;		// Absolute coordinate of left-most edge of MT
 
-		double kbT_;
-		double radius_;
-		double height_;
-		double eta_inverse_;	
-		double site_size_; 
-		double big_l_;				// in nm, overall length of MT
 		double gamma_;				// in units of pN / nm ???
 
 

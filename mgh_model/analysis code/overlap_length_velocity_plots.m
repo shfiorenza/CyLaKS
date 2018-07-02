@@ -1,11 +1,11 @@
 clear all;
 % Often-changed variables
-n_sites = 1000;
-simName = 'slide2e_noteth';
+n_sites = 250;
+simName = 'test2';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 40000000;
-delta_t = 0.000005;
+n_steps = 2000000;
+delta_t = 0.0001;
 n_datapoints = 100000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;
@@ -35,23 +35,12 @@ for i_data = starting_point + 1 : 1 : n_datapoints
     final_overlap_data(i_data) = overlap_length; 
 end
 
-% For a smoother slope calculation, spread out datapoints to sample from
-datapoints_per_iteration = 1000;
-n_iterations = n_datapoints / datapoints_per_iteration;
-overlap_slope_data = zeros(n_iterations, 1);
-for i_iteration = starting_point + 1 : 1 : n_iterations
-    overlap_index = i_iteration * datapoints_per_iteration;
-    overlap_slope_data(i_iteration) = final_overlap_data(overlap_index);
-end
-
-% USE ALL; SMOOTH
 % Calculate real time that passes per iteration to get an accurate velocity
-time_per_iteration = delta_t * (n_steps / n_datapoints); % * datapoints_per_iteration;
+time_per_datapoint = delta_t * (n_steps / n_datapoints);
 % Use gradient function with above spacing to get slope of overlap length
-overlap_slope_data = smooth(final_overlap_data, 500);
-slope_data = gradient(overlap_slope_data, time_per_iteration);
+smoothed_overlap_data = smooth(final_overlap_data, 1000);
+slope_data = gradient(smoothed_overlap_data, time_per_datapoint);
 final_slope_data = slope_data;
-%final_slope_data = abs(slope_data);
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
@@ -65,8 +54,8 @@ title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
 ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
-xlim([start_time end_time - 1]);
-ylim([0 8]);
+%xlim([start_time end_time]);
+%ylim([0 8]);
 grid on
 grid minor
 
@@ -75,9 +64,9 @@ subplot(2, 1, 2)
 plot(linspace(start_time, end_time, n_datapoints), final_slope_data, ...
         'LineWidth', 2);
 title('Sliding velocity over time');
-ylabel('Sliding velocity (nm/s)');
+ylabel('Sliding velocity (um/s)');
 xlabel('Time (s)');
-xlim([start_time end_time - 1]);
+xlim([start_time + 0.1 end_time - 0.1]);
 %axis tight
 grid on
 grid minor

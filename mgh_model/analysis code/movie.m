@@ -3,7 +3,7 @@ clear all
 % Parameters from sim
 n_datapoints = 100000;
 motor_ID = 2;
-n_sites = 1000;
+n_sites = 250;
 n_mts = 2;
 xlink_cutoff = 7;
 
@@ -12,7 +12,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'slide2e';
+simName = 'test';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
@@ -24,9 +24,9 @@ xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
-n_frames = 1;
-frames_per_plot = 10000;
-start_frame = 14750;
+n_frames = 100000;
+frames_per_plot = 1000;
+start_frame = 1;
 site_height = 1;
 site_width = 1;
 
@@ -89,9 +89,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos + 900) (first_pos + 1050)];
+                ax.XLim = [(first_pos) (second_pos + n_sites + 1)];
             else
-                ax.XLim = [(second_pos + 900) (second_pos + 1050)];
+                ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
             end
         end
         

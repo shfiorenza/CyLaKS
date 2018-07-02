@@ -150,10 +150,11 @@ dirs:
 clean:
 	rm -f -r $(OBJDIR)
 	rm -f -r $(BINDIR)
+	rm -f sim
 
 .PHONY : clean-output
 clean-output :
-	rm -f *.file sim
+	rm -f *.file
 
 sim: dirs $(BINDIR)/sim; cp $(BINDIR)/sim sim
 

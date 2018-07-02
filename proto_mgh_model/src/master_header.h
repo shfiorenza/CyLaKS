@@ -9,6 +9,7 @@
 #include <iostream>
 #include <random>
 #include <algorithm>
+#include <sys/stat.h>
 
 /* Include gsl header files. */
 #include <gsl/gsl_rng.h>
@@ -17,8 +18,5 @@
 /* Include custom structures. */
 #include "system_parameters.h"
 #include "system_properties.h"
-
-/* Include function prototypes. */
-#include "prototypes.h"
 
 #endif

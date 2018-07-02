@@ -17,21 +17,21 @@ void AssociatedProtein::Initialize(system_parameters *parameters,
 
 void AssociatedProtein::SetParameters(){
 
-	kbT_ = parameters_->kbT;
-	site_size_ = parameters_->site_size;
-	r_0_ = parameters_->r_0_xlink;
-	k_spring_ = parameters_->k_spring_xlink;
+	r_0_ = parameters_->xlinks.r_0;
+	k_spring_ = parameters_->xlinks.k_spring;
 }
 
 void AssociatedProtein::PopulateBindingLookupTable(){
 
 	double r_y = 35;		//dist between MTs in nm; static as of now
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
 	binding_weight_lookup_.resize(dist_cutoff_ + 1);
 	for(int i_dist = 0; i_dist <= dist_cutoff_; i_dist++){
-		double r_x = (double)i_dist*site_size_;
+		double r_x = (double)i_dist*site_size;
 		double r = sqrt(r_y*r_y + r_x*r_x);
 		double dr = r - r_0_;
-		double weight = exp(-dr*dr*k_spring_/(2*kbT_));
+		double weight = exp(-dr*dr*k_spring_/(2*kbT));
 		binding_weight_lookup_[i_dist] = weight;
 //		printf("r: %g, dr: %g,  weight: %g\n", r, dr, weight);
 	}
@@ -40,8 +40,8 @@ void AssociatedProtein::PopulateBindingLookupTable(){
 void AssociatedProtein::UpdateNeighborSites(){
 	
 	n_neighbor_sites_ = 0;
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
+	int n_mts = parameters_->microtubules.count;
+	int mt_length = parameters_->microtubules.length;
 	if(n_mts > 1){
 		Tubulin *site = GetActiveHeadSite();
 		int i_site = site->index_;
@@ -102,6 +102,7 @@ bool AssociatedProtein::NeighborExists(int x_dist){
 
 void AssociatedProtein::UpdateExtension(){
 
+	double site_size = parameters_->microtubules.site_size;
 	if(heads_active_ == 2){
 		int x_dist_pre = x_dist_;
 		// Calculate first head's coordinate
@@ -117,7 +118,7 @@ void AssociatedProtein::UpdateExtension(){
 		if(x_dist <= dist_cutoff_){
 			x_dist_ = x_dist; 
 			double r_y = 35;					// static as of now
-			double r_x = site_size_*x_dist_;
+			double r_x = site_size*x_dist_;
 			double r = sqrt(r_y*r_y + r_x*r_x);
 			double extension = r - r_0_; 
 			extension_ = extension;
@@ -231,7 +232,9 @@ int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 int AssociatedProtein::SampleSpringExtension(){
 
 	// Scale sigma so that the avg for binomial is greater than 1
-	double sigma = sqrt(kbT_ / k_spring_) / site_size_ * 100;
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
+	double sigma = sqrt(kbT / k_spring_) / site_size * 100;
 	int x_dist = properties_->gsl.SampleNormalDist(sigma);
 	x_dist = x_dist / 100;
 	if(x_dist > dist_cutoff_)

@@ -17,34 +17,33 @@ void Microtubule::Initialize(system_parameters *parameters,
 
 void Microtubule::SetParameters(){
 
-	n_sites_ = parameters_->length_of_microtubule;
-	kbT_ = parameters_->kbT;
-	radius_ = parameters_->mt_radius;
-	height_ = parameters_->mt_height;
-	eta_inverse_ = parameters_->eta_inverse;
-	site_size_ = parameters_->site_size;
+	n_sites_ = parameters_->microtubules.length;
 	coord_ = 0;
 	if(index_%2 == 0){
 		polarity_ = 0;
-		plus_end_ = n_sites_ - 1;
-		minus_end_ = 0;
-		delta_x_ = 1;
-		mt_index_adj_ = index_ + 1; 	// FIXME
-		coord_ = parameters_->bot_mt_start_coord;	// FIXME
-	}
-	else if(index_%2 == 1){
-		polarity_ = 1;
 		plus_end_ = 0;
 		minus_end_ = n_sites_ - 1;
 		delta_x_ = -1;
-		mt_index_adj_ = index_ - 1;		// FIXME 
-		coord_ = parameters_->top_mt_start_coord;	// FIXME 
+		mt_index_adj_ = index_ + 1; 	// FIXME
+		coord_ = parameters_->microtubules.start_coord[0];
 	}
-	int mt_length = parameters_->length_of_microtubule;
-	big_l_ = mt_length * site_size_;
-	// see radhika paper for any of this to make sense
-	double numerator = 2 * 3.14159 * big_l_ / (eta_inverse_ * 1000000);;
-	double denom = log(2 * height_ / radius_);
+	else if(index_%2 == 1){
+		polarity_ = 1;
+		plus_end_ = n_sites_ - 1;
+		minus_end_ = 0;
+		delta_x_ = 1;
+		mt_index_adj_ = index_ - 1;		// FIXME 
+		coord_ = parameters_->microtubules.start_coord[1]; 
+	}
+	int mt_length = parameters_->microtubules.length;
+	double site_size = parameters_->microtubules.site_size;
+	double big_l = mt_length * site_size;
+	double radius = parameters_->microtubules.radius;
+	double height = parameters_->microtubules.elevation;
+	double eta = parameters_->eta;
+	// see radhika sliding paper for any of this to make sense
+	double numerator = 2 * 3.14159 * big_l * (eta / 1000000);;
+	double denom = log(2 * height / radius);
 	gamma_ = (numerator / denom);
 }
 

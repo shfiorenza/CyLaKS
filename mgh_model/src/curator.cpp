@@ -4,15 +4,159 @@
 Curator::Curator(){
 }
 
-void Curator::InitializeSimulation(system_parameters *parameters, 
-								   system_properties *properties){
+void Curator::ParseParameters(system_parameters *params, 
+							  char *param_file) {
 
-	parameters_ = parameters;
+	printf("Reading params from %s:\n\n", param_file);
+	// Check to make sure param file actually exists
+	if(!FileExists(param_file)){
+		printf("  Error: parameter file does not exist; aborting\n"); 
+		exit(1);
+	}
+	// Parse parameter file into a YAML node
+	YAML::Node input = YAML::LoadFile(param_file);
+	// Transfer values from input param node to system_parameters structure
+	printf("  General simulation parameters:\n");
+	params->seed = input["seed"].as<int>();
+	printf("    seed = %li\n", params->seed);
+	params->n_steps = input["n_steps"].as<int>();
+	printf("    n_steps = %i\n", params->n_steps);
+	params->n_datapoints = input["n_datapoints"].as<int>();
+	printf("    n_datapoints = %i\n", params->n_datapoints);
+	params->data_threshold = input["data_threshold"].as<int>();
+	printf("    data_threshold = %i steps\n", params->data_threshold);
+	params->delta_t = input["delta_t"].as<double>();
+	printf("    delta_t = %g s\n", params->delta_t);
+	params->kbT = input["kbT"].as<double>();
+	printf("    kbT = %g pN*nm\n", params->kbT);
+	params->eta = input["eta"].as<double>();
+	printf("    eta = %g (pN*s)/um^2\n", params->eta);
+	/* Motor parameters below */ 
+	YAML::Node motors = input["motors"];
+	printf("\n  Kinesin (motor) parameters:\n");
+	params->motors.k_on = motors["k_on"].as<double>();
+	printf("    k_on = %g /(nM*s)\n", params->motors.k_on);
+	params->motors.concentration = motors["concentration"].as<double>();
+	printf("    concentration = %g nM\n", params->motors.concentration);
+	params->motors.conc_eff_bind = motors["conc_eff_bind"].as<double>();
+	printf("    conc_eff_bind = %g nM\n", params->motors.conc_eff_bind);
+	params->motors.k_off_i = motors["k_off_i"].as<double>();
+	printf("    k_off_i = %g /s\n", params->motors.k_off_i);
+	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
+	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
+	params->motors.velocity = motors["velocity"].as<double>();
+	printf("    velocity = %g nm/s\n", params->motors.velocity);
+	params->motors.diffusion_const = motors["diffusion_const"].as<double>();
+	printf("    diffusion_const = %g um^2/s\n", 
+			params->motors.diffusion_const);
+	params->motors.k_off_ratio = motors["k_off_ratio"].as<double>();
+	printf("    k_off_ratio = %g\n", params->motors.k_off_ratio);
+	params->motors.failstep_rate = motors["failstep_rate"].as<double>();
+	printf("    failstep_rate = %g /s\n", params->motors.failstep_rate);
+	params->motors.k_tether_free = motors["k_tether_free"].as<double>();
+	printf("    k_tether_free = %g /(nM*s)\n", params->motors.k_tether_free);
+	params->motors.conc_eff_tether = motors["conc_eff_tether"].as<double>();
+	printf("    conc_eff_tether = %g nM\n", params->motors.conc_eff_tether);
+	params->motors.k_untether_free = motors["k_untether_free"].as<double>();
+	printf("    k_untether_free = %g /s\n", params->motors.k_untether_free);
+	params->motors.k_untether = motors["k_untether"].as<double>();
+	printf("    k_untether = %g /s\n", params->motors.k_untether);
+	params->motors.r_0 = motors["r_0"].as<double>();
+	printf("    r_0 = %g nm\n", params->motors.r_0);
+	params->motors.k_spring = motors["k_spring"].as<double>();
+	printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
+	params->motors.k_slack = motors["k_slack"].as<double>();
+	printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
+	params->motors.stall_force = motors["stall_force"].as<double>();
+	printf("    stall_force = %g pN\n", params->motors.stall_force);
+	params->motors.alpha = motors["alpha"].as<double>();
+	printf("    alpha = %g inserts per sec\n", params->motors.alpha);
+	params->motors.beta = motors["beta"].as<double>();
+	printf("    beta = %g removals per sec\n", params->motors.beta); 
+	/* Xlink parameters below */
+	YAML::Node xlinks = input["xlinks"];
+	printf("\n  Crosslinker (xlink) parameters:\n");
+	params->xlinks.k_on = xlinks["k_on"].as<double>();
+	printf("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
+	params->xlinks.concentration = xlinks["concentration"].as<double>();
+	printf("    concentration = %g nM\n", params->xlinks.concentration);
+	params->xlinks.conc_eff_bind = xlinks["conc_eff_bind"].as<double>();
+	printf("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);  
+	params->xlinks.k_off_i = xlinks["k_off_i"].as<double>();
+	printf("    k_off_i = %g /s\n", params->xlinks.k_off_i);
+	params->xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
+	printf("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
+	params->xlinks.diffusion_const_i = 
+			xlinks["diffusion_const_i"].as<double>();
+	printf("    diffusion_constant_i = %g um^2/s\n", 
+			params->xlinks.diffusion_const_i);
+	params->xlinks.diffusion_const_ii = 
+			xlinks["diffusion_const_ii"].as<double>();
+	printf("    diffusion_constant_ii = %g um^2/s\n", 
+			params->xlinks.diffusion_const_ii);
+	params->xlinks.r_0 = xlinks["r_0"].as<double>();
+	printf("    r_0 = %g nm\n", params->xlinks.r_0);
+	params->xlinks.k_spring = xlinks["k_spring"].as<double>();
+	printf("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
+	/* Microtubule parameters below */ 
+	YAML::Node mts = input["microtubules"];
+	printf("\n  Microtubule (mt) parameters:\n");
+	params->microtubules.count = mts["count"].as<int>();
+	printf("    count = %i\n", params->microtubules.count);
+	params->microtubules.length = mts["length"].as<int>();
+	printf("    length = %i sites\n", params->microtubules.length);
+	params->microtubules.site_size = mts["site_size"].as<double>();
+	printf("    site_size = %g nm\n", params->microtubules.site_size);
+	params->microtubules.radius = mts["radius"].as<double>();
+	printf("    radius = %g nm\n", params->microtubules.radius);
+	params->microtubules.elevation = mts["elevation"].as<double>();
+	printf("    elevation = %g nm above surface\n", 
+			params->microtubules.elevation);
+	params->microtubules.start_coord = 
+			mts["start_coord"].as<std::vector<double>>();
+	// Check to make sure there are enough vector entries for given MT count
+	int n_start_coords = mts["start_coord"].size();
+	int n_imp_vel = mts["imposed_velocity"].size();
+	int n_immo = mts["immobile_until"].size();
+	if(params->microtubules.count > n_start_coords
+	|| params->microtubules.count > n_imp_vel
+	|| params->microtubules.count > n_immo){
+		printf("\nError! More MTs than given parameters; ");
+		printf("check vector entries in parameter file!\n\n");
+		exit(1);
+	}
+	for(int i_mt = 0; i_mt < n_start_coords; i_mt++){
+		double start_coord = params->microtubules.start_coord[i_mt];
+		printf("    start_coord = %g nm for mt %i\n", start_coord, i_mt);
+	}
+	params->microtubules.imposed_velocity =
+			mts["imposed_velocity"].as<std::vector<double>>();
+	for(int i_mt = 0; i_mt < n_imp_vel; i_mt++){
+		double imp_vel = params->microtubules.imposed_velocity[i_mt];
+		printf("    imposed_velocity = %g nm/s for mt %i\n", imp_vel, i_mt);
+	}
+	params->microtubules.immobile_until = 
+			mts["immobile_until"].as<std::vector<double>>();
+	for(int i_mt = 0; i_mt < n_immo; i_mt++){
+		double immo = params->microtubules.immobile_until[i_mt];	
+		printf("    immobile until = %g s for mt %i\n", immo, i_mt);
+	}
+	params->microtubules.printout = mts["printout"].as<bool>();
+	printf("    printout = %s\n", 
+			params->microtubules.printout ? "true" : "false");
+	// Store params pointer as parameters_ in Curator
+	parameters_ = params;
+	int n_steps = parameters_->n_steps;
+	double delta_t = parameters_->delta_t;
+    printf("\nTotal simulation duration: %g seconds\n\n", delta_t*n_steps);
+}
+
+void Curator::InitializeSimulation(system_properties *properties){
+
 	properties_ = properties;
 	start_ = clock();
 	SetParameters();
 	SetExperimentalStage();
-	OutputSimDetails();
 }
 
 void Curator::SetParameters(){
@@ -37,16 +181,7 @@ void Curator::SetExperimentalStage(){
 	properties_->prc1.Initialize(parameters_, properties_);
 }
 
-void Curator::OutputSimDetails(){
-
-	int n_steps = parameters_->n_steps;
-	double delta_t = parameters_->delta_t;
-    printf("Total simulation duration: %g seconds\n", delta_t*n_steps);
-    printf("Timestep duration: %g seconds\n\n", delta_t);
-    fflush(stdout);
-}
-
-void Curator::OpenFiles(char* sim_name){
+void Curator::GenerateDataFiles(char* sim_name){
 
 	char occupancy_file[160], 
 		 motor_ID_file[160], xlink_ID_file[160], 
@@ -90,40 +225,58 @@ void Curator::OpenFiles(char* sim_name){
 	}
 	// Open occupancy file, which stores the species ID of each occupant 
 	// (or -1 for none) for all MT sites during data collection (DC)
-	properties_->occupancy_file_ = gfopen(occupancy_file, "w");
+	properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
 	// Open motor ID file, which stores the unique ID of all bound motors 
 	// (unbound not tracked) and their respective site indices during DC
-	properties_->motor_ID_file_ = gfopen(motor_ID_file, "w");
+	properties_->motor_ID_file_ = OpenFile(motor_ID_file, "w");
 	// Open xlink ID file, which does the same 
 	// as the motor ID file but for xlinks
-	properties_->xlink_ID_file_ = gfopen(xlink_ID_file, "w");
+	properties_->xlink_ID_file_ = OpenFile(xlink_ID_file, "w");
 	// Open tether coord file, which stores the coordinates 
 	// of the anchor points of tethered motors
-	properties_->tether_coord_file_ = gfopen(tether_coord_file, "w");
+	properties_->tether_coord_file_ = OpenFile(tether_coord_file, "w");
 	// Open mt coord file, which stores the coordinates 
 	// of the left-most edge of each microtubule during DC
-	properties_->mt_coord_file_ = gfopen(mt_coord_file, "w");
+	properties_->mt_coord_file_ = OpenFile(mt_coord_file, "w");
 	// Open motor extension file, which stores the number of motors 
 	// with a certain tether extension for all possible extensions
-	properties_->motor_extension_file_ = gfopen(motor_extension_file, "w");
+	properties_->motor_extension_file_ = OpenFile(motor_extension_file, "w");
 	// Open xlink extension file, which stores the number of stage-2 
 	// xlinks at a certain extension for all possible extensions
-	properties_->xlink_extension_file_ = gfopen(xlink_extension_file, "w");
+	properties_->xlink_extension_file_ = OpenFile(xlink_extension_file, "w");
 	// Open motor force file, which stores the sum 
 	// of forces coming from motor tether extensions
-	properties_->motor_force_file_ = gfopen(motor_force_file, "w");
+	properties_->motor_force_file_ = OpenFile(motor_force_file, "w");
 	// Open xlink force file, which stores the sum
 	// of forces coming from xlink extensions
-	properties_->xlink_force_file_ = gfopen(xlink_force_file, "w");
+	properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
 	// Open total force file, which stores the sum of ALL 
 	// forces coming from xlink and motor tether extensions
-	properties_->total_force_file_ = gfopen(total_force_file, "w");
+	properties_->total_force_file_ = OpenFile(total_force_file, "w");
+}
+
+FILE* Curator::OpenFile(const char *file_name, const char *type){
+
+    FILE *file_ptr;
+
+    if ((file_ptr = fopen(file_name, type)) == NULL) {
+		fprintf(stderr, "Cannot open %s\n", file_name);
+		exit(1);
+    }
+
+    return file_ptr;
+}
+
+bool Curator::FileExists(std::string file_name){
+
+	struct stat buffer;
+	return (stat(file_name.c_str(), &buffer) != -1);
 }
 
 void Curator::PrintMicrotubules(){
 
-    int n_mts = parameters_->n_microtubules;
-    int mt_length = parameters_->length_of_microtubule;
+    int n_mts = parameters_->microtubules.count;
+    int mt_length = parameters_->microtubules.length; 
 	// Figure out which MT is the farthest left 
 	int leftmost_coord = 0;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
@@ -259,13 +412,12 @@ void Curator::PrintMicrotubules(double pause_duration){
 
 	PrintMicrotubules();
 	PauseSim(pause_duration);
-
 }
 
 void Curator::OutputData(){
 
-	int n_mts = parameters_->n_microtubules;
-	int mt_length = parameters_->length_of_microtubule;
+	int n_mts = parameters_->microtubules.count; 
+	int mt_length = parameters_->microtubules.length;
 	// Get file pointers from system properties
 	FILE *occupancy_file = properties_->occupancy_file_;
 	FILE *motor_ID_file = properties_->motor_ID_file_;
@@ -411,7 +563,7 @@ void Curator::OutputSimDuration(){
 
 	finish_ = clock();
 	sim_duration_ = (double)(finish_ - start_)/CLOCKS_PER_SEC;
-/*	stream_ = fopen("sim_duration.dat", "w");
+/*	stream_ = OpenFile("sim_duration.dat", "w");
 	fprintf(stream_, "Time to execute sim: %f seconds.\n", sim_duration_);
 	fclose(stream_);
 */	
@@ -430,10 +582,4 @@ void Curator::CleanUp(){
 	fclose(properties_->motor_force_file_);
 	fclose(properties_->xlink_force_file_);
 	fclose(properties_->total_force_file_);
-}
-
-bool Curator::FileExists(std::string file_name){
-
-	struct stat buffer;
-	return (stat(file_name.c_str(), &buffer) != -1);
 }

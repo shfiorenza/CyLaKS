@@ -48,7 +48,6 @@ class AssociatedProteinManagement{
 		double tau_i_;	
 		double tau_ii_;		
 
-		double c_eff_;				// unitless 	(educated guess)
 		double p_bind_i_;			
 		double p_unbind_i_;		
 		std::vector<double> p_unbind_ii_;	// One for each extension

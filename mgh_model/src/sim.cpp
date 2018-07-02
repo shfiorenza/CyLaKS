@@ -2,8 +2,6 @@
 #include "master_header.h"
 
 int main(int argc, char *argv[]){
-
-	char param_file[160];
    
 	system_parameters parameters;
 	system_properties properties;
@@ -14,14 +12,11 @@ int main(int argc, char *argv[]){
 		fprintf(stderr, "Usage: %s parameters.yaml sim_name\n\n", argv[0]);
 		exit(1);
 	}
-	// Copy inputted parameter file name
-	strcpy(param_file, argv[1]);
-	// Parse through input parameter file and copy values to sim's internal parameter structure
-	parse_parameters(param_file, &parameters);
 
-	// Use our experimental curator, Wallace, to open appropriate files and initialize classes/etc. used in the simulation
-	properties.wallace.InitializeSimulation(&parameters, &properties);
-	properties.wallace.OpenFiles(argv[2]);
+	// Use our experimental curator, Wallace, to parse parameters, initialize objects used in the sim, and open files for data writing 
+	properties.wallace.ParseParameters(&parameters, argv[1]);
+	properties.wallace.InitializeSimulation(&properties);
+	properties.wallace.GenerateDataFiles(argv[2]);
 
 	// Run kinetic Monte Carlo loop n_steps times 
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
@@ -34,9 +29,9 @@ int main(int argc, char *argv[]){
 		properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-//		properties.microtubules.RunDiffusion();
+		properties.microtubules.RunDiffusion();
 		// Some good ole-fashioned ASCII printout
-		if(parameters.mt_printout == true)
+		if(parameters.microtubules.printout == true)
 			if(i_step % 1000 == 0)
 				properties.wallace.PrintMicrotubules(0.5);
 	}

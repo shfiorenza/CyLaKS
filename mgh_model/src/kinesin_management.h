@@ -21,8 +21,6 @@ class KinesinManagement{
 		std::vector<int> n_bound_tethered_;
 		std::vector<int> n_stepable_to_teth_rest_;
 		std::vector<int> n_stepable_from_teth_rest_;
-		// switching currently disabled in KMC
-		int n_switchable_;		// must be tethered to switch
 
 		int dist_cutoff_;		// see kinesin header
 		int comp_cutoff_;		// see kinesin header
@@ -55,9 +53,7 @@ class KinesinManagement{
 		double p_failstep_untethered_;
 		std::vector<double> p_step_to_teth_rest_;
 		std::vector<double> p_step_from_teth_rest_;
-		double p_switch_;
 
-		double c_eff_; 		// Used in partition function for tethering
 		// boundaries currently disabled in KMC
 		double alpha_;		// Prob. to insert onto the minus end
 		double beta_;		// Prob. to remove from the plus end
@@ -75,7 +71,6 @@ class KinesinManagement{
 		std::vector< std::vector<Kinesin*> > bound_tethered_table_;
 		std::vector< std::vector<Kinesin*> > stepable_to_rest_table_;
 		std::vector< std::vector<Kinesin*> > stepable_from_rest_table_;
-		std::vector<Kinesin*> switchable_list_; 
 
 		std::vector<int> diffusion_list_;
 		std::vector<int> kmc_list_;
@@ -107,7 +102,6 @@ class KinesinManagement{
 		void UpdateBoundTetheredList();
 		void UpdateBoundTetheredTable();
 		void UpdateStepableTetheredTables();
-		void UpdateSwitchableList();
 		
 		void GenerateDiffusionList();
 		int GetNumToStepForward_Unteth();
@@ -138,7 +132,6 @@ class KinesinManagement{
 		int GetNumToFailstep_Untethered();
 		int GetNumToStep_ToTethRest(int x_dist_doubled);
 		int GetNumToStep_FromTethRest(int x_dist_doubled);
-		int GetNumToSwitch(); 
 
 		void RunKMC();
 		void KMC_Bind_I_Free();			// bind from bulk solution
@@ -157,6 +150,5 @@ class KinesinManagement{
 		void KMC_Step_ToTethRest(int x_dist_doubled);
 		void KMC_Step_FromTethRest(int x_dist_doubled);
 		void KMC_Boundaries(int n_events);
-		void KMC_Switch();
 };
 #endif

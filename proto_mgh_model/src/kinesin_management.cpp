@@ -17,8 +17,8 @@ void KinesinManagement::Initialize(system_parameters *parameters,
 
 void KinesinManagement::GenerateMotors(){
 
-    int n_mts = parameters_->n_microtubules;
-    int n_sites = parameters_->length_of_microtubule;
+    int n_mts = parameters_->microtubules.count;
+    int n_sites = parameters_->microtubules.length;
     // Since only one head has to be bound, the most that will ever
     // be needed (all single-bound) is the total number of sites 
     n_motors_ = n_mts*n_sites;
@@ -31,11 +31,10 @@ void KinesinManagement::GenerateMotors(){
 
 void KinesinManagement::SetParameters(){
 
-//	tau_ = parameters_->tau_m;
     double delta_t = parameters_->delta_t;
-	double site_size = parameters_->site_size;
+	double site_size = parameters_->microtubules.site_size;
 	// Statistics for diffusion
-	double D_const = parameters_->D_motor;
+	double D_const = parameters_->motors.diffusion_const;
 	double x_squared = (site_size/1000)*(site_size/1000); // convert to um^2
 	tau_ = x_squared / (2 * D_const);
 	p_diffuse_fwd_untethered_ = delta_t / tau_;
@@ -48,10 +47,10 @@ void KinesinManagement::SetParameters(){
 	rest_dist_ = motor_list_[0].rest_dist_;
 	p_diffuse_to_tether_rest_.resize(2*dist_cutoff_ + 1);
 	p_diffuse_from_tether_rest_.resize(2*dist_cutoff_ + 1);
+	double kbT = parameters_->kbT;
 	double r_0 = motor_list_[0].r_0_;
-	double kbT = motor_list_[0].kbT_;
 	double k_spring = motor_list_[0].k_spring_;
-	double k_eff_slack = motor_list_[0].k_eff_slack_;
+	double k_eff_slack = motor_list_[0].k_slack_;
 	double r_y = 17.5;		// in nm; from MT to midpoint of prc1
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
 		// Calculate tether length for this x_dist as well as +/- 1 it
@@ -116,37 +115,34 @@ void KinesinManagement::SetParameters(){
 		p_diffuse_to_tether_rest_[x_dist_dub] = p_to;
 	}
 	// Statistics for KMC
-    double k_on = parameters_->k_on_motor;
-    double c_motor = parameters_->c_motor;
+    double k_on = parameters_->motors.k_on;
+    double c_motor = parameters_->motors.concentration;
 	p_bind_i_free_ = k_on * c_motor * delta_t;
-	double c_eff_motor_teth = parameters_->c_eff_motor_teth; 
+	double c_eff_motor_teth = parameters_->motors.conc_eff_tether;
 	p_bind_i_tethered_ = k_on * c_eff_motor_teth * delta_t; 
-	double c_eff_motor_bind = parameters_->c_eff_motor_bind;
+	double c_eff_motor_bind = parameters_->motors.conc_eff_bind;
 	p_bind_ii_ = k_on * c_eff_motor_bind * delta_t;
-	double k_off_pseudo = parameters_->k_off_pseudo; 
-	p_unbind_pseudo_ = k_off_pseudo * delta_t;		// FIXME
-    double k_off = parameters_->k_off_motor;
+	double k_off_pseudo = parameters_->motors.k_off_i; 
+	p_unbind_pseudo_ = k_off_pseudo * delta_t;
+    double k_off = parameters_->motors.k_off_ii;
 	p_unbind_stepable_untethered_ = k_off * delta_t;
-	double unbind_ratio = parameters_->k_off_ratio;
+	double unbind_ratio = parameters_->motors.k_off_ratio;
 	p_unbind_stalled_untethered_ = k_off * delta_t / unbind_ratio;
 	p_unbind_tethered_ = p_unbind_stepable_untethered_ / 2; 
-	c_eff_ = parameters_->c_eff_motor_teth;
-	double k_tether_free = parameters_->k_tether_free;
+	double k_tether_free = parameters_->motors.k_tether_free;
 	p_tether_free_ = k_tether_free * c_motor * delta_t;
 	p_tether_bound_ = k_tether_free * c_eff_motor_teth * delta_t;
-	double k_untether_free = parameters_->k_untether_free;
+	double k_untether_free = parameters_->motors.k_untether_free;
 	p_untether_free_ = k_untether_free * delta_t;
-    double motor_speed = parameters_->motor_speed;
+    double motor_speed = parameters_->motors.velocity;
 	p_step_untethered_ = motor_speed * delta_t / site_size;
-	double k_failstep = parameters_->failstep_rate; 
+	double k_failstep = parameters_->motors.failstep_rate; 
 	p_failstep_untethered_ = k_failstep * delta_t;
-    double switch_rate = parameters_->switch_rate;
-	p_switch_ = switch_rate*delta_t;
 	// Generate untethering and stepping rates for all tether extensions	
 	// Everything is 2*dist_cutoff to allow for half-integer distances, 
 	// so the 3rd entry will correspond to a distance of 1.5, etc. 
-	double k_unteth = parameters_->k_untether;
-	double stall_force = motor_list_[0].stall_force_;		// in pN
+	double k_unteth = parameters_->motors.k_untether;
+	double stall_force = parameters_->motors.stall_force;
 	p_untether_bound_.resize(2*dist_cutoff_ + 1);
 	p_step_to_teth_rest_.resize(2*dist_cutoff_ + 1);
 	p_step_from_teth_rest_.resize(2*dist_cutoff_ + 1);
@@ -210,8 +206,8 @@ void KinesinManagement::SetParameters(){
 			}
 		}
 	}
-	alpha_ = parameters_->alpha;
-	beta_ = parameters_->beta;
+	alpha_ = parameters_->motors.alpha;
+	beta_ = parameters_->motors.beta;
 }
 void KinesinManagement::InitiateLists(){
 
@@ -224,7 +220,6 @@ void KinesinManagement::InitiateLists(){
 	stalled_untethered_list_.resize(n_motors_);
 	bound_tethered_list_.resize(n_motors_);
 	stepable_untethered_list_.resize(n_motors_);
-	switchable_list_.resize(n_motors_);
 	// Two dimensional stuff
 	n_bound_tethered_.resize(2*dist_cutoff_ + 1);
 	n_stepable_to_teth_rest_.resize(2*dist_cutoff_ + 1);
@@ -564,39 +559,6 @@ void KinesinManagement::UpdateStepableTetheredTables(){
 	}
 }
 
-void KinesinManagement::UpdateSwitchableList(){
-
-	n_switchable_ = 0; 
-	int i_entry = 0;
-	int mt_length = parameters_->length_of_microtubule;
-    for(int i_motor = 0; i_motor < n_motors_; i_motor++){
-		Kinesin *motor = &motor_list_[i_motor];
-		if(motor->heads_active_ == 2
-		&& motor->tethered_ == true){
-//		&& BoundaryStatus(motor) == false){
-            Microtubule *mt = motor->mt_;
-            Microtubule *mt_adj = mt->neighbor_; 	// FIXME define neighb
-            int mt_coord = mt->coord_;
-            int mt_adj_coord = mt_adj->coord_;
-            int offset = mt_adj_coord - mt_coord;
-            int i_front = motor->front_site_->index_;
-            int i_rear = motor->rear_site_->index_;
-            int i_front_adj = i_rear - offset;
-            int i_rear_adj = i_front - offset;
-            // Exclude non-overlapping microtubule segments
-            if((i_front_adj > 0 && i_front_adj < mt_length - 1)
-			&& (i_rear_adj > 0 && i_rear_adj < mt_length - 1)){
-                if(mt_adj->lattice_[i_front_adj].occupied_ == false
-				&& mt_adj->lattice_[i_rear_adj].occupied_ == false){
-					switchable_list_[i_entry] = motor; 
-					i_entry++;
-                    n_switchable_++;
-				}
-            }
-        }
-    }
-}
-
 void KinesinManagement::GenerateDiffusionList(){
 
 	int n_events = 0; 
@@ -841,7 +803,7 @@ void KinesinManagement::RunDiffusion_Backward_Untethered(){
 
 void KinesinManagement::RunDiffusion_Toward_Rest(int x_dist_doubled){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;	
 	UpdateBoundTetheredTable();
 	int n_bound = n_bound_tethered_[x_dist_doubled];
@@ -928,7 +890,7 @@ void KinesinManagement::RunDiffusion_Toward_Rest(int x_dist_doubled){
 
 void KinesinManagement::RunDiffusion_From_Rest(int x_dist_doubled){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;	
 	UpdateBoundTetheredTable();
 	int n_bound = n_bound_tethered_[x_dist_doubled];
@@ -1067,27 +1029,11 @@ void KinesinManagement::GenerateKMCList(){
 		}
 	}
 	n_events += n_unbind_p;
-	// XXX is the following necessary? think about it
-/*
-	while(n_bind_ii + n_unbind_p > n_eligible_pseudo_
-	&& n_eligible_pseudo_ > 0){
-		if(n_bind_ii > 0){
-			n_bind_ii--;
-			n_events--;
-		}
-	}
-*/
 	int n_tether_free = GetNumToTether_Free();
 	n_events += n_tether_free;
 	UpdateBoundUntetheredList();
 	int n_tether_bound = GetNumToTether_Bound();
 	n_events += n_tether_bound;
-	
-// XXX HARD CODE DISABLE OF SWITCHING;XXX DO NOT FORGET ABOUT!! XXX
-/*	UpdateSwitchableList();
-    int n_switch = 0; //GetNumToSwitch();	
-	n_events += n_switch;
-*/	
 	int n_untether_free = GetNumToUntether_Free();
 	while(n_untether_free + n_bind_i_tethered > n_free_tethered_){
 			if(n_bind_i_tethered > 0){
@@ -1292,7 +1238,7 @@ void KinesinManagement::GenerateKMCList(){
 
 int KinesinManagement::GetNumToBind_I_Free(){
 
-    properties_->microtubules.UpdateNumUnoccupied();
+    properties_->microtubules.UpdateUnoccupiedList();
     int n_unocc = properties_->microtubules.n_unoccupied_;
 	double p_bind = p_bind_i_free_; 
 //	double p_avg = p_bind * n_unocc;
@@ -1443,14 +1389,6 @@ int KinesinManagement::GetNumToStep_FromTethRest(int x_dist_doubled){
 	return n_to_step;
 }
 
-int KinesinManagement::GetNumToSwitch(){
-
-	double p_switch = p_switch_;
-	int n_able = n_switchable_;
-    int n_to_switch = properties_->gsl.SampleBinomialDist(p_switch, n_able);
-    return n_to_switch;
-}
-
 void KinesinManagement::RunKMC(){
 
 //	printf("Start of Kinesin KMC cycle\n");
@@ -1514,7 +1452,7 @@ void KinesinManagement::RunKMC(){
 						break;
 				case 40:
 //						printf("motor switched\n");
-						KMC_Switch();
+//						KMC_Switch();
                         break;
 				case 50:
 //						printf("free motor untethered\n");
@@ -1773,7 +1711,6 @@ void KinesinManagement::KMC_Bind_II(){
 		printf("Error in Bind_II: no eligible pseudo. \n");
 //		exit(1);
 	}
-//	properties_->wallace.PrintMicrotubules(2);
 }	
 
 void KinesinManagement::KMC_Unbind_Stepable_Untethered(){
@@ -2055,42 +1992,6 @@ void KinesinManagement::KMC_Tether_Bound(){
 	}
 }
 
-void KinesinManagement::KMC_Switch(){
-
-	// Make sure there is at least one switchable motor 
-	UpdateSwitchableList();
-	if(n_switchable_ > 0){
-		int i_entry = properties_->gsl.GetRanInt(n_switchable_);
-		Kinesin *motor = switchable_list_[i_entry]; 
-		Tubulin *old_front_site = motor->front_site_;
-		Tubulin	*old_rear_site = motor->rear_site_;
-		Microtubule *mt = motor->mt_; 
-		Microtubule *mt_adj = mt->neighbor_; 
-		int offset = mt_adj->coord_ - mt->coord_;
-		int i_front_new = old_rear_site->index_ - offset;
-		int i_rear_new = old_front_site->index_ - offset;
-		Tubulin *new_front_site = &mt_adj->lattice_[i_front_new];
-		Tubulin *new_rear_site = &mt_adj->lattice_[i_rear_new];
-		// Remove motor from old sites; Place it on new sites
-		old_front_site->occupied_ = false;
-		old_front_site->motor_ = nullptr;
-		old_rear_site->occupied_ = false;
-		old_rear_site->motor_ = nullptr;
-		new_front_site->occupied_ = true;
-		new_front_site->motor_ = motor;
-		new_rear_site->occupied_ = true;
-		new_rear_site->motor_ = motor;
-		// Update motor details
-		motor->front_site_ = new_front_site;
-		motor->rear_site_ = new_rear_site;
-		motor->mt_ = mt_adj;
-	}
-	else{
-		printf("Error in RunKMC_Switch(): no switchable motors\n");
-//		exit(1);
-    }
-}
-
 void KinesinManagement::KMC_Untether_Bound(int x_dist_doubled){
 
 	UpdateBoundTetheredTable();
@@ -2333,7 +2234,7 @@ void KinesinManagement::KMC_Step_Untethered(){
 
 void KinesinManagement::KMC_Boundaries(int n_events){
 
-    int n_mts = parameters_->n_microtubules;
+    int n_mts = parameters_->microtubules.count;
     double alpha_eff = (alpha_*p_step_untethered_)/n_events;
     double beta_eff = (beta_*p_step_untethered_)/n_events;
     for(int i_mt = 0; i_mt < n_mts; i_mt++){

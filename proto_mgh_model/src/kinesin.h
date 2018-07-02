@@ -17,6 +17,9 @@ class Kinesin{
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
 		
+		int n_binding_affinities_ = 5;
+		int cooperativity_range_ = 9; 	// in microns
+		
 		// x_dist_dub is used to index the tether extension of motors, e.g.
 		// an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
 		int x_dist_doubled_;		// in no. of sites 
@@ -24,12 +27,9 @@ class Kinesin{
 		int comp_cutoff_ = 1;			// min value x_dist (not 2x) can be
 		double rest_dist_ = 14.5;		// spring extension is ~0 for this
 
-		double kbT_; 
-		double site_size_;		// tubulin dimer size in nm
 		double r_0_;			
 		double k_spring_;
-		double k_eff_slack_;
-		double stall_force_; 
+		double k_slack_;
 		double extension_;		// in nm
 		double cosine_;			// of motor tether angle w.r.t. horizontal
 	

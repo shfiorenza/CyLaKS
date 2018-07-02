@@ -17,8 +17,8 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
 
 void AssociatedProteinManagement::GenerateXLinks(){
 
-	int n_mts = parameters_->n_microtubules;
-	int n_sites = parameters_->length_of_microtubule;
+	int n_mts = parameters_->microtubules.count;
+	int n_sites = parameters_->microtubules.length;
 	// Since only one head has to be bound, the sim will at most
 	// as many xlinks as sites in the bulk (all single-bound)
 	n_xlinks_ = n_mts*n_sites;
@@ -31,10 +31,10 @@ void AssociatedProteinManagement::GenerateXLinks(){
 void AssociatedProteinManagement::SetParameters(){
 
 	double delta_t = parameters_->delta_t;
-	double site_size = parameters_->site_size;
+	double site_size = parameters_->microtubules.site_size;
 	// DIFFUSION STATISTICS FOR SELF BELOW
-	double D_const_i = parameters_->D_xlink_i;
-	double D_const_ii = parameters_->D_xlink_ii;
+	double D_const_i = parameters_->xlinks.diffusion_const_i;
+	double D_const_ii = parameters_->xlinks.diffusion_const_ii;
 	double x_squared = (site_size/1000)*(site_size/1000); // in um^2
 	tau_i_ = x_squared / (2 * D_const_i);
 	tau_ii_ = x_squared / (2 * D_const_ii);
@@ -46,8 +46,8 @@ void AssociatedProteinManagement::SetParameters(){
 	rest_dist_ = xlink_list_[0].rest_dist_;
 	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
 	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);
+	double kbT = parameters_->kbT;
 	double r_0 = xlink_list_[0].r_0_;
-	double kbT = xlink_list_[0].kbT_;
 	double k_spring = xlink_list_[0].k_spring_;
 	double r_y = 35;	// in nm
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
@@ -98,7 +98,7 @@ void AssociatedProteinManagement::SetParameters(){
 	p_diffuse_ii_from_self_to_teth_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_ii_from_both_rest_.resize(2*teth_dist_cutoff + 1);
 	double k_teth_spring = properties_->kinesin4.motor_list_[0].k_spring_;
-	double k_teth_slack = properties_->kinesin4.motor_list_[0].k_eff_slack_;
+	double k_teth_slack = properties_->kinesin4.motor_list_[0].k_slack_;
 	double r_0_teth = properties_->kinesin4.motor_list_[0].r_0_;
 	double r_y_teth = 17.5;
 	double rest_dist_teth = properties_->kinesin4.motor_list_[0].rest_dist_;
@@ -213,14 +213,13 @@ void AssociatedProteinManagement::SetParameters(){
 		}
 	}
 	// KMC STATISTICS BELOW
-	c_eff_ = parameters_->c_eff_xlink;
-	double k_on = parameters_->k_on_xlink; 
-	double c_xlink = parameters_->c_xlink;
+	double k_on = parameters_->xlinks.k_on; 
+	double c_xlink = parameters_->xlinks.concentration;
 	p_bind_i_ = k_on * c_xlink * delta_t;
-	double k_off_i = parameters_->k_off_xlink_i;
+	double k_off_i = parameters_->xlinks.k_off_i;
 	p_unbind_i_ = k_off_i * delta_t;
 	// Generate unbinding rates based on discretized spring extension
-	double k_off_ii = parameters_->k_off_xlink_ii;
+	double k_off_ii = parameters_->xlinks.k_off_ii;
 	p_unbind_ii_.resize(dist_cutoff_ + 1);
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
 		double r_x = x_dist*site_size;
@@ -1456,7 +1455,7 @@ void AssociatedProteinManagement::RunDiffusionI_Backward(){
 
 void AssociatedProteinManagement::RunDiffusionII_ToRest(int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;	
 	UpdateDoubleUntetheredSites();
 	int n_bound = n_sites_ii_untethered_[x_dist];
@@ -1506,7 +1505,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToRest(int x_dist){
 
 void AssociatedProteinManagement::RunDiffusionII_FromRest(int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;	
 	UpdateDoubleUntetheredSites();
 	int n_bound = n_sites_ii_untethered_[x_dist];
@@ -1555,7 +1554,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromRest(int x_dist){
 
 void AssociatedProteinManagement::RunDiffusionI_ToTethRest(int x_dist_dub){
 
-	int mt_length = parameters_->length_of_microtubule; 
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	UpdateSingleTetheredSites();
 	int n_bound = n_sites_i_tethered_[x_dist_dub];
@@ -1610,7 +1609,7 @@ void AssociatedProteinManagement::RunDiffusionI_ToTethRest(int x_dist_dub){
 
 void AssociatedProteinManagement::RunDiffusionI_FromTethRest(int x_dist_dub){
 
-	int mt_length = parameters_->length_of_microtubule; 
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	UpdateSingleTetheredSites();
 	int n_bound = n_sites_i_tethered_[x_dist_dub];
@@ -1670,7 +1669,7 @@ void AssociatedProteinManagement::RunDiffusionI_FromTethRest(int x_dist_dub){
 void AssociatedProteinManagement::RunDiffusionII_ToBothRest
 										(int x_dist_dub, int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
@@ -1751,7 +1750,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToBothRest
 void AssociatedProteinManagement::RunDiffusionII_FromBothRest
 										(int x_dist_dub, int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
@@ -1833,7 +1832,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromBothRest
 void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth
 										(int x_dist_dub, int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
@@ -1914,7 +1913,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth
 void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth
 										(int x_dist_dub, int x_dist){
 
-	int mt_length = parameters_->length_of_microtubule;
+	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
 	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
@@ -2061,7 +2060,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 
 int AssociatedProteinManagement::GetNumToBind_I(){
 	
-	properties_->microtubules.UpdateNumUnoccupied();
+	properties_->microtubules.UpdateUnoccupiedList();
 	int n_unocc = properties_->microtubules.n_unoccupied_;
 	double p_bind = p_bind_i_;
 	int n_to_bind = properties_->gsl.SampleBinomialDist(p_bind, n_unocc);
@@ -2071,6 +2070,9 @@ int AssociatedProteinManagement::GetNumToBind_I(){
 int AssociatedProteinManagement::GetNumToBind_II(){
 	
 	UpdateSingleBoundList();
+	double k_on = parameters_->xlinks.k_on;
+	double c_eff = parameters_->xlinks.conc_eff_bind;
+	double delta_t = parameters_->delta_t;
 	double weights_summed = 0;
 	// Sum over all single-bound xlinks
 	for(int i_xlink = 0; i_xlink < n_single_bound_; i_xlink++){
@@ -2085,14 +2087,9 @@ int AssociatedProteinManagement::GetNumToBind_II(){
 		}
 	}
 	// Scale summed weights by an effective conc. to get  n_bound at equil
-	double k_on = parameters_->k_on_xlink;
-	double delta_t = parameters_->delta_t;
-	int n_equil = (int) weights_summed; 
-//	printf("yo n_equil is %i\n", n_equil);
-	double p_bind = k_on * c_eff_ * delta_t;
-//	printf("yo p_bind is %g\n", c_eff_);
-	int n_to_bind = properties_->gsl.SampleBinomialDist(p_bind, n_equil);
-//	printf("yo n_to_bind is %i\n", n_to_bind);
+	double bind_rate = k_on * c_eff * weights_summed; 
+	double n_avg = bind_rate * delta_t; 
+	int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
 	return n_to_bind;
 }
 
@@ -2218,15 +2215,6 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 		// Sample normal distribution for x-dist of xlink to insert 
 		int x_dist = xlink->SampleSpringExtension();
 //		printf("x_dist be %i\n", x_dist);
-//		double ran = properties_->gsl.GetRanProb();
-//		x_dist = 0;
-//		if(ran < 0.5)
-//			x_dist = -1;
-//		else //if(ran < 0.5)
-//			x_dist = 1;
-//		else
-//			x_dist = 0;
-
 		// Ensure xlink has a neighbor with desired distance
 		int attempts = 0;
 		int switches = 0;
@@ -2263,7 +2251,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 			else if(xlink->site_two_ == nullptr)
 				xlink->site_two_ = site;
 			else{
-				printf("bruhhhhhhhh");
+				printf("bruhhhhhhhh - check xlinks");
 				exit(1);
 			}
 			xlink->UpdateExtension();

@@ -59,9 +59,8 @@ void Microtubule::UpdateExtensions(){
 
 	KinesinManagement *kinesin4 = &properties_->kinesin4;
 	AssociatedProteinManagement *prc1 = &properties_->prc1;
-	int n_sites = n_sites_;
 	// Run through all sites on MT
-	for(int i_site = 0; i_site < n_sites; i_site++){
+	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site]; 
 		// Check if site is occupied by a motor
 		if(site->motor_ != nullptr){
@@ -183,6 +182,11 @@ void Microtubule::UpdateExtensions(){
 			}
 		}
 	}
+}
+
+void Microtubule::UpdateAffinities(){
+
+
 }
 
 double Microtubule::GetNetForce(){

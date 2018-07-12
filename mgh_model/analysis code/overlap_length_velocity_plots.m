@@ -1,11 +1,11 @@
 clear all;
 % Often-changed variables
 n_sites = 250;
-simName = 'test2';
+simName = 'slide_b';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 2000000;
-delta_t = 0.0001;
+n_steps = 50000000;
+delta_t = 0.000001;
 n_datapoints = 100000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;

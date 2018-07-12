@@ -301,12 +301,15 @@ void Curator::PrintMicrotubules(){
         for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
             if(site->occupied_ == false)
-                printf("=");
+//                printf("=");
+				printf("%i", site->binding_affinity_);
 			else if(site->xlink_ != nullptr){
 				AssociatedProtein *xlink = site->xlink_;
 				if(xlink->heads_active_ == 1){
 					if(xlink->tethered_ == false)
 						printf("i");
+					else if(xlink->motor_->heads_active_ == 0)
+						printf("F");
 					else
 						printf("I");
 				}
@@ -342,9 +345,9 @@ void Curator::PrintMicrotubules(){
 						}
 						if(i_site == i_front){
 							if(motor->tethered_ == false)
-								printf("%i)", motor->ID_);
+								printf(")");
 							else
-								printf("%i]", motor->ID_);
+								printf("]");
 						}
 					} 
 					else if(i_front < i_rear){
@@ -356,9 +359,9 @@ void Curator::PrintMicrotubules(){
 						}
 						if(i_site == i_rear){
 							if(motor->tethered_ == false)
-								printf("%i)", motor->ID_);
+								printf(")");
 							else
-								printf("%i]", motor->ID_);
+								printf("]");
 						}
 					}
 					else{

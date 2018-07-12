@@ -1,7 +1,7 @@
 clear all
 % Often-changed variables
-n_sites = 250;
-simName = 'test';
+n_sites = 1750;
+simName = 'coop_04_6';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -12,7 +12,7 @@ active_datapoints = n_datapoints - starting_point;
 temp_one = zeros([n_sites 1]);
 final_mt = zeros([n_sites 1]);
 
-polarityArray = {'Plus-end on right'};
+polarityArray = {'Plus-end on left'};
 
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
@@ -43,9 +43,9 @@ smoothed_final_mt = final_mt;
 % alt method: highest slope
 highest_slope = 0;
 endtag_site = n_sites;
-for i=1:1:n_sites
+for i=n_sites:-1:1
     site_occupancy = smoothed_final_mt(i, 1);
-    if(i == 1)
+    if(i == n_sites)
         prev_site_occupancy = 0;
     else
         prev_site_occupancy = smoothed_final_mt(i - 1, 1);
@@ -56,7 +56,7 @@ for i=1:1:n_sites
     %    endtag_site = i;
     %end 
 
-    if(site_occupancy > 0.3)
+    if(site_occupancy > 0.7)
         endtag_site =  i;
         break;
     end
@@ -75,7 +75,7 @@ plot([endtag_pos endtag_pos], [0 1], ':r', 'LineWidth', 0.1);
 grid on
 grid minor
 title(sprintf('%g micron endtag for %g micron MT', ... % \n k on = %g s^-^1, k off (stalled) = k off / %i', ...
-    (n_sites - endtag_site) * 0.008, n_sites * 0.008)); % k_on, k_off_frac));
+    (endtag_site) * 0.008, n_sites * 0.008)); % k_on, k_off_frac));
 
 xlabel({'Distance along microtubule (microns)'}); %, sprintf('(%d microns)', ...
     %length_of_microtubule * 8 / 1000)});

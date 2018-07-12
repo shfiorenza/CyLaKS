@@ -41,6 +41,7 @@ class Microtubule{
 		void GenerateLattice();
 
 		void UpdateExtensions();
+		void UpdateAffinities();
 
 		double GetNetForce();
 		double GetNetForce_Motors();

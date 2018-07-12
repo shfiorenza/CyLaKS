@@ -16,7 +16,7 @@ class AssociatedProteinManagement{
 		int n_tethered_ = 0;
 		int n_untethered_ = 0;
 		
-		// Only one population
+		// Only one population for singly-bound untethered xlink heads
         int n_sites_i_untethered_ = 0;
 		// Population for each xlink extension
 		std::vector<int> n_sites_ii_untethered_;

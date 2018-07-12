@@ -14,7 +14,7 @@ class Tubulin{
 		int index_;		// Index of tubulin site in MT lattice
 		int coord_;		// Absolute coord of tubulin site
 		int speciesID_ = 0;
-		int binding_affinity = 0; // For kinesin cooperative-binding
+		int binding_affinity_ = 0; // For kinesin cooperative-binding
 
 		bool occupied_ = false;
 

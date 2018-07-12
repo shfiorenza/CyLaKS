@@ -17,9 +17,6 @@ class Kinesin{
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
 		
-		int n_binding_affinities_ = 5;
-		int cooperativity_range_ = 9; 	// in microns
-		
 		// x_dist_dub is used to index the tether extension of motors, e.g.
 		// an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
 		int x_dist_doubled_;		// in no. of sites 
@@ -64,9 +61,7 @@ class Kinesin{
 		void PopulateBindingLookupTable();
 
 		void UpdateNeighborXlinks();
-		bool NeighborXlinkExists(int x_dist_doubled);
 		void UpdateNeighborSites();
-		bool NeighborSiteExists(int x_dist_doubled); 
 
 		void UpdateExtension();
 		void ForceUntether(int x_dub_pre);
@@ -83,7 +78,8 @@ class Kinesin{
 		Tubulin* GetActiveHeadSite();
 		Tubulin* GetSiteCloserToRest();
 		Tubulin* GetSiteFartherFromRest();
-		Tubulin* GetNeighborSite(int x_dist_doubled);
-		AssociatedProtein* GetNeighborXlink(int x_dist_doubled);
+
+		Tubulin* GetWeightedNeighborSite(int binding_affinity);
+		AssociatedProtein* GetWeightedNeighborXlink();
 };
 #endif

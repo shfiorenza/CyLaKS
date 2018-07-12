@@ -812,7 +812,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 				n_to_one = n_ii_to_both[x_dist_dub][x_dist];
 				n_from_one = n_ii_from_both[x_dist_dub][x_dist];
 				n_avail_one = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites w/ op equil
+				// Make sure there aren't more events than sites
 				while((n_to_one + n_from_one) > n_avail_one){
 //					printf("yah for to/from both_ext (2x: %i, x: %i)\n", 
 //							x_dist_dub, x_dist);
@@ -842,7 +842,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 				n_to_two = n_ii_to_self_from_teth[x_dist_dub][x_dist];
 				n_from_two = n_ii_from_self_to_teth[x_dist_dub][x_dist];
 				n_avail_two = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites w/ same equil
+				// Make sure there aren't more events than sites
 				while((n_to_two + n_from_two) > n_avail_two){
 //					printf("yah for to/from self/teth_ext (2x: %i, x: %i)\n",
 //								x_dist_dub, x_dist);
@@ -2061,7 +2061,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 int AssociatedProteinManagement::GetNumToBind_I(){
 	
 	properties_->microtubules.UpdateUnoccupiedList();
-	int n_unocc = properties_->microtubules.n_unoccupied_;
+	int n_unocc = properties_->microtubules.n_unoccupied_tot_;
 	double p_bind = p_bind_i_;
 	int n_to_bind = properties_->gsl.SampleBinomialDist(p_bind, n_unocc);
 	return n_to_bind;
@@ -2153,7 +2153,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 
 	// Make sure unoccupied sites are available
 	properties_->microtubules.UpdateUnoccupiedList();
-	if(properties_->microtubules.n_unoccupied_ > 0){
+	if(properties_->microtubules.n_unoccupied_tot_ > 0){
 		// Randomly choose an unbound xlink
 		int i_xlink = properties_->gsl.GetRanInt(n_xlinks_);
 		AssociatedProtein *xlink = &xlink_list_[i_xlink];
@@ -2207,7 +2207,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 	UpdateSingleBoundList();
 	properties_->microtubules.UpdateUnoccupiedList();
 	if(n_single_bound_ > 0
-	&& properties_->microtubules.n_unoccupied_ > 0){
+	&& properties_->microtubules.n_unoccupied_tot_ > 0){
 		// Randomly pick single-bound xlink
 		int i_xlink = properties_->gsl.GetRanInt(n_single_bound_);
 		AssociatedProtein *xlink = single_bound_list_[i_xlink];

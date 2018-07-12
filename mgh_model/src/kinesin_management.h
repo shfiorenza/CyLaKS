@@ -21,6 +21,8 @@ class KinesinManagement{
 		std::vector<int> n_bound_tethered_;
 		std::vector<int> n_stepable_to_teth_rest_;
 		std::vector<int> n_stepable_from_teth_rest_;
+		std::vector<int> n_stalled_to_teth_rest_;
+		std::vector<int> n_stalled_from_teth_rest_;
 
 		int dist_cutoff_;		// see kinesin header
 		int comp_cutoff_;		// see kinesin header
@@ -28,15 +30,18 @@ class KinesinManagement{
 
 		double p_diffuse_fwd_untethered_; 
 		double p_diffuse_bck_untethered_;
-		// Diffusing away FROM xlink means the extension increases, 
-		// whereas diffusing TO xlink means extension is decreasing
+		// Diffusing away FROM xlink means the extension/compression increases,
+		// whereas diffusing TO xlink means extension/compression is decreasing
 		std::vector<double> p_diffuse_to_tether_rest_;
 		std::vector<double> p_diffuse_from_tether_rest_;
 
 		double tau_;		// in seconds, from weird paper
 		
-		double p_bind_i_free_;
-		double p_bind_i_tethered_;
+		int n_binding_affinities_ = 6;	// for discretizing Etsuko Muto paper
+		int cooperativity_range_ = 9; 	// in microns
+		
+		std::vector<double> p_bind_i_free_;
+		std::vector<double> p_bind_i_tethered_;
 		double p_bind_ii_; 
 		double p_unbind_pseudo_;
 		double p_unbind_stepable_untethered_;
@@ -53,6 +58,8 @@ class KinesinManagement{
 		double p_failstep_untethered_;
 		std::vector<double> p_step_to_teth_rest_;
 		std::vector<double> p_step_from_teth_rest_;
+		std::vector<double> p_failstep_to_teth_rest_;
+		std::vector<double> p_failstep_from_teth_rest_;
 
 		// boundaries currently disabled in KMC
 		double alpha_;		// Prob. to insert onto the minus end
@@ -71,6 +78,8 @@ class KinesinManagement{
 		std::vector< std::vector<Kinesin*> > bound_tethered_table_;
 		std::vector< std::vector<Kinesin*> > stepable_to_rest_table_;
 		std::vector< std::vector<Kinesin*> > stepable_from_rest_table_;
+		std::vector< std::vector<Kinesin*> > stalled_to_rest_table_;
+		std::vector< std::vector<Kinesin*> > stalled_from_rest_table_;
 
 		std::vector<int> diffusion_list_;
 		std::vector<int> kmc_list_;
@@ -102,6 +111,7 @@ class KinesinManagement{
 		void UpdateBoundTetheredList();
 		void UpdateBoundTetheredTable();
 		void UpdateStepableTetheredTables();
+		void UpdateStalledTetheredTables();
 		
 		void GenerateDiffusionList();
 		int GetNumToStepForward_Unteth();
@@ -117,8 +127,8 @@ class KinesinManagement{
 
 		void GenerateKMCList();
 		// Roman numerals refer to STAGE of binding, not # of heads to bind
-		int GetNumToBind_I_Free();
-		int GetNumToBind_I_Tethered();
+		int GetNumToBind_I_Free(int binding_affinity);
+		int GetNumToBind_I_Tethered(int binding_affinity);
 		int GetNumToBind_II();
 		int GetNumToUnbind_Pseudo(); 
 		int GetNumToUnbind_Stepable_Untethered();
@@ -132,11 +142,13 @@ class KinesinManagement{
 		int GetNumToFailstep_Untethered();
 		int GetNumToStep_ToTethRest(int x_dist_doubled);
 		int GetNumToStep_FromTethRest(int x_dist_doubled);
+		int GetNumToFailstep_ToTethRest(int x_dist_doubled);
+		int GetNumToFailstep_FromTethRest(int x_dist_doubled); 
 
 		void RunKMC();
-		void KMC_Bind_I_Free();			// bind from bulk solution
-		void KMC_Bind_I_Tethered();		// bind from nearby tether
-		void KMC_Bind_II();				// bind 2nd head via 'diffusion'
+		void KMC_Bind_I_Free(int binding_affinity); 	// bind from bulk
+		void KMC_Bind_I_Tethered(int binding_affinity); // bind from tether
+		void KMC_Bind_II();								// bind 2nd head
 		void KMC_Unbind_Pseudo();
 		void KMC_Unbind_Stepable_Untethered();
 		void KMC_Unbind_Stalled_Untethered(); 
@@ -149,6 +161,8 @@ class KinesinManagement{
 		void KMC_Failstep_Untethered();
 		void KMC_Step_ToTethRest(int x_dist_doubled);
 		void KMC_Step_FromTethRest(int x_dist_doubled);
+		void KMC_Failstep_ToTethRest(int x_dist_doubled);
+		void KMC_Failstep_FromTethRest(int x_dist_doubled); 
 		void KMC_Boundaries(int n_events);
 };
 #endif

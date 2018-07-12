@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
 		properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-		properties.microtubules.RunDiffusion();
+//		properties.microtubules.RunDiffusion();
 		// Some good ole-fashioned ASCII printout
 		if(parameters.microtubules.printout == true)
 			if(i_step % 1000 == 0)

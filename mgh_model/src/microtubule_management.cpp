@@ -22,14 +22,15 @@ void MicrotubuleManagement::SetParameters(){
 	int n_mts = parameters_->microtubules.count;
 	int mt_length = parameters_->microtubules.length;
 	n_sites_tot_ = n_mts*mt_length;
-//	KinesinManagement *kinesin4 = &properties_->kinesin4; 
-//	int n_binding_affinities = kinesin4->motor_list_[0].n_binding_affinities_;
 	// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
 	// int n_sites_bulk = n_sites_tot_ - 2*n_mts;	
-	unoccupied_list_.resize(n_sites_tot_); 	
-//	for(int i_aff = 0; i_aff < n_binding_affinities; i_aff++){
-//		unoccupied_list_[i_aff].resize(n_sites_tot_);
-//	}
+	unoccupied_list_.resize(n_sites_tot_); 
+	int n_binding_affinities = properties_->kinesin4.n_binding_affinities_;
+	n_unoccupied_.resize(n_binding_affinities);
+	unoccupied_table_.resize(n_binding_affinities); 	
+	for(int i_aff = 0; i_aff < n_binding_affinities; i_aff++){
+		unoccupied_table_[i_aff].resize(n_sites_tot_);
+	}
 }
 
 void MicrotubuleManagement::GenerateMicrotubules(){
@@ -91,29 +92,70 @@ void MicrotubuleManagement::UpdateNeighbors(){
 
 void MicrotubuleManagement::UpdateUnoccupiedList(){
 
-	n_unoccupied_ = 0;
-	int n_occupied = 0;
-	int i_unoccupied = 0;
 	int n_mts = parameters_->microtubules.count;
 	int mt_length = parameters_->microtubules.length;
+	n_unoccupied_tot_ = 0; 
+	int i_unoccupied = 0; 
+	int n_occupied = 0;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
 		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
 		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
-				unoccupied_list_[i_unoccupied] = site;
+				unoccupied_list_[i_unoccupied] = site; 
 				i_unoccupied++;
-				n_unoccupied_++; 
+				n_unoccupied_tot_++;
 			}
 			else{
 				n_occupied++; 
 			}
 		}
 	}
-	if(n_unoccupied_ + n_occupied != n_sites_tot_){
-		printf("something awful in update_unoccupied_list bruh:\n");
-		printf("  %i != %i\n", i_unoccupied, n_unoccupied_);
+	if(n_unoccupied_tot_ + n_occupied != n_sites_tot_){
+		printf("something awful in update_unoccupied_list bruh: \n");
+		printf("%i != %i + %i\n", n_sites_tot_, 
+				n_unoccupied_tot_, n_occupied);
+		exit(1);
+	}
+}
+
+void MicrotubuleManagement::UpdateUnoccupiedTable(){
+
+	int n_mts = parameters_->microtubules.count;
+	int mt_length = parameters_->microtubules.length;
+	int n_affinities = properties_->kinesin4.n_binding_affinities_;
+	int i_unnocupied[n_affinities];
+	for(int i_aff = 0; i_aff < n_affinities; i_aff++){	
+		n_unoccupied_[i_aff] = 0;
+		i_unnocupied[i_aff] = 0;
+	}
+	int n_occupied = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		Microtubule *mt = &mt_list_[i_mt];
+		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
+		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
+			Tubulin *site = &mt->lattice_[i_site];
+			if(site->occupied_ == false){
+				int affinity = site->binding_affinity_; 
+				int index = i_unnocupied[affinity]; 
+				unoccupied_table_[affinity][index] = site;
+				i_unnocupied[affinity]++;
+				n_unoccupied_[affinity]++; 
+			}
+			else{
+				n_occupied++; 
+			}
+		}
+	}
+	int n_unoccupied_tot = 0;
+	for(int i_aff = 0; i_aff < n_affinities; i_aff++){
+		n_unoccupied_tot += n_unoccupied_[i_aff];
+//		printf("number in affinity #%i: %i\n", i_aff, n_unoccupied_[i_aff]);
+	}
+	if(n_unoccupied_tot + n_occupied != n_sites_tot_){
+		printf("something awful in update_unoccupied_list bruh: \n");
+		printf("%i != %i + %i\n", n_sites_tot_, n_unoccupied_tot, n_occupied);
 		exit(1);
 	}
 }
@@ -121,10 +163,28 @@ void MicrotubuleManagement::UpdateUnoccupiedList(){
 Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 
 	UpdateUnoccupiedList();
+	int n_unoccupied = n_unoccupied_tot_;
 	// Make sure an unoccupied site exists
-	if(n_unoccupied_ > 0){
-		int i_entry = properties_->gsl.GetRanInt(n_unoccupied_);	
+	if(n_unoccupied > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_unoccupied);	
 		Tubulin *site = unoccupied_list_[i_entry];
+		UnoccupiedCheck(site);
+		return site;
+	}
+	else{
+		printf("Error: GetUnoccupiedSite called, but no unoccupied sites\n");
+		exit(1);
+	}
+}
+
+Tubulin* MicrotubuleManagement::GetUnoccupiedSite(int binding_affinity){
+
+	UpdateUnoccupiedTable();
+	int n_unoccupied = n_unoccupied_[binding_affinity];
+	// Make sure an unoccupied site exists
+	if(n_unoccupied > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_unoccupied);	
+		Tubulin *site = unoccupied_table_[binding_affinity][i_entry];
 		UnoccupiedCheck(site);
 		return site;
 	}

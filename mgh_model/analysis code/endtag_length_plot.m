@@ -5,8 +5,8 @@ mt_lengths = [2, 4, 6, 8, 10, 14];
 n_datapoints = length(mt_lengths);
 
 final_data_00 = [n_datapoints 1];
-final_data_00(1) = 0.008;
-final_data_00(2) = 0.008;
+final_data_00(1) = 1.312;
+final_data_00(2) = 1.968;
 final_data_00(3) = 0.008;
 final_data_00(4) = 0.016;
 final_data_00(5) = 0.008;
@@ -30,8 +30,8 @@ final_data_04(6) = 0.216;
 
 plot(mt_lengths, final_data_00, 'LineWidth', 2, 'Color', 'blue');
 hold on
-plot(mt_lengths, final_data_02, 'LineWidth', 2, 'Color', 'red');
-plot(mt_lengths, final_data_04, 'LineWidth', 2, 'Color', 'black');
+%plot(mt_lengths, final_data_02, 'LineWidth', 2, 'Color', 'red');
+%plot(mt_lengths, final_data_04, 'LineWidth', 2, 'Color', 'black');
 
 xlabel('Length of microtubule (microns)');
 ylabel('Endtag length (microns)');

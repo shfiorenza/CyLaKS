@@ -1,8 +1,8 @@
 seed: 329951228
-n_steps: 2000000
+n_steps: 500000
 n_datapoints: 100000
 data_threshold: 0   # dont use this anymore; want all steps for movie
-delta_t: 0.000001   #0.000005
+delta_t: 0.0001 
 
 kbT: 4.114
 eta: 0.001
@@ -20,7 +20,7 @@ microtubules:
 
 motors:
     k_on: 0.0035
-    concentration: 1.5
+    concentration: 0 #1.5
     conc_eff_bind: 5000
     k_off_i: 10    
     k_off_ii: 0.20

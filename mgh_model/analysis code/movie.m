@@ -3,8 +3,8 @@ clear all
 % Parameters from sim
 n_datapoints = 100000;
 motor_ID = 2;
-n_sites = 250;
-n_mts = 2;
+n_sites = 1750;
+n_mts = 1;
 xlink_cutoff = 7;
 
 % Colors
@@ -12,7 +12,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'test';
+simName = 'coop_04_6';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
@@ -31,7 +31,7 @@ site_height = 1;
 site_width = 1;
 
 % Videowriter details
-v = VideoWriter('sliding_teth.avi');
+v = VideoWriter('sliding_coop.avi');
 v.FrameRate = (n_frames / frames_per_plot) / 60;
 open(v);
 frame_box = [0 0 1545 200];
@@ -89,9 +89,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos) (second_pos + n_sites + 1)];
+                ax.XLim = [(first_pos) (second_pos + 500 + 1)];
             else
-                ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
+                ax.XLim = [(second_pos) (first_pos + 500 + 1)];
             end
         end
         

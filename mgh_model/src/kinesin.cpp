@@ -91,63 +91,60 @@ void Kinesin::PopulateBindingLookupTable(){
 
 void Kinesin::UpdateNeighborXlinks(){
 
-	n_neighbor_xlinks_ = 0;
-	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length;
-	double stalk_coord = GetStalkCoordinate();
-	// Scan through all potential neighbor sites; add only untethered xlinks
-	int i_entry = 0;
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
-		int offset = mt->coord_;
-//		printf("for mt %i, stalk %g: ", i_mt, stalk_coord); 
-		for(int x_dist = -dist_cutoff_; x_dist <= dist_cutoff_; x_dist++){
-			int i_site = (int)stalk_coord + x_dist - offset;	// FIXME 
-			// Start index at first bulk site (1) if site index is 0 or less
-			// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
-			if(i_site < 0){
-				x_dist -= (i_site - 1);
-			}
-			// End scan once last bulk site (mt_length - 2) is reached
-			else if(i_site > mt_length - 1){
-				break;
-			}
-			else{
-				Tubulin *site = &mt->lattice_[i_site];
-				if(site->xlink_ != nullptr){
-					AssociatedProtein *xlink = site->xlink_;
-					double anchor_coord = xlink->GetAnchorCoordinate();
-					double x_dist = abs(anchor_coord - stalk_coord);
-					if(x_dist >= comp_cutoff_ && x_dist <= dist_cutoff_){
-						if(xlink->heads_active_ == 1
+	if(tethered_ == false
+	&& heads_active_ == 2){
+		n_neighbor_xlinks_ = 0;
+		int n_mts = parameters_->microtubules.count;
+		int mt_length = parameters_->microtubules.length;
+		double stalk_coord = GetStalkCoordinate();
+		// Scan through all potential neighbor sites; add untethered xlinks
+		int i_entry = 0;
+		// FIXME this only works for two MTs as of now FIXME
+		for(int i_mt = 0; i_mt < n_mts; i_mt++){
+			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+			int i_stalk = stalk_coord - mt_->coord_;
+//			printf("i_stalk is %i\n\n", i_stalk);
+			for(int x_dist = -dist_cutoff_; x_dist <= dist_cutoff_; x_dist++){
+				int i_site = i_stalk + x_dist;
+//				printf("i_site is %i\n", i_site);
+				// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA
+				if(i_site < 0){
+					x_dist -= (i_site + 1);
+				}
+				// End scan once last bulk site (mt_length - 2) is reached
+				else if(i_site > mt_length - 1){
+					break;
+				}
+				else{
+					Tubulin *site = &mt->lattice_[i_site];
+					if(site->xlink_ != nullptr){
+						AssociatedProtein *xlink = site->xlink_;
+						double anchor_coord = xlink->GetAnchorCoordinate();
+						double x_dist = abs(anchor_coord - stalk_coord);
+						if(x_dist >= comp_cutoff_ 
+						&& x_dist <= dist_cutoff_
 						&& xlink->tethered_ == false){
-							n_neighbor_xlinks_++;
-							neighbor_xlinks_[i_entry] = xlink; 
-							i_entry++;
-						}
-						else if(xlink->heads_active_ == 2
-						&& xlink->tethered_ == false
-						&& i_mt == 0){					// FIXME this is bad
-//							printf("%iii_", i_site);
-							n_neighbor_xlinks_++;
-							neighbor_xlinks_[i_entry] = xlink;
-							i_entry++;		
+							if(xlink->heads_active_ == 1){
+								n_neighbor_xlinks_++;
+								neighbor_xlinks_[i_entry] = xlink; 
+								i_entry++;
+							}
+							else if(xlink->heads_active_ == 2
+							&& i_mt == 0){				// FIXME this is bad
+								n_neighbor_xlinks_++;
+								neighbor_xlinks_[i_entry] = xlink;
+								i_entry++;		
+							}
 						}
 					}
 				}
 			}
 		}
-		//		printf("\n");
 	}
-}
-
-bool Kinesin::NeighborXlinkExists(int x_dist_doubled){
-
-	AssociatedProtein *neighbor_xlink = GetNeighborXlink(x_dist_doubled);
-	if(neighbor_xlink == nullptr)
-		return false;
-	else
-		return true;
+	else{
+		printf("error in update neighbor xlinks\n");
+		exit(1);
+	}
 }
 
 void Kinesin::UpdateNeighborSites(){
@@ -158,18 +155,20 @@ void Kinesin::UpdateNeighborSites(){
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length;
 		double anchor_coord = xlink_->GetAnchorCoordinate();
-		// FIXME this only works for two MTs as of now FIXME
+//		printf("anchor coord is %g\n\n", anchor_coord);
 		// Scan through all potential neighbor sites; add unoccupied to list 
 		int i_entry = 0;
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){ 	
 			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
-			int offset = mt->coord_;
+			double mt_coord = mt->coord_;
+			int i_anchor = anchor_coord - mt_coord; 
 			for(int x_dist = -dist_cutoff_; x_dist <= dist_cutoff_; x_dist++){
-				int i_site = (int)anchor_coord + x_dist - offset;
+				int i_site = i_anchor + x_dist; 
+//				printf("i_site is %i (x_dist %i)\n", i_site, x_dist);
 				// Start index at first bulk site (1) if site index is <= 0
 				// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
 				if(i_site < 0){
-					x_dist -= (i_site - 1);
+					x_dist -= (i_site + 1);
 				}
 				// End scan at last bulk site (mt_length - 2)
 				else if(i_site > mt_length - 1){
@@ -190,15 +189,6 @@ void Kinesin::UpdateNeighborSites(){
 		printf("error in update neighbor sites\n");
 		exit(1);
 	}
-}
-
-bool Kinesin::NeighborSiteExists(int x_dist_doubled){
-
-		Tubulin *neighbor_site = GetNeighborSite(x_dist_doubled);
-		if(neighbor_site == nullptr)
-			return false;
-		else
-			return true;
 }
 
 void Kinesin::UpdateExtension(){
@@ -321,7 +311,7 @@ int Kinesin::SampleTailExtensionDoubled(){
 	double tot_weight = ext_weight + slack_weight;
 	// Roll to determine which side of the profile we sample
 	RandomNumberManagement* gsl = &properties_->gsl;
-	double ran = properties_->gsl.GetRanProb();
+	double ran = gsl->GetRanProb();
 	// Sample a normal distribution around rest length if we get extension
 	if(ran < ext_weight/tot_weight){
 		double sigma = sqrt(kbT / k_spring_) / site_size;
@@ -595,48 +585,70 @@ Tubulin* Kinesin::GetSiteFartherFromRest(){
 	}
 }
 
-Tubulin* Kinesin::GetNeighborSite(int x_dist_doubled){
+Tubulin* Kinesin::GetWeightedNeighborSite(int binding_affinity){
 
 	UpdateNeighborSites();
-	double x_dist = ((double)x_dist_doubled)/2;
-	if(tethered_ == true
-	&& heads_active_ == 0){
-		double anchor_coord = xlink_->GetAnchorCoordinate();
-		for(int i_entry = 0; i_entry < n_neighbor_sites_; i_entry++){
-			Tubulin *neighbor_site = neighbor_sites_[i_entry];
-			int neighb_index = neighbor_site->index_;
-			int mt_coord = neighbor_site->mt_->coord_; 
-			double neighb_coord = mt_coord + neighb_index; 
-			double neighb_dist = fabs(anchor_coord - neighb_coord);
-			if(neighb_dist == x_dist)
-				return neighbor_site;
+	Tubulin* eligible_neighbor_sites[n_neighbor_sites_]; 
+	int n_eligible = 0;
+	int i_entry = 0;
+	// Scan through all neighbor sites to extract eligible ones
+	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
+		Tubulin* site = neighbor_sites_[i_site];
+		if(site->binding_affinity_ == binding_affinity){
+			eligible_neighbor_sites[i_entry] = site;
+			i_entry++;
+			n_eligible++;
 		}
-		return nullptr;
 	}
-	else{
-		printf("error: neighb sites but untethered.\n");
-		exit(1);
+	double anch_coord = xlink_->GetAnchorCoordinate();
+	double p_tot = 0;
+	// Get total binding probability of all eligible sites for normalization
+	for(int i_site = 0; i_site < n_eligible; i_site++){
+		Tubulin* site = eligible_neighbor_sites[i_site];
+		double site_coord = site->mt_->coord_ + site->index_;
+		double x_dist = fabs(anch_coord - site_coord);
+		int x_dist_dub = 2 * x_dist;
+		p_tot += binding_weight_lookup_[x_dist_dub];
 	}
+	// Scan through eligible sites; pick one randomly based on weights
+	double ran = properties_->gsl.GetRanProb();
+	double p_cum = 0;
+	for(int i_site = 0; i_site < n_eligible; i_site++){
+		Tubulin* site = eligible_neighbor_sites[i_site];
+		double site_coord = site->mt_->coord_ + site->index_;
+		double x_dist = fabs(anch_coord - site_coord);
+		int x_dist_dub = 2 * x_dist;
+		p_cum += binding_weight_lookup_[x_dist_dub] / p_tot; 
+		if(ran < p_cum){
+			return site; 
+		}
+	}
+	return nullptr;
 }
 
-AssociatedProtein* Kinesin::GetNeighborXlink(int x_dist_doubled){
+AssociatedProtein* Kinesin::GetWeightedNeighborXlink(){
 
 	UpdateNeighborXlinks();
-	double x_dist = (double)x_dist_doubled/2; 
-	if(heads_active_ == 2){
-		double stalk_coord = GetStalkCoordinate();
-		for(int i_entry = 0; i_entry < n_neighbor_xlinks_; i_entry++){
-			AssociatedProtein *neighbor_xlink = neighbor_xlinks_[i_entry];
-			double anchor_coord = neighbor_xlink->GetAnchorCoordinate();
-			double neighb_dist = fabs(stalk_coord - anchor_coord);
-//			printf("n_d: %g, x_d: %g\n", neighb_dist, x_dist);
-			if(neighb_dist == x_dist)
-				return neighbor_xlink;
+	double stalk_coord = GetStalkCoordinate();
+	double p_tot = 0;
+	for(int i_xlink = 0; i_xlink < n_neighbor_xlinks_; i_xlink++){
+		AssociatedProtein* xlink = neighbor_xlinks_[i_xlink];
+		double anch_coord = xlink->GetAnchorCoordinate();
+		double x_dist = fabs(stalk_coord - anch_coord);
+		int x_dist_dub = 2 * x_dist;
+		p_tot += tethering_weight_lookup_[x_dist_dub];
+	}
+	double ran = properties_->gsl.GetRanProb();
+	double p_cum = 0; 
+	for(int i_xlink = 0; i_xlink < n_neighbor_xlinks_; i_xlink++){
+		AssociatedProtein* xlink = neighbor_xlinks_[i_xlink];
+		double anch_coord = xlink->GetAnchorCoordinate();
+		double x_dist = fabs(stalk_coord - anch_coord);
+		int x_dist_dub = 2 * x_dist;
+		p_cum += tethering_weight_lookup_[x_dist_dub] / p_tot;
+		if(ran < p_cum){
+			return xlink;
 		}
-		return nullptr;
 	}
-	else{
-		printf("error: neighb xlinks but not double bound\n");
-		exit(1);
-	}
+	return nullptr;
 }

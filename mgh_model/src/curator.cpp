@@ -105,6 +105,8 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    count = %i\n", params->microtubules.count);
 	params->microtubules.length = mts["length"].as<int>();
 	printf("    length = %i sites\n", params->microtubules.length);
+	params->microtubules.y_dist = mts["y_dist"].as<double>(); 
+	printf("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
 	params->microtubules.site_size = mts["site_size"].as<double>();
 	printf("    site_size = %g nm\n", params->microtubules.site_size);
 	params->microtubules.radius = mts["radius"].as<double>();

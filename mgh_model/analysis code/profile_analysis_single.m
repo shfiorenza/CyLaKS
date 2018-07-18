@@ -1,7 +1,7 @@
 clear all
 % Often-changed variables
-n_sites = 750;
-simName = 'c01_3';
+n_sites = 250;
+simName = 'test';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -16,8 +16,8 @@ polarityArray = {'Plus-end on left'};
 
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
-fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
-%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
 

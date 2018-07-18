@@ -42,14 +42,17 @@ void AssociatedProteinManagement::SetParameters(){
 	p_diffuse_i_bck_ = delta_t / tau_i_;
 	// Generate different stepping rates based on changes in
 	// potential energy (dU) associated with that step
-	dist_cutoff_ = xlink_list_[0].dist_cutoff_;
 	rest_dist_ = xlink_list_[0].rest_dist_;
+	dist_cutoff_ = xlink_list_[0].dist_cutoff_;
+	printf("For crosslinkers:\n");
+	printf("  rest_dist is %i\n", rest_dist_);
+	printf("  dist_cutoff is %i\n\n", dist_cutoff_);
 	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
 	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);
 	double kbT = parameters_->kbT;
 	double r_0 = xlink_list_[0].r_0_;
 	double k_spring = xlink_list_[0].k_spring_;
-	double r_y = 35;	// in nm
+	double r_y = parameters_->microtubules.y_dist;
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
 		double r_x = x_dist * site_size;
 		double r_x_to = (x_dist - 1) * site_size;
@@ -100,7 +103,7 @@ void AssociatedProteinManagement::SetParameters(){
 	double k_teth_spring = properties_->kinesin4.motor_list_[0].k_spring_;
 	double k_teth_slack = properties_->kinesin4.motor_list_[0].k_slack_;
 	double r_0_teth = properties_->kinesin4.motor_list_[0].r_0_;
-	double r_y_teth = 17.5;
+	double r_y_teth = parameters_->microtubules.y_dist / 2;
 	double rest_dist_teth = properties_->kinesin4.motor_list_[0].rest_dist_;
 	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_dist_cutoff; x_dist_dub++){
 		p_diffuse_ii_to_both_rest_[x_dist_dub].resize(dist_cutoff_ + 1);
@@ -218,6 +221,8 @@ void AssociatedProteinManagement::SetParameters(){
 	p_bind_i_ = k_on * c_xlink * delta_t;
 	double c_eff_teth = parameters_->motors.conc_eff_tether;
 	p_bind_i_tethered_ = k_on * c_eff_teth * delta_t; 
+	double c_eff_bind = parameters_->xlinks.conc_eff_bind;
+	p_bind_ii_ = k_on * c_eff_bind * delta_t;
 	double k_off_i = parameters_->xlinks.k_off_i;
 	p_unbind_i_ = k_off_i * delta_t;
 	// Generate unbinding rates based on discretized spring extension
@@ -2184,9 +2189,6 @@ int AssociatedProteinManagement::GetNumToBind_I_Tethered(){
 
 int AssociatedProteinManagement::GetNumToBind_II(){
 	
-	double k_on = parameters_->xlinks.k_on;
-	double c_eff = parameters_->xlinks.conc_eff_bind;
-	double delta_t = parameters_->delta_t;
 	double weights_summed = 0;
 	// Sum over all single-bound xlinks
 	for(int i_xlink = 0; i_xlink < n_single_bound_; i_xlink++){
@@ -2201,8 +2203,7 @@ int AssociatedProteinManagement::GetNumToBind_II(){
 		}
 	}
 	// Scale summed weights by an effective conc. to get  n_bound at equil
-	double bind_rate = k_on * c_eff * weights_summed; 
-	double n_avg = bind_rate * delta_t; 
+	double n_avg = p_bind_ii_ * weights_summed; 
 	if(n_avg > 0){
 		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
 		return n_to_bind;
@@ -2210,6 +2211,12 @@ int AssociatedProteinManagement::GetNumToBind_II(){
 	else{
 		return 0;
 	}
+}
+
+int AssociatedProteinManagement::GetNumToBind_II_Tethered(){
+	
+	double weights_summed = 0;
+
 }
 
 int AssociatedProteinManagement::GetNumToUnbind_I(){
@@ -2339,6 +2346,9 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 		// Update statistics
 		n_single_bound_++;
 		if(xlink->tethered_ == true){
+			printf("error in xlink_bind_i\n");
+			exit(1);
+			/*
 			xlink->motor_->UpdateExtension();
 			// Tethers attached to free motors diffuse as untethered
 			if(xlink->motor_->heads_active_ == 0){
@@ -2353,6 +2363,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 				printf("hummm in bind_i (XLINKS)\n");
 				exit(1);
 			}
+			*/
 		}
 		else{
 			n_untethered_++;
@@ -2394,8 +2405,6 @@ void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 			// Update statistics
 			xlink->motor_->UpdateExtension();
 			int x_dist_dub = xlink->motor_->x_dist_doubled_;
-			if(x_dist_dub > 35)
-				printf("2x is %i\n", x_dist_dub);
 			n_free_tethered_--;
 			n_single_bound_++; 
 			n_sites_i_tethered_[x_dist_dub]++; 
@@ -2486,6 +2495,9 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 				n_sites_ii_untethered_[x_dist] += 2;	
 				n_sites_i_untethered_--;
 			}
+		}
+		else{
+			printf("failed to xlink bind_ii\n");
 		}
 	}
 	else{

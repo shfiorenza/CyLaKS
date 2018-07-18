@@ -20,9 +20,9 @@ class Kinesin{
 		// x_dist_dub is used to index the tether extension of motors, e.g.
 		// an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
 		int x_dist_doubled_;		// in no. of sites 
-		int dist_cutoff_ = 18;			// max value x_dist (not 2x) can be
-		int comp_cutoff_ = 1;			// min value x_dist (not 2x) can be
-		double rest_dist_ = 14.5;		// spring extension is ~0 for this
+		int dist_cutoff_;			// max value x_dist (not 2x) can be
+		int comp_cutoff_;			// min value x_dist (not 2x) can be
+		double rest_dist_;		// spring extension is ~0 for this
 
 		double r_0_;			
 		double k_spring_;
@@ -56,6 +56,7 @@ class Kinesin{
 		void Initialize(system_parameters *parameters, 
 			system_properties *properties, int ID);
 		void SetParameters();
+		void CalculateCutoffs();
 		void InitiateNeighborLists();
 		void PopulateTetheringLookupTable();
 		void PopulateBindingLookupTable();
@@ -68,7 +69,6 @@ class Kinesin{
 
 		bool AtCutoff();
 
-		int SampleTailExtensionDoubled();
 		int GetDirectionTowardRest();
 		double GetRestLengthCoordinate(); 	// coord where ext ~ 0 when bound
 		double GetStalkCoordinate(); // tail originates from stalk
@@ -78,7 +78,6 @@ class Kinesin{
 		Tubulin* GetActiveHeadSite();
 		Tubulin* GetSiteCloserToRest();
 		Tubulin* GetSiteFartherFromRest();
-
 		Tubulin* GetWeightedNeighborSite(int binding_affinity);
 		AssociatedProtein* GetWeightedNeighborXlink();
 };

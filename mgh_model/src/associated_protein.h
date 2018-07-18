@@ -20,8 +20,8 @@ class AssociatedProtein{
 		// x_dist_ is used to index the xlink extensions for lookup
 		// e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
 		int x_dist_; 			// in no. of sites; can only be 0 or pos. 
-		int dist_cutoff_  = 7;		// maximum value x_dist_ can have
-		int rest_dist_ = 0;			// x_dist at which spring extension is ~0
+		int dist_cutoff_;		// maximum value x_dist_ can have
+		int rest_dist_;			// x_dist at which spring extension is ~0
 	
 		double r_0_;		
         double k_spring_;
@@ -48,6 +48,8 @@ class AssociatedProtein{
 		void Initialize(system_parameters *parameters, 
 			system_properties *properties, int ID);
 		void SetParameters();
+		void CalculateCutoffs();
+		void InitiateNeighborLists();
 		void PopulateBindingLookupTable();
 		void PopulateTethBindingLookupTable();
 
@@ -58,7 +60,6 @@ class AssociatedProtein{
 		void ForceUnbind(int x_dist_pre); 
 
 		int GetDirectionTowardRest(Tubulin *site);
-		int SampleSpringExtension();
 		double GetAnchorCoordinate();
 		double GetBindingWeight(Tubulin *neighbor);
 		double GetTethBindingWeight(Tubulin *neighbor); 

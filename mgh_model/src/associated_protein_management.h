@@ -13,7 +13,7 @@ class AssociatedProteinManagement{
 		int n_single_bound_ = 0;
 		// Each possible spring extension has its own double bound list
 		std::vector<int> n_double_bound_; 
-		int n_tethered_ = 0;
+		int n_free_tethered_ = 0;
 		int n_untethered_ = 0;
 		
 		// Only one population for singly-bound untethered xlink heads
@@ -49,12 +49,16 @@ class AssociatedProteinManagement{
 		double tau_ii_;		
 
 		double p_bind_i_;			
+		double p_bind_i_tethered_; 
 		double p_unbind_i_;		
 		std::vector<double> p_unbind_ii_;	// One for each extension
+		double p_tether_free_; 
+		double p_untether_free_;
 
 		std::vector<AssociatedProtein> xlink_list_;
 		std::vector<AssociatedProtein*> single_bound_list_;
 		std::vector< std::vector<AssociatedProtein*> > double_bound_list_;
+		std::vector<AssociatedProtein*> free_tethered_list_;
 		std::vector<AssociatedProtein*> untethered_list_;
 
 		// The following lists all refer to sites of active xlinks
@@ -88,6 +92,7 @@ class AssociatedProteinManagement{
 	
 		void UpdateSingleBoundList();
 		void UpdateDoubleBoundList();
+		void UpdateFreeTetheredList();
 		void UpdateUntetheredList();
 		
 		void UpdateSingleUntetheredSites();
@@ -95,6 +100,7 @@ class AssociatedProteinManagement{
 		void UpdateSingleTetheredSites();
 		void UpdateDoubleTetheredSites();
 
+		AssociatedProtein* GetFreeXlink();
 		AssociatedProtein* GetUntetheredXlink();
 
 		void GenerateDiffusionList();
@@ -127,14 +133,22 @@ class AssociatedProteinManagement{
 
 		void GenerateKMCList();
 		int GetNumToBind_I();
+		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
+		int GetNumToBind_II_Tethered();
 		int GetNumToUnbind_I();
 		int GetNumToUnbind_II(int x_dist);
+		int GetNumToTether_Free();
+		int GetNumToUntether_Free();
 
 		void RunKMC();
 		void RunKMC_Bind_I();
+		void RunKMC_Bind_I_Tethered();
 		void RunKMC_Bind_II();
+		void RunKMC_Bind_II_Tethered();
 		void RunKMC_Unbind_I();
 		void RunKMC_Unbind_II(int x_dist);
+		void RunKMC_Tether_Free();
+		void RunKMC_Untether_Free();
 };
 #endif

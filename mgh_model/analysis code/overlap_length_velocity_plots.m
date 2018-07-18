@@ -1,11 +1,11 @@
 clear all;
 % Often-changed variables
-n_sites = 250;
-simName = 'slide_b';
+n_sites = 500;
+simName = 'slide_pseudo_vlong';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 50000000;
-delta_t = 0.000001;
+n_steps = 100000000;
+delta_t = 0.000005;
 n_datapoints = 100000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;
@@ -55,7 +55,7 @@ ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
 %xlim([start_time end_time]);
-%ylim([0 8]);
+ylim([0 n_sites * 0.008]);
 grid on
 grid minor
 

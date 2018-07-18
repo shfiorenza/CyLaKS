@@ -9,7 +9,7 @@ eta: 0.001
 
 microtubules:
     count: 1
-    length: 1750
+    length: 750
     site_size: 8
     radius: 12.5
     elevation: 50 
@@ -42,7 +42,7 @@ motors:
 
 xlinks:
     k_on: 0.01136
-    concentration: 0.4
+    concentration: 0.0
     conc_eff_bind: 50000
     k_off_i: 0.09091  
     k_off_ii: 0.0455   

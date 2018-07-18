@@ -5,7 +5,7 @@ n_steps = 800000;
 n_datapoints = 100000;
 delta_t = 0.0005; 
 n_sites = 250;
-n_mts = 1;
+n_mts = 2;
 xlink_cutoff = 7;
 
 % Colors
@@ -13,10 +13,10 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'c01_1';
-movie_name = 'endtag_norm_c04.avi';
-fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
-%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+simName = 'test_exp';
+movie_name = 'test.avi';
+%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
 xlinkFileName = '%s_xlinkID.file';
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 100;
+frames_per_plot = 1000;
 start_frame = 1;
 site_height = 1;
 site_width = 1;
@@ -99,9 +99,9 @@ for i_data=start_frame:frames_per_plot:end_frame
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos + 250) (first_pos + 650 + 1)];
+                ax.XLim = [(first_pos) (second_pos + n_sites + 1)];
             else
-                ax.XLim = [(second_pos + 250) (second_pos + 650 + 1)];
+                ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
             end
         end
         

@@ -27,6 +27,7 @@ class AssociatedProteinManagement{
 		std::vector< std::vector<int> > n_sites_ii_tethered_same_; 
 		std::vector< std::vector<int> > n_sites_ii_tethered_oppo_; 
 		// Only need different populations for each tether extension
+		// when at 'self-rest', i.e. an x_dist of 0
 		std::vector<int> n_sites_ii_tethered_self_rest_;
 
 		int dist_cutoff_;		// see assoc. protein header
@@ -50,6 +51,7 @@ class AssociatedProteinManagement{
 
 		double p_bind_i_;			
 		double p_bind_i_tethered_; 
+		double p_bind_ii_; 
 		double p_unbind_i_;		
 		std::vector<double> p_unbind_ii_;	// One for each extension
 		double p_tether_free_; 
@@ -65,7 +67,7 @@ class AssociatedProteinManagement{
 		std::vector<Tubulin*> single_untethered_sites_;
 		std::vector< std::vector<Tubulin*> > double_untethered_sites_;
 		std::vector< std::vector<Tubulin*> > single_tethered_sites_;
-		// 'opposite' refers to tether rest and xlink rest being 
+		// 'oppo' refers to tether rest and xlink rest being 
 		// on opposite sides of the site; likewise for 'same' 
 		std::vector< std::vector< std::vector<Tubulin*> > >
 			double_tethered_sites_oppo_;
@@ -135,7 +137,7 @@ class AssociatedProteinManagement{
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
-		int GetNumToBind_II_Tethered();
+		int GetNumToBind_II_Tethered(); // XXX add in
 		int GetNumToUnbind_I();
 		int GetNumToUnbind_II(int x_dist);
 		int GetNumToTether_Free();
@@ -145,7 +147,7 @@ class AssociatedProteinManagement{
 		void RunKMC_Bind_I();
 		void RunKMC_Bind_I_Tethered();
 		void RunKMC_Bind_II();
-		void RunKMC_Bind_II_Tethered();
+		void RunKMC_Bind_II_Tethered();  // XXX add in
 		void RunKMC_Unbind_I();
 		void RunKMC_Unbind_II(int x_dist);
 		void RunKMC_Tether_Free();

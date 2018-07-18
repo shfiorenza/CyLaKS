@@ -11,6 +11,7 @@ void Kinesin::Initialize(system_parameters *parameters,
 	parameters_ = parameters;
 	properties_ = properties;
 	SetParameters();
+	CalculateCutoffs();
 	InitiateNeighborLists(); 
 	PopulateTetheringLookupTable();
 	PopulateBindingLookupTable();
@@ -23,18 +24,77 @@ void Kinesin::SetParameters(){
 	k_slack_ = parameters_->motors.k_slack;
 }
 
+void Kinesin::CalculateCutoffs(){
+
+	int site_size = parameters_->microtubules.site_size; 
+	double r_y = parameters_->microtubules.y_dist / 2;
+	double kbT = parameters_->kbT; 
+	/* First, calculate rest_dist_ in number of sites */
+	int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
+	double rest_scan[3]; 
+	double scan_force[3]; 
+	for(int i_scan = -1; i_scan <= 1; i_scan++){
+		rest_scan[i_scan + 1] = rough_rest_dist + (i_scan * 0.5);
+		double rest_scan_length = rest_scan[i_scan + 1] * site_size;
+		double r_scan = sqrt(r_y*r_y + rest_scan_length*rest_scan_length); 
+		if(r_scan >= r_0_)
+			scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
+		else
+			scan_force[i_scan + 1] = (r_scan - r_0_) * k_slack_; 
+	}
+	double min_force = 100; 
+	for(int i_scan = -1; i_scan <=1; i_scan++){
+		double force = fabs(scan_force[i_scan + 1]); 
+		if(force < min_force){
+			min_force = force;
+			rest_dist_ = rest_scan[i_scan + 1]; 
+		}	
+	}
+	comp_cutoff_ = 0;
+	/* Next, calculate compression distance cutoff */ 
+	for(int x_dist = (int)rest_dist_; x_dist >= 0; x_dist--){
+		int r_x = x_dist * site_size; 
+		double r = sqrt(r_y*r_y + r_x*r_x); 
+		double dr = r - r_0_; 
+		double boltzmann_weight; 
+		if(r < r_0_)
+			boltzmann_weight = exp(-dr*dr*k_slack_/(2*kbT));
+		else
+			boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
+		if(boltzmann_weight < 1e-9){
+			comp_cutoff_ = x_dist;
+			break;
+		}
+	}
+	/* Finally, calculate extension distance cutoff */
+	for(int x_dist = (int) rest_dist_; x_dist < 1000; x_dist++){
+		int r_x = x_dist * site_size;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double dr = r - r_0_; 
+		double boltzmann_weight;
+		if(r >= r_0_)
+			boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
+		else
+			boltzmann_weight = exp(-dr*dr*k_slack_/(2*kbT));
+		if(boltzmann_weight < 1e-9){
+			dist_cutoff_ = x_dist;
+			break;
+		}
+	}
+}
+
 void Kinesin::InitiateNeighborLists(){
 
 	int n_mts = parameters_->microtubules.count; 
-	neighbor_xlinks_.resize(n_mts*(2*dist_cutoff_ + 1));
 	// Serialize this bitch so we just roll one random number 
+	neighbor_xlinks_.resize(n_mts*(2*dist_cutoff_ + 1));
 	neighbor_sites_.resize(n_mts*(2*dist_cutoff_ + 1));
 }
 
 /* XXX currently the exact same as binding lookup table...appropriate? XXX */
 void Kinesin::PopulateTetheringLookupTable(){
 
-	double r_y = 17.5;
+	double r_y = parameters_->microtubules.y_dist / 2;
 	double kbT = parameters_->kbT;
 	double site_size = parameters_->microtubules.site_size;
 	tethering_weight_lookup_.resize(2*dist_cutoff_ + 1);
@@ -62,7 +122,7 @@ void Kinesin::PopulateTetheringLookupTable(){
 
 void Kinesin::PopulateBindingLookupTable(){
 
-	double r_y = 17.5;		// dist from either MT to midpoint of prc1
+	double r_y = parameters_->microtubules.y_dist / 2;
 	double kbT = parameters_->kbT;
 	double site_size = parameters_->microtubules.site_size;
 	// Use 2*dist_cutoff because we can have half-integer distances
@@ -220,7 +280,7 @@ void Kinesin::UpdateExtension(){
 //			fflush(stdout);
 		}
 		else{
-			double r_y = 17.5;
+			double r_y = parameters_->microtubules.y_dist / 2;
 			double r_x = site_size * x_dist_doubled_ / 2;
 			double r = sqrt(r_x*r_x + r_y*r_y);
 			double extension = r - r_0_;
@@ -244,7 +304,7 @@ void Kinesin::UpdateExtension(){
 		}
 		else{
 			// Calculate new extension
-			double r_y = 17.5;
+			double r_y = parameters_->microtubules.y_dist / 2;
 			double r_x = site_size * x_dist_doubled_/2;
 			double r = sqrt(r_y*r_y + r_x*r_x);
 			double extension = r - r_0_; 
@@ -296,45 +356,6 @@ bool Kinesin::AtCutoff(){
 		return true;
 	else
 		return false;
-}
-
-int Kinesin::SampleTailExtensionDoubled(){
-
-	double kbT = parameters_->kbT;
-	double site_size = parameters_->microtubules.site_size;
-	int rest_dist_dub = 2*rest_dist_;
-	// Total weight of extension 'side' of energy profile
-	double ext_weight = 0;
-	// Total weight of slack 'side' of energy profile
-	double slack_weight = 0;
-	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
-		if(x_dist_dub < rest_dist_dub)
-			slack_weight += tethering_weight_lookup_[x_dist_dub];
-		else
-			ext_weight += tethering_weight_lookup_[x_dist_dub];
-	}
-	double tot_weight = ext_weight + slack_weight;
-	// Roll to determine which side of the profile we sample
-	RandomNumberManagement* gsl = &properties_->gsl;
-	double ran = gsl->GetRanProb();
-	// Sample a normal distribution around rest length if we get extension
-	if(ran < ext_weight/tot_weight){
-		double sigma = sqrt(kbT / k_spring_) / site_size;
-		int extension = gsl->SampleAbsNormalDist(sigma);
-		int x_dist_dub = rest_dist_dub + extension;
-		if(x_dist_dub > 2*dist_cutoff_)
-			x_dist_dub = 2*dist_cutoff_;
-		return x_dist_dub; 
-	}
-	// Otherwise, select for 'slack' based on different sigma
-	else{
-		double sigma = sqrt(kbT / k_slack_) / site_size;
-		int compression = gsl->SampleAbsNormalDist(sigma);
-		int x_dist_dub = rest_dist_dub - compression;
-		if(x_dist_dub < 2*comp_cutoff_)
-			x_dist_dub = 2*comp_cutoff_;
-		return x_dist_dub;
-	}
 }
 
 int Kinesin::GetDirectionTowardRest(){
@@ -487,7 +508,6 @@ double Kinesin::GetTetherForce(Tubulin *site){
 
 	if(tethered_ == true
 	&& heads_active_ > 0){
-		AssociatedProtein *xlink = xlink_; 
 		UpdateExtension();
 		// Make sure we didn't force an untether event
 		if(tethered_ == true){
@@ -497,7 +517,7 @@ double Kinesin::GetTetherForce(Tubulin *site){
 			else
 				force_mag = extension_ * k_spring_; 
 			double stalk_coord = GetStalkCoordinate();
-			double anchor_coord = xlink->GetAnchorCoordinate();
+			double anchor_coord = xlink_->GetAnchorCoordinate();
 			int newtons_third;
 			if(site->mt_ == mt_)
 				newtons_third = -1;

@@ -1,7 +1,7 @@
 clear all
 n_datapoints = 100000;
-length_of_microtubule = 250;
-raw_overlap_length = 0;
+length_of_microtubule = 500;
+raw_overlap_length = -250;
 overlap_length = abs(raw_overlap_length);
 delta = length_of_microtubule - overlap_length;
 if(overlap_length == 0)

@@ -41,16 +41,16 @@ void KinesinManagement::SetParameters(){
 	// Generate stepping rates based on extension of tether: rates are 
 	// increased if stepping towards rest length, and reduced if stepping
 	// away from rest length (which increases tether extension)
-	dist_cutoff_ = motor_list_[0].dist_cutoff_;
-	comp_cutoff_ = motor_list_[0].comp_cutoff_;
 	rest_dist_ = motor_list_[0].rest_dist_;
+	comp_cutoff_ = motor_list_[0].comp_cutoff_;
+	dist_cutoff_ = motor_list_[0].dist_cutoff_;
 	p_diffuse_to_tether_rest_.resize(2*dist_cutoff_ + 1);
 	p_diffuse_from_tether_rest_.resize(2*dist_cutoff_ + 1);
 	double kbT = parameters_->kbT;
 	double r_0 = motor_list_[0].r_0_;
 	double k_spring = motor_list_[0].k_spring_;
 	double k_eff_slack = motor_list_[0].k_slack_;
-	double r_y = 17.5;		// in nm; from MT to midpoint of prc1
+	double r_y = parameters_->microtubules.y_dist / 2;
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
 		// Calculate tether length for this x_dist as well as +/- 1 it
 		double r_x = x_dist_dub * site_size / 2;
@@ -141,8 +141,6 @@ void KinesinManagement::SetParameters(){
 	p_untether_free_ = k_untether_free * delta_t;
     double motor_speed = parameters_->motors.velocity;
 	p_step_untethered_ = motor_speed * delta_t / site_size;
-	alpha_ = 0;
-	beta_ = 0;
 	double k_failstep = parameters_->motors.failstep_rate; 
 	p_failstep_untethered_ = k_failstep * delta_t;
 	// Generate untethering and stepping rates for all tether extensions	
@@ -156,7 +154,6 @@ void KinesinManagement::SetParameters(){
 	p_failstep_to_teth_rest_.resize(2*dist_cutoff_ + 1); 
 	p_failstep_from_teth_rest_.resize(2*dist_cutoff_ + 1); 
 	double fail_coeff = p_failstep_untethered_ / p_step_untethered_; 
-	printf("fail coeff is %g\n", fail_coeff); 	
 	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
 		double r_x = x_dist_dub * site_size / 2;
 		double r = sqrt(r_y*r_y + r_x*r_x);
@@ -233,6 +230,11 @@ void KinesinManagement::SetParameters(){
 	}
 	alpha_ = parameters_->motors.alpha;
 	beta_ = parameters_->motors.beta;
+	printf("For motors:\n");
+	printf("  rest_dist is %g\n", rest_dist_);
+	printf("  comp_cutoff is %i\n", comp_cutoff_);
+	printf("  dist_cutoff is %i\n", dist_cutoff_);
+	printf("  fail coeff is %g\n", fail_coeff); 	
 }
 void KinesinManagement::InitiateLists(){
 

@@ -6,6 +6,7 @@ struct microtubule_parameters{
 	
 	int count;				// Number of MTs in simulation
 	int length;				// Length of each MT in sites (tubulin dimers)
+	double y_dist;			// Vertical distance between each MT
 
 	double site_size; 		// Length of tubulin dimer; nm
 	double radius;			// Outer radius of MT barrel; nm

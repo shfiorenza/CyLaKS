@@ -1,10 +1,10 @@
 clear all;
 % Often-changed variables
 n_sites = 500;
-simName = 'slide_pseudo_vlong';
+simName = 'test_exp';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 100000000;
+n_steps = 8000000;
 delta_t = 0.000005;
 n_datapoints = 100000;
 starting_point = 0;

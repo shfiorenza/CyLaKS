@@ -11,6 +11,8 @@ void AssociatedProtein::Initialize(system_parameters *parameters,
 	parameters_ = parameters;
 	properties_ = properties;
 	SetParameters();
+	CalculateCutoffs();
+	InitiateNeighborLists();
 	PopulateBindingLookupTable();
 	PopulateTethBindingLookupTable();
 }
@@ -19,15 +21,55 @@ void AssociatedProtein::SetParameters(){
 
 	r_0_ = parameters_->xlinks.r_0;
 	k_spring_ = parameters_->xlinks.k_spring;
-	neighbor_sites_.resize(2*dist_cutoff_ + 1);
+}
+
+void AssociatedProtein::CalculateCutoffs(){
+
+	int site_size = parameters_->microtubules.site_size; 
+	double kbT = parameters_->kbT; 
+	double r_y = parameters_->microtubules.y_dist;
+	/* First, calculate rest_dist_ in number of sites */
+	int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
+	double rest_scan[3]; 
+	double scan_force[3]; 
+	for(int i_scan = -1; i_scan <= 1; i_scan++){
+		rest_scan[i_scan + 1] = rough_rest_dist + (i_scan * 0.5);
+		double rest_scan_length = rest_scan[i_scan + 1] * site_size;
+		double r_scan = sqrt(r_y*r_y + rest_scan_length*rest_scan_length); 
+		scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
+	}
+	double min_force = 100; 
+	for(int i_scan = -1; i_scan <=1; i_scan++){
+		double force = fabs(scan_force[i_scan + 1]); 
+		if(force < min_force){
+			min_force = force;
+			rest_dist_ = rest_scan[i_scan + 1]; 
+		}	
+	}
+	/* Finally, calculate extension distance cutoff */
+	for(int x_dist = (int) rest_dist_; x_dist < 1000; x_dist++){
+		int r_x = x_dist * site_size;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double dr = r - r_0_; 
+		double boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
+		if(boltzmann_weight < 1e-9){
+			dist_cutoff_ = x_dist;
+			break;
+		}
+	}
+}
+
+void AssociatedProtein::InitiateNeighborLists(){
+
 	int n_mts = parameters_->microtubules.count; 
 	int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
+	neighbor_sites_.resize((n_mts - 1)*(2*dist_cutoff_ + 1));
 	teth_neighbor_sites_.resize(n_mts*(2*teth_cutoff + 1));
 }
 
 void AssociatedProtein::PopulateBindingLookupTable(){
 
-	double r_y = 35;		//dist between MTs in nm; static as of now
+	double r_y = parameters_->microtubules.y_dist;
 	double kbT = parameters_->kbT;
 	double site_size = parameters_->microtubules.site_size;
 	binding_weight_lookup_.resize(dist_cutoff_ + 1);
@@ -43,7 +85,7 @@ void AssociatedProtein::PopulateBindingLookupTable(){
 
 void AssociatedProtein::PopulateTethBindingLookupTable(){
 
-	double r_y = 17.5;
+	double r_y = parameters_->microtubules.y_dist / 2;
 	double kbT = parameters_->kbT;
 	double site_size = parameters_->microtubules.site_size;	
 	int teth_cutoff = properties_->kinesin4.dist_cutoff_;
@@ -176,7 +218,7 @@ void AssociatedProtein::UpdateExtension(){
 		int x_dist = abs(coord_one - coord_two);	
 		if(x_dist <= dist_cutoff_){
 			x_dist_ = x_dist; 
-			double r_y = 35;					// static as of now
+			double r_y = parameters_->microtubules.y_dist;
 			double r_x = site_size*x_dist_;
 			double r = sqrt(r_y*r_y + r_x*r_x);
 			double extension = r - r_0_; 
@@ -286,21 +328,6 @@ int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 		printf("error in get dir. toward rest (xlink)\n");
 		exit(1);
 	}
-}
-
-int AssociatedProtein::SampleSpringExtension(){
-
-	// Scale sigma so that the avg for binomial is greater than 1
-	double kbT = parameters_->kbT;
-	double site_size = parameters_->microtubules.site_size;
-	double sigma = sqrt(kbT / k_spring_) / site_size * 100;
-	int x_dist = properties_->gsl.SampleNormalDist(sigma);
-	x_dist = x_dist / 100;
-	if(x_dist > dist_cutoff_)
-		x_dist = dist_cutoff_;
-	else if(x_dist < -dist_cutoff_)
-		x_dist = -dist_cutoff_;
-	return x_dist;
 }
 
 double AssociatedProtein::GetAnchorCoordinate(){

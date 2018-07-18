@@ -1,12 +1,12 @@
 clear all
 % Often-changed variables
-n_sites = 1750;
-simName = 'coop_04_6';
+n_sites = 750;
+simName = 'c01_3';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 100000;
-starting_point = 30000;
+n_datapoints = 100000;  %100k
+starting_point = 50000;  %90k
 active_datapoints = n_datapoints - starting_point;
 
 temp_one = zeros([n_sites 1]);
@@ -16,7 +16,8 @@ polarityArray = {'Plus-end on left'};
 
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
+%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
 

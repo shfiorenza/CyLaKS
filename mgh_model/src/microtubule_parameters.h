@@ -15,7 +15,7 @@ struct microtubule_parameters{
 	std::vector<double> immobile_until; // MTs immobilzed until this time; s
 
 	bool printout; 			// Whether or not ASCII printout is enabled 
-
+	bool diffusion;			// Whether or not MT diffusion is enabled
 
 };
 #endif

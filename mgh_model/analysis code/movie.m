@@ -1,9 +1,10 @@
 clear all
 
 % Parameters from sim
+n_steps = 800000;
 n_datapoints = 100000;
-motor_ID = 2;
-n_sites = 1750;
+delta_t = 0.0005; 
+n_sites = 250;
 n_mts = 1;
 xlink_cutoff = 7;
 
@@ -12,8 +13,10 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'coop_04_6';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+simName = 'c01_1';
+movie_name = 'endtag_norm_c04.avi';
+fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
+%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
 xlinkFileName = '%s_xlinkID.file';
@@ -25,13 +28,13 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 1000;
+frames_per_plot = 100;
 start_frame = 1;
 site_height = 1;
 site_width = 1;
 
 % Videowriter details
-v = VideoWriter('sliding_coop.avi');
+v = VideoWriter(movie_name);
 v.FrameRate = (n_frames / frames_per_plot) / 60;
 open(v);
 frame_box = [0 0 1545 200];
@@ -60,8 +63,15 @@ teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
 
+end_frame = start_frame + n_frames - 1;
+if(end_frame > n_datapoints)
+    end_frame = n_datapoints;
+end
+
+time_per_frame = delta_t * (n_steps / n_frames);
+
 % Run through all datapoints; each one is a frame in our movie
-for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
+for i_data=start_frame:frames_per_plot:end_frame
     
     % Clear figure so that it only displays figures from current datapoint
     clf;        
@@ -75,7 +85,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
     ax.XTickLabel = {0, 0.008*n_sites/5, 0.008*2*n_sites/5, ... 
         0.008*3*n_sites/5, 0.008*4*n_sites/5, 0.008*n_sites};
     ax.YTickLabel = {};
-    ax.XLabel.String = 'Distance across MT relative to minus-end (microns)';
+    ax.XLabel.String = 'Distance from plus-end (microns)';
     
     hold all;
     
@@ -89,9 +99,9 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos) (second_pos + 500 + 1)];
+                ax.XLim = [(first_pos + 250) (first_pos + 650 + 1)];
             else
-                ax.XLim = [(second_pos) (first_pos + 500 + 1)];
+                ax.XLim = [(second_pos + 250) (second_pos + 650 + 1)];
             end
         end
         
@@ -172,6 +182,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
         xlink_IDs = xlink_data(:, i_mt, i_data);
         % Array of xlink IDs for neighbor MT
         neighb_IDs = zeros(n_sites);
+        neighb_IDs(:) = -1;
         neighb_mt_pos = 0;
         neighb_mt_height = 0;
         if(n_mts > 1)
@@ -258,14 +269,22 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
                     end_pos = teth_coords(i_teth)*site_width + (3/2)*site_width;
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
-                    ne = 8; a = 10; ro = 0.5;
-                    [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
-                    plot(xs,ys,'LineWidth', 1, 'Color', 'black');
+                    ne = 10; a = 10; ro = 0.5;
+                    if abs(xa - xb) < 18
+                        [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
+                        plot(xs,ys,'LineWidth', 1, 'Color', 'black');
+                    else
+                        disp(xa - xb);
+                    end
                end
             end 
         end
-        
     end
+    dim = [0.0125 0.57 .3 .3];
+    time = (i_data - 1) * time_per_frame;
+    str = sprintf('Time: %#.3g seconds', time);
+    annotation('textbox',dim,'String',str,'FitBoxToText','on');
+    
     frame = getframe(fig1); %, frame_box);
     writeVideo(v, frame);
 end

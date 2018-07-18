@@ -15,6 +15,7 @@ class AssociatedProtein{
 		int speciesID_ = 1;
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
+		int n_teth_neighbor_sites_ = 0;
 
 		// x_dist_ is used to index the xlink extensions for lookup
 		// e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
@@ -34,7 +35,9 @@ class AssociatedProtein{
 		Kinesin *motor_ = nullptr;
 
 		std::vector<Tubulin*> neighbor_sites_;
+		std::vector<Tubulin*> teth_neighbor_sites_; 
 		std::vector<double> binding_weight_lookup_;
+		std::vector<double> teth_binding_weight_lookup_; 
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -46,9 +49,10 @@ class AssociatedProtein{
 			system_properties *properties, int ID);
 		void SetParameters();
 		void PopulateBindingLookupTable();
+		void PopulateTethBindingLookupTable();
 
 		void UpdateNeighborSites();
-		bool NeighborExists(int x_dist);
+		void UpdateTethNeighborSites();
 
 		void UpdateExtension();
 		void ForceUnbind(int x_dist_pre); 
@@ -57,8 +61,10 @@ class AssociatedProtein{
 		int SampleSpringExtension();
 		double GetAnchorCoordinate();
 		double GetBindingWeight(Tubulin *neighbor);
+		double GetTethBindingWeight(Tubulin *neighbor); 
 		double GetExtensionForce(Tubulin *site);
 		Tubulin* GetActiveHeadSite();
-		Tubulin* GetNeighborSite(int x_dist);
+		Tubulin* GetWeightedNeighborSite();
+		Tubulin* GetWeightedTethNeighborSite();
 };
 #endif

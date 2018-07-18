@@ -14,7 +14,7 @@ class KinesinManagement{
 		int n_free_tethered_ = 0;
 	 	int	n_pseudo_bound_ = 0;
 		int n_eligible_pseudo_ = 0;
-		int n_bound_untethered_ = 0;
+		int n_bound_untethered_ = 0;		// only doubly-bound motors
 		int n_stalled_untethered_ = 0;
 		int n_stepable_untethered_ = 0; 
 		int n_bound_tethered_tot_ = 0; 
@@ -30,8 +30,8 @@ class KinesinManagement{
 
 		double p_diffuse_fwd_untethered_; 
 		double p_diffuse_bck_untethered_;
-		// Diffusing away FROM xlink means the extension/compression increases,
-		// whereas diffusing TO xlink means extension/compression is decreasing
+		// Diffusing away FROM xlink means extension/compression increases,
+		// whereas diffusing TO xlink means extension/compression decreases
 		std::vector<double> p_diffuse_to_tether_rest_;
 		std::vector<double> p_diffuse_from_tether_rest_;
 
@@ -100,6 +100,8 @@ class KinesinManagement{
 		void BoundCheck(Kinesin *motor);
 		bool BoundaryStatus(Kinesin *motor);
 
+		int GetNumUntethered();
+		Kinesin* GetUntetheredMotor();
 		Kinesin* GetFreeMotor();
 
 		void UpdateFreeTetheredList();

@@ -1,15 +1,15 @@
 seed: 329951228
-n_steps: 800000
+n_steps: 10000000
 n_datapoints: 100000
 data_threshold: 0   # dont use this anymore; want all steps for movie
-delta_t: 0.0005
+delta_t: 0.000005
 
 kbT: 4.114
 eta: 0.001
 
 microtubules:
-    count: 1
-    length: 1750
+    count: 2
+    length: 500
     site_size: 8
     radius: 12.5
     elevation: 50 
@@ -17,7 +17,7 @@ microtubules:
     imposed_velocity: [0, 0]
     immobile_until: [9500, 10]
     printout: false
-    diffusion: false
+    diffusion: true
 
 motors:
     k_on: 0.0075
@@ -29,8 +29,8 @@ motors:
     diffusion_const: 0.0024
     k_off_ratio: 1.25
     failstep_rate: 50
-    k_tether_free: 0.0005
-    conc_eff_tether: 2000
+    k_tether_free: 0 #0.0005
+    conc_eff_tether: 0 #2000
     k_untether_free: 0.025
     k_untether: 0.068
     r_0: 120
@@ -42,7 +42,7 @@ motors:
 
 xlinks:
     k_on: 0.01136
-    concentration: 0.4
+    concentration: 0.2
     conc_eff_bind: 50000
     k_off_i: 0.09091  
     k_off_ii: 0.0455   

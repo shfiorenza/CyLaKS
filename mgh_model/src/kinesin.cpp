@@ -25,8 +25,8 @@ void Kinesin::SetParameters(){
 
 void Kinesin::InitiateNeighborLists(){
 
-	neighbor_xlinks_.resize(2*dist_cutoff_ + 1);
 	int n_mts = parameters_->microtubules.count; 
+	neighbor_xlinks_.resize(n_mts*(2*dist_cutoff_ + 1));
 	// Serialize this bitch so we just roll one random number 
 	neighbor_sites_.resize(n_mts*(2*dist_cutoff_ + 1));
 }
@@ -120,9 +120,10 @@ void Kinesin::UpdateNeighborXlinks(){
 					if(site->xlink_ != nullptr){
 						AssociatedProtein *xlink = site->xlink_;
 						double anchor_coord = xlink->GetAnchorCoordinate();
-						double x_dist = abs(anchor_coord - stalk_coord);
-						if(x_dist >= comp_cutoff_ 
-						&& x_dist <= dist_cutoff_
+						double x_dist = fabs(anchor_coord - stalk_coord);
+						int x_dist_dub = 2*x_dist;
+						if(x_dist_dub >= 2*comp_cutoff_ 
+						&& x_dist_dub <= 2*dist_cutoff_
 						&& xlink->tethered_ == false){
 							if(xlink->heads_active_ == 1){
 								n_neighbor_xlinks_++;
@@ -174,9 +175,14 @@ void Kinesin::UpdateNeighborSites(){
 				else if(i_site > mt_length - 1){
 					break;
 				}
-				else if(abs(x_dist) >= comp_cutoff_){
+				else{
 					Tubulin *neighbor = &mt->lattice_[i_site];
-					if(neighbor->occupied_ == false){
+					double site_coord = i_site + neighbor->mt_->coord_; 
+					double x_dist = fabs(anchor_coord - site_coord); 
+					int x_dist_dub = 2*x_dist;
+					if(x_dist_dub >= 2*comp_cutoff_
+					&& x_dist_dub <= 2*dist_cutoff_
+					&& neighbor->occupied_ == false){
 						n_neighbor_sites_++;
 						neighbor_sites_[i_entry] = neighbor;
 						i_entry++;
@@ -270,7 +276,6 @@ void Kinesin::ForceUntether(int x_dub_pre){
 		properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
 	}
 	properties_->prc1.n_untethered_++;
-	properties_->prc1.n_tethered_--;
 	// Update motor	
 	tethered_ = false;
 	x_dist_doubled_ = 0;

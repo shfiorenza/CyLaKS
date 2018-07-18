@@ -34,7 +34,8 @@ int main(int argc, char *argv[]){
 			Microtubule *mt = &properties.microtubules.mt_list_[i_mt];
 			mt->UpdateAffinities();
 		}
-//		properties.microtubules.RunDiffusion();
+		if(parameters.microtubules.diffusion == true)
+			properties.microtubules.RunDiffusion();
 		// Some good ole-fashioned ASCII printout
 		if(parameters.microtubules.printout == true)
 			if(i_step % 10000 == 0)

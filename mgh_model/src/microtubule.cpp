@@ -69,28 +69,30 @@ void Microtubule::UpdateExtensions(){
 			// Update tether extension if motor is tethered
 			if(motor->tethered_ == true){
 				int x_dub_pre = motor->x_dist_doubled_;
-				motor->UpdateExtension();
-				// Make sure we didn't force an untether event
-				if(motor->tethered_ == true){
-					int x_dub_post = motor->x_dist_doubled_;
-					if(x_dub_pre != x_dub_post){
-						// Only update kinesin stats if double-bound
-						if(motor->heads_active_ == 2){
-							kinesin4->n_bound_tethered_[x_dub_pre]--;
-							kinesin4->n_bound_tethered_[x_dub_post]++;
-						}
-						// Update site statistics for prc1
-						AssociatedProtein *xlink = motor->xlink_;
-						if(xlink->heads_active_ == 1){
-							prc1->n_sites_i_tethered_[x_dub_pre]--;
-							prc1->n_sites_i_tethered_[x_dub_post]++;
-						}
-						else if(xlink->heads_active_ == 2){
-							int x_dist = xlink->x_dist_;
-							prc1->n_sites_ii_tethered_[x_dub_pre][x_dist] 
+				if(motor->xlink_->heads_active_ > 0){
+					motor->UpdateExtension();
+					// Make sure we didn't force an untether event
+					if(motor->tethered_ == true){
+						int x_dub_post = motor->x_dist_doubled_;
+						if(x_dub_pre != x_dub_post){
+							// Only update kinesin stats if double-bound
+							if(motor->heads_active_ == 2){
+								kinesin4->n_bound_tethered_[x_dub_pre]--;
+								kinesin4->n_bound_tethered_[x_dub_post]++;
+							}
+							// Update site statistics for prc1
+							AssociatedProtein *xlink = motor->xlink_;
+							if(xlink->heads_active_ == 1){
+								prc1->n_sites_i_tethered_[x_dub_pre]--;
+								prc1->n_sites_i_tethered_[x_dub_post]++;
+							}
+							else if(xlink->heads_active_ == 2){
+								int x_dist = xlink->x_dist_;
+								prc1->n_sites_ii_tethered_[x_dub_pre][x_dist] 
 									-= 2;
-							prc1->n_sites_ii_tethered_[x_dub_post][x_dist] 
+								prc1->n_sites_ii_tethered_[x_dub_post][x_dist]
 									+= 2;
+							}
 						}
 					}
 				}

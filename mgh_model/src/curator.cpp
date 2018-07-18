@@ -144,6 +144,9 @@ void Curator::ParseParameters(system_parameters *params,
 	params->microtubules.printout = mts["printout"].as<bool>();
 	printf("    printout = %s\n", 
 			params->microtubules.printout ? "true" : "false");
+	params->microtubules.diffusion = mts["diffusion"].as<bool>();
+	printf("    diffusion = %s\n", 
+			params->microtubules.diffusion ? "true" : "false");
 	// Store params pointer as parameters_ in Curator
 	parameters_ = params;
 	int n_steps = parameters_->n_steps;
@@ -487,9 +490,16 @@ void Curator::OutputData(){
 				motor_ID_array[i_site] = site->motor_->ID_;
 				xlink_ID_array[i_site] = -1;
 				if(site->motor_->tethered_ == true){
-					AssociatedProtein* xlink = site->motor_->xlink_;
-					double anchor_coord = xlink->GetAnchorCoordinate();
-					tether_coord_array[i_site] = anchor_coord; 
+					if(site->motor_->xlink_->heads_active_ > 0){
+						AssociatedProtein* xlink = site->motor_->xlink_;
+						double anchor_coord = xlink->GetAnchorCoordinate();
+						tether_coord_array[i_site] = anchor_coord; 
+						double site_coord = site->index_ + site->mt_->coord_;
+						double teth_dist = abs(anchor_coord - site_coord);
+						if(teth_dist > 18){
+							printf("woah, teth dist is %g\n", teth_dist);
+						}
+					}
 				}
 				else{
 					tether_coord_array[i_site] = -1;

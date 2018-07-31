@@ -78,7 +78,7 @@ class Kinesin{
 		Tubulin* GetActiveHeadSite();
 		Tubulin* GetSiteCloserToRest();
 		Tubulin* GetSiteFartherFromRest();
-		Tubulin* GetWeightedNeighborSite(int binding_affinity);
+		Tubulin* GetWeightedNeighborSite();
 		AssociatedProtein* GetWeightedNeighborXlink();
 };
 #endif

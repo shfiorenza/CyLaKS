@@ -3,7 +3,8 @@
 
 struct kinesin_parameters{
 
-	double k_on;			// Bulk binding rate; 1/(nM*s)
+	double k_on_i;			// Bulk binding rate; 1/(nM*s)
+	double k_on_ii;			// Binding rate of second head; 1/(nM*s)
 	double concentration;	// Bulk Concentration; nM
 	double conc_eff_bind;	// Effective concentration of second head
 							//   when first head is bound; nM
@@ -25,9 +26,5 @@ struct kinesin_parameters{
 							//   rest length--similar to floppy rope; pN/nm
 	double stall_force;		// Force at which the motor can no longer step
 							//   and has a velocity of 0; pN 
-	
-/* Below are no longer used in sim -- may remove */
-	double alpha;			// Probability of placing motor on minus-end
-	double beta;			// Probability of removing motor from plus-end
 };
 #endif

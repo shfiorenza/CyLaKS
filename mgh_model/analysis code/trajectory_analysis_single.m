@@ -1,16 +1,16 @@
 clear all
 n_mts = 1;
-length_of_microtubule = 1000;
+length_of_microtubule = 250;
 n_datapoints = 100000;
 
 starting_point = 00001;
 n_steps = 100000;
-ID = 657;
+ID = 23;
 
 final_trajectory = zeros([n_steps 1]);
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'YES_TW_motorID.file';
+fileName = 'test_motorID.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 mt_array = fread(data_file, [n_mts*length_of_microtubule, n_datapoints], '*int');

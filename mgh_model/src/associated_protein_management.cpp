@@ -92,19 +92,19 @@ void AssociatedProteinManagement::SetParameters(){
 		}
 	}
 	// DIFFUSION STATISTICS INVOLVING TETHER BELOW
-	int teth_dist_cutoff = properties_->kinesin4.motor_list_[0].dist_cutoff_;
-	int teth_comp_cutoff = properties_->kinesin4.motor_list_[0].comp_cutoff_;
+	int teth_dist_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
+	int teth_comp_cutoff = properties_->kinesin4.motors_[0].comp_cutoff_;
 	p_diffuse_i_to_teth_rest_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_i_from_teth_rest_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_ii_to_both_rest_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_ii_to_self_from_teth_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_ii_from_self_to_teth_.resize(2*teth_dist_cutoff + 1);
 	p_diffuse_ii_from_both_rest_.resize(2*teth_dist_cutoff + 1);
-	double k_teth_spring = properties_->kinesin4.motor_list_[0].k_spring_;
-	double k_teth_slack = properties_->kinesin4.motor_list_[0].k_slack_;
-	double r_0_teth = properties_->kinesin4.motor_list_[0].r_0_;
+	double k_teth_spring = properties_->kinesin4.motors_[0].k_spring_;
+	double k_teth_slack = properties_->kinesin4.motors_[0].k_slack_;
+	double r_0_teth = properties_->kinesin4.motors_[0].r_0_;
 	double r_y_teth = parameters_->microtubules.y_dist / 2;
-	double rest_dist_teth = properties_->kinesin4.motor_list_[0].rest_dist_;
+	double rest_dist_teth = properties_->kinesin4.motors_[0].rest_dist_;
 	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_dist_cutoff; x_dist_dub++){
 		p_diffuse_ii_to_both_rest_[x_dist_dub].resize(dist_cutoff_ + 1);
 		p_diffuse_ii_to_self_from_teth_[x_dist_dub].resize(dist_cutoff_ + 1);
@@ -251,7 +251,7 @@ void AssociatedProteinManagement::InitiateLists(){
 		n_double_bound_[x_dist] = 0;
 		n_sites_ii_untethered_[x_dist] = 0;
 	}
-	int teth_cutoff = properties_->kinesin4.motor_list_[0].dist_cutoff_;
+	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
 	n_sites_i_tethered_.resize(2*teth_cutoff + 1);
 	n_sites_ii_tethered_.resize(2*teth_cutoff + 1);
 	n_sites_ii_tethered_same_.resize(2*teth_cutoff + 1);
@@ -514,7 +514,7 @@ void AssociatedProteinManagement::UpdateDoubleUntetheredSites(){
 
 void AssociatedProteinManagement::UpdateSingleTetheredSites(){
 
-	int teth_cutoff = properties_->kinesin4.motor_list_[0].dist_cutoff_;
+	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
     int i_site[2*teth_cutoff + 1];
 	int n_sites[2*teth_cutoff + 1];
 	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_cutoff; x_dist_dub++){
@@ -553,7 +553,7 @@ void AssociatedProteinManagement::UpdateSingleTetheredSites(){
 
 void AssociatedProteinManagement::UpdateDoubleTetheredSites(){
 
-	int teth_cutoff = properties_->kinesin4.motor_list_[0].dist_cutoff_;
+	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
 	int i_site_oppo[2*teth_cutoff + 1][dist_cutoff_ + 1];
 	int i_site_same[2*teth_cutoff + 1][dist_cutoff_ + 1];
 	int n_sites[2*teth_cutoff + 1][dist_cutoff_ + 1];
@@ -772,7 +772,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 		n_events += n_ii_from[x_dist];
 	}
 	// Handle statistics for each tether extension separately
-	int teth_cutoff = properties_->kinesin4.motor_list_[0].dist_cutoff_;
+	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
 	UpdateSingleTetheredSites();
 	UpdateDoubleTetheredSites();
 	int n_i_to_teth[2*teth_cutoff + 1];
@@ -820,7 +820,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 		n_events += n_i_to_teth[x_dist_dub];
 		n_events += n_i_from_teth[x_dist_dub];
 		KinesinManagement *kinesin4 = &properties_->kinesin4;
-		int rest_dist_dub = 2*kinesin4->motor_list_[0].rest_dist_;
+		int rest_dist_dub = 2*kinesin4->motors_[0].rest_dist_;
 		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
 			// First do stats for sites with xlink/teth rest on SAME side
 			n_ii_to_both[x_dist_dub][x_dist] 
@@ -1247,7 +1247,7 @@ int AssociatedProteinManagement::GetNumToStepI_FromTethRest(int x_dist_dub){
 int AssociatedProteinManagement::GetNumToStepII_ToBothRest(int x_dist_dub, 
 		int x_dist){
 
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	int n_bound;
 	// this means we compressed, yo
 	if(x_dist_dub <= rest_dist_dub){
@@ -1269,7 +1269,7 @@ int AssociatedProteinManagement::GetNumToStepII_ToBothRest(int x_dist_dub,
 int AssociatedProteinManagement::GetNumToStepII_FromBothRest(int x_dist_dub, 
 		int x_dist){
 
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	int n_bound;
 	// this means we compressed, yo
 	if(x_dist_dub <= rest_dist_dub){
@@ -1291,7 +1291,7 @@ int AssociatedProteinManagement::GetNumToStepII_FromBothRest(int x_dist_dub,
 int AssociatedProteinManagement::GetNumToStepII_ToSelf_FromTeth
 (int x_dist_dub, int x_dist){
 
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	int n_bound;
 	// this means we compressed, yo
 	if(x_dist_dub <= rest_dist_dub){
@@ -1313,7 +1313,7 @@ int AssociatedProteinManagement::GetNumToStepII_ToSelf_FromTeth
 int AssociatedProteinManagement::GetNumToStepII_FromSelf_ToTeth
 									(int x_dist_dub, int x_dist){
 
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	int n_bound;
 	// this means we compressed, yo
 	if(x_dist_dub <= rest_dist_dub){
@@ -1648,8 +1648,8 @@ void AssociatedProteinManagement::RunDiffusionI_ToTethRest(int x_dist_dub){
 					// Update kinesin4 stats
 					KinesinManagement *kinesin4 = &properties_->kinesin4;
 					if(motor->heads_active_ == 2){
-						kinesin4->n_bound_tethered_[x_dub_pre]--;
-						kinesin4->n_bound_tethered_[x_dub_post]++;
+						kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+						kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 					}
 				}
 			}
@@ -1707,8 +1707,8 @@ void AssociatedProteinManagement::RunDiffusionI_FromTethRest(int x_dist_dub){
 					// Update kinesin4 stats
 					KinesinManagement *kinesin4 = &properties_->kinesin4;
 					if(motor->heads_active_ == 2){
-						kinesin4->n_bound_tethered_[x_dub_pre]--;
-						kinesin4->n_bound_tethered_[x_dub_post]++;
+						kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+						kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 					}
 				}
 			}
@@ -1728,7 +1728,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToBothRest
 
 	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
 	int n_bound;
 	// this means we compressed, yo
@@ -1782,8 +1782,8 @@ void AssociatedProteinManagement::RunDiffusionII_ToBothRest
 						n_sites_ii_tethered_[x_dub_post][x_post] += 2;
 						KinesinManagement *kinesin4 = &properties_->kinesin4;
 						if(motor->heads_active_ == 2){
-							kinesin4->n_bound_tethered_[x_dub_pre]--;
-							kinesin4->n_bound_tethered_[x_dub_post]++;
+							kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+							kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 						}
 					}
 					// If we did, correct stats
@@ -1809,7 +1809,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromBothRest
 
 	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
 	int n_bound;
 	// this means we compressed, yo
@@ -1864,8 +1864,8 @@ void AssociatedProteinManagement::RunDiffusionII_FromBothRest
 						n_sites_ii_tethered_[x_dub_post][x_post] += 2;
 						KinesinManagement *kinesin4 = &properties_->kinesin4;
 						if(motor->heads_active_ == 2){
-							kinesin4->n_bound_tethered_[x_dub_pre]--;
-							kinesin4->n_bound_tethered_[x_dub_post]++;
+							kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+							kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 						}
 					}
 					// If we did, correct stats
@@ -1891,7 +1891,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth
 
 	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
 	int n_bound;
 	// this means we compressed, yo
@@ -1945,8 +1945,8 @@ void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth
 						n_sites_ii_tethered_[x_dub_post][x_post] += 2;
 						KinesinManagement *kinesin4 = &properties_->kinesin4;
 						if(motor->heads_active_ == 2){
-							kinesin4->n_bound_tethered_[x_dub_pre]--;
-							kinesin4->n_bound_tethered_[x_dub_post]++;
+							kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+							kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 						}
 					}
 					// If we did, correct stats
@@ -1972,7 +1972,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth
 
 	int mt_length = parameters_->microtubules.length;
 	int mt_array_length = mt_length - 1;
-	int rest_dist_dub = 2*properties_->kinesin4.motor_list_[0].rest_dist_;
+	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
 	UpdateDoubleTetheredSites();
 	int n_bound;
 	// this means we compressed, yo
@@ -2026,8 +2026,8 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth
 						n_sites_ii_tethered_[x_dub_post][x_post] += 2;
 						KinesinManagement *kinesin4 = &properties_->kinesin4;
 						if(motor->heads_active_ == 2){
-							kinesin4->n_bound_tethered_[x_dub_pre]--;
-							kinesin4->n_bound_tethered_[x_dub_post]++;
+							kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+							kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 						}
 					}
 					// If we did, correct stats
@@ -2149,7 +2149,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 int AssociatedProteinManagement::GetNumToBind_I(){
 	
 	properties_->microtubules.UpdateUnoccupiedList();
-	int n_unocc = properties_->microtubules.n_unoccupied_tot_;
+	int n_unocc = properties_->microtubules.n_unoccupied_;
 	double p_bind = p_bind_i_;
 	if(n_unocc > 0){
 		int n_to_bind = 
@@ -2206,6 +2206,7 @@ int AssociatedProteinManagement::GetNumToBind_II(){
 	double n_avg = p_bind_ii_ * weights_summed; 
 	if(n_avg > 0){
 		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
+		printf("%i single bound, %i to bind\n", n_single_bound_, n_to_bind);
 		return n_to_bind;
 	}
 	else{
@@ -2250,7 +2251,7 @@ int AssociatedProteinManagement::GetNumToUnbind_II(int x_dist){
 
 int AssociatedProteinManagement::GetNumToTether_Free(){
 
-	int n_unteth = properties_->kinesin4.GetNumUntethered();
+	int n_unteth = properties_->kinesin4.GetNumBoundUntethered();
 	double p_teth = p_tether_free_; 
 	if(n_unteth > 0){
 		int n_to_teth =
@@ -2332,7 +2333,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 
 	// Make sure unoccupied sites are available
 	properties_->microtubules.UpdateUnoccupiedList();
-	if(properties_->microtubules.n_unoccupied_tot_ > 0){
+	if(properties_->microtubules.n_unoccupied_> 0){
 		// Randomly choose an unbound xlink
 		AssociatedProtein *xlink = GetFreeXlink();
 		// Get random unoccupied site
@@ -2381,7 +2382,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 	UpdateFreeTetheredList();
 	properties_->microtubules.UpdateUnoccupiedList();
 	if(n_free_tethered_ > 0
-	&& properties_->microtubules.n_unoccupied_tot_ > 0){
+	&& properties_->microtubules.n_unoccupied_> 0){
 		int i_xlink = properties_->gsl.GetRanInt(n_free_tethered_);
 		AssociatedProtein* xlink = free_tethered_list_[i_xlink];
 		Tubulin* site = xlink->GetWeightedTethNeighborSite();
@@ -2409,9 +2410,9 @@ void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 			n_single_bound_++; 
 			n_sites_i_tethered_[x_dist_dub]++; 
 			if(xlink->motor_->heads_active_ == 2){
-				properties_->kinesin4.n_bound_untethered_--;
-				properties_->kinesin4.n_bound_tethered_tot_++; 
-				properties_->kinesin4.n_bound_tethered_[x_dist_dub]++; 
+				properties_->kinesin4.n_bound_ii_--;
+				properties_->kinesin4.n_bound_ii_tethered_tot_++; 
+				properties_->kinesin4.n_bound_ii_tethered_[x_dist_dub]++; 
 			}
 		}
 		else{
@@ -2429,7 +2430,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 	UpdateSingleBoundList();
 	properties_->microtubules.UpdateUnoccupiedList();
 	if(n_single_bound_ > 0
-	&& properties_->microtubules.n_unoccupied_tot_ > 0){
+	&& properties_->microtubules.n_unoccupied_> 0){
 		// Randomly pick single-bound xlink
 		int i_xlink = properties_->gsl.GetRanInt(n_single_bound_);
 		AssociatedProtein *xlink = single_bound_list_[i_xlink];
@@ -2478,8 +2479,8 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 					int x_dub_post = xlink->motor_->x_dist_doubled_;
 					if(motor->heads_active_ == 2){
 						KinesinManagement* kin4 = &properties_->kinesin4;
-						kin4->n_bound_tethered_[x_dub_pre]--;
-						kin4->n_bound_tethered_[x_dub_post]++;
+						kin4->n_bound_ii_tethered_[x_dub_pre]--;
+						kin4->n_bound_ii_tethered_[x_dub_post]++;
 					}
 					n_sites_ii_tethered_[x_dub_post][x_dist] += 2;
 					n_sites_i_tethered_[x_dub_pre]--;
@@ -2537,9 +2538,9 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 			}
 			else{
 				if(motor->heads_active_ == 2){
-					properties_->kinesin4.n_bound_untethered_++;
-					properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
-					properties_->kinesin4.n_bound_tethered_tot_--;
+					properties_->kinesin4.n_bound_ii_++;
+					properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
+					properties_->kinesin4.n_bound_ii_tethered_tot_--;
 				}
 				n_sites_i_tethered_[x_dub_pre]--;
 				n_free_tethered_++;
@@ -2609,8 +2610,8 @@ void AssociatedProteinManagement::RunKMC_Unbind_II(int x_dist){
 			else if(motor->tethered_ == true){
 				int x_dub_post = motor->x_dist_doubled_;
 				if(motor->heads_active_ == 2){
-					properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
-					properties_->kinesin4.n_bound_tethered_[x_dub_post]++;
+					properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
+					properties_->kinesin4.n_bound_ii_tethered_[x_dub_post]++;
 				}
 				n_sites_i_tethered_[x_dub_post]++;
 				n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
@@ -2636,9 +2637,9 @@ void AssociatedProteinManagement::RunKMC_Unbind_II(int x_dist){
 void AssociatedProteinManagement::RunKMC_Tether_Free(){
 
 	AssociatedProtein *xlink = GetFreeXlink();
-	int n_motors_unteth = properties_->kinesin4.GetNumUntethered();
+	int n_motors_unteth = properties_->kinesin4.GetNumBoundUntethered();
 	if(n_motors_unteth > 0){
-		Kinesin *motor = properties_->kinesin4.GetUntetheredMotor();
+		Kinesin *motor = properties_->kinesin4.GetBoundUntetheredMotor();
 		// Update xlink and motor details
 		xlink->motor_ = motor;
 		xlink->tethered_ = true;

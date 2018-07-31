@@ -13,7 +13,8 @@ int main(int argc, char *argv[]){
 		exit(1);
 	}
 
-	// Use our experimental curator, Wallace, to parse parameters, initialize objects used in the sim, and open files for data writing 
+	// Use our experimental curator, Wallace, to parse parameters, 
+	// initialize objects used in the sim, and open files for data writing 
 	properties.wallace.ParseParameters(&parameters, argv[1]);
 	properties.wallace.InitializeSimulation(&properties);
 	properties.wallace.GenerateDataFiles(argv[2]);
@@ -26,14 +27,9 @@ int main(int argc, char *argv[]){
 		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
 		// Diffusion
-		properties.kinesin4.RunDiffusion();
+//XXX	properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-		int n_mts = parameters.microtubules.count; 
-		for(int i_mt = 0; i_mt < n_mts; i_mt++){
-			Microtubule *mt = &properties.microtubules.mt_list_[i_mt];
-			mt->UpdateAffinities();
-		}
 		if(parameters.microtubules.diffusion == true)
 			properties.microtubules.RunDiffusion();
 		// Some good ole-fashioned ASCII printout

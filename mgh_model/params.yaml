@@ -1,5 +1,5 @@
-seed: 329951228
-n_steps: 800000
+seed: 329954438
+n_steps: 2000000
 n_datapoints: 100000
 data_threshold: 0   # dont use this anymore; want all steps for movie
 delta_t: 0.0005
@@ -8,45 +8,44 @@ kbT: 4.114
 eta: 0.001
 
 microtubules:
-    count: 1
-    length: 250
+    count: 2
+    length: 1000
     y_dist: 32
     site_size: 8
     radius: 12.5
     elevation: 50 
-    start_coord: [175, 0] 
-    imposed_velocity: [0, 0]
-    immobile_until: [9500, 20]
+    start_coord: [0, 900] 
+    imposed_velocity: [0, 0]  # currently disabled
+    immobile_until: [9500, 300]
     printout: false
-    diffusion: false
+    diffusion: true
 
 motors:
-    k_on: 0.0075
-    concentration: 1.5
-    conc_eff_bind: 125000
-    k_off_i: 20
-    k_off_ii: 0.54
+    k_on_i: 0.02
+    k_on_ii: 0.02
+    concentration: 0 #1.5
+    conc_eff_bind: 12500
+    k_off_i: 57
+    k_off_ii: 3
     velocity: 650
     diffusion_const: 0.0024
-    k_off_ratio: 50
-    failstep_rate: 0.5
-    k_tether_free: 0.0005
-    conc_eff_tether: 2000
+    k_off_ratio: 5
+    failstep_rate: 0 #0.5
+    k_tether_free: 0 #0.0005
+    conc_eff_tether: 0 #2000
     k_untether_free: 0.025
     k_untether: 0.068
     r_0: 120
     k_spring: 0.3
-    k_slack: 0.005
+    k_slack: 0.05
     stall_force: 5
-    alpha: 0
-    beta: 0
 
 xlinks:
-    k_on: 0.01136
-    concentration: 0.4
-    conc_eff_bind: 50000
-    k_off_i: 0.09091  
-    k_off_ii: 0.0455   
+    k_on: 0.00024 #0.01136
+    concentration: 20
+    conc_eff_bind: 15000
+    k_off_i: 0.143
+    k_off_ii: 0.143
     diffusion_const_i: 0.0058
     diffusion_const_ii: 0.0029
     r_0: 32

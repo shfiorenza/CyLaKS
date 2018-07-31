@@ -282,8 +282,8 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 				// Update kinesin stats
 				KinesinManagement *kinesin4 = &properties_->kinesin4;
 				if(motor_->heads_active_ == 2){
-					kinesin4->n_bound_tethered_[x_dub_pre]--;
-					kinesin4->n_bound_tethered_[x_dub_post]++;
+					kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+					kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 				}
 			}
 			// If untether event DOES occur, counteract force_untether stats

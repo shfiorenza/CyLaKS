@@ -14,7 +14,6 @@ final_mt = zeros([n_sites 1]);
 
 polarityArray = {'Plus-end on left'};
 
-
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
 %fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -46,7 +45,7 @@ highest_slope = 0;
 endtag_site = n_sites;
 for i=n_sites:-1:1
     site_occupancy = smoothed_final_mt(i, 1);
-    if(i == n_sites)
+    if(i == 1)
         prev_site_occupancy = 0;
     else
         prev_site_occupancy = smoothed_final_mt(i - 1, 1);

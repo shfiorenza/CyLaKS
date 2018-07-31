@@ -34,8 +34,10 @@ void Curator::ParseParameters(system_parameters *params,
 	/* Motor parameters below */ 
 	YAML::Node motors = input["motors"];
 	printf("\n  Kinesin (motor) parameters:\n");
-	params->motors.k_on = motors["k_on"].as<double>();
-	printf("    k_on = %g /(nM*s)\n", params->motors.k_on);
+	params->motors.k_on_i = motors["k_on_i"].as<double>();
+	printf("    k_on_i = %g /(nM*s)\n", params->motors.k_on_i);
+	params->motors.k_on_ii = motors["k_on_ii"].as<double>();
+	printf("    k_on_ii = %g /(nM*s)\n", params->motors.k_on_ii);
 	params->motors.concentration = motors["concentration"].as<double>();
 	printf("    concentration = %g nM\n", params->motors.concentration);
 	params->motors.conc_eff_bind = motors["conc_eff_bind"].as<double>();
@@ -69,10 +71,6 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
 	params->motors.stall_force = motors["stall_force"].as<double>();
 	printf("    stall_force = %g pN\n", params->motors.stall_force);
-	params->motors.alpha = motors["alpha"].as<double>();
-	printf("    alpha = %g inserts per sec\n", params->motors.alpha);
-	params->motors.beta = motors["beta"].as<double>();
-	printf("    beta = %g removals per sec\n", params->motors.beta); 
 	/* Xlink parameters below */
 	YAML::Node xlinks = input["xlinks"];
 	printf("\n  Crosslinker (xlink) parameters:\n");
@@ -306,8 +304,7 @@ void Curator::PrintMicrotubules(){
         for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
             if(site->occupied_ == false)
-//                printf("=");
-				printf("%i", site->binding_affinity_);
+                printf("=");
 			else if(site->xlink_ != nullptr){
 				AssociatedProtein *xlink = site->xlink_;
 				if(xlink->heads_active_ == 1){
@@ -521,7 +518,7 @@ void Curator::OutputData(){
 	// Scan through kinesin4/prc1 statistics to get extension occupancies 
 	for(int i_ext = 0; i_ext <= 2*motor_ext_cutoff; i_ext++){
 		KinesinManagement *kinesin4 = &properties_->kinesin4; 
-		motor_extension_array[i_ext] = kinesin4->n_bound_tethered_[i_ext];
+		motor_extension_array[i_ext] = kinesin4->n_bound_ii_tethered_[i_ext];
 	}
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 

@@ -331,9 +331,9 @@ void Kinesin::ForceUntether(int x_dub_pre){
 		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
 	}
 	if(heads_active_ == 2){
-		properties_->kinesin4.n_bound_untethered_++;
-		properties_->kinesin4.n_bound_tethered_tot_--;
-		properties_->kinesin4.n_bound_tethered_[x_dub_pre]--;
+		properties_->kinesin4.n_bound_ii_++;
+		properties_->kinesin4.n_bound_ii_tethered_tot_--;
+		properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
 	}
 	properties_->prc1.n_untethered_++;
 	// Update motor	
@@ -610,26 +610,14 @@ Tubulin* Kinesin::GetSiteFartherFromRest(){
 	}
 }
 
-Tubulin* Kinesin::GetWeightedNeighborSite(int binding_affinity){
+Tubulin* Kinesin::GetWeightedNeighborSite(){
 
 	UpdateNeighborSites();
-	Tubulin* eligible_neighbor_sites[n_neighbor_sites_]; 
-	int n_eligible = 0;
-	int i_entry = 0;
-	// Scan through all neighbor sites to extract eligible ones
-	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
-		Tubulin* site = neighbor_sites_[i_site];
-		if(site->binding_affinity_ == binding_affinity){
-			eligible_neighbor_sites[i_entry] = site;
-			i_entry++;
-			n_eligible++;
-		}
-	}
 	double anch_coord = xlink_->GetAnchorCoordinate();
 	double p_tot = 0;
 	// Get total binding probability of all eligible sites for normalization
-	for(int i_site = 0; i_site < n_eligible; i_site++){
-		Tubulin* site = eligible_neighbor_sites[i_site];
+	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
+		Tubulin* site = neighbor_sites_[i_site];
 		double site_coord = site->mt_->coord_ + site->index_;
 		double x_dist = fabs(anch_coord - site_coord);
 		int x_dist_dub = 2 * x_dist;
@@ -638,8 +626,8 @@ Tubulin* Kinesin::GetWeightedNeighborSite(int binding_affinity){
 	// Scan through eligible sites; pick one randomly based on weights
 	double ran = properties_->gsl.GetRanProb();
 	double p_cum = 0;
-	for(int i_site = 0; i_site < n_eligible; i_site++){
-		Tubulin* site = eligible_neighbor_sites[i_site];
+	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
+		Tubulin* site = neighbor_sites_[i_site];
 		double site_coord = site->mt_->coord_ + site->index_;
 		double x_dist = fabs(anch_coord - site_coord);
 		int x_dist_dub = 2 * x_dist;

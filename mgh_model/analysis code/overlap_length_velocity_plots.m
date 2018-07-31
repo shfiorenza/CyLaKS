@@ -1,11 +1,11 @@
 clear all;
 % Often-changed variables
-n_sites = 500;
-simName = 'test_exp';
+n_sites = 1000;
+simName = 'test4';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 8000000;
-delta_t = 0.000005;
+n_steps = 1000000;
+delta_t = 0.0005;
 n_datapoints = 100000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;

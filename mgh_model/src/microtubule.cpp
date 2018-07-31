@@ -77,8 +77,8 @@ void Microtubule::UpdateExtensions(){
 						if(x_dub_pre != x_dub_post){
 							// Only update kinesin stats if double-bound
 							if(motor->heads_active_ == 2){
-								kinesin4->n_bound_tethered_[x_dub_pre]--;
-								kinesin4->n_bound_tethered_[x_dub_post]++;
+								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 							}
 							// Update site statistics for prc1
 							AssociatedProtein *xlink = motor->xlink_;
@@ -130,9 +130,9 @@ void Microtubule::UpdateExtensions(){
 											[x_dub_post][x_post] += 2;
 										// Update kinesin statistics
 										if(motor->heads_active_ == 2){
-											kinesin4->n_bound_tethered_
+											kinesin4->n_bound_ii_tethered_
 												[x_dub_pre]--;
-											kinesin4->n_bound_tethered_
+											kinesin4->n_bound_ii_tethered_
 												[x_dub_post]++;
 										}
 									}
@@ -176,80 +176,14 @@ void Microtubule::UpdateExtensions(){
 							prc1->n_sites_i_tethered_[x_dub_post]++;
 							// Update kinesin statistics
 							if(motor->heads_active_ == 2){
-								kinesin4->n_bound_tethered_[x_dub_pre]--;
-								kinesin4->n_bound_tethered_[x_dub_post]++;
+								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 							}
 						}
 					}
 				}
 			}
 		}
-	}
-}
-
-void Microtubule::UpdateAffinities(){
-
-	KinesinManagement *motors = &properties_->kinesin4;
-	// Convert from microns to n_sites
-	int coop_range = motors->cooperativity_range_ * 125; 
-	for(int i_site = 0; i_site < n_sites_; i_site++){
-		Tubulin *site = &lattice_[i_site]; 
-		site->binding_affinity_ = 0;
-		int aff_fwd = 0;		// Affinity from motor in front of site
-		int aff_bck = 0;		// Affinity from motor behind site
-		// Scan towards plus-end (these motors are AHEAD of the site)
-		for(int dist = 0; dist < coop_range; dist++){
-			int i_scan = i_site + delta_x_ * dist;
-			if(i_scan > n_sites_ - 1
-			|| i_scan < 0){
-				break; 
-			}
-			Tubulin *scan_site = &lattice_[i_scan];
-			if(scan_site->motor_ != nullptr){
-				// Get distance between motor and site in microns
-				double distance = fabs(i_scan - i_site) / 125; 
-				if(distance < 1)
-					aff_fwd = 4; 
-				else if(distance < 3)
-					aff_fwd = 3;
-				else if(distance < 5)
-					aff_fwd = 2;
-				else if(distance < 7)
-					aff_fwd = 1;
-				else if(distance < 9)
-					aff_fwd = 1;
-				break;
-			}
-		}
-		// Scan towards minus-end (these motors are BEHIND the site)
-		for(int dist = 0; dist < coop_range; dist++){
-			int i_scan = i_site - delta_x_ * dist; 
-			if(i_scan > n_sites_ - 1
-			|| i_scan < 0){
-				break; 
-			}
-			Tubulin *scan_site = &lattice_[i_scan];
-			if(scan_site->motor_ != nullptr){
-				// Get distance between motor and site in microns
-				double distance = fabs(i_scan - i_site) / 125; 
-				if(distance < 1)
-					aff_bck = 5;
-				else if(distance < 3)
-					aff_bck = 4;
-				else if(distance < 5)
-					aff_bck = 3;
-				else if(distance < 7)
-					aff_bck = 2;
-				else if(distance < 9)
-					aff_bck = 1;
-				break;
-			}
-		}
-		// Assign the higher affinity to the site
-		if(aff_bck >= aff_fwd)
-			site->binding_affinity_ = aff_bck;
-		else
-			site->binding_affinity_ = aff_fwd;
 	}
 }
 

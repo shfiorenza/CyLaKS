@@ -1,10 +1,10 @@
 clear all
 
 % Parameters from sim
-n_steps = 800000;
+n_steps = 1000000;
 n_datapoints = 100000;
 delta_t = 0.0005; 
-n_sites = 250;
+n_sites = 1000;
 n_mts = 2;
 xlink_cutoff = 7;
 
@@ -13,7 +13,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'test_exp';
+simName = 'test4';
 movie_name = 'test.avi';
 %fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -103,6 +103,8 @@ for i_data=start_frame:frames_per_plot:end_frame
             else
                 ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
             end
+        else
+            ax.XLim = [first_pos first_pos + n_sites + 1];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...
@@ -275,6 +277,8 @@ for i_data=start_frame:frames_per_plot:end_frame
                         plot(xs,ys,'LineWidth', 1, 'Color', 'black');
                     else
                         disp(xa - xb);
+                        disp(teth_coords(i_teth));
+                        disp(i_teth);
                     end
                end
             end 

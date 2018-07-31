@@ -1,7 +1,7 @@
 clear all
 n_datapoints = 100000;
-length_of_microtubule = 500;
-raw_overlap_length = -250;
+length_of_microtubule = 250;
+raw_overlap_length = 125;
 overlap_length = abs(raw_overlap_length);
 delta = length_of_microtubule - overlap_length;
 if(overlap_length == 0)
@@ -44,15 +44,15 @@ end
 if(raw_overlap_length > 0)
     final_data(1:1:length_of_microtubule, 1) = mt_one(:, 1);
     final_data(delta + 1:1:(length_of_microtubule + delta), 2) = mt_two(:, 1);
-    else if(raw_overlap_length < 0)
+else if(raw_overlap_length < 0)
         final_data(delta + 1:1:(length_of_microtubule + delta), 1) = mt_one(:, 1);
         final_data(1:1:length_of_microtubule, 2) = mt_two(:, 1);
-        else
+    else
         final_data(:, 1) = mt_one(:, 1);
         final_data(:, 2) = mt_two(:, 1);
-        end;
-    end
-  
+    end;
+end
+
 for i = 1:1:length_of_microtubule
     n_r_temp = final_data(i, 1);
     n_l_temp = final_data(i, 2);

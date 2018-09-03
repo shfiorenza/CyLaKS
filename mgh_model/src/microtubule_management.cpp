@@ -139,18 +139,16 @@ void MicrotubuleManagement::RunDiffusion(){
 	double site_size = parameters_->microtubules.site_size;
 	double kbT = parameters_->kbT;
 	double gamma = mt_list_[0].gamma_;
-	double sigma = sqrt(2 * kbT * delta_t / gamma);
-	double noise[n_mts]; 
 	long unpin_step[n_mts]; 
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		double unpin_time = parameters_->microtubules.immobile_until[i_mt]; 
 		unpin_step[i_mt] = unpin_time / delta_t; 
-		if(current_step >= unpin_step[i_mt])
-			noise[i_mt] = properties_->gsl.GetGaussianNoise(sigma); 
 	}
 	/* To ensure smooth diffusion without having to use timesteps of 
 	  ~1e-7 seconds, divide all forces by N and run loop N times */
 	int n_iterations = 100;
+	double delta_t_eff = delta_t / n_iterations; 
+	double sigma = sqrt(2 * kbT * delta_t_eff / gamma); 
 	for(int i_itr = 0; i_itr < n_iterations; i_itr++){
 		/*	Sum up all forces exerted on the MTs 	*/
 		double forces_summed[n_mts];
@@ -183,8 +181,8 @@ void MicrotubuleManagement::RunDiffusion(){
 				double forces_eff = forces_summed[i_mt] / n_iterations;
 				double velocity = forces_eff / gamma; 
 				// gaussian noise is added into the calculated displacement
-				double noise_eff = noise[i_mt] / n_iterations;
-				double raw_displacement = velocity * delta_t + noise_eff;
+				double noise = properties_->gsl.GetGaussianNoise(sigma); 
+				double raw_displacement = velocity * delta_t + noise;
 //				printf("dx: %g (%g noise) sites for mt #%i\n", 
 //					raw_displacement/site_size, noise_eff/site_size, i_mt);
 				double site_displacement = (raw_displacement) / site_size;

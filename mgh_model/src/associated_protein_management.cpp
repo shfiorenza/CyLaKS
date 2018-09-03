@@ -2206,7 +2206,6 @@ int AssociatedProteinManagement::GetNumToBind_II(){
 	double n_avg = p_bind_ii_ * weights_summed; 
 	if(n_avg > 0){
 		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
-		printf("%i single bound, %i to bind\n", n_single_bound_, n_to_bind);
 		return n_to_bind;
 	}
 	else{

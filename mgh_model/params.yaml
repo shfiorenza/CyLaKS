@@ -9,27 +9,27 @@ eta: 0.001
 
 microtubules:
     count: 2
-    length: 1000
+    length: 500
     y_dist: 32
     site_size: 8
     radius: 12.5
     elevation: 50 
-    start_coord: [0, 900] 
+    start_coord: [0, 250] 
     imposed_velocity: [0, 0]  # currently disabled
     immobile_until: [9500, 300]
     printout: false
-    diffusion: true
+    diffusion: false
 
 motors:
     k_on_i: 0.02
     k_on_ii: 0.02
-    concentration: 0 #1.5
+    concentration: 1.5
     conc_eff_bind: 12500
     k_off_i: 57
     k_off_ii: 3
     velocity: 650
     diffusion_const: 0.0024
-    k_off_ratio: 5
+    k_off_ratio: 1
     failstep_rate: 0 #0.5
     k_tether_free: 0 #0.0005
     conc_eff_tether: 0 #2000
@@ -41,11 +41,11 @@ motors:
     stall_force: 5
 
 xlinks:
-    k_on: 0.00024 #0.01136
-    concentration: 20
-    conc_eff_bind: 15000
-    k_off_i: 0.143
-    k_off_ii: 0.143
+    k_on: 0.0173
+    concentration: 0.2
+    conc_eff_bind: 500 #15000
+    k_off_i: 0.132
+    k_off_ii: 0.132
     diffusion_const_i: 0.0058
     diffusion_const_ii: 0.0029
     r_0: 32

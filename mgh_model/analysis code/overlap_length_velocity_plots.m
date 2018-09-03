@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
-n_sites = 1000;
-simName = 'test4';
+n_sites = 500;
+simName = 'test2c';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 1000000;
@@ -54,7 +54,7 @@ title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
 ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
-%xlim([start_time end_time]);
+%xlim([149 151]);
 ylim([0 n_sites * 0.008]);
 grid on
 grid minor

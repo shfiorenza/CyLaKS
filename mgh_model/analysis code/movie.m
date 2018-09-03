@@ -1,10 +1,10 @@
 clear all
 
 % Parameters from sim
-n_steps = 1000000;
+n_steps = 2000000;
 n_datapoints = 100000;
 delta_t = 0.0005; 
-n_sites = 1000;
+n_sites = 500;
 n_mts = 2;
 xlink_cutoff = 7;
 

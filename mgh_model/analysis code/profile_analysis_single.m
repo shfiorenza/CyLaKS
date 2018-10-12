@@ -1,12 +1,12 @@
 clear all
 % Often-changed variables
 n_sites = 250;
-simName = 'test';
+simName = 'testf'
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 100000;  %100k
-starting_point = 50000;  %90k
+n_datapoints = 100000;
+starting_point = 50000;
 active_datapoints = n_datapoints - starting_point;
 
 temp_one = zeros([n_sites 1]);

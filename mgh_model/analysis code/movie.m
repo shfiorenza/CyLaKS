@@ -13,7 +13,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'test4';
+simName = 'slide_testlong';
 movie_name = 'test.avi';
 %fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';

@@ -3,12 +3,12 @@ clear all
 % Parameters from sim
 n_datapoints = 100000;
 %motor_ID = 2;
-mt_length = 1000;
+mt_length = 500;
 n_mts = 2;
 xlink_cutoff = 7;
 
 % File info
-simName = 'testlong';
+simName = 'test4';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';

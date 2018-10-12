@@ -12,7 +12,7 @@ start_time = 0;
 end_time = n_steps * delta_t;
 
 % File info
-simName = 'test4';
+simName = 'slide_testlong';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';
@@ -100,6 +100,7 @@ subplot(3, 1, 1)
 plot(linspace(start_time, end_time, n_datapoints), overlap_data * 0.008, ...
     'LineWidth', 2);
 title('Overlap length in microns');
+legend('Overall overlap', 'location', 'northeastoutside');
 
 % Plot motor occupancy data
 subplot(3, 1, 2)

@@ -6,8 +6,8 @@ delta_t: 5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 2
-  length: 500
+  count: 1
+  length: 1250
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -22,12 +22,12 @@ microtubules:
   - 9500
   - 500
   printout: false
-  diffusion: true
+  diffusion: false
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02
-  concentration: 1.5
-  conc_eff_bind: 800000
+  concentration: 0.5
+  conc_eff_bind: 1.6e+06
   k_off_i: 600
   k_off_ii: 15
   velocity: 650
@@ -44,8 +44,8 @@ motors:
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 1
-  conc_eff_bind: 250000
+  concentration: 0
+  conc_eff_bind: 500000
   k_off_i: 0.132
   k_off_ii: 0.132
   diffusion_const_i: 0.038

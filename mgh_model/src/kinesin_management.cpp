@@ -128,6 +128,72 @@ void KinesinManagement::SetParameters(){
 	p_unbind_ii_stepable_ = k_off * delta_t;
 	double unbind_ratio = parameters_->motors.k_off_ratio;
 	p_unbind_ii_stalled_ = k_off * delta_t / unbind_ratio;
+	p_bind_ii_to_teth_.resize(2*dist_cutoff_ + 1);
+	p_bind_ii_from_teth_.resize(2*dist_cutoff_ + 1);
+	p_unbind_i_tethered_.resize(2*dist_cutoff_ + 1);
+	p_unbind_ii_to_teth_.resize(2*dist_cutoff_ + 1);
+	p_unbind_ii_from_teth_.resize(2*dist_cutoff_ + 1);
+	for(int x_dist_dub = 0; x_dist_dub <= 2*dist_cutoff_; x_dist_dub++){
+		// Calculate tether length for this x_dist as well as +/- 1 it
+		double r_x = x_dist_dub * site_size / 2;
+		double r_x_fwd = (x_dist_dub + 1) *  site_size / 2;
+		double r_x_bck = (x_dist_dub - 1) * site_size / 2;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double r_fwd = sqrt(r_y*r_y + r_x_fwd*r_x_fwd);
+		double r_bck = sqrt(r_y*r_y + r_x_bck*r_x_bck);
+		// Calculate extension of tether for given x_dist_dub
+		double dr = r - r_0; 
+		// Calculate extension if motor diffuses toward/away from rest
+		double dr_toward; 
+		double dr_from; 
+		// If extended (pos extension), r_bck is towards rest
+		if(dr >= 0){
+			dr_toward = r_bck - r_0;
+			dr_from = r_fwd - r_0;
+		}
+		// If compressed (neg extension), r_fwd is towards rest
+		else{
+			dr_toward = r_fwd - r_0;
+			dr_from = r_bck - r_0; 
+		}
+		double U_tot,
+			   dU_to,
+			   dU_from;
+		if(x_dist_dub == 2*rest_dist_){
+			U_tot = (k_eff_slack/2)*dr*dr;
+			dU_from = (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
+			dU_to = (1/2)*(k_spring*dr_toward*dr_toward - k_eff_slack*dr*dr);
+        }
+		// use k_spring if extension is positive
+		else if(dr > 0){
+			U_tot = (k_spring/2)*dr*dr;
+			dU_to = (k_spring/2)*(dr_toward*dr_toward - dr*dr);
+			dU_from = (k_spring/2)*(dr_from*dr_from - dr*dr);
+		}
+		// otherwise, use k_eff to model 'slack' in the tether
+		else{
+			U_tot = (k_eff_slack/2)*dr*dr;
+			dU_to = (k_eff_slack/2)*(dr_toward*dr_toward - dr*dr);
+			dU_from	= (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
+		}
+		double weight_at = exp(-U_tot/(2*kbT));
+		double weight_to = exp(-dU_to/(2*kbT));
+		double weight_from = exp(-dU_from/(2*kbT));
+		if(x_dist_dub >= 2*dist_cutoff_){
+			weight_from = 0;
+		}
+		if(x_dist_dub <= 2*comp_cutoff_){
+			weight_from = 0;
+		}
+		p_bind_ii_to_teth_[x_dist_dub] = weight_to * p_bind_ii_; 
+		p_bind_ii_from_teth_[x_dist_dub] = weight_from * p_bind_ii_; 
+
+		p_unbind_i_tethered_[x_dist_dub] = weight_at * p_unbind_i_;
+
+		p_unbind_ii_to_teth_[x_dist_dub] = weight_to * p_unbind_ii_stalled_;
+		p_unbind_ii_from_teth_[x_dist_dub] = 
+			weight_from * p_unbind_ii_stalled_; 
+	}
 	double k_tether_free = parameters_->motors.k_tether_free;
 	p_tether_free_ = k_tether_free * c_motor * delta_t;
 	p_tether_bound_ = k_tether_free * c_eff_teth * delta_t;

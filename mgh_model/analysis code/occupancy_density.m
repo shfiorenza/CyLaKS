@@ -10,9 +10,10 @@ xlinkSpeciesID = 1;
 motorSpeciesID = 2;
 start_time = 0;
 end_time = n_steps * delta_t;
+unpin_time = 500;
 
 % File info
-simName = 'slide_testlong';
+simName = '/slide_scan/SlideScan_3.0';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';
@@ -92,16 +93,25 @@ for i_data = 1:1:n_datapoints
     xlink_frac_nonoverlap(i_data) = xlink_frac_outside;
 end
 
+overlap_data = smooth(overlap_data);
+motor_frac_overlap = smooth(motor_frac_overlap);
+motor_frac_nonoverlap = smooth(motor_frac_nonoverlap);
+xlink_frac_overlap = smooth(xlink_frac_overlap);
+xlink_frac_nonoverlap = smooth(xlink_frac_nonoverlap);
+
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
 
 % Plot overlap length data
-subplot(3, 1, 1)
+subplot(2, 1, 1)
 plot(linspace(start_time, end_time, n_datapoints), overlap_data * 0.008, ...
     'LineWidth', 2);
+line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Overlap length in microns');
+ylabel('Overlap length (um)');
 legend('Overall overlap', 'location', 'northeastoutside');
 
+%{
 % Plot motor occupancy data
 subplot(3, 1, 2)
 plot(linspace(start_time, end_time, n_datapoints), motor_frac_overlap, ...
@@ -110,14 +120,18 @@ hold on
 plot(linspace(start_time, end_time, n_datapoints), motor_frac_nonoverlap, ...
     'LineWidth', 2);
 title('Motor occupancy');
+ylabel({'Fraction of', 'sites occupied'});
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');
-
+%}
 % Plot xlink occupancy data
-subplot(3, 1, 3)
+subplot(2, 1, 2)
 plot(linspace(start_time, end_time, n_datapoints), xlink_frac_overlap, ...
     'LineWidth', 2);
 hold on
 plot(linspace(start_time, end_time, n_datapoints), xlink_frac_nonoverlap, ...
     'LineWidth', 2);
+line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Crosslinker occupancy')
+xlabel('Time (s)');
+ylabel('Fraction of sites occupied');
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');

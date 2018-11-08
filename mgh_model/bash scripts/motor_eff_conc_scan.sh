@@ -2,8 +2,7 @@
 echo START MOTOR PROCESSIVITY SCAN
 cd ~
 cd Projects/overlap_analysis/mgh_model
-# Run through desired MT lengths (2um, 4um, 6um, 8, 10um)
-for k in `seq 0 9`;
+for k in `seq 10 15`;
 do 
 	echo $k
 	FILE_NAME="MotorProScan"

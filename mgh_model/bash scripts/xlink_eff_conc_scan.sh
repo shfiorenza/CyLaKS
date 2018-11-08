@@ -2,7 +2,7 @@
 echo START XLINK DIFFUSION SCAN
 cd ~
 cd Projects/overlap_analysis/mgh_model
-for k in `seq 0 9`;
+for k in `seq 10 15`;
 do 
 	echo $k
 	FILE_NAME="XlinkDiffScan"

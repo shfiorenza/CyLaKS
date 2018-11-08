@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 n_sites = 1000;
-simName = 'testlong';
+simName = 'XlinkExp_2.0';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 10000000;

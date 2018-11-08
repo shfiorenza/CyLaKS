@@ -127,7 +127,7 @@ void Curator::ParseParameters(system_parameters *params,
 	}
 	for(int i_mt = 0; i_mt < n_start_coords; i_mt++){
 		double start_coord = params->microtubules.start_coord[i_mt];
-		printf("    start_coord = %g nm for mt %i\n", start_coord, i_mt);
+		printf("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
 	}
 	params->microtubules.imposed_velocity =
 			mts["imposed_velocity"].as<std::vector<double>>();

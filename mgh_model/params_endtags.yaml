@@ -7,7 +7,7 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 1
-  length: 1250
+  length: 1750
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -26,7 +26,7 @@ microtubules:
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02
-  concentration: 0.5
+  concentration: 1.5
   conc_eff_bind: 700000
   k_off_i: 600
   k_off_ii: 15
@@ -48,7 +48,7 @@ xlinks:
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132
-  diffusion_const_i: 0.038
-  diffusion_const_ii: 0.019
+  diffusion_const_i: 0.036
+  diffusion_const_ii: 0.018
   r_0: 32
   k_spring: 0.207

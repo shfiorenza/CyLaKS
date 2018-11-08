@@ -1,10 +1,10 @@
 clear all;
 % Often-changed variables
 n_sites = 500;
-simName = 'test2c';
+simName = 'slide_scan/SlideScan_1.2';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 1000000;
+n_steps = 2000000;
 delta_t = 0.0005;
 n_datapoints = 100000;
 starting_point = 0;
@@ -13,6 +13,7 @@ length = n_sites * 0.008;
 end_time = n_steps * delta_t;
 start_time = starting_point * delta_t;
 
+%fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStructure = '%s_mt_coord.file';
 fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
@@ -54,19 +55,20 @@ title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
 ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
-%xlim([149 151]);
+xlim([start_time + 1 end_time - 1]);
 ylim([0 n_sites * 0.008]);
 grid on
 grid minor
 
 % Plot sliding velocity on bottom
 subplot(2, 1, 2)
-plot(linspace(start_time, end_time, n_datapoints), final_slope_data, ...
+plot(linspace(start_time, end_time, n_datapoints), final_slope_data * 1000, ...
         'LineWidth', 2);
 title('Sliding velocity over time');
-ylabel('Sliding velocity (um/s)');
+ylabel('Sliding velocity (nm/s)');
 xlabel('Time (s)');
-xlim([start_time + 0.1 end_time - 0.1]);
+xlim([start_time + 1 end_time - 1]);
+ylim([-200 200]);
 %axis tight
 grid on
 grid minor

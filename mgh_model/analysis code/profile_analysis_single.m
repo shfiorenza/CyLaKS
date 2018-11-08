@@ -1,7 +1,7 @@
 clear all
 % Often-changed variables
-n_sites = 250;
-simName = 'testf'
+n_sites = 750;
+simName = 'Endtag_750';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

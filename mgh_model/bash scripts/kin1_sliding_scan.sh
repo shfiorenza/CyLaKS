@@ -2,13 +2,12 @@
 echo START KINESIN-1 SLIDING SCAN
 cd ~
 cd Projects/overlap_analysis/mgh_model
-# Run through desired MT lengths (2um, 4um, 6um, 8, 10um)
-for k in `seq 1 10`;
+for k in `seq 16 20`;
 do 
 	FILE_NAME="SlideScan"
 	FILE_NAME+="_"
 	XLINK_CONC=$(echo "scale=2; 0.2 * $k" | bc)
-	if [ $k -le 5 ]; then
+	if [ $k -le 9 ]; then
 		FILE_NAME+="0"
 	fi
 	FILE_NAME+="$XLINK_CONC"
@@ -19,14 +18,14 @@ do
 	# Run sim for these parameter values
 	./sim params.yaml $FILE_NAME
 	# Remove unnecessary files after each sim (save mem.)
-	MOTOR_FILE="$FILE_NAME"
-	MOTOR_FILE+="_motorID.file"
-#	rm $MOTOR_FILE
-	XLINK_FILE="$FILE_NAME"
-	XLINK_FILE+="_xlinkID.file"
-#	rm $XLINK_FILE
-	MT_FILE="$FILE_NAME"
-	MT_FILE+="_MTcoord.file"
-#	rm $MT_FILE
+	MOTOR_FORCE_FILE="$FILE_NAME"
+	MOTOR_FORCE_FILE+="_motor_force.file"
+	rm $MOTOR_FORCE_FILE
+	MOTOR_EXT_FILE="$FILE_NAME"
+	MOTOR_EXT_FILE+="_motor_extension.file"
+	rm $MOTOR_EXT_FILE
+	TOT_FORCE_FILE="$FILE_NAME"
+	TOT_FORCE_FILE+="_total_force.file"
+	rm $TOT_FORCE_FILE
 done
-echo END PARAMETER SCAN
+echo END SCAN

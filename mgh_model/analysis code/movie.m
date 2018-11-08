@@ -13,9 +13,9 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'slide_testlong';
-movie_name = 'test.avi';
-%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
+simName = 'slide_scan/SlideScan_3.0long';
+movie_name = 'slide_3.0long.avi';
+%fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 1000;
+frames_per_plot = 100;
 start_frame = 1;
 site_height = 1;
 site_width = 1;
@@ -57,11 +57,13 @@ xlink_data_file = fopen(xlinkFile);
 xlink_raw_data = fread(xlink_data_file, [n_mts * n_sites * n_datapoints], '*int');
 fclose(xlink_data_file);
 xlink_data = reshape(xlink_raw_data, n_sites, n_mts, n_datapoints);
-
+%{
 teth_data_file = fopen(tethFile);
 teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double');
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
+%}
+teth_data = zeros([n_sites n_mts n_datapoints]) - 1;
 
 end_frame = start_frame + n_frames - 1;
 if(end_frame > n_datapoints)
@@ -105,6 +107,7 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
         else
             ax.XLim = [first_pos first_pos + n_sites + 1];
+            %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...

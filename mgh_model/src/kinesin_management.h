@@ -47,9 +47,14 @@ class KinesinManagement{
 		double p_bind_i_;
 		double p_bind_i_tethered_;
 		double p_bind_ii_; 
+		std::vector<double> p_bind_ii_to_teth_;      //XXX
+		std::vector<double> p_bind_ii_from_teth_;	 //XXX
 		double p_unbind_i_; 
-		double p_unbind_ii_stepable_ ; 
-		double p_unbind_ii_stalled_; 
+		std::vector<double> p_unbind_i_tethered_;    //XXX
+		double p_unbind_ii_stepable_ ; 				 // collapse into 1 <
+		double p_unbind_ii_stalled_; 			
+		std::vector<double> p_unbind_ii_to_teth_;    //XXX
+		std::vector<double> p_unbind_ii_from_teth_;  //XXX
 		double p_tether_free_;
 		double p_tether_bound_;
 		// Indices refer to double the x_distance (in no. of sites)
@@ -58,27 +63,28 @@ class KinesinManagement{
 		double p_untether_free_;	
 		std::vector<double> p_untether_bound_; 	
 		double p_step_;
-		double p_failstep_;
+		double p_failstep_;							// cut
 		std::vector<double> p_step_to_teth_rest_;
 		std::vector<double> p_step_from_teth_rest_;
-		std::vector<double> p_failstep_to_teth_rest_;
-		std::vector<double> p_failstep_from_teth_rest_;
+		std::vector<double> p_failstep_to_teth_rest_; // cut
+		std::vector<double> p_failstep_from_teth_rest_; // cut
 
 		std::vector<Kinesin> motors_; 
 		std::vector<Kinesin*> free_tethered_list_;
 		std::vector<Kinesin*> bound_i_list_; 
 		std::vector<Kinesin*> bound_i_bindable_list_; 
+		std::vector<Kinesin*> bound_i_tethered_; 	// XXX
 		std::vector<Kinesin*> bound_ii_list_; 
 		std::vector<Kinesin*> stepable_list_;
-		std::vector<Kinesin*> stalled_list_;
+		std::vector<Kinesin*> stalled_list_;		// cut
 		// For our purposes, 'list' means one-dimensional vector, and
 		// the 'table' means two-dimensions: tether extension and index
 		std::vector<Kinesin*> bound_ii_tethered_list_; 
 		std::vector< std::vector<Kinesin*> > bound_ii_tethered_table_;
 		std::vector< std::vector<Kinesin*> > stepable_to_rest_table_;
 		std::vector< std::vector<Kinesin*> > stepable_from_rest_table_;
-		std::vector< std::vector<Kinesin*> > stalled_to_rest_table_;
-		std::vector< std::vector<Kinesin*> > stalled_from_rest_table_;
+		std::vector< std::vector<Kinesin*> > stalled_to_rest_table_; // cut
+		std::vector< std::vector<Kinesin*> > stalled_from_rest_table_; // cut
 
 		std::vector<int> kmc_list_;
 
@@ -129,7 +135,9 @@ class KinesinManagement{
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
+		int GetNumToBind_II_Tethered(int x_dist_doubled, int dir); //XXX
 		int GetNumToUnbind_I(); 
+		int GetNumToUnbind_I_Tethered(); //XXX
 		int GetNumToUnbind_II_Stepable();
 		int GetNumToUnbind_II_Stalled();
 		int GetNumToTether_Free();

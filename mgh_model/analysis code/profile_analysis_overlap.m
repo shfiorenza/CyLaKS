@@ -1,7 +1,7 @@
 clear all
 n_datapoints = 100000;
 length_of_microtubule = 500;
-raw_overlap_length = 250;
+raw_overlap_length = -250;
 overlap_length = abs(raw_overlap_length);
 delta = length_of_microtubule - overlap_length;
 if(overlap_length == 0)
@@ -22,7 +22,8 @@ final_data = zeros([(length_of_microtubule + delta) 2]);
 polarityArray = {'Plus-end on right', 'Plus end on left'};
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'test_occupancy.file';
+fileName = 'test6_occupancy.file';
+%fileName = 'xl_scan/XlinkDiffScan_2500_occupancy.file';
 
 data_file = fopen(sprintf(fileDirectory, fileName));
 raw_data = fread(data_file, [length_of_microtubule, 2*n_datapoints], '*int');

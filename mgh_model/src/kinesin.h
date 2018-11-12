@@ -67,6 +67,8 @@ class Kinesin{
 		void UpdateExtension();
 		void ForceUntether(int x_dub_pre);
 
+		void UntetherSatellite();
+
 		bool AtCutoff();
 
 		int GetDirectionTowardRest();

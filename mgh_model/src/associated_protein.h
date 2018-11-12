@@ -59,6 +59,8 @@ class AssociatedProtein{
 		void UpdateExtension();
 		void ForceUnbind(int x_dist_pre); 
 
+		void UntetherSatellite(); 
+
 		int GetDirectionTowardRest(Tubulin *site);
 		double GetAnchorCoordinate();
 		double GetBindingWeight(Tubulin *neighbor);

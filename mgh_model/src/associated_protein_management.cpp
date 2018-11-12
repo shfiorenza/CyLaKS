@@ -158,8 +158,8 @@ void AssociatedProteinManagement::SetParameters(){
 		else
 			weight_to_teth = exp(-dU_to_teth/(2*kbT));	
 		double weight_from_teth;
-		if(x_dist_dub < 2*teth_dist_cutoff
-		&& x_dist_dub > 2*teth_comp_cutoff)
+		if(x_dist_dub < 2*teth_dist_cutoff - 1
+		&& x_dist_dub > 2*teth_comp_cutoff + 1)
 			weight_from_teth = exp(-dU_from_teth/(2*kbT));
 		else
 			weight_from_teth = 0; 
@@ -1401,7 +1401,7 @@ void AssociatedProteinManagement::RunDiffusion(){
 					RunDiffusionII_FromRest(x_dist);
 					break;
 				case 50:
-//					printf("teth_i step to rest (%i)\n", x_dist_dub);
+///					printf("teth_i step to rest (%i)\n", x_dist_dub);
 					RunDiffusionI_ToTethRest(x_dist_dub);
 					break;
 				case 60:
@@ -1677,7 +1677,7 @@ void AssociatedProteinManagement::RunDiffusionI_FromTethRest(int x_dist_dub){
 		AssociatedProtein *xlink = site->xlink_;
 		Kinesin *motor = xlink->motor_;
 		if(motor == nullptr){
-			printf("why\n");
+			printf("why - run_diff_i_from_teth_rest (xlinks)\n");
 			exit(1);
 		}	
 		// direction xlink needs to move to rest is opposite of motor's
@@ -1710,6 +1710,10 @@ void AssociatedProteinManagement::RunDiffusionI_FromTethRest(int x_dist_dub){
 						kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
 						kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 					}
+				}
+				else{
+					printf("HOLY SHIT UNTETHER\n");
+					exit(1);
 				}
 			}
 			else{
@@ -2408,7 +2412,10 @@ void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 			n_free_tethered_--;
 			n_single_bound_++; 
 			n_sites_i_tethered_[x_dist_dub]++; 
-			if(xlink->motor_->heads_active_ == 2){
+			if(xlink->motor_->heads_active_ == 1){
+				properties_->kinesin4.n_bound_i_--; 
+			}
+			else if(xlink->motor_->heads_active_ == 2){
 				properties_->kinesin4.n_bound_ii_--;
 				properties_->kinesin4.n_bound_ii_tethered_tot_++; 
 				properties_->kinesin4.n_bound_ii_tethered_[x_dist_dub]++; 
@@ -2528,18 +2535,16 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 			int x_dub_pre = motor->x_dist_doubled_;
 //			motor->UpdateExtension();
 			if(motor->heads_active_ == 0){
-				xlink->tethered_ = false;
-				motor->xlink_ = nullptr;
-				motor->tethered_ = false;
-				xlink->motor_ = nullptr;
-				n_sites_i_untethered_--;
-				properties_->kinesin4.n_free_tethered_--;
+				xlink->UntetherSatellite();
 			}
 			else{
 				if(motor->heads_active_ == 2){
 					properties_->kinesin4.n_bound_ii_++;
 					properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
 					properties_->kinesin4.n_bound_ii_tethered_tot_--;
+				}
+				else{
+					properties_->kinesin4.n_bound_i_++;
 				}
 				n_sites_i_tethered_[x_dub_pre]--;
 				n_free_tethered_++;

@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
 			properties.microtubules.RunDiffusion();
 		// Some good ole-fashioned ASCII printout
 		if(parameters.microtubules.printout == true)
-			if(i_step % 10000 == 0)
+			if(i_step % 1000 == 0)
 				properties.wallace.PrintMicrotubules(0);
 	}
 

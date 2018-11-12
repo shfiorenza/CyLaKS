@@ -305,6 +305,23 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 	properties_->prc1.n_single_bound_++;
 }
 
+void AssociatedProtein::UntetherSatellite(){
+
+	if(tethered_ == true){
+		motor_->tethered_ = false;
+		motor_->xlink_ = nullptr;
+		tethered_ = false;
+		motor_ = nullptr;
+		properties_->prc1.n_sites_i_untethered_--;
+		properties_->kinesin4.n_free_tethered_--;
+	}
+	else{
+		printf("Error in xlink UntethSatellite()\n");
+		exit(1);
+	}
+
+}
+
 int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 
 	Microtubule *mt = site->mt_;

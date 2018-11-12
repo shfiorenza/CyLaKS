@@ -152,7 +152,7 @@ void Kinesin::PopulateBindingLookupTable(){
 void Kinesin::UpdateNeighborXlinks(){
 
 	if(tethered_ == false
-	&& heads_active_ == 2){
+	&& heads_active_ > 0){
 		n_neighbor_xlinks_ = 0;
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length;
@@ -204,7 +204,7 @@ void Kinesin::UpdateNeighborXlinks(){
 	}
 	else{
 		printf("error in update neighbor xlinks\n");
-		exit(1);
+	//	exit(1);
 	}
 }
 
@@ -330,7 +330,13 @@ void Kinesin::ForceUntether(int x_dub_pre){
 		properties_->prc1.n_sites_ii_untethered_[x_dist] += 2;
 		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
 	}
-	if(heads_active_ == 2){
+	else{
+		UntetherSatellite();
+	}
+	if(heads_active_ == 1){
+		properties_->kinesin4.n_bound_i_++;
+	}
+	else if(heads_active_ == 2){
 		properties_->kinesin4.n_bound_ii_++;
 		properties_->kinesin4.n_bound_ii_tethered_tot_--;
 		properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
@@ -345,6 +351,15 @@ void Kinesin::ForceUntether(int x_dub_pre){
 	xlink_->tethered_ = false; 
 	xlink_ = nullptr;
 }	
+
+void Kinesin::UntetherSatellite(){
+
+	xlink_->tethered_ = false;
+	xlink_->motor_ = nullptr;
+	tethered_ = false;
+	xlink_ = nullptr;
+	properties_->prc1.n_free_tethered_--;
+}
 
 bool Kinesin::AtCutoff(){
 
@@ -393,7 +408,7 @@ int Kinesin::GetDirectionTowardRest(){
 			}
 		}
 		else{
-			printf("this is a different type of error in get dir torest\n");
+			printf("this is a diff type of error in getdirtorest\n");
 			exit(1);
 		}
 	}
@@ -586,8 +601,7 @@ Tubulin* Kinesin::GetSiteCloserToRest(){
 
 Tubulin* Kinesin::GetSiteFartherFromRest(){
 
-	if(tethered_ == true
-	&& heads_active_ == 2){
+	if(tethered_ == true){
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		double stalk_coord = GetStalkCoordinate();
 		double rest_coord;

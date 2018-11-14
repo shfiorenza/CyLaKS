@@ -21,7 +21,7 @@ microtubules:
   immobile_until:
   - 9500
   - 500
-  printout: true
+  printout: false
   diffusion: true
 motors:
   k_on_i: 0.02
@@ -32,8 +32,6 @@ motors:
   k_off_ii: 15
   velocity: 650
   diffusion_const: 0.0024
-  k_off_ratio: 1
-  failstep_rate: 0
   k_tether_free: 0.1
   conc_eff_tether: 10000 #100
   k_untether_free: 0 #0.025

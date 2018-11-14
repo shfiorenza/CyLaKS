@@ -137,9 +137,12 @@ class AssociatedProteinManagement{
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
-		int GetNumToBind_II_Tethered(); // XXX add in
+		int GetNumToBind_II_Tethered();		//XXX
 		int GetNumToUnbind_I();
+		int GetNumToUnbind_I_Tethered(int x_dist_dub); // XXX
 		int GetNumToUnbind_II(int x_dist);
+		int GetNumToUnbind_II_To_Teth(int x_dist, int x_dist_dub); //XXX
+		int GetNumToUnbind_II_From_Teth(int x_dist, int x_dist_dub); //XXX
 		int GetNumToTether_Free();
 		int GetNumToUntether_Free();
 
@@ -147,9 +150,12 @@ class AssociatedProteinManagement{
 		void RunKMC_Bind_I();
 		void RunKMC_Bind_I_Tethered();
 		void RunKMC_Bind_II();
-		void RunKMC_Bind_II_Tethered();  // XXX add in
+		void RunKMC_Bind_II_Tethered();  // XXX 
 		void RunKMC_Unbind_I();
+		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 	//XXX
 		void RunKMC_Unbind_II(int x_dist);
+		void RunKMC_Unbind_II_To_Teth(int x_dist, int x_dist_dub);	//XXX
+		void RunKMC_Unbind_II_From_Teth(int x_dist, int x_dist_dub);	//XXX
 		void RunKMC_Tether_Free();
 		void RunKMC_Untether_Free();
 };

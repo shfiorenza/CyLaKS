@@ -51,10 +51,6 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.diffusion_const = motors["diffusion_const"].as<double>();
 	printf("    diffusion_const = %g um^2/s\n", 
 			params->motors.diffusion_const);
-	params->motors.k_off_ratio = motors["k_off_ratio"].as<double>();
-	printf("    k_off_ratio = %g\n", params->motors.k_off_ratio);
-	params->motors.failstep_rate = motors["failstep_rate"].as<double>();
-	printf("    failstep_rate = %g /s\n", params->motors.failstep_rate);
 	params->motors.k_tether_free = motors["k_tether_free"].as<double>();
 	printf("    k_tether_free = %g /(nM*s)\n", params->motors.k_tether_free);
 	params->motors.conc_eff_tether = motors["conc_eff_tether"].as<double>();

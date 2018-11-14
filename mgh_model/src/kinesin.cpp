@@ -475,7 +475,7 @@ double Kinesin::GetStalkCoordinate(){
 		int mt_coord = site->mt_->coord_;
 		double site_coord = i_site + mt_coord;
 		return site_coord; 
-	}
+}
 	else if(heads_active_ == 2){
 		int i_one = front_site_->index_;
 		int i_two = rear_site_->index_;

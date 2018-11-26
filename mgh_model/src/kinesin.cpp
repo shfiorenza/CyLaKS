@@ -52,32 +52,36 @@ void Kinesin::CalculateCutoffs(){
 	}
 	comp_cutoff_ = 0;
 	/* Next, calculate compression distance cutoff */ 
-	for(int x_dist = (int)rest_dist_; x_dist >= 0; x_dist--){
-		int r_x = x_dist * site_size; 
+	for(int x_dist = 2*rest_dist_; x_dist >= 0; x_dist--){
+		//increment by 0.5x
+		int r_x = x_dist * site_size / 2; 
 		double r = sqrt(r_y*r_y + r_x*r_x); 
 		double dr = r - r_0_; 
-		double boltzmann_weight; 
+		double U;
 		if(r < r_0_)
-			boltzmann_weight = exp(-dr*dr*k_slack_/(2*kbT));
+			U = (k_slack_/2)*dr*dr;
 		else
-			boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
-		if(boltzmann_weight < 1e-9){
-			comp_cutoff_ = x_dist;
+			U = (k_spring_/2)*dr*dr; 
+		double boltzmann_weight = exp(U/(2*kbT)); 
+		if(boltzmann_weight > 1000){
+			comp_cutoff_ = x_dist / 2;
 			break;
 		}
 	}
 	/* Finally, calculate extension distance cutoff */
-	for(int x_dist = (int) rest_dist_; x_dist < 1000; x_dist++){
-		int r_x = x_dist * site_size;
+	for(int x_dist = 2*rest_dist_; x_dist < 1000; x_dist++){
+		//increment by 0.5x
+		int r_x = x_dist * site_size / 2;
 		double r = sqrt(r_y*r_y + r_x*r_x);
 		double dr = r - r_0_; 
-		double boltzmann_weight;
-		if(r >= r_0_)
-			boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
+		double U;
+		if(r < r_0_)
+			U = (k_slack_/2)*dr*dr;
 		else
-			boltzmann_weight = exp(-dr*dr*k_slack_/(2*kbT));
-		if(boltzmann_weight < 1e-9){
-			dist_cutoff_ = x_dist;
+			U = (k_spring_/2)*dr*dr; 
+		double boltzmann_weight = exp(U/(2*kbT)); 
+		if(boltzmann_weight > 1000){
+			dist_cutoff_ = x_dist / 2;
 			break;
 		}
 	}
@@ -277,7 +281,6 @@ void Kinesin::UpdateExtension(){
 		|| x_dist_doubled_ < 2*comp_cutoff_){
 			ForceUntether(x_dub_pre);
 //			printf("forced SINGLE-HEAD UNTETHER ???\n");
-//			fflush(stdout);
 		}
 		else{
 			double r_y = parameters_->microtubules.y_dist / 2;
@@ -299,8 +302,6 @@ void Kinesin::UpdateExtension(){
 		|| x_dist_doubled_ < 2*comp_cutoff_){
 			ForceUntether(x_dub_pre); 
 //			printf("forced an untether >:O\n");
-//			fflush(stdout);
-//			exit(1);
 		}
 		else{
 			// Calculate new extension
@@ -324,11 +325,13 @@ void Kinesin::ForceUntether(int x_dub_pre){
 	if(xlink_->heads_active_ == 1){
 		properties_->prc1.n_sites_i_untethered_++;
 		properties_->prc1.n_sites_i_tethered_[x_dub_pre]--;
+		properties_->prc1.n_single_bound_++;
 	}
 	else if(xlink_->heads_active_ == 2){
 		int x_dist = xlink_->x_dist_;
 		properties_->prc1.n_sites_ii_untethered_[x_dist] += 2;
 		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
+		properties_->prc1.n_double_bound_[x_dist]++;
 	}
 	else{
 		UntetherSatellite();

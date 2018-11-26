@@ -7,7 +7,7 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 2
-  length: 50
+  length: 250
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -20,9 +20,9 @@ microtubules:
   - 0
   immobile_until:
   - 9500
-  - 500
-  printout: false
-  diffusion: true
+  - 10
+  printout: true
+  diffusion: false
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02
@@ -33,16 +33,16 @@ motors:
   velocity: 650
   diffusion_const: 0.0024
   k_tether_free: 0.1
-  conc_eff_tether: 10000 #100
-  k_untether_free: 0 #0.025
-  k_untether: 0 #0.068
+  conc_eff_tether: 1000 
+  k_untether_free: 0.025
+  k_untether: 0.068
   r_0: 120
   k_spring: 0.3
   k_slack: 0.05
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 10 #0.2
+  concentration: 0.2
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

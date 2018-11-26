@@ -26,25 +26,23 @@ microtubules:
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02
-  concentration: 1.5
+  concentration: 12
   conc_eff_bind: 700000
   k_off_i: 600
   k_off_ii: 15
   velocity: 650
   diffusion_const: 0.0024
-  k_off_ratio: 1
-  failstep_rate: 0
   k_tether_free: 0
   conc_eff_tether: 0
-  k_untether_free: 0.025
-  k_untether: 0.068
+  k_untether_free: 0
+  k_untether: 0
   r_0: 120
   k_spring: 0.3
   k_slack: 0.05
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 0
+  concentration: 1
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

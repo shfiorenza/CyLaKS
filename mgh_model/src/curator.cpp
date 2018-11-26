@@ -339,13 +339,15 @@ void Curator::PrintMicrotubules(){
 							if(motor->tethered_ == false)
 								printf("(");
 							else
-								printf("[");
+								printf("%i", motor->x_dist_doubled_ / 10);
+							//	printf("[");
 						}
 						if(i_site == i_front){
 							if(motor->tethered_ == false)
 								printf(")");
 							else
-								printf("]");
+//								printf("]");
+								printf("%i", motor->x_dist_doubled_ % 10);
 						}
 					} 
 					else if(i_front < i_rear){
@@ -353,13 +355,15 @@ void Curator::PrintMicrotubules(){
 							if(motor->tethered_ == false)
 								printf("(");
 							else
-								printf("[");
+								printf("%i", motor->x_dist_doubled_ / 10);
+							//	printf("[");
 						}
 						if(i_site == i_rear){
 							if(motor->tethered_ == false)
 								printf(")");
 							else
-								printf("]");
+						//		printf("]");
+								printf("%i", motor->x_dist_doubled_ % 10);
 						}
 					}
 					else{

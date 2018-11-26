@@ -15,6 +15,7 @@ void AssociatedProtein::Initialize(system_parameters *parameters,
 	InitiateNeighborLists();
 	PopulateBindingLookupTable();
 	PopulateTethBindingLookupTable();
+	PopulateTethBindingIILookupTable();
 }
 
 void AssociatedProtein::SetParameters(){
@@ -51,8 +52,9 @@ void AssociatedProtein::CalculateCutoffs(){
 		int r_x = x_dist * site_size;
 		double r = sqrt(r_y*r_y + r_x*r_x);
 		double dr = r - r_0_; 
-		double boltzmann_weight = exp(-dr*dr*k_spring_/(2*kbT));
-		if(boltzmann_weight < 1e-9){
+		double U = (k_spring_/2)*dr*dr;
+		double boltzmann_weight = exp(U/(2*kbT));
+		if(boltzmann_weight > 1000){
 			dist_cutoff_ = x_dist;
 			break;
 		}
@@ -65,6 +67,7 @@ void AssociatedProtein::InitiateNeighborLists(){
 	int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
 	neighbor_sites_.resize((n_mts - 1)*(2*dist_cutoff_ + 1));
 	teth_neighbor_sites_.resize(n_mts*(2*teth_cutoff + 1));
+	teth_neighbor_sites_ii_.resize((n_mts - 1)*(2*dist_cutoff_ + 1));
 }
 
 void AssociatedProtein::PopulateBindingLookupTable(){
@@ -77,7 +80,8 @@ void AssociatedProtein::PopulateBindingLookupTable(){
 		double r_x = (double)i_dist*site_size;
 		double r = sqrt(r_y*r_y + r_x*r_x);
 		double dr = r - r_0_;
-		double weight = exp(-dr*dr*k_spring_/(2*kbT));
+		double U = (k_spring_/2)*dr*dr;
+		double weight = exp(-U/(2*kbT));
 		binding_weight_lookup_[i_dist] = weight;
 //		printf("r: %g, dr: %g,  weight: %g\n", r, dr, weight);
 	}
@@ -103,15 +107,127 @@ void AssociatedProtein::PopulateTethBindingLookupTable(){
 			weight = 0;
 		}
 		else if(dr < 0){
-			weight = exp(-dr*dr*k_slack/kbT);
+			weight = exp(-dr*dr*k_slack/(4*kbT));
 		}
 		else{
-			weight = exp(-dr*dr*k_teth/kbT);
+			weight = exp(-dr*dr*k_teth/(4*kbT));
 		}
 		teth_binding_weight_lookup_[x_dist_dub] = weight;
-//		printf("weight for 2x = %i is %g\n", x_dist_dub, weight);
+		//		printf("weight for 2x = %i is %g\n", x_dist_dub, weight);
 	}
-//	properties_->wallace.PauseSim(2);
+	//	properties_->wallace.PauseSim(2);
+}
+
+// input CURRENT x_dist_dub and PROPOSED x_dist
+void AssociatedProtein::PopulateTethBindingIILookupTable(){
+
+	int teth_dist_cutoff = properties_->kinesin4.dist_cutoff_;
+	int comp_cutoff = properties_->kinesin4.comp_cutoff_;
+	teth_binding_weight_ii_to_.resize(2*teth_dist_cutoff + 1);
+	teth_binding_weight_ii_from_.resize(2*teth_dist_cutoff + 1);
+	double kbT = parameters_->kbT; 
+	double r_y = parameters_->microtubules.y_dist;
+	double k_teth_spring = properties_->kinesin4.motors_[0].k_spring_;
+	double k_teth_slack = properties_->kinesin4.motors_[0].k_slack_;
+	double r_0_teth = properties_->kinesin4.motors_[0].r_0_;
+	double r_y_teth = parameters_->microtubules.y_dist / 2;
+	double rest_dist_teth = properties_->kinesin4.motors_[0].rest_dist_;
+	double site_size = parameters_->microtubules.site_size;
+	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
+		teth_binding_weight_ii_to_[x_dub].resize(2*dist_cutoff_ + 1);
+		teth_binding_weight_ii_from_[x_dub].resize(2*dist_cutoff_ + 1);
+		// Calc x-distances (in nm) for tether
+		double r_x_teth = x_dub * site_size / 2;
+		// Calc total r values 
+		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
+		// Calc tether exts for current dist and stepping to/from rest
+		double dr_teth = r_teth - r_0_teth;	
+		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
+			double r_x = (double)x_dist*site_size;
+			double r = sqrt(r_y*r_y + r_x*r_x);
+			double dr = r - r_0_;
+			double U = (k_spring_/2)*dr*dr;
+			double weight = exp(-U/(2*kbT));
+			// change in teth extension if 2nd xlink head were to bind
+			double dx_teth = (double)x_dist / 2; 
+			double dr_x_teth = dx_teth * site_size;
+			double r_x_teth_to, 
+				   r_x_teth_from; 
+			if(dr_teth > 0){
+				r_x_teth_to = r_x_teth - dr_x_teth;
+				r_x_teth_from = r_x_teth + dr_x_teth; 	
+			}
+			else{
+				r_x_teth_to = r_x_teth + dr_x_teth;
+				r_x_teth_from = r_x_teth - dr_x_teth; 
+			}
+			double r_teth_to = 
+				sqrt(r_x_teth_to*r_x_teth_to + r_y_teth*r_y_teth);
+			double r_teth_from = 
+				sqrt(r_x_teth_from*r_x_teth_from + r_y_teth*r_y_teth);
+			double dr_teth_to = r_teth_to - r_0_teth; 
+			double dr_teth_from = r_teth_from - r_0_teth; 
+			double dU_to_teth, 
+				   dU_from_teth;
+			int x_from_rest_dub = abs((int)(2*rest_dist_teth) - x_dub);
+			int dx_teth_dub = 2 * dx_teth;
+			// Check if we're crossing over equil. point of tether 
+			if(dx_teth_dub > x_from_rest_dub){
+				if(r_teth < r_0_teth){
+					dU_from_teth = (k_teth_slack/2)
+						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+					dU_to_teth = (0.5)*(k_teth_spring*dr_teth_to*dr_teth_to 
+							- k_teth_slack*dr_teth*dr_teth);
+				}
+				else{
+					dU_from_teth = (k_teth_spring/2)
+						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+					dU_to_teth = (0.5)*(k_teth_slack*dr_teth_to*dr_teth_to
+							- k_teth_spring*dr_teth*dr_teth);
+				}
+			}
+			else if(dr_teth > 0){
+				dU_from_teth = (k_teth_spring/2)
+					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+				dU_to_teth = (k_teth_spring/2)
+					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+			}
+			else{
+				dU_from_teth = (k_teth_slack/2)
+					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+				dU_to_teth = (k_teth_slack/2)
+					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+			}
+			double tot_weight_to = 0;
+			int x_dub_to = 2 * r_x_teth_to / site_size;
+			if(x_dub_to < 2*comp_cutoff
+			|| x_dub_to > 2*teth_dist_cutoff){
+				tot_weight_to = 0;
+			}
+			else{
+				double weight_to_teth = exp(-dU_to_teth/(2*kbT));
+				tot_weight_to = weight_to_teth*weight;	
+			}
+			double tot_weight_from = 0; 
+			int x_dub_from = 2 * r_x_teth_from / site_size;
+			if(x_dub_from < 2*comp_cutoff
+			|| x_dub_from > 2*teth_dist_cutoff){
+				tot_weight_from = 0;
+			}
+			else{
+		   		double weight_from_teth = exp(-dU_from_teth/(2*kbT));
+				tot_weight_from = weight_from_teth*weight;
+			}
+			teth_binding_weight_ii_to_[x_dub][x_dist] = tot_weight_to;
+			teth_binding_weight_ii_from_[x_dub][x_dist] = tot_weight_from;
+/*
+			printf("for 2x=%i, x=%i, w_to = %g\n", x_dub, x_dist, 
+				teth_binding_weight_ii_to_[x_dub][x_dist]);
+			printf("for 2x=%i, x=%i, w_from = %g\n", x_dub, x_dist, 
+				teth_binding_weight_ii_from_[x_dub][x_dist]);
+*/
+		}
+	}
 }
 
 void AssociatedProtein::UpdateNeighborSites(){
@@ -201,6 +317,42 @@ void AssociatedProtein::UpdateTethNeighborSites(){
 	}
 }
 
+void AssociatedProtein::UpdateTethNeighborSitesII(){
+
+	n_teth_neighbor_sites_ii_ = 0;
+	int n_mts = parameters_->microtubules.count;
+	int mt_length = parameters_->microtubules.length;
+	if(n_mts > 1){
+		Tubulin *site = GetActiveHeadSite();
+		int i_site = site->index_;
+		Microtubule *mt = site->mt_;
+		Microtubule *adj_mt = mt->neighbor_;
+		int site_coord = mt->coord_ + i_site; 
+		// Scan through all potential neighbors; only add unoccupied to list 
+		int i_entry = 0;
+		for(int dist = -dist_cutoff_; dist <= dist_cutoff_; dist++){
+			int i_neighbor = (site_coord - adj_mt->coord_) + dist;
+			// Start index at first bulk site (1) if i_neighb is 0 or neg
+			// XXX BOUNDARIES CURRENTLY ACCESSED--DISABLE FOR ALPHA/BETA XXX
+			if(i_neighbor < 0){
+				dist -= (i_neighbor + 1); // - 1;
+			}
+			// End scan once last bulk site (mt_length - 2) has been checked
+			else if(i_neighbor > mt_length - 1){
+				break;
+			} 
+			else{
+				Tubulin *neighbor = &adj_mt->lattice_[i_neighbor];
+				if(neighbor->occupied_ == false){
+					n_teth_neighbor_sites_ii_++;
+					teth_neighbor_sites_ii_[i_entry] = neighbor;
+					i_entry++;
+				}
+			}
+		}
+	}
+}
+
 void AssociatedProtein::UpdateExtension(){
 
 	double site_size = parameters_->microtubules.site_size;
@@ -244,65 +396,101 @@ void AssociatedProtein::UpdateExtension(){
 
 void AssociatedProtein::ForceUnbind(int x_dist_pre){
 
-	double ran = properties_->gsl.GetRanProb(); 
-	if(ran < 0.5){
-		// Remove xlink head from site
-		site_one_->xlink_ = nullptr;
-		site_one_->occupied_ = false;
-		// Update xlink details
-		site_one_ = nullptr;
+	// different stuff depending on whether or not xlink is tethered
+	if(tethered_ == false){
+		double ran = properties_->gsl.GetRanProb(); 
+		if(ran < 0.5){
+			site_one_->xlink_ = nullptr;
+			site_one_->occupied_ = false;
+			site_one_ = nullptr;
+		}
+		else{
+			site_two_->xlink_ = nullptr;
+			site_two_->occupied_ = false;
+			site_two_ = nullptr;	
+		}
 		heads_active_--;
 		x_dist_ = 0;
 		extension_ = 0; 
 		cosine_ = 0;
-	}
-	else{
-		// Remove xlink head from site
-		site_two_->xlink_ = nullptr;
-		site_two_->occupied_ = false;
-		// Update xlink details	
-		site_two_ = nullptr;	
-		heads_active_--;
-		x_dist_ = 0;
-		extension_ = 0;
-		cosine_ = 0;
-	}
-	// Update statistics
-	if(tethered_ == true){
-		if(motor_->heads_active_ > 0){
-			// Update motor ext (unbinding 2nd head changes anchor coord) 
-			int x_dub_pre = motor_->x_dist_doubled_;
-			properties_->prc1.n_sites_ii_tethered_
-				[x_dub_pre][x_dist_pre] -= 2;
-			motor_->UpdateExtension();
-			// If untether event didn't occur, update tethered and motor stats
-			if(tethered_ == true){
-				int x_dub_post = motor_->x_dist_doubled_;
-				properties_->prc1.n_sites_i_tethered_[x_dub_post]++;
-				// Update kinesin stats
-				KinesinManagement *kinesin4 = &properties_->kinesin4;
-				if(motor_->heads_active_ == 2){
-					kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
-					kinesin4->n_bound_ii_tethered_[x_dub_post]++;
-				}
-			}
-			// If untether event DOES occur, counteract force_untether stats
-			else{
-				// NOT a typo; see kinesin ForceUntether
-				properties_->prc1.n_sites_i_tethered_[x_dub_pre]++;
-			}
-		}
-		else{
-			properties_->prc1.n_sites_ii_untethered_[x_dist_pre] -= 2;
-			properties_->prc1.n_sites_i_untethered_++;
-		}
-	}
-	else{
 		properties_->prc1.n_sites_ii_untethered_[x_dist_pre] -= 2;
 		properties_->prc1.n_sites_i_untethered_++;
+		properties_->prc1.n_double_bound_[x_dist_pre]--;
+		properties_->prc1.n_single_bound_++;
 	}
-	properties_->prc1.n_double_bound_[x_dist_pre]--;
-	properties_->prc1.n_single_bound_++;
+	else if(motor_->heads_active_ > 0){
+		// Update motor ext (unbinding 2nd head changes anchor coord) 
+		int x_dub_pre = motor_->x_dist_doubled_;
+		double p_unbind_to = 
+			properties_->prc1.p_unbind_ii_to_teth_[x_dub_pre][x_dist_pre]; 
+		double p_unbind_from = 
+			properties_->prc1.p_unbind_ii_from_teth_[x_dub_pre][x_dist_pre]; 
+		double p_tot = p_unbind_to + p_unbind_from;
+		double ran = properties_->gsl.GetRanProb();
+		Tubulin *site(NULL); 
+		if(ran < p_unbind_to / p_tot)
+			site = GetSiteFartherFromTethRest();
+		else
+			site = GetSiteCloserToTethRest();
+		if(site == site_one_){
+			site_one_->xlink_ = nullptr;
+			site_one_->occupied_ = false;
+			site_one_ = nullptr;
+		}
+		else if(site == site_two_){
+			site_two_->xlink_ = nullptr;
+			site_two_->occupied_ = false;
+			site_two_ = nullptr;
+		}
+		else{
+			printf("error in xlink force unbind!!\n");
+			exit(1);
+		}
+		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist_pre] -= 2;
+		heads_active_--;
+		x_dist_ = 0;
+		extension_ = 0; 
+		cosine_ = 0;
+		motor_->UpdateExtension();
+		// If untether event didn't occur, update tethered and motor stats
+		if(tethered_ == true){
+			int x_dub_post = motor_->x_dist_doubled_;
+			properties_->prc1.n_sites_i_tethered_[x_dub_post]++;
+			// Update kinesin stats
+			KinesinManagement *kinesin4 = &properties_->kinesin4;
+			if(motor_->heads_active_ == 2){
+				kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+				kinesin4->n_bound_ii_tethered_[x_dub_post]++;
+			}
+		}
+		// If untether event DOES occur, counteract force_untether stats
+		else{
+			// NOT a typo; see kinesin ForceUntether
+			properties_->prc1.n_sites_i_tethered_[x_dub_pre]++;
+		}
+	}
+	// xlinks tethered to free motors diffuse as if untethered
+	else{
+		double ran = properties_->gsl.GetRanProb(); 
+		if(ran < 0.5){
+			site_one_->xlink_ = nullptr;
+			site_one_->occupied_ = false;
+			site_one_ = nullptr;
+		}
+		else{
+			site_two_->xlink_ = nullptr;
+			site_two_->occupied_ = false;
+			site_two_ = nullptr;	
+		}
+		heads_active_--;
+		x_dist_ = 0;
+		extension_ = 0; 
+		cosine_ = 0;
+		properties_->prc1.n_sites_ii_untethered_[x_dist_pre] -= 2;
+		properties_->prc1.n_sites_i_untethered_++;
+		properties_->prc1.n_double_bound_[x_dist_pre]--;
+		properties_->prc1.n_single_bound_++;
+	}
 }
 
 void AssociatedProtein::UntetherSatellite(){
@@ -404,6 +592,40 @@ double AssociatedProtein::GetTethBindingWeight(Tubulin *neighbor){
 	return weight; 
 }
 
+double AssociatedProtein::GetTethBindingWeightII(Tubulin *neighbor){
+
+	// Get x_dist of xlink extension if 2nd head were to bind to this neighb
+	Tubulin *site = GetActiveHeadSite();
+	double site_coord = site->index_ + site->mt_->coord_;
+	double neighb_coord = neighbor->index_ + neighbor->mt_->coord_;
+	int x_dist = fabs(site_coord - neighb_coord);
+	// Get current x_dist_dub of tether
+	double stalk_coord = motor_->GetStalkCoordinate();
+	int x_dub = 2*fabs(stalk_coord - site_coord);
+	// Get NEW x_dist_dub if 2nd head were to bind to this neighb
+	double anchor_coord_post = (neighb_coord + site_coord) / 2;
+	int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
+	int x_dub_rest = 2*properties_->kinesin4.rest_dist_;
+	double weight;
+	// If extended, ...
+	if(x_dub >= x_dub_rest){
+		// ... further extension is going away FROM rest
+		if(x_dub_post > x_dub)
+			weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+		else
+			weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+	}
+	// Else, if compressed ...
+	else{
+		// ... further extension is going TO rest
+		if(x_dub_post > x_dub)
+			weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+		else
+			weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+	}
+	return weight;
+}
+
 double AssociatedProtein::GetExtensionForce(Tubulin *site){
 
 	if(heads_active_ == 2){
@@ -445,6 +667,92 @@ Tubulin* AssociatedProtein::GetActiveHeadSite(){
 	}
 }
 
+Tubulin* AssociatedProtein::GetSiteCloserToTethRest(){
+
+	if(heads_active_ == 2
+	&& tethered_ == true){
+		double stalk_coord = motor_->GetStalkCoordinate();
+		double site_one_coord = site_one_->index_ + site_one_->mt_->coord_;
+		int dx_dub_one = 2 * fabs(stalk_coord - site_one_coord);
+		double site_two_coord = site_two_->index_ + site_two_->mt_->coord_;
+		int dx_dub_two = 2 * fabs(stalk_coord - site_two_coord);
+		double anchor_coord = GetAnchorCoordinate();
+		int x_dub = 2 * fabs(anchor_coord - stalk_coord);
+		int rest_dist_dub = 2 * properties_->kinesin4.rest_dist_; 
+		// twice dx of teth extension if 1 head unbinds
+		int dx_teth_dub = x_dist_; 
+		// twice the distance teth is drom rest
+		int dist_from_rest_dub = abs(x_dub - rest_dist_dub);
+		// if unbinding causes teth to go from slack to spring or
+		// vise versa, always choose the site that makes it go slack
+		if(dx_teth_dub > dist_from_rest_dub){
+			if(dx_dub_one < dx_dub_two)
+				return site_one_; 
+			else
+				return site_two_;
+		}
+		else if(x_dub >= rest_dist_dub){
+			if(dx_dub_one < dx_dub_two)
+				return site_one_; 
+			else
+				return site_two_;
+		}
+		else{
+			if(dx_dub_one > dx_dub_two)
+				return site_one_;
+			else
+				return site_two_;
+		}
+	}
+	else{
+		printf("Error in get_site_closer_to_teth_rest XLINK\n");
+		exit(1);
+	}
+}
+
+Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
+
+	if(heads_active_ == 2
+	&& tethered_ == true){
+		double stalk_coord = motor_->GetStalkCoordinate();
+		double site_one_coord = site_one_->index_ + site_one_->mt_->coord_;
+		int dx_dub_one = 2 * fabs(stalk_coord - site_one_coord);
+		double site_two_coord = site_two_->index_ + site_two_->mt_->coord_;
+		int dx_dub_two = 2 * fabs(stalk_coord - site_two_coord);
+		double anchor_coord = GetAnchorCoordinate();
+		int x_dub = 2 * fabs(anchor_coord - stalk_coord);
+		int rest_dist_dub = 2 * properties_->kinesin4.rest_dist_; 
+		// twice dx of teth extension if 1 head unbinds
+		int dx_teth_dub = x_dist_; 
+		// twice the distance teth is drom rest
+		int dist_from_rest_dub = abs(x_dub - rest_dist_dub);
+		// if unbinding causes teth to go from slack to spring or
+		// vise versa, always choose the site that makes it go slack
+		if(dx_teth_dub > dist_from_rest_dub){
+			if(dx_dub_one > dx_dub_two)
+				return site_one_; 
+			else
+				return site_two_;
+		}
+		else if(x_dub >= rest_dist_dub){
+			if(dx_dub_one > dx_dub_two)
+				return site_one_; 
+			else
+				return site_two_;
+		}
+		else{
+			if(dx_dub_one < dx_dub_two)
+				return site_one_;
+			else
+				return site_two_;
+		}
+	}
+	else{
+		printf("Error in get_site_closer_to_teth_rest XLINK\n");
+		exit(1);
+	}
+}
+
 Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
 	
 	UpdateNeighborSites();
@@ -453,7 +761,7 @@ Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
 	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
 		Tubulin *site = neighbor_sites_[i_site]; 
 		double site_coord = site->index_ + site->mt_->coord_; 
-		int x_dist = abs(anch_coord - site_coord);
+		int x_dist = (int)fabs(anch_coord - site_coord);
 //		printf("x_dist is %i\n", x_dist);
 		p_tot += binding_weight_lookup_[x_dist]; 
 	}
@@ -462,7 +770,7 @@ Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
 	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
 		Tubulin *site = neighbor_sites_[i_site];
 		double site_coord = site->index_ + site->mt_->coord_;
-		int x_dist = abs(anch_coord - site_coord); 
+		int x_dist = (int)fabs(anch_coord - site_coord); 
 		p_cum += binding_weight_lookup_[x_dist] / p_tot;
 		if(ran < p_cum){
 			return site;
@@ -494,6 +802,72 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
 		if(ran < p_cum){
 			return site;
 		}
+	}
+	return nullptr;
+}
+
+Tubulin* AssociatedProtein::GetWeightedTethNeighborSiteII(){
+
+	UpdateTethNeighborSitesII();
+	double stalk_coord = motor_->GetStalkCoordinate();
+	double anchor_coord = GetAnchorCoordinate();
+	// All neighbor sites have the same initial x_dub
+	int x_dub = 2*fabs(stalk_coord - anchor_coord);
+	int x_dub_rest = 2*properties_->kinesin4.rest_dist_; 
+	double weight_tot = 0;
+	for(int i_site = 0; i_site < n_teth_neighbor_sites_ii_; i_site++){
+		Tubulin *site = teth_neighbor_sites_ii_[i_site];
+		double site_coord = site->index_ + site->mt_->coord_; 
+		int x_dist = (int)fabs(site_coord - anchor_coord);
+		double anchor_coord_post = (site_coord + anchor_coord) / 2;
+		int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
+		double weight;
+		// If extended, ...
+		if(x_dub >= x_dub_rest){
+			// ... further extension is going away FROM rest
+			if(x_dub_post > x_dub)
+				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+			else
+				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+		}
+		// Else, if compressed ...
+		else{
+			// ... further extension is going TO rest
+			if(x_dub_post > x_dub)
+				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+			else
+				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+		}
+		weight_tot += weight;
+	}
+	double ran = properties_->gsl.GetRanProb();
+	double p_cum = 0;
+	for(int i_site = 0; i_site < n_teth_neighbor_sites_ii_; i_site++){
+		Tubulin *site = teth_neighbor_sites_ii_[i_site];
+		double site_coord = site->index_ + site->mt_->coord_; 
+		int x_dist = (int)fabs(site_coord - anchor_coord);
+		double anchor_coord_post = (site_coord + anchor_coord) / 2;
+		int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
+		double weight;
+		// If extended, ...
+		if(x_dub >= x_dub_rest){
+			// ... further extension is going away FROM rest
+			if(x_dub_post > x_dub)
+				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+			else
+				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+		}
+		// Else, if compressed ...
+		else{
+			// ... further extension is going TO rest
+			if(x_dub_post > x_dub)
+				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+			else
+				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+		}
+		p_cum += weight / weight_tot;
+		if(ran < p_cum)
+			return site;
 	}
 	return nullptr;
 }

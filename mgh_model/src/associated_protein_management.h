@@ -11,8 +11,11 @@ class AssociatedProteinManagement{
 		int n_xlinks_ = 0;
 
 		int n_single_bound_ = 0;
+		std::vector<int> n_bound_i_tethered_;
+		int n_bound_i_tethered_tot_ = 0;
 		// Each possible spring extension has its own double bound list
-		std::vector<int> n_double_bound_; 
+		std::vector<int> n_double_bound_;
+		std::vector< std::vector<int> > n_bound_ii_tethered_;
 		int n_free_tethered_ = 0;
 		int n_untethered_ = 0;
 		
@@ -53,13 +56,19 @@ class AssociatedProteinManagement{
 		double p_bind_i_tethered_; 
 		double p_bind_ii_; 
 		double p_unbind_i_;		
+		std::vector<double> p_unbind_i_tethered_;	
 		std::vector<double> p_unbind_ii_;	// One for each extension
+		std::vector< std::vector<double> > p_unbind_ii_to_teth_;
+		std::vector< std::vector<double> > p_unbind_ii_from_teth_;
 		double p_tether_free_; 
 		double p_untether_free_;
 
 		std::vector<AssociatedProtein> xlink_list_;
 		std::vector<AssociatedProtein*> single_bound_list_;
+		std::vector< std::vector<AssociatedProtein*> > bound_i_tethered_;
 		std::vector< std::vector<AssociatedProtein*> > double_bound_list_;
+		std::vector< std::vector< std::vector<AssociatedProtein*> > >
+			bound_ii_tethered_;
 		std::vector<AssociatedProtein*> free_tethered_list_;
 		std::vector<AssociatedProtein*> untethered_list_;
 
@@ -93,7 +102,9 @@ class AssociatedProteinManagement{
 		void UntetheredCheck(AssociatedProtein *xlink);
 	
 		void UpdateSingleBoundList();
+		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();
+		void UpdateBoundIITethered();
 		void UpdateFreeTetheredList();
 		void UpdateUntetheredList();
 		
@@ -137,12 +148,12 @@ class AssociatedProteinManagement{
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
-		int GetNumToBind_II_Tethered();		//XXX
+		int GetNumToBind_II_Tethered();
 		int GetNumToUnbind_I();
-		int GetNumToUnbind_I_Tethered(int x_dist_dub); // XXX
+		int GetNumToUnbind_I_Tethered(int x_dist_dub);
 		int GetNumToUnbind_II(int x_dist);
-		int GetNumToUnbind_II_To_Teth(int x_dist, int x_dist_dub); //XXX
-		int GetNumToUnbind_II_From_Teth(int x_dist, int x_dist_dub); //XXX
+		int GetNumToUnbind_II_To_Teth(int x_dist_dub, int x_dist);
+		int GetNumToUnbind_II_From_Teth(int x_dist_dub, int x_dist);
 		int GetNumToTether_Free();
 		int GetNumToUntether_Free();
 
@@ -152,10 +163,10 @@ class AssociatedProteinManagement{
 		void RunKMC_Bind_II();
 		void RunKMC_Bind_II_Tethered();  // XXX 
 		void RunKMC_Unbind_I();
-		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 	//XXX
+		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
 		void RunKMC_Unbind_II(int x_dist);
-		void RunKMC_Unbind_II_To_Teth(int x_dist, int x_dist_dub);	//XXX
-		void RunKMC_Unbind_II_From_Teth(int x_dist, int x_dist_dub);	//XXX
+		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
+		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Tether_Free();
 		void RunKMC_Untether_Free();
 };

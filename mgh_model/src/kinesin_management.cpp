@@ -81,7 +81,7 @@ void KinesinManagement::SetParameters(){
 		if(x_dist_dub == 2*rest_dist_){
 			// Weights according to Lanksy et al. 
 			dU_from = (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
-			dU_to = (1/2)*(k_spring*dr_toward*dr_toward - k_eff_slack*dr*dr);
+			dU_to = (0.5)*(k_spring*dr_toward*dr_toward - k_eff_slack*dr*dr);
 			weight_to = exp(-dU_to/(2*kbT));
 		   	weight_from = exp(-dU_from/(2*kbT));
         }
@@ -160,7 +160,7 @@ void KinesinManagement::SetParameters(){
 		if(x_dist_dub == 2*rest_dist_){
 			U_tot = (k_eff_slack/2)*dr*dr;
 			dU_from = (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
-			dU_to = (1/2)*(k_spring*dr_toward*dr_toward - k_eff_slack*dr*dr);
+			dU_to = (0.5)*(k_spring*dr_toward*dr_toward - k_eff_slack*dr*dr);
         }
 		// use k_spring if extension is positive
 		else if(dr > 0){
@@ -1898,70 +1898,75 @@ void KinesinManagement::RunKMC(){
 	//		properties_->wallace.PrintMicrotubules(0.000);
             switch(kmc_event){
 				case 10:
-	//					printf("free motor pseudo-bound\n");
+//						printf("free motor pseudo-bound\n");
 						KMC_Bind_I();
                         break;
                 case 11:
-	//					printf("tethered motor pseudo-bound\n");
+//						printf("tethered motor pseudo-bound\n");
 						KMC_Bind_I_Tethered();
                         break;
 				case 12:
-	//					printf("pseudo motor bound\n");
+//						printf("pseudo motor bound\n");
 						KMC_Bind_II();
 						break;
 				case 13:
+//						printf("bind ii to teth\n");
 						KMC_Bind_II_To_Teth(x_dist_doubled); 
 						break;
 				case 14: 
+//						printf("bind ii from teth\n");
 						KMC_Bind_II_From_Teth(x_dist_doubled);
 						break;
 				case 20:
-	//					printf("pseudo-bound motor unbound\n");
+//						printf("pseudo-bound motor unbound\n");
 						KMC_Unbind_I();
 						break;
 				case 21:
+//						printf("unbind i tethered\n");
 						KMC_Unbind_I_Tethered(x_dist_doubled);
 						break;
 				case 22:
-	//					printf("untethered stepable motor unbound\n");
+//						printf("untethered stepable motor unbound\n");
 						KMC_Unbind_II();
                         break;
 				case 23:
+///						printf("unbind ii to teth\n");
 						KMC_Unbind_II_To_Teth(x_dist_doubled);
 						break;
 				case 24:
+//						printf("unbind ii from teth\n");
 						KMC_Unbind_II_From_Teth(x_dist_doubled);
 						break;
                 case 30:
-	//					printf("free motor tethered\n");
+//						printf("free motor tethered\n");
 						KMC_Tether_Free();
                         break;
 				case 31:
-	//					printf("bound motor tethered\n");
+//						printf("bound motor tethered\n");
 						KMC_Tether_Bound();
 						break;
 				case 50:
-	//					printf("free motor untethered\n");
+//						printf("free motor untethered\n");
 						KMC_Untether_Free();
 						break;
 				case 51:
-	//					printf("bound motor (ext %i) untethered\n", 
-	//							x_dist_doubled);
+//						printf("bound motor (ext %i) untethered\n", 
+//								x_dist_doubled);
 						KMC_Untether_Bound(x_dist_doubled);
 						break;
 				case 60:
-	//					printf("untethered motor stepped\n");
+//						printf("untethered motor stepped\n");
 						KMC_Step();
 						break;
 						
 				case 62:
-	//					printf("tethered motor (ext %i) stepped\n", 
-	//							x_dist_doubled);
+//						printf("tethered motor (ext %i) stepped\n", 
+//								x_dist_doubled);
 						KMC_Step_ToTethRest(x_dist_doubled);
 						break;
 				case 63:
-	//					printf("tethered motor (ext %i) stepped\n", 
-	//							x_dist_doubled);
+//						printf("tethered motor (ext %i) stepped\n", 
+//								x_dist_doubled);
 						KMC_Step_FromTethRest(x_dist_doubled);
 						break;
             }
@@ -2035,11 +2040,13 @@ void KinesinManagement::KMC_Bind_I_Tethered(){
 					AssociatedProteinManagement *prc1 = &properties_->prc1;
 					int x_dist_dub = motor->x_dist_doubled_;
 					if(xlink->heads_active_ == 1){
+						prc1->n_single_bound_--;
 						prc1->n_sites_i_tethered_[x_dist_dub]++;	
 						prc1->n_sites_i_untethered_--;
 					}
 					else if(xlink->heads_active_ == 2){
 						int x_dist = xlink->x_dist_;
+						prc1->n_double_bound_[x_dist]--;
 						prc1->n_sites_ii_tethered_[x_dist_dub][x_dist] += 2;
 						prc1->n_sites_ii_untethered_[x_dist] -= 2;
 					}
@@ -2453,7 +2460,6 @@ void KinesinManagement::KMC_Unbind_I(){
 		motor->rear_site_ = nullptr;
 		// Update statistics
 		if(motor->tethered_ == true){
-			printf("wut UNBIND\n");
 			if(motor->xlink_->heads_active_ == 0)
 				motor->UntetherSatellite();
 			else{
@@ -2499,11 +2505,13 @@ void KinesinManagement::KMC_Unbind_I_Tethered(int x_dist_doubled){
 				AssociatedProtein *xlink = motor->xlink_;
 				AssociatedProteinManagement *prc1 = &properties_->prc1;	
 				if(xlink->heads_active_ == 1){
+					prc1->n_single_bound_++;
 					prc1->n_sites_i_tethered_[x_dist_dub]--;
 					prc1->n_sites_i_untethered_++;
 				}
 				else{
 					int x_dist = xlink->x_dist_;
+					prc1->n_double_bound_[x_dist]++;
 					prc1->n_sites_ii_tethered_[x_dist_dub][x_dist] -= 2;
 					prc1->n_sites_ii_untethered_[x_dist] += 2;
 				}
@@ -2586,7 +2594,6 @@ void KinesinManagement::KMC_Unbind_II_To_Teth(int x_dist_doubled){
 		if(motor->tethered_ == true){
 			if(motor->xlink_->heads_active_ > 0){
 				// Update statistics
-				n_bound_i_tethered_[x_dub]++;
 				AssociatedProtein* xlink = motor->xlink_;
 				int x_dub_pre = motor->x_dist_doubled_;
 				if(x_dub_pre != x_dub){
@@ -2667,7 +2674,6 @@ void KinesinManagement::KMC_Unbind_II_From_Teth(int x_dist_doubled){
 		if(motor->tethered_ == true){
 			if(motor->xlink_->heads_active_ > 0){
 				// Update statistics
-				n_bound_i_tethered_[x_dub]++;
 				AssociatedProtein* xlink = motor->xlink_;
 				int x_dub_pre = motor->x_dist_doubled_;
 				if(x_dub_pre != x_dub){
@@ -2746,7 +2752,6 @@ void KinesinManagement::KMC_Tether_Bound(){
 
 	UpdateBoundUntethered();
 	if(n_bound_untethered_ > 0){
-		// Pick a random free tethered motor
 		int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
 		Kinesin *motor = bound_untethered_[i_motor];
 		AssociatedProtein* xlink = nullptr;
@@ -2796,6 +2801,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 			AssociatedProteinManagement *prc1 = &properties_->prc1;
 			prc1->n_untethered_--;
 			if(xlink->heads_active_ == 1){
+				prc1->n_single_bound_--;
 				prc1->n_sites_i_untethered_--;
 				prc1->n_sites_i_tethered_[x_dist_dub]++;
 			}
@@ -2807,6 +2813,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 					printf("error in tetherbound 2....\n");
 					exit(1);
 				}
+				prc1->n_double_bound_[x_dist]--;
 				prc1->n_sites_ii_untethered_[x_dist] -= 2;
 				prc1->n_sites_ii_tethered_[x_dist_dub][x_dist] += 2;
 			}
@@ -2827,7 +2834,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 
 void KinesinManagement::KMC_Untether_Bound(int x_dist_doubled){
 
-	UpdateBoundUntethered();
+	UpdateBoundTethered();
 	int n_bound_tethered = n_bound_tethered_[x_dist_doubled];
 	if(n_bound_tethered  > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_bound_tethered);
@@ -2854,15 +2861,20 @@ void KinesinManagement::KMC_Untether_Bound(int x_dist_doubled){
 			n_bound_ii_tethered_tot_--;
 			n_bound_ii_++;
 		}
+		else{
+			n_bound_i_++;
+		}
 		properties_->prc1.n_untethered_++;
 		// Update sites for prc1_management
 		AssociatedProteinManagement *prc1 = &properties_->prc1;
 		if(xlink->heads_active_ == 1){
+			prc1->n_single_bound_++;
 			prc1->n_sites_i_tethered_[x_dub_pre]--;
 			prc1->n_sites_i_untethered_++;
 		}
 		else if(xlink->heads_active_ ==2){
 			int x_dist = xlink->x_dist_;
+			prc1->n_double_bound_[x_dist]++;
 			prc1->n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
 			prc1->n_sites_ii_untethered_[x_dist] += 2;
 		}

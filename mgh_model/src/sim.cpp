@@ -30,11 +30,12 @@ int main(int argc, char *argv[]){
 //XXX	properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
 		// MTs go last because they sum up all the forces and stuff
-		if(parameters.microtubules.diffusion == true)
+		if(parameters.microtubules.diffusion == true){
 			properties.microtubules.RunDiffusion();
+		}
 		// Some good ole-fashioned ASCII printout
 		if(parameters.microtubules.printout == true)
-			if(i_step % 1000 == 0)
+			if(i_step % 1 == 0)
 				properties.wallace.PrintMicrotubules(0);
 	}
 

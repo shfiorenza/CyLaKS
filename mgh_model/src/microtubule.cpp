@@ -62,6 +62,122 @@ void Microtubule::UpdateExtensions(){
 	int n_sites = n_sites_;
 	// Run through all sites on MT
 	for(int i_site = 0; i_site < n_sites; i_site++){
+		Tubulin *site = &lattice_[i_site];
+		// Only update extensions from xlinks (both tether and xlink itself)
+		if(site->xlink_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_;
+			// If xlink is doubly-bound, update its own extension
+			if(xlink->heads_active_ == 2){
+				int x_pre = xlink->x_dist_;
+				// If xlink is tethered, must be careful about teth ext
+				if(xlink->tethered_){
+					Kinesin *motor = xlink->motor_;
+					int x_dub_pre = motor->x_dist_doubled_;
+					xlink->UpdateExtension();
+					// Make sure we didn't force an unbind event
+					if(xlink->heads_active_ == 2){
+						int x_post = xlink->x_dist_; 
+						motor->UpdateExtension();	
+						// Make sure we didn't force an untether event
+						if(motor->tethered_){
+							int x_dub_post = motor->x_dist_doubled_;
+							// Only bound motors contribute to teth stats
+							if(motor->heads_active_ > 0){
+								prc1->n_sites_ii_tethered_
+									[x_dub_pre][x_pre] -= 2;
+								prc1->n_sites_ii_tethered_
+									[x_dub_post][x_post] += 2;
+								// Update kinesin statistics
+								if(motor->heads_active_ == 2){
+									kinesin4->n_bound_ii_tethered_
+										[x_dub_pre]--;
+									kinesin4->n_bound_ii_tethered_
+										[x_dub_post]++;
+								}
+							}
+							// Xlinks attached to free motors diffuse 
+							// as though they are untethered
+							else{
+								prc1->n_double_bound_[x_pre]--;
+								prc1->n_double_bound_[x_post]++;
+								prc1->n_sites_ii_untethered_[x_pre] -= 2;
+								prc1->n_sites_ii_untethered_[x_post] += 2;
+							}
+						}
+						// If we did force an untether, correct stats
+						else{
+							
+							prc1->n_sites_ii_tethered_
+								[x_dub_pre][x_pre] -= 2;	
+							prc1->n_sites_ii_tethered_
+								[x_dub_pre][x_post] += 2;
+						}
+					}
+					/*
+					// If we did force an unbind, still gotta update teth ext
+					else{
+						printf("YO UNBIND\n");
+					//	motor->UpdateExtension();
+						// Make sure we didn't force an untether event
+						if(motor->tethered_){
+							printf("hola\n");
+						}
+						// If we did force an untether, correct statistics 
+						else{
+							printf("bonjour\n");
+					//		exit(1);
+						}
+					}
+					*/
+				}
+				// Otherwise if xlink isn't tethered, simply update own ext
+				else{
+					xlink->UpdateExtension();
+					// Make sure we didn't force an unbind event
+					if(xlink->heads_active_ == 2){
+						int x_post = xlink->x_dist_;
+						// If x changes, update statistics
+						if(x_post != x_pre){
+							prc1->n_sites_ii_untethered_[x_pre] -= 2;
+							prc1->n_sites_ii_untethered_[x_post] += 2;
+							prc1->n_double_bound_[x_pre]--;
+							prc1->n_double_bound_[x_post]++;
+						}
+					}
+				}
+			}
+			// Otherwise, check to see if singly-bound xlink is tethered
+			else if(xlink->tethered_){
+				Kinesin *motor = xlink->motor_; 
+				/*
+				printf("wuuut %i ext (%i heads) @ site %i\n", 
+						motor->x_dist_doubled_, motor->heads_active_, 
+						i_site);
+				*/
+				// Only bound motors have valid tether extensions
+				if(motor->heads_active_ > 0){
+					int x_dub_pre = motor->x_dist_doubled_; 
+					motor->UpdateExtension(); 
+					// Make sure we didn't force an untether event
+					if(motor->tethered_){
+						int x_dub_post = motor->x_dist_doubled_; 
+						// If 2x changes, update statistics
+						if(x_dub_post != x_dub_pre){
+							prc1->n_sites_i_tethered_[x_dub_pre]--;
+							prc1->n_sites_i_tethered_[x_dub_post]++;
+							if(motor->heads_active_ == 2){
+								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+/*
+	for(int i_site = 0; i_site < n_sites; i_site++){
 		Tubulin *site = &lattice_[i_site]; 
 		// Check if site is occupied by a motor
 		if(site->motor_ != nullptr){
@@ -103,16 +219,18 @@ void Microtubule::UpdateExtensions(){
 			AssociatedProtein *xlink = site->xlink_;
 			if(xlink->heads_active_ == 2){
 				int x_pre = xlink->x_dist_;
+				bool tethered_prior = xlink->tethered_; 
 				xlink->UpdateExtension();
 				// Make sure we didn't force an unbind event
 				if(xlink->heads_active_ == 2){
 					int x_post = xlink->x_dist_;
 					if(x_pre != x_post){
-						prc1->n_double_bound_[x_pre]--;
-						prc1->n_double_bound_[x_post]++;
-						if(xlink->tethered_ == false){
+						if(xlink->tethered_ == false
+						&& tethered_prior == false){
 							prc1->n_sites_ii_untethered_[x_pre] -= 2;
 							prc1->n_sites_ii_untethered_[x_post] += 2;
+							prc1->n_double_bound_[x_pre]--;
+							prc1->n_double_bound_[x_post]++;
 						}
 						else{
 							Kinesin *motor = xlink->motor_;
@@ -160,6 +278,11 @@ void Microtubule::UpdateExtensions(){
 						}
 					}
 				}
+				// If we forced an unbind event, we gotta check if
+				// we also forced an untether and correct stat if so
+				else{
+					printf("hola\n");
+				}
 			}
 			// If xlink is single bound, check if motor is on another MT
 			else if(xlink->tethered_ == true){
@@ -185,6 +308,7 @@ void Microtubule::UpdateExtensions(){
 			}
 		}
 	}
+	*/
 }
 
 double Microtubule::GetNetForce(){

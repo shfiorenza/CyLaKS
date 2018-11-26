@@ -207,6 +207,7 @@ void MicrotubuleManagement::RunDiffusion(){
 		/*  Run through MT list and update displacementsi */
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){ 
 			Microtubule *mt = &mt_list_[i_mt];
+			Microtubule *neighb = &mt_list_[mt->mt_index_adj_];
 			int n_steps = displacement[i_mt];
 			int dx = 0;
 			if(n_steps > 0)
@@ -218,6 +219,7 @@ void MicrotubuleManagement::RunDiffusion(){
 			for(int i_step = 0; i_step < n_steps; i_step++){
 				mt->coord_ += dx; 
 				mt->UpdateExtensions();
+				neighb->UpdateExtensions();
 			}
 		}
 	}

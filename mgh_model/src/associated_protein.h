@@ -16,6 +16,7 @@ class AssociatedProtein{
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
 		int n_teth_neighbor_sites_ = 0;
+		int n_teth_neighbor_sites_ii_ = 0;
 
 		// x_dist_ is used to index the xlink extensions for lookup
 		// e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
@@ -36,8 +37,11 @@ class AssociatedProtein{
 
 		std::vector<Tubulin*> neighbor_sites_;
 		std::vector<Tubulin*> teth_neighbor_sites_; 
+		std::vector<Tubulin*> teth_neighbor_sites_ii_; 
 		std::vector<double> binding_weight_lookup_;
 		std::vector<double> teth_binding_weight_lookup_; 
+		std::vector< std::vector<double> > teth_binding_weight_ii_to_; 
+		std::vector< std::vector<double> > teth_binding_weight_ii_from_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -52,9 +56,11 @@ class AssociatedProtein{
 		void InitiateNeighborLists();
 		void PopulateBindingLookupTable();
 		void PopulateTethBindingLookupTable();
+		void PopulateTethBindingIILookupTable();
 
 		void UpdateNeighborSites();
 		void UpdateTethNeighborSites();
+		void UpdateTethNeighborSitesII();
 
 		void UpdateExtension();
 		void ForceUnbind(int x_dist_pre); 
@@ -65,9 +71,13 @@ class AssociatedProtein{
 		double GetAnchorCoordinate();
 		double GetBindingWeight(Tubulin *neighbor);
 		double GetTethBindingWeight(Tubulin *neighbor); 
+		double GetTethBindingWeightII(Tubulin *neighbor);
 		double GetExtensionForce(Tubulin *site);
 		Tubulin* GetActiveHeadSite();
+		Tubulin* GetSiteCloserToTethRest();
+		Tubulin* GetSiteFartherFromTethRest();
 		Tubulin* GetWeightedNeighborSite();
 		Tubulin* GetWeightedTethNeighborSite();
+		Tubulin* GetWeightedTethNeighborSiteII();
 };
 #endif

@@ -1,13 +1,13 @@
 seed: 329954438
-n_steps: 50000000 #0
+n_steps: 500000000
 n_datapoints: 100000
 data_threshold: 0
-delta_t: 2e-05 ######e-06
+delta_t: 2e-06
 kbT: 4.114
 eta: 0.001
 microtubules:
   count: 2
-  length: 50 #######500
+  length: 500
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -20,7 +20,7 @@ microtubules:
   - 0
   immobile_until:
   - 9500
-  - 50 ######500
+  - 500
   printout: false
   diffusion: true
 motors:

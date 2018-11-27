@@ -154,10 +154,14 @@ void MicrotubuleManagement::RunDiffusion(){
 		double forces_summed[n_mts];
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){
 			Microtubule *mt = &mt_list_[i_mt]; 
-			if(i_itr == 0)		// For checking symmetry
+			if(i_itr == 0){		// For checking symmetry
+				mt->UpdateExtensions(); 
 				forces_summed[i_mt] = mt->GetNetForce();
-			else if(current_step >= unpin_step[i_mt])
+			}
+			else if(current_step >= unpin_step[i_mt]){
+				mt->UpdateExtensions();
 				forces_summed[i_mt] = mt->GetNetForce();
+			}
 		}
 		// Check for symmetry on first iteration only
 		if(i_itr == 0){
@@ -178,11 +182,10 @@ void MicrotubuleManagement::RunDiffusion(){
 		int displacement[n_mts];
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){
 			if(current_step >= unpin_step[i_mt]){
-				double forces_eff = forces_summed[i_mt] / n_iterations;
-				double velocity = forces_eff / gamma; 
+				double velocity = forces_summed[i_mt] / gamma; 
 				// gaussian noise is added into the calculated displacement
 				double noise = properties_->gsl.GetGaussianNoise(sigma); 
-				double raw_displacement = velocity * delta_t + noise;
+				double raw_displacement = velocity*delta_t_eff + noise;
 //				printf("dx: %g (%g noise) sites for mt #%i\n", 
 //					raw_displacement/site_size, noise_eff/site_size, i_mt);
 				double site_displacement = (raw_displacement) / site_size;
@@ -210,8 +213,9 @@ void MicrotubuleManagement::RunDiffusion(){
 			Microtubule *neighb = &mt_list_[mt->mt_index_adj_];
 			int n_steps = displacement[i_mt];
 			int dx = 0;
-			if(n_steps > 0)
+			if(n_steps > 0){
 				dx = 1;
+			}
 			else if(n_steps < 0){
 				dx = -1;
 				n_steps = abs(n_steps);

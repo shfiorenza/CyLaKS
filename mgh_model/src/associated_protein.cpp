@@ -380,7 +380,6 @@ void AssociatedProtein::UpdateExtension(){
 		else{
 			ForceUnbind(x_dist_pre);
 //			printf("forced an unbind event >:O\n");
-//			fflush(stdout); 
 		}
 	}
 	else if(heads_active_ == 1){
@@ -642,6 +641,8 @@ double AssociatedProtein::GetExtensionForce(Tubulin *site){
 				force = -1 * force_mag * cosine_;
 			return force; 
 		}
+		else
+			return 0;
 	}
 	else{
 		printf("error in get ext force (xlink)\n");

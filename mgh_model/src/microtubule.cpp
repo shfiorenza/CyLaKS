@@ -79,7 +79,7 @@ void Microtubule::UpdateExtensions(){
 						int x_post = xlink->x_dist_; 
 						motor->UpdateExtension();	
 						// Make sure we didn't force an untether event
-						if(motor->tethered_){
+						if(xlink->tethered_){
 							int x_dub_post = motor->x_dist_doubled_;
 							// Only bound motors contribute to teth stats
 							if(motor->heads_active_ > 0){
@@ -106,29 +106,12 @@ void Microtubule::UpdateExtensions(){
 						}
 						// If we did force an untether, correct stats
 						else{
-							
 							prc1->n_sites_ii_tethered_
 								[x_dub_pre][x_pre] -= 2;	
 							prc1->n_sites_ii_tethered_
 								[x_dub_pre][x_post] += 2;
 						}
 					}
-					/*
-					// If we did force an unbind, still gotta update teth ext
-					else{
-						printf("YO UNBIND\n");
-					//	motor->UpdateExtension();
-						// Make sure we didn't force an untether event
-						if(motor->tethered_){
-							printf("hola\n");
-						}
-						// If we did force an untether, correct statistics 
-						else{
-							printf("bonjour\n");
-					//		exit(1);
-						}
-					}
-					*/
 				}
 				// Otherwise if xlink isn't tethered, simply update own ext
 				else{
@@ -136,179 +119,34 @@ void Microtubule::UpdateExtensions(){
 					// Make sure we didn't force an unbind event
 					if(xlink->heads_active_ == 2){
 						int x_post = xlink->x_dist_;
-						// If x changes, update statistics
-						if(x_post != x_pre){
-							prc1->n_sites_ii_untethered_[x_pre] -= 2;
-							prc1->n_sites_ii_untethered_[x_post] += 2;
-							prc1->n_double_bound_[x_pre]--;
-							prc1->n_double_bound_[x_post]++;
-						}
+						prc1->n_sites_ii_untethered_[x_pre] -= 2;
+						prc1->n_sites_ii_untethered_[x_post] += 2;
+						prc1->n_double_bound_[x_pre]--;
+						prc1->n_double_bound_[x_post]++;
 					}
 				}
 			}
 			// Otherwise, check to see if singly-bound xlink is tethered
 			else if(xlink->tethered_){
 				Kinesin *motor = xlink->motor_; 
-				/*
-				printf("wuuut %i ext (%i heads) @ site %i\n", 
-						motor->x_dist_doubled_, motor->heads_active_, 
-						i_site);
-				*/
 				// Only bound motors have valid tether extensions
 				if(motor->heads_active_ > 0){
 					int x_dub_pre = motor->x_dist_doubled_; 
 					motor->UpdateExtension(); 
 					// Make sure we didn't force an untether event
-					if(motor->tethered_){
+					if(xlink->tethered_){
 						int x_dub_post = motor->x_dist_doubled_; 
-						// If 2x changes, update statistics
-						if(x_dub_post != x_dub_pre){
-							prc1->n_sites_i_tethered_[x_dub_pre]--;
-							prc1->n_sites_i_tethered_[x_dub_post]++;
-							if(motor->heads_active_ == 2){
-								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
-								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
-							}
+						prc1->n_sites_i_tethered_[x_dub_pre]--;
+						prc1->n_sites_i_tethered_[x_dub_post]++;
+						if(motor->heads_active_ == 2){
+							kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
+							kinesin4->n_bound_ii_tethered_[x_dub_post]++;
 						}
 					}
 				}
 			}
 		}
 	}
-
-/*
-	for(int i_site = 0; i_site < n_sites; i_site++){
-		Tubulin *site = &lattice_[i_site]; 
-		// Check if site is occupied by a motor
-		if(site->motor_ != nullptr){
-			Kinesin *motor = site->motor_;
-			// Update tether extension if motor is tethered
-			if(motor->tethered_ == true){
-				int x_dub_pre = motor->x_dist_doubled_;
-				if(motor->xlink_->heads_active_ > 0){
-					motor->UpdateExtension();
-					// Make sure we didn't force an untether event
-					if(motor->tethered_ == true){
-						int x_dub_post = motor->x_dist_doubled_;
-						if(x_dub_pre != x_dub_post){
-							// Only update kinesin stats if double-bound
-							if(motor->heads_active_ == 2){
-								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
-								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
-							}
-							// Update site statistics for prc1
-							AssociatedProtein *xlink = motor->xlink_;
-							if(xlink->heads_active_ == 1){
-								prc1->n_sites_i_tethered_[x_dub_pre]--;
-								prc1->n_sites_i_tethered_[x_dub_post]++;
-							}
-							else if(xlink->heads_active_ == 2){
-								int x_dist = xlink->x_dist_;
-								prc1->n_sites_ii_tethered_[x_dub_pre][x_dist] 
-									-= 2;
-								prc1->n_sites_ii_tethered_[x_dub_post][x_dist]
-									+= 2;
-							}
-						}
-					}
-				}
-			}
-		}
-		// Check if site is occupied by an xlink
-		if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
-			if(xlink->heads_active_ == 2){
-				int x_pre = xlink->x_dist_;
-				bool tethered_prior = xlink->tethered_; 
-				xlink->UpdateExtension();
-				// Make sure we didn't force an unbind event
-				if(xlink->heads_active_ == 2){
-					int x_post = xlink->x_dist_;
-					if(x_pre != x_post){
-						if(xlink->tethered_ == false
-						&& tethered_prior == false){
-							prc1->n_sites_ii_untethered_[x_pre] -= 2;
-							prc1->n_sites_ii_untethered_[x_post] += 2;
-							prc1->n_double_bound_[x_pre]--;
-							prc1->n_double_bound_[x_post]++;
-						}
-						else{
-							Kinesin *motor = xlink->motor_;
-							int x_dub_pre = motor->x_dist_doubled_;
-							motor->UpdateExtension();
-							// Make sure we didn't force an untether event
-							if(motor->tethered_ == true){
-								// Only bound motors contribute to teth stats
-								if(motor->heads_active_ > 0){
-									int x_dub_post = motor->x_dist_doubled_;
-									if(x_dub_pre != x_dub_post){
-										prc1->n_sites_ii_tethered_
-											[x_dub_pre][x_pre] -= 2;
-										prc1->n_sites_ii_tethered_
-											[x_dub_post][x_post] += 2;
-										// Update kinesin statistics
-										if(motor->heads_active_ == 2){
-											kinesin4->n_bound_ii_tethered_
-												[x_dub_pre]--;
-											kinesin4->n_bound_ii_tethered_
-												[x_dub_post]++;
-										}
-									}
-									else{
-										prc1->n_sites_ii_tethered_
-											[x_dub_pre][x_pre] -= 2;
-										prc1->n_sites_ii_tethered_
-											[x_dub_pre][x_post] += 2;
-									}
-								}
-								// Xlinks attached to free motors diffuse 
-								// as though they are untethered
-								else{
-									prc1->n_sites_ii_untethered_[x_pre] -= 2;
-									prc1->n_sites_ii_untethered_[x_post] += 2;
-								}
-							}
-							// If untether event was forced, correct stats
-							else{
-								prc1->n_sites_ii_tethered_
-									[x_dub_pre][x_pre] -= 2;	
-								prc1->n_sites_ii_tethered_
-									[x_dub_pre][x_post] += 2;
-							}
-						}
-					}
-				}
-				// If we forced an unbind event, we gotta check if
-				// we also forced an untether and correct stat if so
-				else{
-					printf("hola\n");
-				}
-			}
-			// If xlink is single bound, check if motor is on another MT
-			else if(xlink->tethered_ == true){
-				Kinesin *motor = xlink->motor_;
-				if(motor->heads_active_ > 0
-				&& motor->mt_ != this){
-					int x_dub_pre = motor->x_dist_doubled_;
-					motor->UpdateExtension();
-					// Make sure we didn't force an unbinding event
-					if(motor->tethered_ == true){
-						int x_dub_post = motor->x_dist_doubled_;
-						if(x_dub_pre != x_dub_post){
-							prc1->n_sites_i_tethered_[x_dub_pre]--;
-							prc1->n_sites_i_tethered_[x_dub_post]++;
-							// Update kinesin statistics
-							if(motor->heads_active_ == 2){
-								kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
-								kinesin4->n_bound_ii_tethered_[x_dub_post]++;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	*/
 }
 
 double Microtubule::GetNetForce(){
@@ -316,53 +154,65 @@ double Microtubule::GetNetForce(){
 	double forces_summed = 0;
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
-		// Check if site is occupied by a motor
-		if(site->motor_ != nullptr){
-			Kinesin *motor = site->motor_;
-			// Motors can only exert forces if they're tethered
-			if(motor->tethered_ == true){
-				AssociatedProtein *xlink = motor->xlink_;
-				// If xlink is single bound, only add force if
-				// it's on a different microtubule
-				if(xlink->heads_active_ == 1){
-					Tubulin *xlink_site = xlink->GetActiveHeadSite();
-					if(site->mt_ != xlink_site->mt_){
-						if(motor->heads_active_ == 1){
-							forces_summed += motor->GetTetherForce(site);
-						}
-						// Only count force from 1st foot
-						else if(site == motor->front_site_){
+		// Check if site is occupied by xlink head
+		if(site->xlink_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_;
+			// If doubly-bound, get force from self and potentially teth
+			if(xlink->heads_active_ == 2){
+				forces_summed += xlink->GetExtensionForce(site);
+				if(xlink->tethered_){
+					Kinesin* motor = xlink->motor_;
+					// Only bound motors have valid tether extensions
+					if(motor->heads_active_ > 0){
+						// Only motors on OTHER MTs can exert a force
+						if(motor->mt_ != site->mt_){
 							forces_summed += motor->GetTetherForce(site);
 						}
 					}
 				}
-				// If xlink is double bound, add force regardless
-				else if(xlink->heads_active_ == 2){
-					if(motor->heads_active_ == 1){
-						forces_summed += motor->GetTetherForce(site);
-					}
-					// Only count force from 1st foot (no double counting)
-					else if(site == motor->front_site_){
+			}
+			// Otherwise if singly-bound, check for tether force
+			else if(xlink->tethered_){
+				Kinesin* motor = xlink->motor_;
+				// Only bound motors have valid tether extensions
+				if(motor->heads_active_ > 0){
+					// Only motors on OTHER MTs can exert a force
+					if(motor->mt_ != site->mt_){
 						forces_summed += motor->GetTetherForce(site);
 					}
 				}
 			}
 		}
-		// Otherwise, check if site is occupied by an xlink
-		else if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
-			// Xlinks can only exert forces if they're double bound
-			if(xlink->heads_active_ == 2){
-				forces_summed += xlink->GetExtensionForce(site);
-			}
-			// Motors tethered to this xlink can also exert forces
-			if(xlink->tethered_ == true){
-				Kinesin *motor = xlink->motor_;
-				// To avoid double counting, make sure xlink's motor
-				// is on a different microtubule when double bound
-				if(site->mt_ != motor->mt_ 
-				&& motor->heads_active_ > 0){
-					forces_summed += motor->GetTetherForce(site);
+		// Otherwise, check if occupied by motor head
+		else if(site->motor_ != nullptr){
+			Kinesin* motor = site->motor_;
+			// Motors can only exert a force if they are tethered
+			if(motor->tethered_){
+				AssociatedProtein* xlink = motor->xlink_;
+				// singly-bound xlinks must be on other MTs to exert a force
+				if(xlink->heads_active_ == 1){
+					Tubulin* xlink_site = xlink->GetActiveHeadSite();
+					if(xlink_site->mt_ != site->mt_){
+						// With 1 head active, no danger of double counting
+						if(motor->heads_active_ == 1){
+							forces_summed += motor->GetTetherForce(site);
+						}
+						// With 2 heads active, only get force from front
+						else if(site == motor->front_site_){
+							forces_summed += motor->GetTetherForce(site);
+						}
+					}
+				}
+				// If xlink is doubly-bound, get reaction force
+				else if(xlink->heads_active_ == 2){
+					// With 1 head active, no danger of double counting
+					if(motor->heads_active_ == 1){
+						forces_summed += motor->GetTetherForce(site);
+					}
+					// With 2 heads active, only get force from front
+					else if(site == motor->front_site_){
+						forces_summed += motor->GetTetherForce(site);
+					}
 				}
 			}
 		}
@@ -375,49 +225,65 @@ double Microtubule::GetNetForce_Motors(){
 	double forces_summed = 0;
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
-		// Check if site is occupied by a motor
-		if(site->motor_ != nullptr){
-			Kinesin *motor = site->motor_;
-			// Motors can only exert forces if they're tethered
-			if(motor->tethered_ == true){
-				AssociatedProtein *xlink = motor->xlink_;
-				// If xlink is single bound, only add force if
-				// it's on a different microtubule
-				if(xlink->heads_active_ == 1){
-					Tubulin *xlink_site = xlink->GetActiveHeadSite();
-					if(site->mt_ != xlink_site->mt_){
-						if(motor->heads_active_ == 1){
-							forces_summed += motor->GetTetherForce(site);
-						}
-						// Only count force from 1st foot (no double counting)
-						else if(site == motor->front_site_){
+		// Check if site is occupied by xlink head
+		if(site->xlink_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_;
+			// If doubly-bound, get force from self and potentially teth
+			if(xlink->heads_active_ == 2){
+				forces_summed += xlink->GetExtensionForce(site);
+				if(xlink->tethered_){
+					Kinesin* motor = xlink->motor_;
+					// Only bound motors have valid tether extensions
+					if(motor->heads_active_ > 0){
+						// Only motors on OTHER MTs can exert a force
+						if(motor->mt_ != site->mt_){
 							forces_summed += motor->GetTetherForce(site);
 						}
 					}
 				}
-				// If xlink is double bound, add force regardless
-				else if(xlink->heads_active_ == 2){
-					if(motor->heads_active_ == 1){
-						forces_summed += motor->GetTetherForce(site);
-					}
-					// Only count force from 1st foot (no double counting)
-					else if(site == motor->front_site_){
+			}
+			// Otherwise if singly-bound, check for tether force
+			else if(xlink->tethered_){
+				Kinesin* motor = xlink->motor_;
+				// Only bound motors have valid tether extensions
+				if(motor->heads_active_ > 0){
+					// Only motors on OTHER MTs can exert a force
+					if(motor->mt_ != site->mt_){
 						forces_summed += motor->GetTetherForce(site);
 					}
 				}
 			}
 		}
-		// Otherwise, check if site is occupied by an xlink
-		else if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
-			// Motors tethered to this xlink can also exert forces
-			if(xlink->tethered_ == true){
-				Kinesin *motor = xlink->motor_;
-				// To avoid double counting, make sure xlink's motor
-				// is on a different microtubule when double bound
-				if(site->mt_ != motor->mt_ 
-				&& motor->heads_active_ > 0){
-					forces_summed += motor->GetTetherForce(site);
+		// Otherwise, check if occupied by motor head
+		else if(site->motor_ != nullptr){
+			Kinesin* motor = site->motor_;
+			// Motors can only exert a force if they are tethered
+			if(motor->tethered_){
+				AssociatedProtein* xlink = motor->xlink_;
+				// singly-bound xlinks must be on other MTs to exert a force
+				if(xlink->heads_active_ == 1){
+					Tubulin* xlink_site = xlink->GetActiveHeadSite();
+					if(xlink_site->mt_ != site->mt_){
+						// With 1 head active, no danger of double counting
+						if(motor->heads_active_ == 1){
+							forces_summed += motor->GetTetherForce(site);
+						}
+						// With 2 heads active, only get force from front
+						else if(site == motor->front_site_){
+							forces_summed += motor->GetTetherForce(site);
+						}
+					}
+				}
+				// If xlink is doubly-bound, get reaction force
+				else if(xlink->heads_active_ == 2){
+					// With 1 head active, no danger of double counting
+					if(motor->heads_active_ == 1){
+						forces_summed += motor->GetTetherForce(site);
+					}
+					// With 2 heads active, only get force from front
+					else if(site == motor->front_site_){
+						forces_summed += motor->GetTetherForce(site);
+					}
 				}
 			}
 		}

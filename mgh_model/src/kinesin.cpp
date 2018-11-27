@@ -536,19 +536,17 @@ double Kinesin::GetTetherForce(Tubulin *site){
 				force_mag = extension_ * k_spring_; 
 			double stalk_coord = GetStalkCoordinate();
 			double anchor_coord = xlink_->GetAnchorCoordinate();
-			int newtons_third;
-			if(site->mt_ == mt_)
-				newtons_third = -1;
-			else
-				newtons_third = 1;	
+			double center = (stalk_coord + anchor_coord) / 2;
+			double site_coord = site->index_ + site->mt_->coord_;
 			double force;
-			if(anchor_coord < stalk_coord){
-				force = newtons_third * force_mag * cosine_;
-			}
+			if(site_coord < center)
+				force = force_mag * cosine_; 
 			else
-				force = -newtons_third * force_mag * cosine_; 
+				force = -1 * force_mag * cosine_;
 			return force;
 		}
+		else
+			return 0; 
 	}
 	else{
 		printf("error in get teth force (motor)\n");

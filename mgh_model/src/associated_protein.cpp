@@ -16,6 +16,7 @@ void AssociatedProtein::Initialize(system_parameters *parameters,
 	PopulateBindingLookupTable();
 	PopulateTethBindingLookupTable();
 	PopulateTethBindingIILookupTable();
+	PopulateExtensionLookups();
 }
 
 void AssociatedProtein::SetParameters(){
@@ -54,7 +55,7 @@ void AssociatedProtein::CalculateCutoffs(){
 		double dr = r - r_0_; 
 		double U = (k_spring_/2)*dr*dr;
 		double boltzmann_weight = exp(U/(2*kbT));
-		if(boltzmann_weight > 1000){
+		if(boltzmann_weight > 100){
 			dist_cutoff_ = x_dist;
 			break;
 		}
@@ -230,6 +231,20 @@ void AssociatedProtein::PopulateTethBindingIILookupTable(){
 	}
 }
 
+void AssociatedProtein::PopulateExtensionLookups(){
+
+	double r_y = parameters_->microtubules.y_dist;
+	double site_size = parameters_->microtubules.site_size;
+	extension_lookup_.resize(dist_cutoff_ + 1);
+	cosine_lookup_.resize(dist_cutoff_ + 1);
+	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
+		double r_x = site_size * x_dist;
+		double r = sqrt(r_x*r_x + r_y*r_y);
+		extension_lookup_[x_dist] = r - r_0_;
+		cosine_lookup_[x_dist] = r_x / r;
+	}
+}
+
 void AssociatedProtein::UpdateNeighborSites(){
 	
 	n_neighbor_sites_ = 0;
@@ -355,7 +370,6 @@ void AssociatedProtein::UpdateTethNeighborSitesII(){
 
 void AssociatedProtein::UpdateExtension(){
 
-	double site_size = parameters_->microtubules.site_size;
 	if(heads_active_ == 2){
 		int x_dist_pre = x_dist_;
 		// Calculate first head's coordinate
@@ -368,14 +382,10 @@ void AssociatedProtein::UpdateExtension(){
 		int coord_two = mt_coord_two + i_head_two;
 		// Calculate x_distance in # of sites
 		int x_dist = abs(coord_one - coord_two);	
+		x_dist_ = x_dist; 
 		if(x_dist <= dist_cutoff_){
-			x_dist_ = x_dist; 
-			double r_y = parameters_->microtubules.y_dist;
-			double r_x = site_size*x_dist_;
-			double r = sqrt(r_y*r_y + r_x*r_x);
-			double extension = r - r_0_; 
-			extension_ = extension;
-			cosine_ = r_x / r;
+			extension_ = extension_lookup_[x_dist_];
+			cosine_ = cosine_lookup_[x_dist_];
 		}
 		else{
 			ForceUnbind(x_dist_pre);

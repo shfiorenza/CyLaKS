@@ -12,6 +12,7 @@ struct kinesin_parameters{
 	double k_off_ii;		// Unbinding rate for doubly-bound; 1/s
 	double velocity;		// Motor stepping velocity; nm/s 
 	double diffusion_const;	// Diffusion constant; um^2/s 
+	bool tethers_active;
 	double k_tether_free;   // Bulk (not bound) tethering rate; 1/(nM*s)
 	double conc_eff_tether;	// Effective concentration of first head
 							//   when tethered but not bound; nM

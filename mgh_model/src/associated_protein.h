@@ -42,6 +42,8 @@ class AssociatedProtein{
 		std::vector<double> teth_binding_weight_lookup_; 
 		std::vector< std::vector<double> > teth_binding_weight_ii_to_; 
 		std::vector< std::vector<double> > teth_binding_weight_ii_from_;
+		std::vector<double> extension_lookup_;
+		std::vector<double> cosine_lookup_; 
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -57,6 +59,7 @@ class AssociatedProtein{
 		void PopulateBindingLookupTable();
 		void PopulateTethBindingLookupTable();
 		void PopulateTethBindingIILookupTable();
+		void PopulateExtensionLookups();
 
 		void UpdateNeighborSites();
 		void UpdateTethNeighborSites();

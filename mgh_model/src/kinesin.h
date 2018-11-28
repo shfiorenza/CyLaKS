@@ -46,6 +46,8 @@ class Kinesin{
 		// e.g. ...lookup_[1] is an x-dist of 1/2 of a site
 		std::vector<double> tethering_weight_lookup_;
 		std::vector<double> binding_weight_lookup_;
+		std::vector<double> extension_lookup_;
+		std::vector<double> cosine_lookup_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -60,6 +62,7 @@ class Kinesin{
 		void InitiateNeighborLists();
 		void PopulateTetheringLookupTable();
 		void PopulateBindingLookupTable();
+		void PopulateExtensionLookups();
 
 		void UpdateNeighborXlinks();
 		void UpdateNeighborSites();

@@ -15,6 +15,7 @@ void Kinesin::Initialize(system_parameters *parameters,
 	InitiateNeighborLists(); 
 	PopulateTetheringLookupTable();
 	PopulateBindingLookupTable();
+	PopulateExtensionLookups();
 }
 
 void Kinesin::SetParameters(){
@@ -153,6 +154,20 @@ void Kinesin::PopulateBindingLookupTable(){
 	}
 }
 
+void Kinesin::PopulateExtensionLookups(){
+
+	double r_y = parameters_->microtubules.y_dist / 2;
+	double site_size = parameters_->microtubules.site_size;
+	extension_lookup_.resize(2*dist_cutoff_ + 1);
+	cosine_lookup_.resize(2*dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
+		double r_x = site_size * x_dist_doubled_ / 2;
+		double r = sqrt(r_x*r_x + r_y*r_y);
+		extension_lookup_[x_dub] = r - r_0_;
+		cosine_lookup_[x_dub] = r_x / r;
+	}
+}
+
 void Kinesin::UpdateNeighborXlinks(){
 
 	if(tethered_ == false
@@ -263,7 +278,6 @@ void Kinesin::UpdateNeighborSites(){
 
 void Kinesin::UpdateExtension(){
 
-	double site_size = parameters_->microtubules.site_size;
 	if(heads_active_ == 0
 	|| tethered_ == false){
 		x_dist_doubled_ = 0;
@@ -283,12 +297,8 @@ void Kinesin::UpdateExtension(){
 //			printf("forced SINGLE-HEAD UNTETHER ???\n");
 		}
 		else{
-			double r_y = parameters_->microtubules.y_dist / 2;
-			double r_x = site_size * x_dist_doubled_ / 2;
-			double r = sqrt(r_x*r_x + r_y*r_y);
-			double extension = r - r_0_;
-			extension_ = extension;
-			cosine_ = r_x / r; 
+			extension_ = extension_lookup_[x_dist_doubled_];
+			cosine_ = cosine_lookup_[x_dist_doubled_]; 
 		}
 	}
 	else if(heads_active_ == 2){
@@ -304,13 +314,8 @@ void Kinesin::UpdateExtension(){
 //			printf("forced an untether >:O\n");
 		}
 		else{
-			// Calculate new extension
-			double r_y = parameters_->microtubules.y_dist / 2;
-			double r_x = site_size * x_dist_doubled_/2;
-			double r = sqrt(r_y*r_y + r_x*r_x);
-			double extension = r - r_0_; 
-			extension_ = extension;
-			cosine_ = r_x / r;
+			extension_ = extension_lookup_[x_dist_doubled_];
+			cosine_ = cosine_lookup_[x_dist_doubled_]; 
 		}
 	}
 	else{

@@ -13,7 +13,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'SlideScan_1.00';
+simName = 'test';
 movie_name = 'test.avi';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 100;
+frames_per_plot = 1000;
 start_frame = 1;
 site_height = 1;
 site_width = 1;
@@ -42,13 +42,12 @@ frame_box = [0 0 1545 200];
 % Figure details
 fig1 = figure;
 set(fig1, 'Position', [0 100 1600 400])
-%{
+
 mt_data_file = fopen(mtFile);
 mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
-%}
-mt_data = zeros([n_mts n_datapoints]);
+%mt_data = zeros([n_mts n_datapoints]);
 
 motor_data_file = fopen(motorFile);
 motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');

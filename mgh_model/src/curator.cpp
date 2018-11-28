@@ -51,6 +51,9 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.diffusion_const = motors["diffusion_const"].as<double>();
 	printf("    diffusion_const = %g um^2/s\n", 
 			params->motors.diffusion_const);
+	params->motors.tethers_active = motors["tethers_active"].as<bool>();
+	printf("    tethers_active = %s\n", 
+		   params->motors.tethers_active ? "true" : "false");	
 	params->motors.k_tether_free = motors["k_tether_free"].as<double>();
 	printf("    k_tether_free = %g /(nM*s)\n", params->motors.k_tether_free);
 	params->motors.conc_eff_tether = motors["conc_eff_tether"].as<double>();
@@ -200,8 +203,7 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
 	// Check to see if sim files already exist
 	if (FileExists(occupancy_file)){
-
-		printf("Simulation file with this name already exists!\n");
+		printf("\nSimulation file with this name already exists!\n");
 		printf("Do you wish to overwrite? y/n\n");
 		std::string response; 
 		bool response_unacceptable = true;
@@ -220,7 +222,6 @@ void Curator::GenerateDataFiles(char* sim_name){
 				printf("bro I said y or n. try again plz\n");
 			}
 		}
-
 	}
 	// Open occupancy file, which stores the species ID of each occupant 
 	// (or -1 for none) for all MT sites during data collection (DC)

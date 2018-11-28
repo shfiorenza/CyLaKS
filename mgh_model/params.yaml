@@ -1,13 +1,13 @@
 seed: 329954438
-n_steps: 100000000
+n_steps: 20000000
 n_datapoints: 100000
 data_threshold: 0
-delta_t: 2e-06
+delta_t: 5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
   count: 2
-  length: 250
+  length: 500
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -20,9 +20,9 @@ microtubules:
   - 0
   immobile_until:
   - 9500
-  - 10
-  printout: true
-  diffusion: false
+  - 500
+  printout: false
+  diffusion: true
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02
@@ -32,8 +32,9 @@ motors:
   k_off_ii: 15
   velocity: 650
   diffusion_const: 0.0024
+  tethers_active: false
   k_tether_free: 0.1
-  conc_eff_tether: 1000 
+  conc_eff_tether: 100 
   k_untether_free: 0.025
   k_untether: 0.068
   r_0: 120

@@ -44,6 +44,10 @@ void KinesinManagement::SetParameters(){
 	rest_dist_ = motors_[0].rest_dist_;
 	comp_cutoff_ = motors_[0].comp_cutoff_;
 	dist_cutoff_ = motors_[0].dist_cutoff_;
+	printf("For motors:\n");
+	printf("  rest_dist is %g\n", rest_dist_);
+	printf("  comp_cutoff is %i\n", comp_cutoff_);
+	printf("  dist_cutoff is %i\n", dist_cutoff_);
 	p_diffuse_to_teth_rest_.resize(2*dist_cutoff_ + 1);
 	p_diffuse_from_teth_rest_.resize(2*dist_cutoff_ + 1);
 	double kbT = parameters_->kbT;
@@ -117,11 +121,20 @@ void KinesinManagement::SetParameters(){
     double k_on_i = parameters_->motors.k_on_i;
     double c_motor = parameters_->motors.concentration;
 	p_bind_i_ = k_on_i * c_motor * delta_t;
+	if(p_bind_i_ > 1){
+		printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
+	}
 	double c_eff_teth = parameters_->motors.conc_eff_tether;
+	if(!parameters_->motors.tethers_active){
+		c_eff_teth = 0;
+	}
 	p_bind_i_tethered_ = k_on_i * c_eff_teth * delta_t;
 	double k_on_ii = parameters_->motors.k_on_ii;
 	double c_eff_motor_bind = parameters_->motors.conc_eff_bind;
 	p_bind_ii_ = k_on_ii * c_eff_motor_bind * delta_t;
+	if(p_bind_ii_ > 1){
+		printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
+	}
 	double k_off_i = parameters_->motors.k_off_i; 
 	p_unbind_i_ = k_off_i * delta_t;
     double k_off = parameters_->motors.k_off_ii;
@@ -185,29 +198,60 @@ void KinesinManagement::SetParameters(){
 		|| x_dist_dub > 2*dist_cutoff_){
 			weight_to = 0;
 		}
-	//	printf("for ext %g: \n", (double)x_dist_dub / 2);
+		if(!parameters_->motors.tethers_active){
+			weight_at = 0;
+			weight_to = 0;
+			weight_from = 0;
+		}
 		p_bind_ii_to_teth_[x_dist_dub] = weight_to * p_bind_ii_; 
+		if(p_bind_ii_to_teth_[x_dist_dub] > 1){
+			printf("WARNING: p_bind_ii_to_teth=%g for 2x=%i\n", 
+					p_bind_ii_to_teth_[x_dist_dub], x_dist_dub);
+		}
 		p_bind_ii_from_teth_[x_dist_dub] = weight_from * p_bind_ii_; 
-
+		if(p_bind_ii_from_teth_[x_dist_dub] > 1){
+			printf("WARNING: p_bind_ii_from_teth=%g for 2x=%i\n", 
+					p_bind_ii_from_teth_[x_dist_dub], x_dist_dub);
+		}
 		p_unbind_i_tethered_[x_dist_dub] = weight_at * p_unbind_i_;
-
+		if(p_unbind_i_tethered_[x_dist_dub] > 1){
+			printf("WARNING: p_unbind_i_tethered=%g for 2x=%i\n", 
+					p_unbind_i_tethered_[x_dist_dub], x_dist_dub);
+		}
 		p_unbind_ii_to_teth_[x_dist_dub] = weight_to * p_unbind_ii_;
+		if(p_unbind_ii_to_teth_[x_dist_dub] > 1){
+			printf("WARNING: p_unbind_ii_to_teth=%g for 2x=%i\n", 
+					p_unbind_ii_to_teth_[x_dist_dub], x_dist_dub);
+		}
 		p_unbind_ii_from_teth_[x_dist_dub] = weight_from * p_unbind_ii_; 
-	//	printf("base: %g\n", p_bind_ii_);
-	//	printf("bind_ii to: %g\n", p_bind_ii_to_teth_[x_dist_dub]);
-	//	printf("bind_ii from: %g\n", p_bind_ii_from_teth_[x_dist_dub]);
+		if(p_unbind_ii_from_teth_[x_dist_dub] > 1){
+			printf("WARNING: p_unbind_ii_from_teth=%g for 2x=%i\n", 
+					p_unbind_ii_from_teth_[x_dist_dub], x_dist_dub);
+		}
 	}
 	double k_tether_free = parameters_->motors.k_tether_free;
+	if(!parameters_->motors.tethers_active){
+		k_tether_free = 0;
+	}
 	p_tether_free_ = k_tether_free * c_motor * delta_t;
 	p_tether_bound_ = k_tether_free * c_eff_teth * delta_t;
 	double k_untether_free = parameters_->motors.k_untether_free;
+	if(!parameters_->motors.tethers_active){
+		k_untether_free = 0;
+	}
 	p_untether_free_ = k_untether_free * delta_t;
     double motor_speed = parameters_->motors.velocity;
 	p_step_ = motor_speed * delta_t / site_size;
+	if(p_step_ > 1){
+		printf("WARNING: p_step=%g for motors\n", p_step_);
+	}
 	// Generate untethering and stepping rates for all tether extensions	
 	// Everything is 2*dist_cutoff to allow for half-integer distances, 
 	// so the 3rd entry will correspond to a distance of 1.5, etc. 
 	double k_unteth = parameters_->motors.k_untether;
+	if(!parameters_->motors.tethers_active){
+		k_unteth = 0;
+	}
 	double stall_force = parameters_->motors.stall_force;
 	p_untether_bound_.resize(2*dist_cutoff_ + 1);
 	p_step_to_teth_rest_.resize(2*dist_cutoff_ + 1);
@@ -231,6 +275,18 @@ void KinesinManagement::SetParameters(){
 			double coeff_from = 1 - cosine * (force / stall_force); 
 			double p_to = coeff_to * p_step_;
 			double p_from = coeff_from * p_step_; 
+			if(!parameters_->motors.tethers_active){
+				p_to = 0;
+				p_from = 0;
+			}
+			if(p_to > 1){
+				printf("WARNING: p_step_to=%g for 2x=%i\n", 
+						p_to, x_dist_dub);
+			}
+			if(p_from > 1){
+				printf("WARNING: p_step_from=%g for 2x=%i\n", 
+						p_from, x_dist_dub);
+			}
 			if(x_dist_dub >= 2*dist_cutoff_){
 				p_step_to_teth_rest_[x_dist_dub] = p_to;
 				p_step_from_teth_rest_[x_dist_dub] = 0;
@@ -254,6 +310,18 @@ void KinesinManagement::SetParameters(){
 			double coeff_from = 1 - cosine * (force / stall_force);
 			double p_to = coeff_to * p_step_;
 			double p_from = coeff_from * p_step_;
+			if(!parameters_->motors.tethers_active){
+				p_to = 0;
+				p_from = 0;
+			}
+			if(p_to > 1){
+				printf("WARNING: p_step_to=%g for 2x=%i\n", 
+						p_to, x_dist_dub);
+			}
+			if(p_from > 1){
+				printf("WARNING: p_step_from=%g for 2x=%i\n", 
+						p_from, x_dist_dub);
+			}
 			if(x_dist_dub < 2*comp_cutoff_){
 				p_step_to_teth_rest_[x_dist_dub] = 0;
 				p_step_from_teth_rest_[x_dist_dub] = 0;
@@ -272,10 +340,6 @@ void KinesinManagement::SetParameters(){
 			}
 		}
 	}
-	printf("For motors:\n");
-	printf("  rest_dist is %g\n", rest_dist_);
-	printf("  comp_cutoff is %i\n", comp_cutoff_);
-	printf("  dist_cutoff is %i\n", dist_cutoff_);
 }
 
 void KinesinManagement::InitiateLists(){

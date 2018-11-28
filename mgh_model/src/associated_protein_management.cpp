@@ -44,9 +44,9 @@ void AssociatedProteinManagement::SetParameters(){
 	// potential energy (dU) associated with that step
 	rest_dist_ = xlink_list_[0].rest_dist_;
 	dist_cutoff_ = xlink_list_[0].dist_cutoff_;
-	printf("For crosslinkers:\n");
+	printf("\nFor crosslinkers:\n");
 	printf("  rest_dist is %i\n", rest_dist_);
-	printf("  dist_cutoff is %i\n\n", dist_cutoff_);
+	printf("  dist_cutoff is %i\n", dist_cutoff_);
 	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
 	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);
 	double kbT = parameters_->kbT;
@@ -71,8 +71,16 @@ void AssociatedProteinManagement::SetParameters(){
 			// Weights according to Lanksy et al.
 			double weight_to = exp(-dU_to_rest/(2*kbT));
 			double weight_from = exp(-dU_from_rest/(2*kbT));
-			double p_to = weight_to * delta_t / tau_ii_; //XXX
+			double p_to = weight_to * delta_t / tau_ii_;
 			double p_from = weight_from * delta_t / tau_ii_;
+			if(p_to > 1){
+				printf("WARNING: p_diffuse_to_rest=%g for x=%i\n", 
+						p_to, x_dist);
+			}
+			if(2*p_from > 1){
+				printf("WARNING: 2*p_diffuse_from_rest=%g for x=%i\n", 
+						2*p_from, x_dist);
+			}
 			if(x_dist == rest_dist_){
 				p_diffuse_ii_to_rest_[x_dist] = 0;
 				p_diffuse_ii_from_rest_[x_dist] = 2*p_from;
@@ -174,8 +182,20 @@ void AssociatedProteinManagement::SetParameters(){
 			weight_from_teth = exp(-dU_from_teth/(2*kbT));
 		else
 			weight_from_teth = 0; 
+		if(!parameters_->motors.tethers_active){
+			weight_to_teth = 0;
+			weight_from_teth = 0;
+		}
 		double p_to_teth_i = weight_to_teth * delta_t / tau_i_;
 		double p_from_teth_i = weight_from_teth * delta_t / tau_i_;
+		if(p_to_teth_i > 1){
+			printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
+					p_to_teth_i, x_dist_dub);
+		}
+		if(p_from_teth_i > 1){
+			printf("WARNING: p_diffuse_from_teth_i=%g for 2x=%i\n", 
+					p_from_teth_i, x_dist_dub);
+		}
 		// Input probabilities for stage_i / tethered xlinks
 		p_diffuse_i_to_teth_rest_[x_dist_dub] = p_to_teth_i;
 		p_diffuse_i_from_teth_rest_[x_dist_dub] = p_from_teth_i;
@@ -210,21 +230,49 @@ void AssociatedProteinManagement::SetParameters(){
 					weight_to = exp(-dU_to_rest/(2*kbT));
 					weight_from = exp(-dU_from_rest/(2*kbT));
 				}
+				if(!parameters_->motors.tethers_active){
+					weight_to = 0;
+					weight_from = 0;
+				}
 				// Convolve these bitches
+				double p_to_both = weight_to * weight_to_teth 
+					 * delta_t / tau_ii_;
+				double p_to_self_from_teth = weight_to * weight_from_teth
+					 * delta_t / tau_ii_;
+				double p_from_self_to_teth = weight_from * weight_to_teth 
+					 * delta_t / tau_ii_;
+				double p_from_both = weight_from * weight_from_teth
+					 * delta_t / tau_ii_;
+				if(p_to_both > 1){
+					printf("WARNING: p_diff_to_both=%g for 2x=%i, x=%i\n", 
+							p_to_both, x_dist_dub, x_dist);
+				}
+				if(p_to_self_from_teth > 1){
+					printf("WARNING: p_diff_to_self_fr_teth=%g", 
+						   p_to_self_from_teth);	
+					printf(" for 2x=%i, x=%i\n", 
+						   x_dist_dub, x_dist);
+				}
+				if(p_from_self_to_teth > 1){
+					printf("WARNING: p_diff_fr_self_to_teth=%g", 
+						   p_from_self_to_teth);	
+					printf(" for 2x=%i, x=%i\n", 
+						   x_dist_dub, x_dist);
+				}
+				if(p_from_both > 1){
+					printf("WARNING: p_diff_fr_both=%g", 
+						   p_from_both);	
+					printf(" for 2x=%i, x=%i\n", 
+						   x_dist_dub, x_dist);
+				}
 				p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist]
-					= weight_to * weight_to_teth * delta_t / tau_ii_;
+					= p_to_both;
 				p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist]
-					= weight_to * weight_from_teth * delta_t / tau_ii_;
+					= p_to_self_from_teth;
 				p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist]
-					= weight_from * weight_to_teth * delta_t / tau_ii_;
+					= p_from_self_to_teth; 
 				p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist]
-					= weight_from * weight_from_teth * delta_t / tau_ii_;
-/*
-				printf("for 2x=%i, x=%i: %g (weight = %g)\n", 
-						x_dist_dub, x_dist, 
-						p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist], 
-						weight_to);
-*/
+					= p_from_both; 
 			}
 			else{
 				printf("woah mayne. xlink set parameters TWOO \n");
@@ -272,12 +320,18 @@ void AssociatedProteinManagement::SetParameters(){
 		else
 			U_at_teth = (k_teth_slack/2)*dr_teth*dr_teth;
 		double weight_at_teth = exp(U_at_teth/(2*kbT));
+		if(x_dist_dub < 2*teth_comp_cutoff){
+			weight_at_teth = 0;
+		}
+		if(!parameters_->motors.tethers_active){
+			weight_at_teth = 0;
+		}
 		double p_unbind_teth = weight_at_teth * p_unbind_i_;
+		if(p_unbind_teth > 1){
+			printf("WARNING: p_unbind_teth (XLINK)=%g for 2x=%i\n", 
+					p_unbind_teth, x_dist_dub);
+		}
 		p_unbind_i_tethered_[x_dist_dub] = p_unbind_teth; 
-/*
-		printf("FOR 2X = %i, UNBIND: %g (weight: %g)\n", 
-				x_dist_dub, p_unbind_teth, weight_at_teth);
-*/
 		// XXX variable shift in delta-E based on x_dist XXX
 		// Run through x_dists to get probs for stage_ii / tethered xlinks
 		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
@@ -333,16 +387,26 @@ void AssociatedProteinManagement::SetParameters(){
 			}
 			double weight_to_teth = exp(-dU_to_teth/(2*kbT));
 			double weight_from_teth = exp(-dU_from_teth/(2*kbT));
+			if(x_dist_dub < 2*teth_comp_cutoff){
+					weight_to_teth = 0;
+					weight_from_teth = 0;
+			}
+			if(!parameters_->motors.tethers_active){
+					weight_to_teth = 0;
+					weight_from_teth = 0;
+			}
 			double p_unbind_to = weight_to_teth * p_unbind_ii_[x_dist];
 			double p_unbind_from = weight_from_teth * p_unbind_ii_[x_dist];
+			if(p_unbind_to > 1){
+				printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
+						p_unbind_to, x_dist_dub, x_dist);
+			}
+			if(p_unbind_from > 1){
+				printf("WARNING: p_unbind_from = %g for 2x=%i, x=%i\n", 
+						p_unbind_from, x_dist_dub, x_dist);
+			}
 			p_unbind_ii_to_teth_[x_dist_dub][x_dist] = p_unbind_to;
 			p_unbind_ii_from_teth_[x_dist_dub][x_dist] = p_unbind_from; 
-/*
-			printf("for 2x = %i & x = %i, to: %g (weight: %g)\n", 
-					x_dist_dub, x_dist, p_unbind_to, weight_to_teth);
-			printf("for 2x = %i & x = %i, from: %g (weight: %g)\n", 
-					x_dist_dub, x_dist, p_unbind_from, weight_from_teth);
-*/
 		}
 	}
 	double k_teth = parameters_->motors.k_tether_free;

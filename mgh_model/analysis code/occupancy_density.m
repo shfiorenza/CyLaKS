@@ -13,7 +13,7 @@ end_time = n_steps * delta_t;
 unpin_time = 500;
 
 % File info
-simName = '/slide_scan/SlideScan_3.0';
+simName = 'test';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';

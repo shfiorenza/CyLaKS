@@ -1,6 +1,7 @@
 #ifndef _CURATOR_H
 #define _CURATOR_H
 #include <yaml-cpp/yaml.h>
+#include <thread>
 struct system_parameters;
 struct system_properties;
 
@@ -13,8 +14,9 @@ class Curator{
 		int n_pickup_;
 		int equil_milestone_;
 		int data_milestone_;
+		double start_;
+		double finish_;
 		double sim_duration_;
-		clock_t start_, finish_;
 		FILE *stream_;
 		struct timespec pause_dur_;
 
@@ -29,6 +31,9 @@ class Curator{
 		void InitializeSimulation(system_properties *properties);
 		void SetParameters();
 		void SetExperimentalStage();
+
+		void CheckMPI(int threads_provided);
+		void CheckArguments(char *sim_name, int argc);
 
 		void GenerateDataFiles(char *sim_name);
 		FILE* OpenFile(const char *file_name, const char *type);  

@@ -1,14 +1,27 @@
+#include "master_header.h"
 #include "rng_management.h"
 
 RandomNumberManagement::RandomNumberManagement(){
 }
 
-void RandomNumberManagement::Initialize(int seed){
+void RandomNumberManagement::Initialize(system_parameters *parameters, 
+		system_properties *properties){
 
+	parameters_ = parameters;
+	properties_ = properties;
+	long seed = parameters->seed; 
 	// Mersenne Twister up in this bitch 
 	generator_type_ = gsl_rng_mt19937;
 	rng = gsl_rng_alloc(generator_type_);
 	gsl_rng_set(rng, seed);
+
+	int n_types = properties->kinesin4.serial_pop_.size();
+	rngs.resize(n_types); 
+	for(int i_type(0); i_type < n_types; i_type++){
+		rngs[i_type] = gsl_rng_alloc(generator_type_);
+		long local_seed = seed + i_type*1000;
+		gsl_rng_set(rngs[i_type], local_seed);
+	}
 }
 
 /* NOTE: These functions could be wrapped to simply return 0 if
@@ -36,7 +49,6 @@ int RandomNumberManagement::SampleNormalDist(double sigma){
 	double avg = p*n;
 	int sample = SampleBinomialDist(p, n);
 	int result = sample - avg;
-//	printf("sample: %i, avg: %g\n", sample, avg);
 	return result;
 }
 
@@ -61,26 +73,12 @@ int RandomNumberManagement::SampleAbsNormalDist(double sigma){
 	return result;
 }
 
-/*
-int RandomNumberManagement::SampleNormalDist(double sigma, int center){
-
-	// Same as above, but centered around some input value 
-
-	double p = 0.0001;
-	double n = sigma*sigma/(p*(1-p));
-	double avg = p*n;
-	int sample = SampleBinomialDist(p, n);
-	int result;
-	if(sample > avg)
-		result = sample - avg + center;
-	else
-		result = avg - sample + center;
-	return result;
-}
-*/
-
 int RandomNumberManagement::SampleBinomialDist(double p, int n){
 	return gsl_ran_binomial(rng, p, n);
+}
+
+int RandomNumberManagement::SampleBinomialDist(double p, int n, int i_event){
+	return gsl_ran_binomial(rngs[i_event], p, n);
 }
 
 int RandomNumberManagement::SamplePoissonDist(double n_avg){

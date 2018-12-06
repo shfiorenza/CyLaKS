@@ -1,20 +1,31 @@
 #ifndef _KINESIN_MANAGEMENT_H
 #define _KINESIN_MANAGEMENT_H
 #include "kinesin.h"
+#include <map>
+#include <string>
+#include <functional>
 
 struct system_parameters;
 struct system_properties;
+
+// Make a structure to hold the number and type of population
+struct pop_t{
+	int n_entries_ = -1;
+	std::string type_ = std::string("wut"); 
+	int x_dist_ = -1;
+	int x_dist_dub_ = -1;
+}; 
 
 class KinesinManagement{
 	private:
 
 	public:
-		int n_motors_ = 0;		
+		int n_motors_ = 0;
 		
 		// As a general rule, populations are 
 		// untethered unless otherwise specified 
 		int n_free_tethered_ = 0;
-	 	int	n_bound_i_ = 0; 
+	 	int	n_bound_i_ = 0;
 		int n_bound_i_bindable_ = 0; 
 		int n_bound_ii_ = 0; 
 		int n_bound_untethered_ = 0;
@@ -49,21 +60,21 @@ class KinesinManagement{
 		double p_bind_i_;
 		double p_bind_i_tethered_;
 		double p_bind_ii_; 
-		std::vector<double> p_bind_ii_to_teth_;
-		std::vector<double> p_bind_ii_from_teth_;	
 		double p_unbind_i_; 
-		std::vector<double> p_unbind_i_tethered_;  
 		double p_unbind_ii_;
-		std::vector<double> p_unbind_ii_to_teth_; 
-		std::vector<double> p_unbind_ii_from_teth_;
 		double p_tether_free_;
 		double p_tether_bound_;
+		double p_untether_free_;	
+		double p_step_;
 		// Indices refer to double the x_distance (in no. of sites)
 		// between the stalk of a motor and the anchor of an xlink
 		// e.g. p_untether_bound_[23] is for an x_dist of 11.5 sites
-		double p_untether_free_;	
+		std::vector<double> p_bind_ii_to_teth_;
+		std::vector<double> p_bind_ii_from_teth_;	
+		std::vector<double> p_unbind_i_tethered_;  
+		std::vector<double> p_unbind_ii_to_teth_; 
+		std::vector<double> p_unbind_ii_from_teth_;
 		std::vector<double> p_untether_bound_; 	
-		double p_step_;
 		std::vector<double> p_step_to_teth_rest_;
 		std::vector<double> p_step_from_teth_rest_;
 
@@ -87,6 +98,10 @@ class KinesinManagement{
 
 		std::vector<int> kmc_list_;
 
+		std::vector<pop_t> serial_pop_; 
+		std::vector<pop_t> serial_kmc_;
+		std::map<std::string, std::function<int(int)> > sampling_functs;
+
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 	private:
@@ -98,6 +113,8 @@ class KinesinManagement{
 		void SetParameters();
 		void GenerateMotors();
 		void InitiateLists();
+		void InitializeSerialPop(); 
+		void InitializeFunctionMap();
 
 		void UnboundCheck(Kinesin *motor);
 		void BoundCheck(Kinesin *motor);
@@ -106,6 +123,7 @@ class KinesinManagement{
 		Kinesin* GetFreeMotor();
 		Kinesin* GetBoundUntetheredMotor();
 
+		void UpdateAllLists();
 		void UpdateFreeTetheredList();
 		void UpdateBoundIList(); 
 		void UpdateBoundIBindableList();
@@ -133,6 +151,8 @@ class KinesinManagement{
 		void RunDiffusion_From_Teth_Rest(int x_dist_doubled);
 
 		void GenerateKMCList();
+		void UpdateSerializedPopulations(); 
+		void UpdateSerializedEvents();
 		// Roman numerals refer to binding stage being executed 
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();

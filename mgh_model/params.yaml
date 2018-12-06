@@ -22,7 +22,7 @@ microtubules:
   - 9500
   - 50
   printout: false
-  diffusion: true
+  diffusion: false
 motors:
   k_on_i: 0.02
   k_on_ii: 0.02

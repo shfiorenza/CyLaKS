@@ -49,7 +49,7 @@ void AssociatedProteinManagement::SetParameters(){
 	if(world_rank == 0){
 		printf("\nFor crosslinkers:\n");
 		printf("  rest_dist is %i\n", rest_dist_);
-		printf("  dist_cutoff is %i\n\n", dist_cutoff_);
+		printf("  dist_cutoff is %i\n", dist_cutoff_);
 	}
 	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
 	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);
@@ -679,7 +679,7 @@ void AssociatedProteinManagement::UpdateFreeTetheredList(){
 	}
 }
 
-void AssociatedProteinManagement::UpdateUntetheredList(){
+void AssociatedProteinManagement::UpdateUntethered(){
 	
 	int i_entry = 0;
 	int n_entries = 0;
@@ -993,7 +993,7 @@ AssociatedProtein* AssociatedProteinManagement::GetFreeXlink(){
 
 AssociatedProtein* AssociatedProteinManagement::GetUntetheredXlink(){
 
-	UpdateUntetheredList();
+	UpdateUntethered();
 	if(n_untethered_ > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_untethered_);
 		AssociatedProtein* xlink = untethered_list_[i_entry];
@@ -2482,7 +2482,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 
 int AssociatedProteinManagement::GetNumToBind_I(){
 	
-	properties_->microtubules.UpdateUnoccupiedList();
+	properties_->microtubules.UpdateUnoccupied();
 	int n_unocc = properties_->microtubules.n_unoccupied_;
 	double p_bind = p_bind_i_;
 	if(n_unocc > 0){
@@ -2763,7 +2763,7 @@ void AssociatedProteinManagement::RunKMC(){
 void AssociatedProteinManagement::RunKMC_Bind_I(){
 
 	// Make sure unoccupied sites are available
-	properties_->microtubules.UpdateUnoccupiedList();
+	properties_->microtubules.UpdateUnoccupied();
 	if(properties_->microtubules.n_unoccupied_> 0){
 		// Randomly choose an unbound xlink
 		AssociatedProtein *xlink = GetFreeXlink();
@@ -2803,7 +2803,7 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 
 	UpdateFreeTetheredList();
-	properties_->microtubules.UpdateUnoccupiedList();
+	properties_->microtubules.UpdateUnoccupied();
 	if(n_free_tethered_ > 0
 	&& properties_->microtubules.n_unoccupied_> 0){
 		int i_xlink = properties_->gsl.GetRanInt(n_free_tethered_);
@@ -2841,8 +2841,6 @@ void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
 						properties_->
 							kinesin4.n_bound_ii_--;
 						properties_->
-							kinesin4.n_bound_ii_tethered_tot_++; 
-						properties_->
 							kinesin4.n_bound_ii_tethered_[x_dist_dub]++;
 					}
 				}
@@ -2869,7 +2867,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 
 	// Make sure stage 1 xlinks and unoccupied sites are available
 	UpdateSingleBoundList();
-	properties_->microtubules.UpdateUnoccupiedList();
+	properties_->microtubules.UpdateUnoccupied();
 	if(n_single_bound_ > 0
 	&& properties_->microtubules.n_unoccupied_> 0){
 		// Randomly pick single-bound xlink
@@ -2937,7 +2935,7 @@ void AssociatedProteinManagement::RunKMC_Bind_II_Tethered(){
 	// Make sure stage 1 xlinks and unoccupied sites are available
 	UpdateBoundITethered();
 	int teth_cutoff = properties_->kinesin4.dist_cutoff_;
-	properties_->microtubules.UpdateUnoccupiedList();
+	properties_->microtubules.UpdateUnoccupied();
 	if(n_bound_i_tethered_tot_ > 0
 	&& properties_->microtubules.n_unoccupied_> 0){
 		// Get a weighted teth extension
@@ -3115,7 +3113,6 @@ void AssociatedProteinManagement::RunKMC_Unbind_I_Tethered(int x_dist_dub){
 				if(motor->heads_active_ == 2){
 					properties_->kinesin4.n_bound_ii_++;
 					properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
-					properties_->kinesin4.n_bound_ii_tethered_tot_--;
 				}
 				else{
 					properties_->kinesin4.n_bound_i_++;

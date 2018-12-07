@@ -346,7 +346,6 @@ void Kinesin::ForceUntether(int x_dub_pre){
 	}
 	else if(heads_active_ == 2){
 		properties_->kinesin4.n_bound_ii_++;
-		properties_->kinesin4.n_bound_ii_tethered_tot_--;
 		properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
 	}
 	properties_->prc1.n_untethered_++;

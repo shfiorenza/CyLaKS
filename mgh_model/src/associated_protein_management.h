@@ -106,7 +106,7 @@ class AssociatedProteinManagement{
 		void UpdateDoubleBoundList();
 		void UpdateBoundIITethered();
 		void UpdateFreeTetheredList();
-		void UpdateUntetheredList();
+		void UpdateUntethered();
 		
 		void UpdateSingleUntetheredSites();
 		void UpdateDoubleUntetheredSites();

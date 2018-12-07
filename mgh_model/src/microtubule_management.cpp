@@ -14,7 +14,7 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 	SetParameters();
 	GenerateMicrotubules();
 	UpdateNeighbors();
-	UpdateUnoccupiedList();
+	UpdateUnoccupied();
 }
 
 void MicrotubuleManagement::SetParameters(){
@@ -83,7 +83,7 @@ void MicrotubuleManagement::UpdateNeighbors(){
 
 }
 
-void MicrotubuleManagement::UpdateUnoccupiedList(){
+void MicrotubuleManagement::UpdateUnoccupied(){
 
 	int n_mts = parameters_->microtubules.count;
 	int mt_length = parameters_->microtubules.length;
@@ -115,7 +115,7 @@ void MicrotubuleManagement::UpdateUnoccupiedList(){
 
 Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 
-	UpdateUnoccupiedList();
+	UpdateUnoccupied();
 	int n_unoccupied = n_unoccupied_;
 	// Make sure an unoccupied site exists
 	if(n_unoccupied > 0){

@@ -169,7 +169,6 @@ void Curator::ParseParameters(system_parameters *params,
 void Curator::InitializeSimulation(system_properties *properties){
 
 	properties_ = properties;
-	start_ = MPI_Wtime();
 	SetParameters();
 	SetExperimentalStage();
 }
@@ -614,6 +613,7 @@ void Curator::OutputData(){
 void Curator::UpdateTimestep(int i_step){
 
 	properties_->current_step_ = i_step;
+	if(i_step == 0) start_ = MPI_Wtime();
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 	if(world_rank == 0){

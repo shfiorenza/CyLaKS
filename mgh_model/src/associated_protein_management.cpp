@@ -30,8 +30,8 @@ void AssociatedProteinManagement::GenerateXLinks(){
 
 void AssociatedProteinManagement::SetParameters(){
 
-	int world_rank(0);
-//	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank); 
+	int world_rank;
+	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank); 
 	double delta_t = parameters_->delta_t;
 	double site_size = parameters_->microtubules.site_size;
 	// DIFFUSION STATISTICS FOR SELF BELOW
@@ -1444,7 +1444,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 			}
 		}
 		RandomNumberManagement *gsl = &properties_->gsl;
-		gsl_ran_shuffle(gsl->rng, pre_list, n_events, sizeof(int));
+		gsl_ran_shuffle(gsl->rng_, pre_list, n_events, sizeof(int));
 		diffusion_list_.resize(n_events);
 		for(int i_event = 0; i_event < n_events; i_event++){
 			diffusion_list_[i_event] = pre_list[i_event];
@@ -2468,7 +2468,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 			kmc_index++;
 		}
 		// Shuffle using GSL (why an array is necessary in the 1st place)
-		gsl_ran_shuffle(properties_->gsl.rng,pre_list,n_events,sizeof(int));
+		gsl_ran_shuffle(properties_->gsl.rng_,pre_list,n_events,sizeof(int));
 		kmc_list_.resize(n_events);
 		// Transfer shuffled array into our class kmc vector 
 		for(int j_event = 0; j_event < n_events; j_event++){

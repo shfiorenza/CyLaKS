@@ -33,12 +33,12 @@ class KinesinManagement{
 		int n_stepable_ = 0; 
 		// Tethered populations are organized by tether extension
 		std::vector<int> n_bindable_to_teth_;   
-		std::vector<int> n_bindable_from_teth_; 
+		std::vector<int> n_bindable_fr_teth_; 
 		std::vector<int> n_bound_i_tethered_;  	//cut ?
 		std::vector<int> n_bound_ii_tethered_; 	//cut ?
 		std::vector<int> n_bound_tethered_;	
 		std::vector<int> n_stepable_to_teth_rest_;
-		std::vector<int> n_stepable_from_teth_rest_;
+		std::vector<int> n_stepable_fr_teth_rest_;
 
 		// See kinesin header for description of below
 		int dist_cutoff_;
@@ -52,7 +52,7 @@ class KinesinManagement{
 		// Diffusing away FROM rest means extension/compression increases,
 		// whereas diffusing TO rest means extension/compression decreases
 		std::vector<double> p_diffuse_to_teth_rest_;
-		std::vector<double> p_diffuse_from_teth_rest_;
+		std::vector<double> p_diffuse_fr_teth_rest_;
 	
 		std::vector<int> diffusion_list_;
 
@@ -70,13 +70,13 @@ class KinesinManagement{
 		// between the stalk of a motor and the anchor of an xlink
 		// e.g. p_untether_bound_[23] is for an x_dist of 11.5 sites
 		std::vector<double> p_bind_ii_to_teth_;
-		std::vector<double> p_bind_ii_from_teth_;	
+		std::vector<double> p_bind_ii_fr_teth_;	
 		std::vector<double> p_unbind_i_tethered_;  
 		std::vector<double> p_unbind_ii_to_teth_; 
-		std::vector<double> p_unbind_ii_from_teth_;
+		std::vector<double> p_unbind_ii_fr_teth_;
 		std::vector<double> p_untether_bound_; 	
 		std::vector<double> p_step_to_teth_rest_;
-		std::vector<double> p_step_from_teth_rest_;
+		std::vector<double> p_step_fr_teth_rest_;
 
 		std::vector<Kinesin> motors_; 
 		std::vector<Kinesin*> free_tethered_list_;
@@ -89,12 +89,12 @@ class KinesinManagement{
 		// the 'table' means two-dimensions: tether extension and index
 		std::vector<Kinesin*> bound_ii_tethered_list_; 
 		std::vector< std::vector<Kinesin*> > bindable_to_teth_; 
-		std::vector< std::vector<Kinesin*> > bindable_from_teth_; 
+		std::vector< std::vector<Kinesin*> > bindable_fr_teth_; 
 		std::vector< std::vector<Kinesin*> > bound_i_tethered_;	// needed?
 		std::vector< std::vector<Kinesin*> > bound_ii_tethered_table_;
 		std::vector< std::vector<Kinesin*> > bound_tethered_; 
 		std::vector< std::vector<Kinesin*> > stepable_to_rest_table_;
-		std::vector< std::vector<Kinesin*> > stepable_from_rest_table_;
+		std::vector< std::vector<Kinesin*> > stepable_fr_rest_table_;
 
 		std::vector<int> kmc_list_;
 
@@ -153,7 +153,9 @@ class KinesinManagement{
 		void GenerateKMCList();
 		void UpdateSerializedPopulations(); 
 		void UpdateSerializedEvents();
-		// Roman numerals refer to binding stage being executed 
+		double GetWeight_Bind_I_Tethered();
+		double GetWeight_Tether_Bound();
+
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();

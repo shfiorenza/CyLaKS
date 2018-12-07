@@ -6,7 +6,6 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
-#include <time.h>
 #include <sys/stat.h>
 
 /* Include MPI and openMP header for parallelization */ 

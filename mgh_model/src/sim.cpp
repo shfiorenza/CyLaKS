@@ -32,10 +32,12 @@ int main(int argc, char *argv[]){
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
 //			properties.prc1.RunKMC();
-//XXX		properties.kinesin4.RunDiffusion();
 //			properties.prc1.RunDiffusion();
 //			properties.microtubules.RunDiffusion();
-		properties.wallace.PrintMicrotubules(0);
+		if(i_step % 100 == 0){
+//			printf("%i ACTIVE MOTS:\n", properties.kinesin4.n_active_);
+			properties.wallace.PrintMicrotubules(0);
+		}
 	}
 
 	// Cleanup stuff

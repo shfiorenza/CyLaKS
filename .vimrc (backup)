@@ -1,0 +1,45 @@
+set nocompatible
+filetype off
+set rtp+=~/.vim/bundle/vundle/
+call vundle#rc()
+
+"Put all vundle plugins here
+Plugin 'gmarik/vundle'
+Plugin 'tpope/vim-fugitive'
+Plugin 'itchyny/lightline.vim'
+Plugin 'airblade/vim-gitgutter'
+Plugin 'scrooloose/syntastic'
+"The following are all colorschemes
+Plugin 'BusyBee'   
+Plugin 'Sorcerer'
+Plugin 'oceandeep'
+Plugin 'badwolf'
+Plugin 'jeetsukumaran/vim-nefertiti'
+
+filetype plugin indent on 
+syntax on
+
+" Syntastic configuration
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
+let g:syntastic_auto_loc_list = 0
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_loc_list_height=5
+let g:syntastic_cpp_compiler = 'mpicxx'
+let g:syntastic_cpp_compiler_options = '-std=c++14 -fopenmp'
+let g:syntastic_cpp_check_header = 1
+let g:syntastic_cpp_config_file = '.syntastic_cpp_config'
+
+set nu
+set shiftwidth=4 tabstop=4
+colorscheme BusyBee
+
+"Default file tree settings
+let g:netrw_browse_split = 0
+let g:netrw_winsize = 50
+let g:netrw_liststyle = 3
+let g:netrw_banner = 0
+

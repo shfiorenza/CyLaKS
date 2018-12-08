@@ -16,6 +16,10 @@ struct pop_t{
 	int x_dist_dub_ = -1;
 }; 
 
+//XXX to-do:
+//XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
+//XXX	- experiment with #pragma omp parallel for in UpdateLists()
+//XXX   - investigate using sampling_functs_['name'] rather than find()
 class KinesinManagement{
 	private:
 		system_parameters *parameters_ = nullptr;
@@ -23,6 +27,8 @@ class KinesinManagement{
 
 	public:
 		int n_motors_ = 0;
+		// motors actively bound to some MT or xlink; dynamically updated
+		int n_active_ = 0;	
 		
 		// As a general rule, populations are 
 		// untethered unless otherwise specified 
@@ -48,7 +54,7 @@ class KinesinManagement{
 		int comp_cutoff_;
 		double rest_dist_;
 
-		// KMC event probabilities 
+		// Kinematics probabilities 
 		double p_bind_i_;
 		double p_bind_i_tethered_;
 		double p_bind_ii_; 
@@ -70,13 +76,13 @@ class KinesinManagement{
 
 		// 1-D vectors, index is simply motor entry
 		std::vector<Kinesin> motors_; 
+		std::vector<Kinesin*> active_;
 		std::vector<Kinesin*> free_tethered_;
 		std::vector<Kinesin*> bound_i_; 
 		std::vector<Kinesin*> bound_i_bindable_; 
 		std::vector<Kinesin*> bound_ii_; 
 		std::vector<Kinesin*> bound_untethered_;
 		std::vector<Kinesin*> stepable_;
-//		std::vector<Kinesin*> bound_ii_tethered_; 
 		// 2-D vectors: first index is x_dist_doubled, second is motor entry
 		// e.g. bound_i_tethered_[16][0] is the 1st motor with 2x = 16
 		std::vector< std::vector<Kinesin*> > bound_i_tethered_;
@@ -96,12 +102,12 @@ class KinesinManagement{
 		std::vector<pop_t> serial_kmc_;
 		// Map of population/event label to sampling function;
 		// see InitializeFUnctionMap() for function definitions
-		std::map<std::string, std::function<int(int)> > sampling_functs;
+		std::map<std::string, std::function<int(int)> > sampling_functs_;
 
 	private:
 		void SetParameters();
 		void GenerateMotors();
-		void InitiateLists();
+		void InitializeLists();
 		void InitializeSerialPop(); 
 		void InitializeFunctionMap();
 
@@ -134,8 +140,8 @@ class KinesinManagement{
 		void GenerateKMCList();
 		void UpdateSerializedPopulations(); 
 		void UpdateSerializedEvents();
-		double GetWeight_Bind_I_Tethered();
-		double GetWeight_Tether_Bound();
+		double GetWeightBindITethered();
+		double GetWeightTetherBound();
 
 		void RunKMC();
 		void KMC_Bind_I();

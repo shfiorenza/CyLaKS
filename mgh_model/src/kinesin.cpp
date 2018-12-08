@@ -113,11 +113,11 @@ void Kinesin::PopulateTetheringLookupTable(){
 		}
 		// For compression, assume the tail can bend, lowering its k_spring
 		else if(dr < 0){
-			weight = exp(-dr*dr*k_slack_/(2*kbT));
+			weight = exp(-dr*dr*k_slack_/(4*kbT));
 		}
 		// For extension, treat tail as a spring
 		else{
-			weight = exp(-dr*dr*k_spring_/(2*kbT));
+			weight = exp(-dr*dr*k_spring_/(4*kbT));
 		}
 		tethering_weight_lookup_[x_dist_dub] = weight;
 //		printf("TETH_ #%i_ r: %g, dr: %g, weight: %g\n", 
@@ -142,11 +142,11 @@ void Kinesin::PopulateBindingLookupTable(){
 		}
 		// For compression, assume the tail can bend, lowering its k_spring
 		else if(dr < 0){
-			weight = exp(-dr*dr*k_slack_/(2*kbT));
+			weight = exp(-dr*dr*k_slack_/(4*kbT));
 		}
 		// For extension, treat tail as a spring
 		else{
-			weight = exp(-dr*dr*k_spring_/(2*kbT));
+			weight = exp(-dr*dr*k_spring_/(4*kbT));
 		}
 		binding_weight_lookup_[x_dist_dub] = weight;
 //		printf("BIND_ #%i_ r: %g, dr: %g, weight: %g\n", 
@@ -186,11 +186,11 @@ void Kinesin::UpdateNeighborXlinks(){
 			for(int x_dist = -dist_cutoff_; x_dist <= dist_cutoff_; x_dist++){
 				int i_site = i_stalk + x_dist;
 //				printf("i_site is %i\n", i_site);
-				// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA
+				// Start index at first site (0) if site index is <= 0
 				if(i_site < 0){
 					x_dist -= (i_site + 1);
 				}
-				// End scan once last bulk site (mt_length - 2) is reached
+				// End scan once last site (mt_length - 1) is reached
 				else if(i_site > mt_length - 1){
 					break;
 				}
@@ -238,6 +238,7 @@ void Kinesin::UpdateNeighborSites(){
 //		printf("anchor coord is %g\n\n", anchor_coord);
 		// Scan through all potential neighbor sites; add unoccupied to list 
 		int i_entry = 0;
+		// FIXME this only works for two MTs as of now FIXME
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){ 	
 			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 			double mt_coord = mt->coord_;
@@ -245,12 +246,11 @@ void Kinesin::UpdateNeighborSites(){
 			for(int x_dist = -dist_cutoff_; x_dist <= dist_cutoff_; x_dist++){
 				int i_site = i_anchor + x_dist; 
 //				printf("i_site is %i (x_dist %i)\n", i_site, x_dist);
-				// Start index at first bulk site (1) if site index is <= 0
-				// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
+				// Start index at first site (0) if site index is <= 0
 				if(i_site < 0){
 					x_dist -= (i_site + 1);
 				}
-				// End scan at last bulk site (mt_length - 2)
+				// End scan at last bulk site (mt_length - 1)
 				else if(i_site > mt_length - 1){
 					break;
 				}
@@ -293,7 +293,7 @@ void Kinesin::UpdateExtension(){
 		x_dist_doubled_ = x_dist_dub;
 		if(x_dist_doubled_ > 2*dist_cutoff_
 		|| x_dist_doubled_ < 2*comp_cutoff_){
-			ForceUntether(x_dub_pre);
+			ForceUntether();
 //			printf("forced SINGLE-HEAD UNTETHER ???\n");
 		}
 		else{
@@ -310,7 +310,7 @@ void Kinesin::UpdateExtension(){
 		x_dist_doubled_ = x_dist_dub; 
 		if(x_dist_doubled_ > 2*dist_cutoff_
 		|| x_dist_doubled_ < 2*comp_cutoff_){
-			ForceUntether(x_dub_pre); 
+			ForceUntether(); 
 //			printf("forced an untether >:O\n");
 		}
 		else{
@@ -324,31 +324,8 @@ void Kinesin::UpdateExtension(){
 	}
 }
 
-void Kinesin::ForceUntether(int x_dub_pre){
+void Kinesin::ForceUntether(){
 	
-	// Update statistics
-	if(xlink_->heads_active_ == 1){
-		properties_->prc1.n_sites_i_untethered_++;
-		properties_->prc1.n_sites_i_tethered_[x_dub_pre]--;
-		properties_->prc1.n_single_bound_++;
-	}
-	else if(xlink_->heads_active_ == 2){
-		int x_dist = xlink_->x_dist_;
-		properties_->prc1.n_sites_ii_untethered_[x_dist] += 2;
-		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist] -= 2;
-		properties_->prc1.n_double_bound_[x_dist]++;
-	}
-	else{
-		UntetherSatellite();
-	}
-	if(heads_active_ == 1){
-		properties_->kinesin4.n_bound_i_++;
-	}
-	else if(heads_active_ == 2){
-		properties_->kinesin4.n_bound_ii_++;
-		properties_->kinesin4.n_bound_ii_tethered_[x_dub_pre]--;
-	}
-	properties_->prc1.n_untethered_++;
 	// Update motor	
 	tethered_ = false;
 	x_dist_doubled_ = 0;
@@ -365,7 +342,6 @@ void Kinesin::UntetherSatellite(){
 	xlink_->motor_ = nullptr;
 	tethered_ = false;
 	xlink_ = nullptr;
-	properties_->prc1.n_free_tethered_--;
 }
 
 bool Kinesin::AtCutoff(){
@@ -373,8 +349,8 @@ bool Kinesin::AtCutoff(){
 	int dx = mt_->delta_x_; 
 	int drest = GetDirectionTowardRest();
 
-	if((x_dist_doubled_  >= (2*dist_cutoff_ - 1) && dx == -drest)
-		 ||(x_dist_doubled_ <= (2*comp_cutoff_ + 1) && dx == -drest))
+	if((x_dist_doubled_  >= (2*dist_cutoff_ - 2) && dx == -drest)
+	|| (x_dist_doubled_ <= (2*comp_cutoff_ + 2) && dx == -drest))
 		return true;
 	else
 		return false;
@@ -660,6 +636,10 @@ Tubulin* Kinesin::GetWeightedNeighborSite(){
 
 AssociatedProtein* Kinesin::GetWeightedNeighborXlink(){
 
+	if(tethered_){
+		printf("Error: called GetWeightedNeighborXlink() while tethered\n");
+		exit(1);
+	}
 	UpdateNeighborXlinks();
 	double stalk_coord = GetStalkCoordinate();
 	double p_tot = 0;

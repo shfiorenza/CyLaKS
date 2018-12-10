@@ -8,17 +8,22 @@
 struct system_parameters;
 struct system_properties;
 
-struct pop_t{
-	int n_entries_ = -1;
-	std::string type_ = std::string("wut");
-	int x_dist_ = -1;
-	int x_dist_dub_ = -1;
-};
+//XXX	to-do:
+//XXX		-see kinesin_mgmt header
+//XXX		-rename functs
+
 
 class AssociatedProteinManagement{
 	private:
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
+		// Structure to hold the size and type of a population
+		struct pop_t{
+			int n_entries_ = -1;
+			std::string type_ = std::string("wut");
+			int x_dist_ = -1;
+			int x_dist_dub_ = -1;
+		};
 
 	public:
 		int n_xlinks_ = 0;
@@ -28,10 +33,10 @@ class AssociatedProteinManagement{
 		int n_bound_i_ = 0;
 		int n_free_tethered_ = 0;
 		int n_bound_untethered_ = 0;
-		int n_bound_i_tethered_tot_ = 0;
+		int n_bound_i_tethered_tot_ = 0;		// needed?
 		std::vector<int> n_bound_i_tethered_;
 		// Each possible spring extension has its own double bound list
-		std::vector<int> n_double_bound_;
+		std::vector<int> n_bound_ii_;
 		std::vector< std::vector<int> > n_bound_ii_tethered_;
 		
 		// Only one population for singly-bound untethered xlink heads
@@ -44,8 +49,6 @@ class AssociatedProteinManagement{
 		std::vector< std::vector<int> > n_sites_ii_tethered_;
 		std::vector< std::vector<int> > n_sites_ii_tethered_same_; 
 		std::vector< std::vector<int> > n_sites_ii_tethered_oppo_; 
-		// Only need tether extension when at 'self-rest', i.e. x_dist = 0
-		std::vector<int> n_sites_ii_tethered_self_rest_;
 
 		int teth_cutoff_; 		// see kinesin header (is dist_cutoff_ there)
 		int dist_cutoff_;		// see assoc. protein header
@@ -130,9 +133,6 @@ class AssociatedProteinManagement{
 		void SetParameters();
 		void InitiateLists();
 
-		void BoundCheck(AssociatedProtein *xlink);	
-		void UntetheredCheck(AssociatedProtein *xlink);
-	
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();

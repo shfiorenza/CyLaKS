@@ -27,64 +27,73 @@ void Kinesin::SetParameters(){
 
 void Kinesin::CalculateCutoffs(){
 
-	int site_size = parameters_->microtubules.site_size; 
-	double r_y = parameters_->microtubules.y_dist / 2;
-	double kbT = parameters_->kbT; 
-	/* First, calculate rest_dist_ in number of sites */
-	int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
-	double rest_scan[3]; 
-	double scan_force[3]; 
-	for(int i_scan = -1; i_scan <= 1; i_scan++){
-		rest_scan[i_scan + 1] = rough_rest_dist + (i_scan * 0.5);
-		double rest_scan_length = rest_scan[i_scan + 1] * site_size;
-		double r_scan = sqrt(r_y*r_y + rest_scan_length*rest_scan_length); 
-		if(r_scan >= r_0_)
-			scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
-		else
-			scan_force[i_scan + 1] = (r_scan - r_0_) * k_slack_; 
-	}
-	double min_force = 100; 
-	for(int i_scan = -1; i_scan <=1; i_scan++){
-		double force = fabs(scan_force[i_scan + 1]); 
-		if(force < min_force){
-			min_force = force;
-			rest_dist_ = rest_scan[i_scan + 1]; 
-		}	
-	}
-	comp_cutoff_ = 0;
-	/* Next, calculate compression distance cutoff */ 
-	for(int x_dist = 2*rest_dist_; x_dist >= 0; x_dist--){
-		//increment by 0.5x
-		int r_x = x_dist * site_size / 2; 
-		double r = sqrt(r_y*r_y + r_x*r_x); 
-		double dr = r - r_0_; 
-		double U;
-		if(r < r_0_)
-			U = (k_slack_/2)*dr*dr;
-		else
-			U = (k_spring_/2)*dr*dr; 
-		double boltzmann_weight = exp(U/(2*kbT)); 
-		if(boltzmann_weight > 1000){
-			comp_cutoff_ = x_dist / 2;
-			break;
+	// Only calculate cutoffs if tethering is enabled
+	if(parameters_->motors.tethers_active){
+		int site_size = parameters_->microtubules.site_size; 
+		double r_y = parameters_->microtubules.y_dist / 2;
+		double kbT = parameters_->kbT; 
+		/* First, calculate rest_dist_ in number of sites */
+		int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
+		double rest_scan[3]; 
+		double scan_force[3]; 
+		for(int i_scan = -1; i_scan <= 1; i_scan++){
+			rest_scan[i_scan + 1] = rough_rest_dist + (i_scan * 0.5);
+			double rest_scan_length = rest_scan[i_scan + 1] * site_size;
+			double r_scan = sqrt(r_y*r_y+rest_scan_length*rest_scan_length); 
+			if(r_scan >= r_0_)
+				scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
+			else
+				scan_force[i_scan + 1] = (r_scan - r_0_) * k_slack_; 
+		}
+		double min_force = 100; 
+		for(int i_scan = -1; i_scan <=1; i_scan++){
+			double force = fabs(scan_force[i_scan + 1]); 
+			if(force < min_force){
+				min_force = force;
+				rest_dist_ = rest_scan[i_scan + 1]; 
+			}	
+		}
+		/* Next, calculate compression distance cutoff */ 
+		comp_cutoff_ = 0;
+		for(int x_dist = 2*rest_dist_; x_dist >= 0; x_dist--){
+			//increment by 0.5x
+			int r_x = x_dist * site_size / 2; 
+			double r = sqrt(r_y*r_y + r_x*r_x); 
+			double dr = r - r_0_; 
+			double U;
+			if(r < r_0_)
+				U = (k_slack_/2)*dr*dr;
+			else
+				U = (k_spring_/2)*dr*dr; 
+			double boltzmann_weight = exp(U/(2*kbT)); 
+			if(boltzmann_weight > 1000){
+				comp_cutoff_ = x_dist / 2;
+				break;
+			}
+		}
+		/* Finally, calculate extension distance cutoff */
+		for(int x_dist = 2*rest_dist_; x_dist < 1000; x_dist++){
+			//increment by 0.5x
+			int r_x = x_dist * site_size / 2;
+			double r = sqrt(r_y*r_y + r_x*r_x);
+			double dr = r - r_0_; 
+			double U;
+			if(r < r_0_)
+				U = (k_slack_/2)*dr*dr;
+			else
+				U = (k_spring_/2)*dr*dr; 
+			double boltzmann_weight = exp(U/(2*kbT)); 
+			if(boltzmann_weight > 1000){
+				dist_cutoff_ = x_dist / 2;
+				break;
+			}
 		}
 	}
-	/* Finally, calculate extension distance cutoff */
-	for(int x_dist = 2*rest_dist_; x_dist < 1000; x_dist++){
-		//increment by 0.5x
-		int r_x = x_dist * site_size / 2;
-		double r = sqrt(r_y*r_y + r_x*r_x);
-		double dr = r - r_0_; 
-		double U;
-		if(r < r_0_)
-			U = (k_slack_/2)*dr*dr;
-		else
-			U = (k_spring_/2)*dr*dr; 
-		double boltzmann_weight = exp(U/(2*kbT)); 
-		if(boltzmann_weight > 1000){
-			dist_cutoff_ = x_dist / 2;
-			break;
-		}
+	// If tethering isn't enabled, dist_cutoff_ set to 0
+	else {
+		rest_dist_ = 0;
+		comp_cutoff_ = 0;
+		dist_cutoff_ = 0;
 	}
 }
 
@@ -120,8 +129,8 @@ void Kinesin::PopulateTetheringLookupTable(){
 			weight = exp(-dr*dr*k_spring_/(4*kbT));
 		}
 		tethering_weight_lookup_[x_dist_dub] = weight;
-//		printf("TETH_ #%i_ r: %g, dr: %g, weight: %g\n", 
-//				x_dist_dub, r, dr, weight);
+		//		printf("TETH_ #%i_ r: %g, dr: %g, weight: %g\n", 
+		//				x_dist_dub, r, dr, weight);
 	}
 }
 
@@ -149,8 +158,8 @@ void Kinesin::PopulateBindingLookupTable(){
 			weight = exp(-dr*dr*k_spring_/(4*kbT));
 		}
 		binding_weight_lookup_[x_dist_dub] = weight;
-//		printf("BIND_ #%i_ r: %g, dr: %g, weight: %g\n", 
-//				x_dist_dub, r, dr, weight);
+		//		printf("BIND_ #%i_ r: %g, dr: %g, weight: %g\n", 
+		//				x_dist_dub, r, dr, weight);
 	}
 }
 
@@ -170,9 +179,9 @@ void Kinesin::PopulateExtensionLookups(){
 
 void Kinesin::UpdateNeighborXlinks(){
 
+	n_neighbor_xlinks_ = 0;
 	if(tethered_ == false
 	&& heads_active_ > 0){
-		n_neighbor_xlinks_ = 0;
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length;
 		double stalk_coord = GetStalkCoordinate();
@@ -210,7 +219,7 @@ void Kinesin::UpdateNeighborXlinks(){
 								i_entry++;
 							}
 							else if(xlink->heads_active_ == 2
-							&& i_mt == 0){				// FIXME this is bad
+							&& i_mt % 2 == 0){			// FIXME this is bad
 								n_neighbor_xlinks_++;
 								neighbor_xlinks_[i_entry] = xlink;
 								i_entry++;		
@@ -229,9 +238,9 @@ void Kinesin::UpdateNeighborXlinks(){
 
 void Kinesin::UpdateNeighborSites(){
 
+	n_neighbor_sites_ = 0;
 	if(tethered_ == true
 	&& heads_active_ == 0){
-		n_neighbor_sites_ = 0;
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length;
 		double anchor_coord = xlink_->GetAnchorCoordinate();
@@ -283,26 +292,11 @@ void Kinesin::UpdateExtension(){
 		x_dist_doubled_ = 0;
 		extension_ = 0;
 	}
-	else if(heads_active_ == 1){
-		int x_dub_pre = x_dist_doubled_;
-		Tubulin *site = GetActiveHeadSite();
-		double site_coord = site->index_ + mt_->coord_;
-		double anchor_coord = xlink_->GetAnchorCoordinate();
-		double x_dist = fabs(anchor_coord - site_coord);
-		int x_dist_dub = 2*x_dist;
-		x_dist_doubled_ = x_dist_dub;
-		if(x_dist_doubled_ > 2*dist_cutoff_
-		|| x_dist_doubled_ < 2*comp_cutoff_){
-			ForceUntether();
-//			printf("forced SINGLE-HEAD UNTETHER ???\n");
-		}
-		else{
-			extension_ = extension_lookup_[x_dist_doubled_];
-			cosine_ = cosine_lookup_[x_dist_doubled_]; 
-		}
+	else if(xlink_->heads_active_ == 0){
+		x_dist_doubled_ = 0;
+		extension_ = 0;
 	}
-	else if(heads_active_ == 2){
-		int x_dub_pre = x_dist_doubled_;
+	else{
 		double stalk_coord = GetStalkCoordinate();
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		double x_dist = fabs(anchor_coord - stalk_coord);
@@ -311,16 +305,11 @@ void Kinesin::UpdateExtension(){
 		if(x_dist_doubled_ > 2*dist_cutoff_
 		|| x_dist_doubled_ < 2*comp_cutoff_){
 			ForceUntether(); 
-//			printf("forced an untether >:O\n");
 		}
 		else{
 			extension_ = extension_lookup_[x_dist_doubled_];
 			cosine_ = cosine_lookup_[x_dist_doubled_]; 
 		}
-	}
-	else{
-		printf("ok error in update motor extension\n");
-		exit(1);
 	}
 }
 
@@ -338,10 +327,27 @@ void Kinesin::ForceUntether(){
 
 void Kinesin::UntetherSatellite(){
 
-	xlink_->tethered_ = false;
-	xlink_->motor_ = nullptr;
-	tethered_ = false;
-	xlink_ = nullptr;
+	if(tethered_ == true){
+		// Remove satellite xlink from active_, replace with last entry
+		int i_last = properties_->prc1.n_active_ - 1;
+		AssociatedProtein *last_entry = properties_->prc1.active_[i_last];
+		int i_this = xlink_->active_index_; 
+		if(i_this != i_last){
+			properties_->prc1.active_[i_this] = last_entry; 
+			last_entry->active_index_ = i_this; 
+		}
+		properties_->prc1.n_active_--;
+		// Update xlink details
+		xlink_->tethered_ = false;
+		xlink_->motor_ = nullptr;
+		// Update motor details
+		tethered_ = false;
+		xlink_ = nullptr;
+	}
+	else{
+		printf("Error in motor UntethSatellite()\n");
+		exit(1);
+	}
 }
 
 bool Kinesin::AtCutoff(){
@@ -359,35 +365,21 @@ bool Kinesin::AtCutoff(){
 int Kinesin::GetDirectionTowardRest(){
 
 	if(tethered_ == true){
-		if(heads_active_ == 1){
-			Tubulin *site = GetActiveHeadSite();
-			int site_coord = site->index_ + mt_->coord_;
-			double rest_coord = GetRestLengthCoordinate();
-			if(site_coord > rest_coord)
-				return -1;
-			else if(site_coord < rest_coord)
-				return 1;
-			else{
-				double anchor_coord = xlink_->GetAnchorCoordinate();
-				if(site_coord > anchor_coord)
-					return 1;
-				else
-					return -1;
-			}
-		}
-		else if(heads_active_ == 2){
+		if(xlink_->heads_active_ > 0){
 			double stalk_coord = GetStalkCoordinate();
 			double rest_coord = GetRestLengthCoordinate();
 			if(stalk_coord > rest_coord)
 				return -1;
 			else if(stalk_coord < rest_coord)
 				return 1;
+			// If stalk is at rest dist, stepping TO xlink is closer
+			// to true rest than stepping FROM xlink
 			else{
 				double anchor_coord = xlink_->GetAnchorCoordinate();
 				if(stalk_coord > anchor_coord)
-					return 1;
-				else
 					return -1;
+				else
+					return 1;
 			}
 		}
 		else{
@@ -403,46 +395,29 @@ int Kinesin::GetDirectionTowardRest(){
 
 double Kinesin::GetRestLengthCoordinate(){
 
-	if(tethered_ == true){
-		if(heads_active_ == 1){
-			Tubulin *site = GetActiveHeadSite();
-			int site_coord = site->index_ + mt_->coord_;
-			double anchor_coord = xlink_->GetAnchorCoordinate();
-			if(site_coord > anchor_coord){
-				double rest_coord = anchor_coord + rest_dist_;
+	if(tethered_ == true
+	&& heads_active_ > 0){
+		if(xlink_->heads_active_ > 0){
+			double stalk_coord = GetStalkCoordinate();
+			double anch_coord = xlink_->GetAnchorCoordinate();
+			if(stalk_coord > anch_coord){
+				double rest_coord = anch_coord + rest_dist_;
 				return rest_coord;
 			}
-			else if(site_coord < anchor_coord){
-				double rest_coord = anchor_coord - rest_dist_;
+			else if(stalk_coord < anch_coord){
+				double rest_coord = anch_coord - rest_dist_;
 				return rest_coord;
 			}
 			else{
-				printf("lameness in get rest length coord kinesin ONE\n");
-				exit(1);
-				}
-			}
-			else if(heads_active_ == 2){
-				double stalk_coord = GetStalkCoordinate();
-				double anchor_coord = xlink_->GetAnchorCoordinate();
-				if(stalk_coord > anchor_coord){
-					double rest_coord = anchor_coord + rest_dist_;
-					return rest_coord;
-				}
-				else if(stalk_coord < anchor_coord){
-					double rest_coord = anchor_coord - rest_dist_;
-					return rest_coord;
-				}
-				else{
-					printf("lameness in get rest length coord kinesin TWO\n");
-					printf("stalk: %g | anchor: %g\n", stalk_coord, 
-							anchor_coord);
-					exit(1);
-				}
-			}
-			else{
-				printf("god damnit in get rest length coord (kinesin)\n");
+				printf("lameness in get rest length coord kinesin\n");
+				printf("stalk: %g | anchor: %g\n", stalk_coord, anch_coord);
 				exit(1);
 			}
+		}
+		else{
+			printf("error in get_rest_length_coord TWO (kinesin)\n");
+			exit(1);
+		}
 	}
 	else{
 		printf("error in get_rest_length_coord (kinesin)\n");
@@ -454,11 +429,9 @@ double Kinesin::GetStalkCoordinate(){
 
 	if(heads_active_ == 1){
 		Tubulin *site = GetActiveHeadSite();
-		int i_site = site->index_;
-		int mt_coord = site->mt_->coord_;
-		double site_coord = i_site + mt_coord;
+		double site_coord = site->index_ + mt_->coord_;
 		return site_coord; 
-}
+	}
 	else if(heads_active_ == 2){
 		int i_one = front_site_->index_;
 		int i_two = rear_site_->index_;
@@ -479,10 +452,9 @@ double Kinesin::GetTetheringWeight(AssociatedProtein *xlink){
 	double anchor_coord = xlink->GetAnchorCoordinate();
 	double x_dist = fabs(anchor_coord - stalk_coord);
 	// Multiply by 2 to guarentee an integer
-	int adj_distance = x_dist*2; 
+	int x_dub = x_dist*2; 
 	// Get tethering weight that corressponds to this adj. x-dist
-	double weight = tethering_weight_lookup_[adj_distance];
-	return weight; 
+	return tethering_weight_lookup_[x_dub];
 }
 
 double Kinesin::GetBindingWeight(Tubulin *site){
@@ -496,37 +468,44 @@ double Kinesin::GetBindingWeight(Tubulin *site){
 	double anchor_coord = xlink_->GetAnchorCoordinate();
 	double x_dist = fabs(anchor_coord - site_coord); 
 	// Multiply by 2 to guarentee an integer 
-	int adj_distance = x_dist*2; 
+	int x_dub = x_dist*2; 
 	// Get binding weight that corresponds to this adj. x-dist
-	double weight =  binding_weight_lookup_[adj_distance]; 
-	return weight;
+	return binding_weight_lookup_[x_dub]; 
 }
 
 double Kinesin::GetTetherForce(Tubulin *site){
 
 	if(tethered_ == true
 	&& heads_active_ > 0){
-		UpdateExtension();
-		// Make sure we didn't force an untether event
-		if(tethered_ == true){
-			double force_mag;
-			if(x_dist_doubled_ <= 2*rest_dist_)
-				force_mag = extension_ * k_slack_;
+		// Ensure we're not tethered to a satellite xlink
+		if(xlink_->heads_active_ > 0){
+			UpdateExtension();
+			// Make sure we didn't force an untether event
+			if(tethered_ == true){
+				double force_mag;
+				if(x_dist_doubled_ <= 2*rest_dist_)
+					force_mag = extension_ * k_slack_;
+				else
+					force_mag = extension_ * k_spring_; 
+				double stalk_coord = GetStalkCoordinate();
+				double anchor_coord = xlink_->GetAnchorCoordinate();
+				double center = (stalk_coord + anchor_coord) / 2;
+				double site_coord = site->index_ + site->mt_->coord_;
+				double force;
+				// Account for Newton's 3rd
+				if(site_coord < center)
+					force = force_mag * cosine_; 
+				else
+					force = -1 * force_mag * cosine_;
+				return force;
+			}
 			else
-				force_mag = extension_ * k_spring_; 
-			double stalk_coord = GetStalkCoordinate();
-			double anchor_coord = xlink_->GetAnchorCoordinate();
-			double center = (stalk_coord + anchor_coord) / 2;
-			double site_coord = site->index_ + site->mt_->coord_;
-			double force;
-			if(site_coord < center)
-				force = force_mag * cosine_; 
-			else
-				force = -1 * force_mag * cosine_;
-			return force;
+				return 0; 
 		}
-		else
-			return 0; 
+		else{
+			printf("error in get teth force TWO (motor)\n");
+			exit(1);
+		}
 	}
 	else{
 		printf("error in get teth force (motor)\n");
@@ -560,22 +539,18 @@ Tubulin* Kinesin::GetSiteCloserToRest(){
 	&& heads_active_ == 2){
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		double stalk_coord = GetStalkCoordinate();
-		double rest_coord;
-		if(stalk_coord > anchor_coord)
-			rest_coord = anchor_coord + rest_dist_;
-		else
-			rest_coord = anchor_coord - rest_dist_;
+		double rest_coord = GetRestLengthCoordinate();
 		int front_coord = front_site_->index_ + mt_->coord_;
 		int rear_coord = rear_site_->index_ + mt_->coord_;
-		double dist_front = abs(rest_coord - front_coord);
-		double dist_rear = abs(rest_coord - rear_coord);
+		double dist_front = fabs(rest_coord - front_coord);
+		double dist_rear = fabs(rest_coord - rear_coord);
 		if(dist_front < dist_rear)
 			return front_site_;
 		else
 			return rear_site_;
 	}
 	else{
-		printf("Error in getting site closest to xlink (motor)\n");
+		printf("Error in getting site closest to rest (motor)\n");
 		exit(1);
 	}
 }
@@ -585,22 +560,18 @@ Tubulin* Kinesin::GetSiteFartherFromRest(){
 	if(tethered_ == true){
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		double stalk_coord = GetStalkCoordinate();
-		double rest_coord;
-		if(stalk_coord > anchor_coord)
-			rest_coord = anchor_coord + rest_dist_;
-		else
-			rest_coord = anchor_coord - rest_dist_;
+		double rest_coord = GetRestLengthCoordinate();
 		int front_coord = front_site_->index_ + mt_->coord_;
 		int rear_coord = rear_site_->index_ + mt_->coord_;	
-		double dist_front = abs(rest_coord - front_coord);
-		double dist_rear = abs(rest_coord - rear_coord);
+		double dist_front = fabs(rest_coord - front_coord);
+		double dist_rear = fabs(rest_coord - rear_coord);
 		if(dist_front > dist_rear)
 			return front_site_;
 		else
 			return rear_site_;
 	}
 	else{
-		printf("Error in getting site farthest xlink (motor)\n");
+		printf("Error in getting site farthest from rest (motor)\n");
 		exit(1);
 	}
 }

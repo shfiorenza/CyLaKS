@@ -37,7 +37,8 @@ void KinesinManagement::SetParameters(){
 	rest_dist_ = motors_[0].rest_dist_;
 	comp_cutoff_ = motors_[0].comp_cutoff_;
 	dist_cutoff_ = motors_[0].dist_cutoff_;
-	if(world_rank == 0){
+	if(world_rank == 0
+	&& parameters_->motors.tethers_active){
 		printf("For motors:\n");
 		printf("  rest_dist is %g\n", rest_dist_);
 		printf("  comp_cutoff is %i\n", comp_cutoff_);
@@ -583,7 +584,7 @@ void KinesinManagement::InitializeFunctionMap(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii_to_teth", 
+		sampling_functs_.insert(std::make_pair("unbind_ii_to_teth", 
 					bind_ii_to_teth));
 		auto unbind_ii_fr_teth = [&](int x_dub){
 			if(n_bound_ii_tethered_[x_dub] > 0){
@@ -594,14 +595,14 @@ void KinesinManagement::InitializeFunctionMap(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii_fr_teth", 
+		sampling_functs_.insert(std::make_pair("unbind_ii_fr_teth", 
 					bind_ii_fr_teth));
 		// Function that gets num tether_free
 		auto tether_free = [&](int x_dub){
-			if(properties_->prc1.n_untethered_ > 0){
+			if(properties_->prc1.n_bound_untethered_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_tether_free_, 
-						properties_->prc1.n_untethered_, 
+						properties_->prc1.n_bound_untethered_, 
 						10 + 10*dist_cutoff_);
 			}
 			else return 0;
@@ -1523,7 +1524,7 @@ void KinesinManagement::UpdateSerializedPopulations(){
 
 		// for tether_free
 		serial_pop_[offset3 + 1].n_entries_ = 
-			properties_->prc1.n_untethered_;
+			properties_->prc1.n_bound_untethered_;
 
 		// for tether_bound
 		serial_pop_[offset3 + 2].n_entries_ = n_bound_untethered_;
@@ -2088,12 +2089,6 @@ void KinesinManagement::KMC_Unbind_I(){
 			active_[this_index] = last_entry; 
 			last_entry->active_index_ = this_index; 
 		}
-		/*
-		printf("removing motor %i from active_[%i], replacing it with", 
-				motor->ID_, this_index);
-		printf(" last entry: motor %i in active_[%i]\n", last_entry->ID_, 
-				n_active_ - 1);
-		*/
 		n_active_--;
 	}
 	else{
@@ -2232,7 +2227,7 @@ void KinesinManagement::KMC_Unbind_II_From_Teth_Rest(int x_dist_doubled){
 
 void KinesinManagement::KMC_Tether_Free(){
 
-	if(properties_->prc1.n_untethered_ > 0){
+	if(properties_->prc1.n_bound_untethered_ > 0){
 		Kinesin *motor = GetFreeMotor();
 		// Randomly pick an xlink
 		AssociatedProtein *xlink = properties_->prc1.GetUntetheredXlink();
@@ -2260,7 +2255,6 @@ void KinesinManagement::KMC_Tether_Bound(){
 		int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
 		Kinesin *motor = bound_untethered_[i_motor];
 		AssociatedProtein* xlink = motor->GetWeightedNeighborXlink();
-		/*
 		int attempts = 0; 
 		while(xlink == nullptr){
 			if(attempts > 10*n_bound_untethered_){
@@ -2268,12 +2262,9 @@ void KinesinManagement::KMC_Tether_Bound(){
 			}
 			i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
 			motor = bound_untethered_[i_motor];
-			if(motor->tethered_ == false){
-				xlink = motor->GetWeightedNeighborXlink();
-			}
+			xlink = motor->GetWeightedNeighborXlink();
 			attempts++;
 		}
-		*/
 		if(xlink != nullptr){
 			// Update motor and xlink details
 			motor->xlink_ = xlink;

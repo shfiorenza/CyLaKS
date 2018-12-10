@@ -14,28 +14,50 @@ void Tubulin::Initialize(system_parameters *parameters,
 	mt_ = mt;
 }
 
-bool Tubulin::SpringEquilOnSameSide(){
+bool Tubulin::EquilibriumInSameDirection(){
 
 	if(occupied_ == true
 	&& xlink_ != nullptr){
 		if(xlink_->heads_active_ == 2
 		&& xlink_->tethered_ == true){
-			Kinesin *motor = xlink_->motor_;
+			Kinesin* motor = xlink_->motor_;
 			double site_coord = index_ + mt_->coord_;
 			double xlink_rest = xlink_->GetAnchorCoordinate();
 			double motor_rest = motor->GetRestLengthCoordinate();
-			if((xlink_rest > site_coord && motor_rest > site_coord)
-			|| (xlink_rest < site_coord && motor_rest < site_coord)){
-				return true;
+			// When tether is extended past rest length, ...
+			if(motor->x_dist_doubled_ > 2*motor->rest_dist_){
+				// ... equils are in same dir. if coords are on same side
+				if((xlink_rest > site_coord && motor_rest > site_coord)
+				|| (xlink_rest < site_coord && motor_rest < site_coord)){
+					return true;
+				}
+				// ... equils are in oppo dir. if coords are on oppo side
+				else if((xlink_rest > site_coord && motor_rest < site_coord)
+					 || (xlink_rest < site_coord && motor_rest > site_coord)){
+					return false;
+				}
+				else{
+					printf("error in Tubulin::SpringEquilOnSameSide\n");
+					exit(1);
+				}
 			}
-			else if((xlink_rest > site_coord && motor_rest < site_coord)
-				 || (xlink_rest < site_coord && motor_rest > site_coord)){
-				return false;
-			}
+			// When tether at or compressed below rest length, ...
 			else{
-				printf("BACK THE F UP!! in spring equil on same (tubby)\n");
-				exit(1);
-			} 
+				// ... equils are in same dir. if coords are on oppo side
+				if((xlink_rest > site_coord && motor_rest < site_coord)
+				|| (xlink_rest < site_coord && motor_rest > site_coord)){
+					return true;
+				}
+				// ... equils are in oppo dir. if coords are on same side
+				else if((xlink_rest > site_coord && motor_rest > site_coord)
+					 || (xlink_rest < site_coord && motor_rest < site_coord)){
+					return false;
+				}
+				else{
+					printf("error in Tubulin::SpringEquilOnSameSide TWO\n");
+					exit(1);
+				}
+			}
 		}
 		else{
 			printf("error NO. 2 in tubulin: spring equil on same side ??\n");

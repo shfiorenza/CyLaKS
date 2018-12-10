@@ -90,79 +90,87 @@ void Curator::ParseParameters(system_parameters *params,
 	// Store params pointer as parameters_ in Curator
 	parameters_ = params;
 	if(world_rank == 0){
-	int n_steps = parameters_->n_steps;
-	double delta_t = parameters_->delta_t;
-	printf("Reading params from %s:\n\n", param_file);
-	printf("  General simulation parameters:\n");
-	printf("    seed = %li\n", params->seed);
-	printf("    n_steps = %i\n", params->n_steps);
-	printf("    n_datapoints = %i\n", params->n_datapoints);
-	printf("    data_threshold = %i steps\n", params->data_threshold);
-	printf("    delta_t = %g s\n", params->delta_t);
-	printf("    kbT = %g pN*nm\n", params->kbT);
-	printf("    eta = %g (pN*s)/um^2\n", params->eta);
-	printf("\n  Kinesin (motor) parameters:\n");
-	printf("    k_on_i = %g /(nM*s)\n", params->motors.k_on_i);
-	printf("    k_on_ii = %g /(nM*s)\n", params->motors.k_on_ii);
-	printf("    concentration = %g nM\n", params->motors.concentration);
-	printf("    conc_eff_bind = %g nM\n", params->motors.conc_eff_bind);
-	printf("    k_off_i = %g /s\n", params->motors.k_off_i);
-	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
-	printf("    velocity = %g nm/s\n", params->motors.velocity);
-	printf("    diffusion_const = %g um^2/s\n", 
-			params->motors.diffusion_const);
-	printf("    tethers_active = %s\n", 
-		   params->motors.tethers_active ? "true" : "false");	
-	printf("    k_tether_free = %g /(nM*s)\n", params->motors.k_tether_free);
-	printf("    conc_eff_tether = %g nM\n", params->motors.conc_eff_tether);
-	printf("    k_untether_free = %g /s\n", params->motors.k_untether_free);
-	printf("    k_untether = %g /s\n", params->motors.k_untether);
-	printf("    r_0 = %g nm\n", params->motors.r_0);
-	printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
-	printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
-	printf("    stall_force = %g pN\n", params->motors.stall_force);
-	printf("\n  Crosslinker (xlink) parameters:\n");
-	printf("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
-	printf("    concentration = %g nM\n", params->xlinks.concentration);
-	printf("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);  
-	printf("    k_off_i = %g /s\n", params->xlinks.k_off_i);
-	printf("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
-	printf("    diffusion_constant_i = %g um^2/s\n", 
-			params->xlinks.diffusion_const_i);
-	printf("    diffusion_constant_ii = %g um^2/s\n", 
-			params->xlinks.diffusion_const_ii);
-	printf("    r_0 = %g nm\n", params->xlinks.r_0);
-	printf("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
-	printf("\n  Microtubule (mt) parameters:\n");
-	printf("    count = %i\n", params->microtubules.count);
-	printf("    length = %i sites\n", params->microtubules.length);
-	printf("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
-	printf("    site_size = %g nm\n", params->microtubules.site_size);
-	printf("    radius = %g nm\n", params->microtubules.radius);
-	printf("    elevation = %g nm above surface\n", 
-			params->microtubules.elevation);
-	for(int i_mt = 0; i_mt < n_start_coords; i_mt++){
-		double start_coord = params->microtubules.start_coord[i_mt];
-		printf("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
-	}
-	for(int i_mt = 0; i_mt < n_imp_vel; i_mt++){
-		double imp_vel = params->microtubules.imposed_velocity[i_mt];
-		printf("    imposed_velocity = %g nm/s for mt %i\n", imp_vel, i_mt);
-	}
-	for(int i_mt = 0; i_mt < n_immo; i_mt++){
-		double immo = params->microtubules.immobile_until[i_mt];	
-		printf("    immobile until = %g s for mt %i\n", immo, i_mt);
-	}
-	printf("    printout = %s\n", 
-			params->microtubules.printout ? "true" : "false");
-	printf("    diffusion = %s\n", 
-			params->microtubules.diffusion ? "true" : "false");
-    printf("\nTotal simulation duration: %g seconds\n", delta_t*n_steps);
-	int world_size;
-	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-	int n_threads = omp_get_max_threads();
-	printf("Running on %i MPI process(es), each with %i OpenMP threads.\n\n", 
-			world_size, n_threads);
+		int n_steps = parameters_->n_steps;
+		double delta_t = parameters_->delta_t;
+		printf("Reading params from %s:\n\n", param_file);
+		printf("  General simulation parameters:\n");
+		printf("    seed = %li\n", params->seed);
+		printf("    n_steps = %i\n", params->n_steps);
+		printf("    n_datapoints = %i\n", params->n_datapoints);
+		printf("    data_threshold = %i steps\n", params->data_threshold);
+		printf("    delta_t = %g s\n", params->delta_t);
+		printf("    kbT = %g pN*nm\n", params->kbT);
+		printf("    eta = %g (pN*s)/um^2\n", params->eta);
+		printf("\n  Kinesin (motor) parameters:\n");
+		printf("    k_on_i = %g /(nM*s)\n", params->motors.k_on_i);
+		printf("    k_on_ii = %g /(nM*s)\n", params->motors.k_on_ii);
+		printf("    concentration = %g nM\n", params->motors.concentration);
+		printf("    conc_eff_bind = %g nM\n", params->motors.conc_eff_bind);
+		printf("    k_off_i = %g /s\n", params->motors.k_off_i);
+		printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
+		printf("    velocity = %g nm/s\n", params->motors.velocity);
+		printf("    diffusion_const = %g um^2/s\n", 
+				params->motors.diffusion_const);
+		printf("    tethers_active = %s\n", 
+				params->motors.tethers_active ? "true" : "false");	
+		if(params->motors.tethers_active){
+			printf("    k_tether_free = %g /(nM*s)\n", 
+					params->motors.k_tether_free);
+			printf("    conc_eff_tether = %g nM\n", 
+					params->motors.conc_eff_tether);
+			printf("    k_untether_free = %g /s\n", 
+					params->motors.k_untether_free);
+			printf("    k_untether = %g /s\n", params->motors.k_untether);
+			printf("    r_0 = %g nm\n", params->motors.r_0);
+			printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
+			printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
+			printf("    stall_force = %g pN\n", params->motors.stall_force);
+		}
+		printf("\n  Crosslinker (xlink) parameters:\n");
+		printf("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
+		printf("    concentration = %g nM\n", params->xlinks.concentration);
+		printf("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);
+		printf("    k_off_i = %g /s\n", params->xlinks.k_off_i);
+		printf("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
+		printf("    diffusion_constant_i = %g um^2/s\n", 
+				params->xlinks.diffusion_const_i);
+		printf("    diffusion_constant_ii = %g um^2/s\n", 
+				params->xlinks.diffusion_const_ii);
+		printf("    r_0 = %g nm\n", params->xlinks.r_0);
+		printf("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
+		printf("\n  Microtubule (mt) parameters:\n");
+		printf("    count = %i\n", params->microtubules.count);
+		printf("    length = %i sites\n", params->microtubules.length);
+		printf("    y_dist = %g nm between MTs\n", 
+				params->microtubules.y_dist);
+		printf("    site_size = %g nm\n", params->microtubules.site_size);
+		printf("    radius = %g nm\n", params->microtubules.radius);
+		printf("    elevation = %g nm above surface\n", 
+				params->microtubules.elevation);
+		for(int i_mt = 0; i_mt < n_start_coords; i_mt++){
+			double start_coord = params->microtubules.start_coord[i_mt];
+			printf("    start_coord = %g sites for mt %i\n", 
+					start_coord, i_mt);
+		}
+		for(int i_mt = 0; i_mt < n_imp_vel; i_mt++){
+			double imp_vel = params->microtubules.imposed_velocity[i_mt];
+			printf("    imposed_velocity = %g nm/s for mt %i\n", 
+					imp_vel, i_mt);
+		}
+		for(int i_mt = 0; i_mt < n_immo; i_mt++){
+			double immo = params->microtubules.immobile_until[i_mt];	
+			printf("    immobile until = %g s for mt %i\n", immo, i_mt);
+		}
+		printf("    printout = %s\n", 
+				params->microtubules.printout ? "true" : "false");
+		printf("    diffusion = %s\n", 
+				params->microtubules.diffusion ? "true" : "false");
+		printf("\nTotal simulation duration: %g seconds\n", delta_t*n_steps);
+		int world_size;
+		MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+		int n_threads = omp_get_max_threads();
+		printf("Running on %i MPI process(es), ", world_size);
+		printf("each with %i OpenMP threads.\n\n", n_threads);
 	}
 }
 
@@ -174,7 +182,7 @@ void Curator::InitializeSimulation(system_properties *properties){
 }
 
 void Curator::SetParameters(){
-	
+
 	int n_steps = parameters_->n_steps;
 	int n_datapoints = parameters_->n_datapoints;
 	data_threshold_ = parameters_->data_threshold;
@@ -594,7 +602,7 @@ void Curator::OutputData(){
 	}
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 
-		xlink_extension_array[i_ext] = prc1->n_double_bound_[i_ext]; 
+		xlink_extension_array[i_ext] = prc1->n_bound_ii_[i_ext]; 
 	}
 	// Write the data to respective files one timestep at a time 
 	fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);
@@ -661,6 +669,7 @@ void Curator::OutputSimDuration(){
 
 void Curator::CleanUp(){
 
+	properties_->gsl.CleanUp();
 	fclose(properties_->occupancy_file_);
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);

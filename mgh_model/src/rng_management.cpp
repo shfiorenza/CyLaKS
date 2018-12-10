@@ -24,9 +24,24 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 		kinesin_rngs_[i_event] = gsl_rng_alloc(generator_type_);
 		gsl_rng_set(kinesin_rngs_[i_event], event_seed);
 	}
-	printf("\n");
+//	printf("\n");
 	parameters_ = parameters;
 	properties_ = properties;
+}
+
+void RandomNumberManagement::CleanUp(){
+
+	gsl_rng_free(rng_);
+	for(int i_rng(0); i_rng < kinesin_rngs_.size(); i_rng++){
+		gsl_rng_free(kinesin_rngs_[i_rng]);
+	}
+	for(int i_rng(0); i_rng < xlink_dif_rngs_.size(); i_rng++){
+		gsl_rng_free(xlink_dif_rngs_[i_rng]);
+	}
+	for(int i_rng(0); i_rng < xlink_kmc_rngs_.size(); i_rng++){
+		gsl_rng_free(xlink_kmc_rngs_[i_rng]);
+	}
+
 }
 
 /* NOTE: These functions could be wrapped to simply return 0 if
@@ -87,9 +102,14 @@ int RandomNumberManagement::SampleBinomialDist_Kinesin(double p,
 	return gsl_ran_binomial(kinesin_rngs_[i_rng], p, n);
 }
 
-int RandomNumberManagement::SampleBinomialDist_Xlink(double p, 
+int RandomNumberManagement::SampleBinomialDist_XlinkDif(double p, 
 		int n, int i_rng){
-	return gsl_ran_binomial(xlink_rngs_[i_rng], p, n);
+	return gsl_ran_binomial(xlink_dif_rngs_[i_rng], p, n);
+}
+
+int RandomNumberManagement::SampleBinomialDist_XlinkKMC(double p, 
+		int n, int i_rng){
+	return gsl_ran_binomial(xlink_kmc_rngs_[i_rng], p, n);
 }
 
 int RandomNumberManagement::SamplePoissonDist(double n_avg){

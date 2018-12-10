@@ -8,22 +8,24 @@
 struct system_parameters;
 struct system_properties;
 
-// Make a structure to hold the number and type of population
-struct pop_t{
-	int n_entries_ = -1;
-	std::string type_ = std::string("wut"); 
-	int x_dist_ = -1;
-	int x_dist_dub_ = -1;
-}; 
 
 //XXX to-do:
 //XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
 //XXX	- experiment with #pragma omp parallel for in UpdateLists()
 //XXX   - investigate using sampling_functs_['name'] rather than find()
+//XXX   - update active_ in both motor/xlink UntetherSatellite()
+
 class KinesinManagement{
 	private:
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
+		// Structure to hold the size and type of population
+		struct pop_t{
+			int n_entries_ = -1;
+			std::string type_ = std::string("wut"); 
+			int x_dist_ = -1;
+			int x_dist_dub_ = -1;
+		}; 
 
 	public:
 		int n_motors_ = 0;

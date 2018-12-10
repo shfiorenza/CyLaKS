@@ -45,7 +45,7 @@ class Curator{
 		void UpdateTimestep(int i_step);
 		void PauseSim(double duration); 
 		void OutputSimDuration();
-		void CleanUp();
+		void CloseDataFiles();
 
 };
 #endif

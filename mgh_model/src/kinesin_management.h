@@ -8,12 +8,11 @@
 struct system_parameters;
 struct system_properties;
 
-
 //XXX to-do:
 //XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
 //XXX	- experiment with #pragma omp parallel for in UpdateLists()
 //XXX   - investigate using sampling_functs_['name'] rather than find()
-//XXX   - update active_ in both motor/xlink UntetherSatellite()
+//XXX 	- reorganize KMC functions so non-tether group is first
 
 class KinesinManagement{
 	private:
@@ -107,11 +106,11 @@ class KinesinManagement{
 		std::map<std::string, std::function<int(int)> > sampling_functs_;
 
 	private:
-		void SetParameters();
 		void GenerateMotors();
+		void SetParameters();
 		void InitializeLists();
 		void InitializeSerialPop(); 
-		void InitializeFunctionMap();
+		void InitializeSamplingFunctions();
 
 	public:
 		KinesinManagement();

@@ -11,6 +11,7 @@ struct system_properties;
 //XXX	to-do:
 //XXX		-see kinesin_mgmt header
 //XXX		-rename functs
+//XXX		-rearrange KMC functs
 
 
 class AssociatedProteinManagement{
@@ -115,23 +116,30 @@ class AssociatedProteinManagement{
 		// Serialized (in regards to self/teth extension) vectors that store
 		// number of entries, the population/event label, x, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
-		std::vector<pop_t> serial_pop_; 
+		std::vector<pop_t> serial_dif_pop_; 
 		std::vector<pop_t> serial_dif_;
+		std::vector<pop_t> serial_kmc_pop_;
 		std::vector<pop_t> serial_kmc_;
 		// Map of population/event label to sampling function;
 		// see InitializeFUnctionMap() for function definitions
-		std::map<std::string, std::function<int(int)> > dif_sampling_functs_;
-		std::map<std::string, std::function<int(int)> > kmc_sampling_functs_;
+		std::map<std::string, std::function<int(int, int)> > 
+			dif_sampling_functs_;
+		std::map<std::string, std::function<int(int, int)> > 
+			kmc_sampling_functs_;
 
 	private:
+		void GenerateXLinks();
+		void SetParameters();
+		void InitializeLists();
+		void InitializeDifSerialPop();
+		void InitializeKMCSerialPop();
+		void InitializeDifSamplingFunctions();
+		void InitializeKMCSamplingFunctions();
 
 	public:
 		AssociatedProteinManagement();
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
-		void GenerateXLinks();
-		void SetParameters();
-		void InitiateLists();
 
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
@@ -177,6 +185,11 @@ class AssociatedProteinManagement{
 		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
 
 		void GenerateKMCList();
+		void UpdateSerializedKMCPopulations();
+		void UpdateSerializedKMCEvents();
+		double GetWeightBindII(); 
+		double GetWeightBindITethered();
+		double GetWeightBindIITethered();
 		int GetNumToBind_I();
 		int GetNumToBind_I_Tethered();
 		int GetNumToBind_II();
@@ -191,12 +204,12 @@ class AssociatedProteinManagement{
 
 		void RunKMC();
 		void RunKMC_Bind_I();
-		void RunKMC_Bind_I_Tethered();
 		void RunKMC_Bind_II();
-		void RunKMC_Bind_II_Tethered();  // XXX 
 		void RunKMC_Unbind_I();
-		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
 		void RunKMC_Unbind_II(int x_dist);
+		void RunKMC_Bind_I_Tethered();
+		void RunKMC_Bind_II_Tethered();
+		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
 		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Tether_Free();

@@ -667,9 +667,8 @@ void Curator::OutputSimDuration(){
 	printf(" Time to execute: %f seconds.\n\n", sim_duration_);
 }
 
-void Curator::CleanUp(){
+void Curator::CloseDataFiles(){
 
-	properties_->gsl.CleanUp();
 	fclose(properties_->occupancy_file_);
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);

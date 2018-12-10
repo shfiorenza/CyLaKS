@@ -14,7 +14,7 @@ void KinesinManagement::Initialize(system_parameters *parameters,
     SetParameters();	
 	InitializeLists();
 	InitializeSerialPop();
-	InitializeFunctionMap();
+	InitializeSamplingFunctions();
 }
 
 void KinesinManagement::GenerateMotors(){
@@ -424,7 +424,7 @@ void KinesinManagement::InitializeSerialPop(){
 	serial_kmc_ = serial_pop_;
 }
 
-void KinesinManagement::InitializeFunctionMap(){
+void KinesinManagement::InitializeSamplingFunctions(){
 
 	// Use lambda expressions to create functions that sample statistical
 	// distributions with the appropriate p & n values for each population,
@@ -2255,6 +2255,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 		int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
 		Kinesin *motor = bound_untethered_[i_motor];
 		AssociatedProtein* xlink = motor->GetWeightedNeighborXlink();
+		/*
 		int attempts = 0; 
 		while(xlink == nullptr){
 			if(attempts > 10*n_bound_untethered_){
@@ -2265,6 +2266,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 			xlink = motor->GetWeightedNeighborXlink();
 			attempts++;
 		}
+		*/
 		if(xlink != nullptr){
 			// Update motor and xlink details
 			motor->xlink_ = xlink;
@@ -2279,7 +2281,6 @@ void KinesinManagement::KMC_Tether_Bound(){
 		}
 		else{
 			printf("Failed to tether bound motor\n");
-			exit(1);
 		}
 	}
 	else{

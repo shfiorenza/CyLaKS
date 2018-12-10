@@ -13,8 +13,7 @@ class RandomNumberManagement{
 	public:
 		gsl_rng *rng_;		
 		std::vector<gsl_rng*> kinesin_rngs_; 
-		std::vector<gsl_rng*> xlink_dif_rngs_;
-		std::vector<gsl_rng*> xlink_kmc_rngs_;
+		std::vector<gsl_rng*> crosslinker_rngs_; 
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -32,12 +31,13 @@ class RandomNumberManagement{
 
 		int SampleNormalDist(double sigma);
 		int SampleAbsNormalDist(double sigma);
+
 		int SampleBinomialDist(double p, int n);
 		int SampleBinomialDist_Kinesin(double p, int n, int i_rng);
-		int SampleBinomialDist_XlinkDif(double p, int n, int i_rng); 
-		int SampleBinomialDist_XlinkKMC(double p, int n, int i_rng); 
+		int SampleBinomialDist_Crosslinker(double p, int n, int i_rng); 
+
 		int SamplePoissonDist(double n_avg);
 		int SamplePoissonDist_Kinesin(double n_avg, int i_rng);
-		int SamplePoissonDist_Xlink(double n_avg, int i_rng);
+		int SamplePoissonDist_Crosslinker(double n_avg, int i_rng);
 };
 #endif

@@ -7,26 +7,50 @@ RandomNumberManagement::RandomNumberManagement(){
 void RandomNumberManagement::Initialize(system_parameters *parameters, 
 		system_properties *properties){
 
+	parameters_ = parameters;
+	properties_ = properties;
+
 	int world_rank; 
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+	int world_size;
+	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
 	// initialize "root" RNG
 	long seed = parameters->seed; 
 	rng_ = gsl_rng_alloc(generator_type_);
 	gsl_rng_set(rng_, seed);
 
-	// initialize RNG for each KMC event on each MPI node
-	int n_kin_events = properties->kinesin4.serial_kmc_.size();
-	kinesin_rngs_.resize(n_kin_events); 
-	for(int i_event(0); i_event < n_kin_events; i_event++){
-		long event_seed = seed + (world_rank+1)*10000 + (i_event+1)*100;
-//		printf("seed for kin_rng #%i is %lu\n", i_event, event_seed);
-		kinesin_rngs_[i_event] = gsl_rng_alloc(generator_type_);
-		gsl_rng_set(kinesin_rngs_[i_event], event_seed);
+	// initialize RNG for each kinesin population on each MPI node
+	int n_kin_pop = properties->kinesin4.serial_pop_.size();
+	kinesin_rngs_.resize(n_kin_pop); 
+	long last_seed = seed; 
+	for(int i_pop(0); i_pop < n_kin_pop; i_pop++){
+		long pop_seed = seed + 1 + world_rank*(n_kin_pop + 1) + i_pop;
+		kinesin_rngs_[i_pop] = gsl_rng_alloc(generator_type_);
+		gsl_rng_set(kinesin_rngs_[i_pop], pop_seed);
+		// Ensure seeds aren't duplicated amongst threads
+		if(pop_seed == last_seed){
+			printf("Error in seeding kinsin RNGs: duplicate seeds!\n");
+			exit(1);
+		}
+		last_seed = pop_seed; 
 	}
-//	printf("\n");
-	parameters_ = parameters;
-	properties_ = properties;
+
+	// initialize RNG for each crosslinker KMC event on each MPI node
+	// (there will always be more diffusion populations than KMC)
+	int n_xl_pop = properties->prc1.serial_dif_pop_.size();
+	crosslinker_rngs_.resize(n_xl_pop);
+	long seed_offset = seed + 1 + world_size*(n_kin_pop + 1) + n_kin_pop;
+	for(int i_pop(0); i_pop < n_xl_pop; i_pop++){
+		long pop_seed = seed_offset + 1 + world_rank*(n_xl_pop + 1) + i_pop;
+		crosslinker_rngs_[i_pop] = gsl_rng_alloc(generator_type_);
+		gsl_rng_set(crosslinker_rngs_[i_pop], pop_seed);
+		if(pop_seed == last_seed){
+			printf("Error in seeding crossinker RNGs: duplicate seeds!\n");
+			exit(1);
+		}
+		last_seed = pop_seed;
+	}
 }
 
 void RandomNumberManagement::CleanUp(){
@@ -35,13 +59,9 @@ void RandomNumberManagement::CleanUp(){
 	for(int i_rng(0); i_rng < kinesin_rngs_.size(); i_rng++){
 		gsl_rng_free(kinesin_rngs_[i_rng]);
 	}
-	for(int i_rng(0); i_rng < xlink_dif_rngs_.size(); i_rng++){
-		gsl_rng_free(xlink_dif_rngs_[i_rng]);
+	for(int i_rng(0); i_rng < crosslinker_rngs_.size(); i_rng++){
+		gsl_rng_free(crosslinker_rngs_[i_rng]);
 	}
-	for(int i_rng(0); i_rng < xlink_kmc_rngs_.size(); i_rng++){
-		gsl_rng_free(xlink_kmc_rngs_[i_rng]);
-	}
-
 }
 
 /* NOTE: These functions could be wrapped to simply return 0 if
@@ -102,14 +122,9 @@ int RandomNumberManagement::SampleBinomialDist_Kinesin(double p,
 	return gsl_ran_binomial(kinesin_rngs_[i_rng], p, n);
 }
 
-int RandomNumberManagement::SampleBinomialDist_XlinkDif(double p, 
+int RandomNumberManagement::SampleBinomialDist_Crosslinker(double p, 
 		int n, int i_rng){
-	return gsl_ran_binomial(xlink_dif_rngs_[i_rng], p, n);
-}
-
-int RandomNumberManagement::SampleBinomialDist_XlinkKMC(double p, 
-		int n, int i_rng){
-	return gsl_ran_binomial(xlink_kmc_rngs_[i_rng], p, n);
+	return gsl_ran_binomial(crosslinker_rngs_[i_rng], p, n);
 }
 
 int RandomNumberManagement::SamplePoissonDist(double n_avg){
@@ -119,4 +134,9 @@ int RandomNumberManagement::SamplePoissonDist(double n_avg){
 int RandomNumberManagement::SamplePoissonDist_Kinesin(double n_avg, 
 		int i_rng){
 	return gsl_ran_poisson(kinesin_rngs_[i_rng], n_avg);
+}
+
+int RandomNumberManagement::SamplePoissonDist_Crosslinker(double n_avg,
+		int i_rng){
+	return gsl_ran_poisson(crosslinker_rngs_[i_rng], n_avg);
 }

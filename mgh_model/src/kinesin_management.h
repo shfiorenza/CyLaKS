@@ -10,9 +10,14 @@ struct system_properties;
 
 //XXX to-do:
 //XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
+//				- wait, would this break reproducability??
+//					- potentially random order in lists; same RNG
 //XXX	- experiment with #pragma omp parallel for in UpdateLists()
 //XXX   - investigate using sampling_functs_['name'] rather than find()
 //XXX 	- reorganize KMC functions so non-tether group is first
+//			- this will let us do gen_kmc_event in 2 independent pieces
+//				- don't need to initialize all arrays if tethers disabled!
+//XXX	- parallelize update_serial_pops
 
 class KinesinManagement{
 	private:

@@ -940,6 +940,20 @@ void AssociatedProteinManagement::InitializeKMCSamplingFunctions(){
 	}
 };
 
+void AssociatedProteinManagement::UpdateAllLists(){
+
+	UpdateSingleBoundList();
+	UpdateDoubleBoundList();
+	properties_->microtubules.UpdateUnoccupied();
+	if(parameters_->motors.tethers_active){
+		UpdateBoundITethered();
+		UpdateBoundIITethered();
+		UpdateFreeTetheredList();
+		UpdateUntethered();
+		properties_->kinesin4.UpdateBoundUntethered();
+	}
+}
+
 void AssociatedProteinManagement::UpdateSingleBoundList(){
 	
 	n_bound_i_ = 0;
@@ -1065,6 +1079,16 @@ void AssociatedProteinManagement::UpdateUntethered(){
 	}
 }
 
+void AssociatedProteinManagement::UpdateAllSiteLists(){
+
+	UpdateSingleUntetheredSites();
+	UpdateDoubleUntetheredSites();
+	if(parameters_->motors.tethers_active){
+		UpdateSingleTetheredSites();
+		UpdateDoubleTetheredSites();
+	}
+}
+
 void AssociatedProteinManagement::UpdateSingleUntetheredSites(){
 
 	n_sites_i_untethered_ = 0;
@@ -1167,9 +1191,9 @@ void AssociatedProteinManagement::UpdateSingleTetheredSites(){
 void AssociatedProteinManagement::UpdateDoubleTetheredSites(){
 
 	for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			n_sites_ii_tethered_same_[x_dub][x_dist] = 0;
-			n_sites_ii_tethered_oppo_[x_dub][x_dist] = 0;
+		for(int x = 0; x <= dist_cutoff_; x++){
+			n_sites_ii_tethered_same_[x_dub][x] = 0;
+			n_sites_ii_tethered_oppo_[x_dub][x] = 0;
 		}
 	}
 	for(int i_xlink = 0; i_xlink < n_active_; i_xlink++){
@@ -1183,51 +1207,51 @@ void AssociatedProteinManagement::UpdateDoubleTetheredSites(){
 				// Make sure an untether or unbind event wasn't forced
 				if(xlink->heads_active_ == 2
 				&& xlink->tethered_ == true){
-					int x_dist = xlink->x_dist_;
+					int x = xlink->x_dist_;
 					int x_dub = xlink->motor_->x_dist_doubled_;
 					// Site one
 					Tubulin *site_one = xlink->site_one_;
-					if(x_dist == rest_dist_){
-						int i_one = n_sites_ii_tethered_same_[x_dub][x_dist];
-						sites_ii_tethered_same_[x_dub][x_dist][i_one] = 
+					if(x == rest_dist_){
+						int i_one = n_sites_ii_tethered_same_[x_dub][x];
+						sites_ii_tethered_same_[x_dub][x][i_one] = 
 							site_one;
-						int i_two = n_sites_ii_tethered_oppo_[x_dub][x_dist];
-						sites_ii_tethered_oppo_[x_dub][x_dist][i_two] =
+						int i_two = n_sites_ii_tethered_oppo_[x_dub][x];
+						sites_ii_tethered_oppo_[x_dub][x][i_two] =
 							site_one;
-						n_sites_ii_tethered_same_[x_dub][x_dist]++;
-						n_sites_ii_tethered_oppo_[x_dub][x_dist]++;
+						n_sites_ii_tethered_same_[x_dub][x]++;
+						n_sites_ii_tethered_oppo_[x_dub][x]++;
 					}
-					else if(site_one->EquilibriumInSameDirection() == true){
-						int i = n_sites_ii_tethered_same_[x_dub][x_dist];
-						sites_ii_tethered_same_[x_dub][x_dist][i] = site_one;
-						n_sites_ii_tethered_same_[x_dub][x_dist]++;
+					else if(site_one->EquilibriumInSameDirection()){
+						int i = n_sites_ii_tethered_same_[x_dub][x];
+						sites_ii_tethered_same_[x_dub][x][i] = site_one;
+						n_sites_ii_tethered_same_[x_dub][x]++;
 					}
 					else{
-						int i = n_sites_ii_tethered_oppo_[x_dub][x_dist]; 
-						sites_ii_tethered_oppo_[x_dub][x_dist][i] = site_one;
-						n_sites_ii_tethered_oppo_[x_dub][x_dist]++;
+						int i = n_sites_ii_tethered_oppo_[x_dub][x]; 
+						sites_ii_tethered_oppo_[x_dub][x][i] = site_one;
+						n_sites_ii_tethered_oppo_[x_dub][x]++;
 					}
 					// Site two
 					Tubulin *site_two = xlink->site_two_;
-					if(x_dist == rest_dist_){
-						int i_one = n_sites_ii_tethered_same_[x_dub][x_dist];
-						sites_ii_tethered_same_[x_dub][x_dist][i_one] = 
+					if(x == rest_dist_){
+						int i_one = n_sites_ii_tethered_same_[x_dub][x];
+						sites_ii_tethered_same_[x_dub][x][i_one] = 
 							site_two;
-						int i_two = n_sites_ii_tethered_oppo_[x_dub][x_dist];
-						sites_ii_tethered_oppo_[x_dub][x_dist][i_two] = 
+						int i_two = n_sites_ii_tethered_oppo_[x_dub][x];
+						sites_ii_tethered_oppo_[x_dub][x][i_two] = 
 							site_two;
-						n_sites_ii_tethered_same_[x_dub][x_dist]++;
-						n_sites_ii_tethered_oppo_[x_dub][x_dist]++;
+						n_sites_ii_tethered_same_[x_dub][x]++;
+						n_sites_ii_tethered_oppo_[x_dub][x]++;
 					}
-					else if(site_two->EquilibriumInSameDirection() == true){
-						int i = n_sites_ii_tethered_same_[x_dub][x_dist];
-						sites_ii_tethered_same_[x_dub][x_dist][i] = site_two;
-						n_sites_ii_tethered_same_[x_dub][x_dist]++;
+					else if(site_two->EquilibriumInSameDirection()){
+						int i = n_sites_ii_tethered_same_[x_dub][x];
+						sites_ii_tethered_same_[x_dub][x][i] = site_two;
+						n_sites_ii_tethered_same_[x_dub][x]++;
 					}
 					else{
-						int i = n_sites_ii_tethered_oppo_[x_dub][x_dist];
-						sites_ii_tethered_oppo_[x_dub][x_dist][i] = site_two;
-						n_sites_ii_tethered_oppo_[x_dub][x_dist]++;
+						int i = n_sites_ii_tethered_oppo_[x_dub][x];
+						sites_ii_tethered_oppo_[x_dub][x][i] = site_two;
+						n_sites_ii_tethered_oppo_[x_dub][x]++;
 					}
 				}
 			}
@@ -1274,12 +1298,18 @@ AssociatedProtein* AssociatedProteinManagement::GetUntetheredXlink(){
 void AssociatedProteinManagement::GenerateDiffusionList(){
 
 	int n_events = 0;
+	UpdateSerializedDifPopulations();
+	UpdateSerializedDifEvents();
+
+	int n_i_fwd,
+		n_i_bck,
+		n_ii_to[dist_cutoff_ + 1],
+		n_ii_fr[dist_cutoff_ + 1];
+
 	// Untethered statistics
-	UpdateSingleUntetheredSites();
-	int n_i_fwd = GetNumToStepI_Forward();
-	int n_i_bck = GetNumToStepI_Backward();
+	n_i_fwd = serial_dif_[0].n_entries_;
+	n_i_bck = serial_dif_[1].n_entries_;
 	while(n_i_fwd + n_i_bck > n_sites_i_untethered_){
-//		printf("yah for n_i_unteth\n");
 		double ran = properties_->gsl.GetRanProb();
 		if(ran < 0.5)
 			n_i_fwd--;
@@ -1288,599 +1318,400 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	}
 	n_events += n_i_fwd;
 	n_events += n_i_bck;
-	UpdateDoubleUntetheredSites();
-	int n_ii_to[dist_cutoff_ + 1];
-	int n_ii_from[dist_cutoff_ + 1];
 	// Handle statistics for each xlink extension separately
-	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		n_ii_to[x_dist] = GetNumToStepII_ToRest(x_dist);
-		n_ii_from[x_dist] = GetNumToStepII_FromRest(x_dist);
-		int n_to = n_ii_to[x_dist];
-		int n_from = n_ii_from[x_dist];
-		int n_avail = n_sites_ii_untethered_[x_dist];
-//		printf("%i out of %i\n", x_dist, dist_cutoff_);
-		while(2*(n_to + n_from) > n_avail && n_avail != 0){
-//		printf("yah for n_ii_unteth (x: %i)\n", x_dist);
-//		printf("n_to: %i n_from: %i n_avail: %i\n", n_to, n_from, n_avail);
+	for(int x = 0; x <= dist_cutoff_; x++){
+		n_ii_to[x] = serial_dif_[2 + x].n_entries_;
+		n_ii_fr[x] = serial_dif_[3 + dist_cutoff_ + x].n_entries_;
+		while(2*(n_ii_to[x] + n_ii_fr[x]) > n_sites_ii_untethered_[x]){
 			double ran = properties_->gsl.GetRanProb();
-			double p_to = p_diffuse_ii_to_rest_[x_dist];
-			double p_from = p_diffuse_ii_from_rest_[x_dist];
+			double p_to = p_diffuse_ii_to_rest_[x];
+			double p_from = p_diffuse_ii_from_rest_[x];
 			double p_tot = p_to + p_from;
 			if(ran < p_to/p_tot
-			&& n_to > 0){
-				n_ii_to[x_dist]--;
-				n_to = n_ii_to[x_dist];
+			&& n_ii_to[x] > 0){
+				n_ii_to[x]--;
 			}
-			else if(n_from > 0){
-				n_ii_from[x_dist]--;
-				n_from = n_ii_from[x_dist];
+			else if(n_ii_fr[x] > 0){
+				n_ii_fr[x]--;
 			}
-			else if(n_to > 0){
-				n_ii_to[x_dist]--;
-				n_to = n_ii_to[x_dist];
+			else if(n_ii_to[x] > 0){
+				n_ii_to[x]--;
 			}
 		}
-		n_events += n_ii_to[x_dist];
-		n_events += n_ii_from[x_dist];
+		n_events += n_ii_to[x];
+		n_events += n_ii_fr[x];
 	}
-	// Handle statistics for each tether extension separately
-	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
-	UpdateSingleTetheredSites();
-	UpdateDoubleTetheredSites();
-	int n_i_to_teth[2*teth_cutoff + 1];
-	int n_i_from_teth[2*teth_cutoff + 1];
-	int n_ii_to_both[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	int n_ii_to_self_from_teth[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	int n_ii_from_self_to_teth[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	int n_ii_from_both[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	int n_to, n_from, n_avail,
-		n_to_one, n_from_one, 
-		n_to_two, n_from_two,
-		n_avail_one, n_avail_two;
-	double p_to, p_from, p_tot,
-		   p_to_one, p_from_one, 
-		   p_to_two, p_from_two; 
-	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_cutoff; x_dist_dub++){
-		n_i_to_teth[x_dist_dub] = GetNumToStepI_ToTethRest(x_dist_dub);
-		n_i_from_teth[x_dist_dub] = GetNumToStepI_FromTethRest(x_dist_dub);
-		// Make sure we don't get more events than sites that exist
-		n_to = n_i_to_teth[x_dist_dub];
-		n_from = n_i_from_teth[x_dist_dub];
-		n_avail = n_sites_i_tethered_[x_dist_dub];
-		while(n_to + n_from > n_avail){
-			double ran = properties_->gsl.GetRanProb();
-//			printf("yah for n_i_teth (2x: %i)\n", x_dist_dub);
-//			printf("n_to: %i n_from: %i n_avail: %i\n", 
-//					n_to, n_from, n_avail);
-			p_to = p_diffuse_i_to_teth_rest_[x_dist_dub];
-			p_from = p_diffuse_i_from_teth_rest_[x_dist_dub];
-			p_tot = p_to + p_from;
-			if(ran < p_to/p_tot
-			&& n_to > 0){
-				n_i_to_teth[x_dist_dub]--;
-				n_to = n_i_to_teth[x_dist_dub];
-			}
-			else if(n_from > 0){
-				n_i_from_teth[x_dist_dub]--;
-				n_from = n_i_from_teth[x_dist_dub];
-			}
-			else if(n_to > 0){
-				n_i_to_teth[x_dist_dub]--;
-				n_to = n_i_to_teth[x_dist_dub];
-			}
-		}
-		n_events += n_i_to_teth[x_dist_dub];
-		n_events += n_i_from_teth[x_dist_dub];
-		KinesinManagement *kinesin4 = &properties_->kinesin4;
-		int rest_dist_dub = 2*kinesin4->motors_[0].rest_dist_;
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			// First do stats for sites with xlink/teth rest on SAME side
-			n_ii_to_both[x_dist_dub][x_dist] 
-				= GetNumToStepII_ToBothRest(x_dist_dub, x_dist);
-			n_ii_from_both[x_dist_dub][x_dist]
-				= GetNumToStepII_FromBothRest(x_dist_dub, x_dist);
-			// Next do stats for sites with xlink/teth on OPPOSITE sides
-			n_ii_to_self_from_teth[x_dist_dub][x_dist]
-				= GetNumToStepII_ToSelf_FromTeth(x_dist_dub, x_dist);
-			n_ii_from_self_to_teth[x_dist_dub][x_dist]
-				= GetNumToStepII_FromSelf_ToTeth(x_dist_dub, x_dist);
-			// Make sure we don't get more events than available sites
-			if(x_dist == 0){
-				n_to = n_ii_from_self_to_teth[x_dist_dub][x_dist];
-				n_from = n_ii_from_both[x_dist_dub][x_dist];
-				n_avail = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-				while(2*(n_to + n_from) > n_avail){
-//					printf("yah for ii_teth_serr (2x: %i, x: %i)\n", 
-//							x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//							n_to, n_from, n_avail);
-					double ran = properties_->gsl.GetRanProb();
-					p_to = p_diffuse_ii_from_self_to_teth_
-									[x_dist_dub][x_dist];
-					p_from = p_diffuse_ii_from_both_rest_
-									[x_dist_dub][x_dist];
-					p_tot = p_to + p_from;
-					if(ran < p_to/p_tot
-							&& n_to > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_to = n_ii_from_self_to_teth[x_dist_dub][x_dist];
-					}
-					else if(n_from > 0){
-						n_ii_from_both[x_dist_dub][x_dist]--;
-						n_from = n_ii_from_both[x_dist_dub][x_dist];
-					}
-					else if (n_to > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_to = n_ii_from_self_to_teth[x_dist_dub][x_dist];
-					}
-				}
-			}
-			// For compression, sides are switched
-			else if(x_dist_dub <= rest_dist_dub){
-				n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-				n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-				n_avail_one = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites
-				while((n_to_one + n_from_one) > n_avail_one){
-//					printf("yah for to/from both_ext (2x: %i, x: %i)\n", 
-//							x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//							n_to_one, n_from_one, n_avail_one);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_one = p_diffuse_ii_to_both_rest_
-								[x_dist_dub][x_dist];
-					p_from_one = p_diffuse_ii_from_both_rest_
-								[x_dist_dub][x_dist];
-					p_tot = p_to_one + p_from_one;
-					if(ran < p_to_one/p_tot
-							&& n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-					}
-					else if(n_from_one > 0){
-						n_ii_from_both[x_dist_dub][x_dist]--;
-						n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-					}
-					else if (n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-					}
-
-				}
-				n_to_two = n_ii_to_self_from_teth[x_dist_dub][x_dist];
-				n_from_two = n_ii_from_self_to_teth[x_dist_dub][x_dist];
-				n_avail_two = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites
-				while((n_to_two + n_from_two) > n_avail_two){
-//					printf("yah for to/from self/teth_ext (2x: %i, x: %i)\n",
-//								x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//								n_to_two, n_from_two, n_avail_two);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_two = p_diffuse_ii_to_self_from_teth_
-								[x_dist_dub][x_dist];
-					p_from_two = p_diffuse_ii_from_self_to_teth_
-								[x_dist_dub][x_dist];
-					p_tot = p_to_two + p_from_two;
-					if(ran < p_to_two/p_tot
-					&& n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-					}
-					else if(n_from_two > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_from_two = n_ii_from_self_to_teth
-									[x_dist_dub][x_dist];
-					}
-					else if(n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-					}
-				}
-				n_to = n_to_one + n_to_two;
-				n_from = n_from_one + n_from_two;
-				n_avail = n_avail_one + n_avail_two;
-				// Make sure there aren't more events than ALL sites
-				while(2*(n_to + n_from) > n_avail){
-//					printf("yah for teth_ii ext FINALE comp (2x: %i, x: %i)\n",
-//								x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//								n_to, n_from, n_avail);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_one = p_diffuse_ii_to_both_rest_
-								[x_dist_dub][x_dist];
-					p_from_one = p_diffuse_ii_from_both_rest_
-								[x_dist_dub][x_dist];
-					p_to_two = p_diffuse_ii_to_self_from_teth_
-								[x_dist_dub][x_dist];
-					p_from_two = p_diffuse_ii_from_self_to_teth_
-								[x_dist_dub][x_dist];
-					p_to = p_to_one + p_to_two;
-					p_from = p_from_one + p_from_two;
-					p_tot = p_to + p_from;
-//					printf("%g, %g, %g, %g\n", p_to_one, p_to_two, 
-//							p_from_one, p_from_two);
-					if(ran < p_to_one/p_tot
-					&& n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-						n_to = n_to_one + n_to_two;
-					}
-					else if(ran < p_to/p_tot
-					&& n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-						n_to = n_to_one + n_to_two;
-					}
-					else if(ran < (p_to + p_from_one)/p_tot
-					&& n_from_one > 0){
-						n_ii_from_both[x_dist_dub][x_dist]--;
-						n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-						n_from = n_from_one + n_from_two;
-					}
-					else if(n_from_two > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_from_two = n_ii_from_self_to_teth
-									[x_dist_dub][x_dist];
-						n_from = n_from_one + n_from_two;
-					}
-				}
-			}
-			// Extension
-			else{
-				n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-				n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-				n_avail_one = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-				// Make sure there arent more events than sites w/ same equil
-				while((n_to_one + n_from_one) > n_avail_one){
-//					printf("yah for to/from both_ext (2x: %i, x: %i)\n", 
-//							x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//							n_to_one, n_from_one, n_avail_one);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_one = p_diffuse_ii_to_both_rest_
-								[x_dist_dub][x_dist];
-					p_from_one = p_diffuse_ii_from_both_rest_
-								[x_dist_dub][x_dist];
-					p_tot = p_to_one + p_from_one;
-					if(ran < p_to_one/p_tot
-							&& n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-					}
-					else if(n_from_one > 0){
-						n_ii_from_both[x_dist_dub][x_dist]--;
-						n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-					}
-					else if (n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-					}
-
-				}
-				n_to_two = n_ii_to_self_from_teth[x_dist_dub][x_dist];
-				n_from_two = n_ii_from_self_to_teth[x_dist_dub][x_dist];
-				n_avail_two = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-				// Make sure there aren't more events than sites w/ oppo equil
-				while((n_to_two + n_from_two) > n_avail_two){
-//					printf("yah for to/from self/teth_ext (2x: %i, x: %i)\n",
-//								x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//								n_to_two, n_from_two, n_avail_two);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_two = p_diffuse_ii_to_self_from_teth_
-								[x_dist_dub][x_dist];
-					p_from_two = p_diffuse_ii_from_self_to_teth_
-								[x_dist_dub][x_dist];
-					p_tot = p_to_two + p_from_two;
-					if(ran < p_to_two/p_tot
-					&& n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-					}
-					else if(n_from_two > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_from_two = n_ii_from_self_to_teth
-									[x_dist_dub][x_dist];
-					}
-					else if(n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-					}
-				}
-				n_to = n_to_one + n_to_two;
-				n_from = n_from_one + n_from_two;
-				n_avail = n_avail_one + n_avail_two;
-				// Make sure there aren't more events than ALL sites
-				while(2*(n_to + n_from) > n_avail){
-//					printf("yah for teth_ii ext FINALE ext (2x: %i, x: %i)\n",
-//								x_dist_dub, x_dist);
-//					printf("n_to: %i n_from: %i n_avail: %i\n", 
-//								n_to, n_from, n_avail);
-					double ran = properties_->gsl.GetRanProb();
-					p_to_one = p_diffuse_ii_to_both_rest_
-								[x_dist_dub][x_dist];
-					p_from_one = p_diffuse_ii_from_both_rest_
-								[x_dist_dub][x_dist];
-					p_to_two = p_diffuse_ii_to_self_from_teth_
-								[x_dist_dub][x_dist];
-					p_from_two = p_diffuse_ii_from_self_to_teth_
-								[x_dist_dub][x_dist];
-					p_to = p_to_one + p_to_two;
-					p_from = p_from_one + p_from_two;
-					p_tot = p_to + p_from;
-					if(ran < p_to_one/p_tot
-					&& n_to_one > 0){
-						n_ii_to_both[x_dist_dub][x_dist]--;
-						n_to_one = n_ii_to_both[x_dist_dub][x_dist];
-						n_to = n_to_one + n_to_two;
-					}
-					else if(ran < p_to/p_tot
-					&& n_to_two > 0){
-						n_ii_to_self_from_teth[x_dist_dub][x_dist]--;
-						n_to_two = n_ii_to_self_from_teth
-									[x_dist_dub][x_dist];
-						n_to = n_to_one + n_to_two;
-					}
-					else if(ran < (p_to + p_from_one)/p_tot
-					&& n_from_one > 0){
-						n_ii_from_both[x_dist_dub][x_dist]--;
-						n_from_one = n_ii_from_both[x_dist_dub][x_dist];
-						n_from = n_from_one + n_from_two;
-					}
-					else if(n_from_two > 0){
-						n_ii_from_self_to_teth[x_dist_dub][x_dist]--;
-						n_from_two = n_ii_from_self_to_teth
-									[x_dist_dub][x_dist];
-						n_from = n_from_one + n_from_two;
-					}
-				}
-			}
-			n_events += n_ii_to_both[x_dist_dub][x_dist];
-			n_events += n_ii_from_both[x_dist_dub][x_dist];
-			n_events += n_ii_to_self_from_teth[x_dist_dub][x_dist];
-			n_events += n_ii_from_self_to_teth[x_dist_dub][x_dist];
-		}
-	}
-	// Only generate a list if more than zero events occured
-	if(n_events > 0){
-		int pre_list[n_events];
-		int diff_index = 0;
-		for(int i_event = 0; i_event < n_i_fwd; i_event++){
-			pre_list[diff_index] = 10;
-			diff_index++;
-		}
-		for(int i_event = 0; i_event < n_i_bck; i_event++){
-			pre_list[diff_index] = 20;
-			diff_index++;
-		}
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			int n_step_to = n_ii_to[x_dist];
-			for(int i_event = 0; i_event < n_step_to; i_event++){
-				pre_list[diff_index] = 300 + x_dist;
+	
+	// If tethering is disabled, construct diffusion list now
+	if(!parameters_->motors.tethers_active){
+		if(n_events > 0){
+			int pre_list[n_events];
+			int diff_index = 0;
+			for(int i_event = 0; i_event < n_i_fwd; i_event++){
+				pre_list[diff_index] = 10;
 				diff_index++;
 			}
-			int n_step_from = n_ii_from[x_dist];
-			for(int i_event = 0; i_event < n_step_from; i_event++){
-				pre_list[diff_index] = 400 + x_dist;
-				diff_index++;
-			}
-		}
-		for(int x_dist_dub = 0; x_dist_dub <= 2*teth_cutoff; x_dist_dub++){
-			int n_step_to_i = n_i_to_teth[x_dist_dub];
-			for(int i_event = 0; i_event < n_step_to_i; i_event++){
-				pre_list[diff_index] = 500 + x_dist_dub;
-				diff_index++;
-			}
-			int n_step_from_i = n_i_from_teth[x_dist_dub];
-			for(int i_event = 0; i_event < n_step_from_i; i_event++){
-				pre_list[diff_index] = 600 + x_dist_dub;
+			for(int i_event = 0; i_event < n_i_bck; i_event++){
+				pre_list[diff_index] = 20;
 				diff_index++;
 			}
 			for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-				int n_step_to_same = n_ii_to_both[x_dist_dub][x_dist];	
-				for(int i_event = 0; i_event < n_step_to_same; i_event++){
-					pre_list[diff_index] = 7000 + 10*x_dist_dub + x_dist;
+				int n_step_to = n_ii_to[x_dist];
+				for(int i_event = 0; i_event < n_step_to; i_event++){
+					pre_list[diff_index] = 300 + x_dist;
 					diff_index++;
 				}
-				int n_step_from_same = n_ii_from_both[x_dist_dub][x_dist];
-				for(int i_event = 0; i_event < n_step_from_same; i_event++){
-					pre_list[diff_index] = 8000 + 10*x_dist_dub + x_dist;
-					diff_index++;
-				}
-				int n_step_to_oppo = n_ii_to_self_from_teth
-						[x_dist_dub][x_dist];
-				for(int i_event = 0; i_event < n_step_to_oppo; i_event++){
-					pre_list[diff_index] = 9000 +10*x_dist_dub + x_dist;
-					diff_index++;
-				}
-				int n_step_from_oppo = n_ii_from_self_to_teth
-						[x_dist_dub][x_dist];
-				for(int i_event = 0; i_event < n_step_from_oppo; i_event++){
-					pre_list[diff_index] = 10000 + 10*x_dist_dub + x_dist;
+				int n_step_from = n_ii_fr[x_dist];
+				for(int i_event = 0; i_event < n_step_from; i_event++){
+					pre_list[diff_index] = 400 + x_dist;
 					diff_index++;
 				}
 			}
+			dif_list_.resize(n_events);
+			if(n_events > 1){
+				gsl_ran_shuffle(properties_->gsl.rng_, pre_list, 
+						n_events, sizeof(int));
+			}
+			for(int i_event = 0; i_event < n_events; i_event++){
+				dif_list_[i_event] = pre_list[i_event];
+			}
 		}
-		RandomNumberManagement *gsl = &properties_->gsl;
-		gsl_ran_shuffle(gsl->rng_, pre_list, n_events, sizeof(int));
-		dif_list_.resize(n_events);
-		for(int i_event = 0; i_event < n_events; i_event++){
-			dif_list_[i_event] = pre_list[i_event];
+		else dif_list_.clear();	
+	}
+	// Otherwise, get stats involving tethers and then construct list	
+	else{
+		int n_i_to_teth[2*teth_cutoff_ + 1],
+			n_i_fr_teth[2*teth_cutoff_ + 1],
+			n_ii_to_both[2*teth_cutoff_ + 1][dist_cutoff_ + 1],
+			n_ii_fr_both[2*teth_cutoff_ + 1][dist_cutoff_ + 1],
+			n_ii_to_self_fr_teth[2*teth_cutoff_ + 1][dist_cutoff_ + 1],
+			n_ii_fr_self_to_teth[2*teth_cutoff_ + 1][dist_cutoff_ + 1];
+
+		// These offsets (AND ONLY THESE) have the + 1 included
+		int offset1 = 4 + 2*dist_cutoff_; 
+		int offset2 = 5 + 2*dist_cutoff_ + 2*teth_cutoff_;
+		int offset3 = 6 + 2*dist_cutoff_ + 4*teth_cutoff_;
+		int offset4 = 7 + 3*dist_cutoff_ + 4*teth_cutoff_ 
+			+ (dist_cutoff_ + 1)*2*teth_cutoff_;
+		int offset5 = 8 + 4*dist_cutoff_ + 4*teth_cutoff_
+			+ (dist_cutoff_ + 1)*4*teth_cutoff_; 
+		int offset6 = 9 + 5*dist_cutoff_ + 4*teth_cutoff_
+			+ (dist_cutoff_ + 1)*6*teth_cutoff_;
+
+		// Scan over tether extensions first
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+			n_i_to_teth[x_dub] = serial_dif_[offset1 + x_dub].n_entries_;  
+			n_i_fr_teth[x_dub] = serial_dif_[offset2 + x_dub].n_entries_;
+			// Make sure we don't get more events than sites that exist
+			while((n_i_to_teth[x_dub] + n_i_fr_teth[x_dub]) 
+			> n_sites_i_tethered_[x_dub]){
+				double ran = properties_->gsl.GetRanProb();
+				double p_to = p_diffuse_i_to_teth_rest_[x_dub];
+				double p_fr = p_diffuse_i_from_teth_rest_[x_dub];
+				double p_tot = p_to + p_fr;
+				if(ran < p_to/p_tot
+				&& n_i_to_teth[x_dub] > 0){
+					n_i_to_teth[x_dub]--;
+				}
+				else if(n_i_fr_teth[x_dub] > 0){
+					n_i_fr_teth[x_dub]--;
+				}
+				else if(n_i_to_teth[x_dub] > 0){
+					n_i_to_teth[x_dub]--;
+				}
+			}
+			n_events += n_i_to_teth[x_dub];
+			n_events += n_i_fr_teth[x_dub];
+			// Now, scan over xlink extensions
+			for(int x = 0; x <= dist_cutoff_; x++){
+				// Get stats for sites with xlink/teth rest in SAME dir.
+				n_ii_to_both[x_dub][x] = serial_dif_
+					[offset3 + x + (dist_cutoff_ + 1)*x_dub].n_entries_;
+				n_ii_fr_both[x_dub][x] = serial_dif_
+					[offset4 + x + (dist_cutoff_ + 1)*x_dub].n_entries_;
+				// Get stats for sites with xlink/teth rest in OPPOSITE dir.
+				n_ii_to_self_fr_teth[x_dub][x] = serial_dif_
+					[offset5 + x + (dist_cutoff_ + 1)*x_dub].n_entries_;
+				n_ii_fr_self_to_teth[x_dub][x] = serial_dif_
+					[offset6 + x + (dist_cutoff_ + 1)*x_dub].n_entries_;
+				/* Statistics corrections */
+				// At rest distance, xlink can only diffuse from its rest
+				if(x == rest_dist_){
+					while(2*(n_ii_fr_self_to_teth[x_dub][x] 
+					+ n_ii_fr_both[x_dub][x]) 
+					> n_sites_ii_tethered_oppo_[x_dub][x]){
+						double ran = properties_->gsl.GetRanProb();
+						double p_to = 
+							p_diffuse_ii_from_self_to_teth_[x_dub][x];
+						double p_fr = 
+							p_diffuse_ii_from_both_rest_[x_dub][x];
+						double p_tot = p_to + p_fr;
+						if(ran < p_to/p_tot
+						&& n_ii_fr_self_to_teth[x_dub][x] > 0){
+							n_ii_fr_self_to_teth[x_dub][x]--;
+						}
+						else if(n_ii_fr_both[x_dub][x] > 0){
+							n_ii_fr_both[x_dub][x]--;
+						}
+						else if (n_ii_fr_self_to_teth[x_dub][x] > 0){
+							n_ii_fr_self_to_teth[x_dub][x]--;
+						}
+					}
+				}
+				// Otherwise, deal with statistics in usual way
+				else{
+					// Stats for sites w/ both rests in SAME direction
+					while((n_ii_to_both[x_dub][x] + n_ii_fr_both[x_dub][x])
+					> n_sites_ii_tethered_same_[x_dub][x]){
+						double ran = properties_->gsl.GetRanProb();
+						double p_to = p_diffuse_ii_to_both_rest_[x_dub][x];
+						double p_fr = p_diffuse_ii_from_both_rest_[x_dub][x];
+						double p_tot = p_to + p_fr;
+						if(ran < p_to/p_tot
+						&& n_ii_to_both[x_dub][x] > 0){
+							n_ii_to_both[x_dub][x]--;
+						}
+						else if(n_ii_fr_both[x_dub][x] > 0){
+							n_ii_fr_both[x_dub][x]--;
+						}
+						else if (n_ii_to_both[x_dub][x] > 0){
+							n_ii_to_both[x_dub][x]--;
+						}
+					}
+					// Stats for sites w/ both rests in OPPOSITE directions
+					while((n_ii_to_self_fr_teth[x_dub][x] 
+				    + n_ii_fr_self_to_teth[x_dub][x]) 
+					> n_sites_ii_tethered_oppo_[x_dub][x]){
+						double ran = properties_->gsl.GetRanProb();
+						double p_to = 
+							p_diffuse_ii_to_self_from_teth_[x_dub][x];
+						double p_fr = 
+							p_diffuse_ii_from_self_to_teth_[x_dub][x];
+						double p_tot = p_to + p_fr;
+						if(ran < p_to/p_tot
+						&& n_ii_to_self_fr_teth[x_dub][x] > 0){
+							n_ii_to_self_fr_teth[x_dub][x]--;
+						}
+						else if(n_ii_fr_self_to_teth[x_dub][x] > 0){
+							n_ii_fr_self_to_teth[x_dub][x]--;
+						}
+						else if(n_ii_to_self_fr_teth[x_dub][x] > 0){
+							n_ii_to_self_fr_teth[x_dub][x]--;
+						}
+					}
+					// Each xlink will always have one head in same_ 
+					// and one head in oppo_. When one moves, it changes
+					// x and x_dub for the other head, so we have to make
+					// sure there aren't more events than (total heads)/2
+					// for any given combination of x and x_dub
+					while(
+					2*(n_ii_to_both[x_dub][x] 
+					 + n_ii_fr_both[x_dub][x]
+					 + n_ii_to_self_fr_teth[x_dub][x]
+					 + n_ii_fr_self_to_teth[x_dub][x]) 
+					> (n_sites_ii_tethered_same_[x_dub][x]
+					 + n_sites_ii_tethered_oppo_[x_dub][x])){
+						double ran = properties_->gsl.GetRanProb();
+						double p_to_one = 
+							p_diffuse_ii_to_both_rest_[x_dub][x];
+						double p_to_two = 
+							p_diffuse_ii_to_self_from_teth_[x_dub][x];
+						double p_from_one = 
+							p_diffuse_ii_from_both_rest_[x_dub][x];
+						double p_from_two = 
+							p_diffuse_ii_from_self_to_teth_[x_dub][x];
+						double p_to = p_to_one + p_to_two;
+						double p_from = p_from_one + p_from_two;
+						double p_tot = p_to + p_from;
+						if(ran < p_to_one/p_tot
+						&& n_ii_to_both[x_dub][x] > 0){
+							n_ii_to_both[x_dub][x]--;
+						}
+						else if(ran < p_to/p_tot
+						&& n_ii_to_self_fr_teth[x_dub][x] > 0){
+							n_ii_to_self_fr_teth[x_dub][x]--;
+						}
+						else if(ran < (p_to + p_from_one)/p_tot
+						&& n_ii_fr_both[x_dub][x] > 0){
+							n_ii_fr_both[x_dub][x]--;
+						}
+						else if(n_ii_fr_self_to_teth[x_dub][x] > 0){
+							n_ii_fr_self_to_teth[x_dub][x]--;
+						}
+					}
+				}
+				n_events += n_ii_to_both[x_dub][x];
+				n_events += n_ii_fr_both[x_dub][x];
+				n_events += n_ii_to_self_fr_teth[x_dub][x];
+				n_events += n_ii_fr_self_to_teth[x_dub][x];
+			}
+		}
+		// Construct diffusion event list
+		if(n_events > 0){
+			int pre_list[n_events];
+			int diff_index = 0;
+			for(int i_event = 0; i_event < n_i_fwd; i_event++){
+				pre_list[diff_index] = 10;
+				diff_index++;
+			}
+			for(int i_event = 0; i_event < n_i_bck; i_event++){
+				pre_list[diff_index] = 20;
+				diff_index++;
+			}
+			for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
+				for(int i_event = 0; i_event < n_ii_to[x_dist]; i_event++){
+					pre_list[diff_index] = 300 + x_dist;
+					diff_index++;
+				}
+				for(int i_event = 0; i_event < n_ii_fr[x_dist]; i_event++){
+					pre_list[diff_index] = 400 + x_dist;
+					diff_index++;
+				}
+			}
+			for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+				for(int i = 0; i < n_i_to_teth[x_dub]; i++){
+					pre_list[diff_index] = 500 + x_dub;
+					diff_index++;
+				}
+				for(int i = 0; i < n_i_fr_teth[x_dub]; i++){
+					pre_list[diff_index] = 600 + x_dub;
+					diff_index++;
+				}
+				for(int x = 0; x <= dist_cutoff_; x++){
+					for(int i = 0; i < n_ii_to_both[x_dub][x]; i++){
+						pre_list[diff_index] = 7000 + 10*x_dub + x;
+						diff_index++;
+					}
+					for(int i = 0; i < n_ii_fr_both[x_dub][x]; i++){
+						pre_list[diff_index] = 8000 + 10*x_dub + x;
+						diff_index++;
+					}
+					for(int i = 0; i < n_ii_to_self_fr_teth[x_dub][x]; i++){
+						pre_list[diff_index] = 9000 +10*x_dub + x;
+						diff_index++;
+					}
+					for(int i = 0; i < n_ii_fr_self_to_teth[x_dub][x]; i++){
+						pre_list[diff_index] = 10000 + 10*x_dub + x;
+						diff_index++;
+					}
+				}
+			}
+			dif_list_.resize(n_events);
+			if(n_events > 1){
+				gsl_ran_shuffle(properties_->gsl.rng_, pre_list, 
+						n_events, sizeof(int));
+			}
+			for(int i_event = 0; i_event < n_events; i_event++){
+				dif_list_[i_event] = pre_list[i_event];
+			}
+		}
+		else dif_list_.clear();	
+	}
+}
+
+void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
+
+	// Update all dif. pop. lists
+	UpdateAllSiteLists();
+
+	// for i_fwd
+	serial_dif_pop_[0].n_entries_ = n_sites_i_untethered_;
+
+	// for i_bck
+	serial_dif_pop_[1].n_entries_ = n_sites_i_untethered_;
+
+	// for ii_to/fr_self
+	for(int x(0); x <= dist_cutoff_; x++){
+		serial_dif_pop_[2 + x].n_entries_ = 
+			n_sites_ii_untethered_[x];
+		serial_dif_pop_[3 + dist_cutoff_ + x].n_entries_ = 
+			n_sites_ii_untethered_[x];
+	}
+
+	if(parameters_->motors.tethers_active){
+
+		int offset1 = 3 + 2*dist_cutoff_; 
+		int offset2 = 4 + 2*dist_cutoff_ + 2*teth_cutoff_;
+		int offset3 = 5 + 2*dist_cutoff_ + 4*teth_cutoff_;
+		int offset4 = 6 + 3*dist_cutoff_ + 4*teth_cutoff_ 
+					+ (dist_cutoff_ + 1)*2*teth_cutoff_;
+		int offset5 = 7 + 4*dist_cutoff_ + 4*teth_cutoff_
+					+ (dist_cutoff_ + 1)*4*teth_cutoff_; 
+		int offset6 = 8 + 5*dist_cutoff_ + 4*teth_cutoff_
+					+ (dist_cutoff_ + 1)*6*teth_cutoff_;
+		
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+			// for i_to_teth
+			serial_dif_pop_[offset1 + 1 + x_dub].n_entries_ =
+				n_sites_i_tethered_[x_dub];
+			// for i_fr_teth
+			serial_dif_pop_[offset2 + 1 + x_dub].n_entries_ = 
+				n_sites_i_tethered_[x_dub];
+			for(int x = 0; x <= dist_cutoff_; x++){
+				// FIXME
+				// god damn this is ugly plz remove soon
+				if(x != serial_dif_pop_[offset3+1+x+(dist_cutoff_+1)*x_dub]
+					.x_dist_
+				|| x_dub != 
+				serial_dif_pop_[offset3+1+x+(dist_cutoff_+1)*x_dub].
+				x_dist_dub_){
+					printf("error in update serial dif pop\n");
+					exit(1);
+				}
+				// for ii_to_both
+				serial_dif_pop_[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
+				// for ii_fr_both
+				serial_dif_pop_[offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
+				// for ii_to_self_fr_teth
+				serial_dif_pop_[offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
+				// for ii_fr_self_to_teth
+				serial_dif_pop_[offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
+			}
 		}
 	}
-	else
-		dif_list_.clear();	
 }
 
-int AssociatedProteinManagement::GetNumToStepI_Forward(){
+void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 
-	int n_bound = n_sites_i_untethered_;
-	if(n_bound > 0){
-		double p_step = p_diffuse_i_fwd_;
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepI_Backward(){
-
-	int n_bound = n_sites_i_untethered_;
-	if(n_bound > 0){
-		double p_step = p_diffuse_i_bck_;
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_ToRest(int x_dist){
-
-	int n_bound = n_sites_ii_untethered_[x_dist];
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_to_rest_[x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_FromRest(int x_dist){
-
-	int n_bound = n_sites_ii_untethered_[x_dist];
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_from_rest_[x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepI_ToTethRest(int x_dist_dub){
-
-	int n_bound = n_sites_i_tethered_[x_dist_dub];
-	if(n_bound > 0){
-		double p_step = p_diffuse_i_to_teth_rest_[x_dist_dub];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepI_FromTethRest(int x_dist_dub){
-
-	int n_bound = n_sites_i_tethered_[x_dist_dub];
-	if(n_bound > 0){
-		double p_step = p_diffuse_i_from_teth_rest_[x_dist_dub];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_ToBothRest(int x_dist_dub, 
-		int x_dist){
-
-	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
-	int n_bound;
-	// this means we compressed, yo
-	if(x_dist_dub <= rest_dist_dub){
-		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-	}
-	else{
-		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-	}
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_FromBothRest(int x_dist_dub, 
-		int x_dist){
-
-	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
-	int n_bound;
-	// this means we compressed, yo
-	if(x_dist_dub <= rest_dist_dub){
-		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-	}
-	else{
-		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-	}
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_ToSelf_FromTeth
-(int x_dist_dub, int x_dist){
-
-	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
-	int n_bound;
-	// this means we compressed, yo
-	if(x_dist_dub <= rest_dist_dub){
-		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-	}
-	else{
-		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-	}
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToStepII_FromSelf_ToTeth
-									(int x_dist_dub, int x_dist){
-
-	int rest_dist_dub = 2*properties_->kinesin4.motors_[0].rest_dist_;
-	int n_bound;
-	// this means we compressed, yo
-	if(x_dist_dub <= rest_dist_dub){
-		n_bound = n_sites_ii_tethered_same_[x_dist_dub][x_dist];
-	}
-	else{
-		n_bound = n_sites_ii_tethered_oppo_[x_dist_dub][x_dist];
-	}
-	if(n_bound > 0){
-		double p_step = p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist];
-		int n_to_step = properties_->gsl.SampleBinomialDist(p_step, n_bound);
-		return n_to_step;
-	}
-	else{
-		return 0;
+	// Run through serialized population types
+	#pragma omp parallel for
+	for(int i_pop = 0; i_pop < serial_dif_pop_.size(); i_pop++){
+		// If population is greater than 0, sample diffusion funct
+		if(serial_dif_pop_[i_pop].n_entries_ > 0){
+			// Get iterator pointing to sampling funct
+			auto itr = 
+				dif_sampling_functs_.find(serial_dif_pop_[i_pop].type_);
+			// Make sure iterator was properly found
+			if(itr != dif_sampling_functs_.end()){
+				// Function itself is 'second' in map's key-funct pair
+				auto funct = itr->second;
+				// Get number of diffusion events
+				int n_entries = funct(serial_dif_pop_[i_pop].x_dist_,
+						serial_dif_pop_[i_pop].x_dist_dub_);
+				serial_dif_[i_pop].n_entries_ = n_entries;
+				/*
+				if(n_entries > 0){
+					printf("%i events for ", n_entries);
+					std::cout << serial_dif_[i_pop].type_ << std::endl;
+					printf("(x=%i, 2x=%i)\n", serial_dif_[i_pop].x_dist_,
+							serial_dif_[i_pop].x_dist_dub_);
+				}
+				*/
+			}
+			else{
+				printf("Error in update serial_dif_events, cant find ");
+				std::cout << serial_dif_pop_[i_pop].type_ << std::endl;
+				exit(1);
+			}	
+		}
+		// if population size is 0, number of diffusion events is also 0
+		else{
+			serial_dif_[i_pop].n_entries_ = 0;
+		}
 	}
 }
 
@@ -1899,34 +1730,34 @@ void AssociatedProteinManagement::RunDiffusion(){
 				x_dist = diff_event % 100; 
 				diff_event = 30;
 			}
-			if(diff_event >= 400 && diff_event < 500){
+			else if(diff_event >= 400 && diff_event < 500){
 				x_dist = diff_event % 100;
 				diff_event = 40;
 			}	
-			if(diff_event >= 500 && diff_event < 600){
+			else if(diff_event >= 500 && diff_event < 600){
 				x_dist_dub = diff_event % 100;
 				diff_event = 50;
 			}
-			if(diff_event >= 600 && diff_event < 700){
+			else if(diff_event >= 600 && diff_event < 700){
 				x_dist_dub = diff_event % 100;
 				diff_event = 60;
 			}
-			if(diff_event >= 7000 && diff_event < 8000){
+			else if(diff_event >= 7000 && diff_event < 8000){
 				x_dist = diff_event % 10;
 				x_dist_dub = (diff_event % 1000 - x_dist)/10; 
 				diff_event = 70;
 			}
-			if(diff_event >= 8000 && diff_event < 9000){
+			else if(diff_event >= 8000 && diff_event < 9000){
 				x_dist = diff_event % 10;
 				x_dist_dub = (diff_event % 1000 - x_dist)/10; 
 				diff_event = 80;
 			}
-			if(diff_event >= 9000 && diff_event < 10000){
+			else if(diff_event >= 9000 && diff_event < 10000){
 				x_dist = diff_event % 10;
 				x_dist_dub = (diff_event % 1000 - x_dist)/10; 
 				diff_event = 90;
 			}
-			if(diff_event >= 10000 && diff_event < 11000){
+			else if(diff_event >= 10000 && diff_event < 11000){
 				x_dist = diff_event % 10;
 				x_dist_dub = (diff_event % 1000 - x_dist)/10; 
 				diff_event = 100;
@@ -2301,6 +2132,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth(
 	}
 	else{
 		printf("issues w/ run_diffusion_ii_toself_fromteth_rest\n");
+		printf("x=%i, 2x=%i\n", x_dist, x_dist_dub);
 		exit(1);
 	}
 }
@@ -2339,6 +2171,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth(
 	}
 	else{
 		printf("issues w/ run_diffusion_ii_fromself_toteth_rest\n");
+		printf("x=%i, 2x=%i\n", x_dist, x_dist_dub);
 		exit(1);
 	}
 }
@@ -2346,142 +2179,353 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth(
 void AssociatedProteinManagement::GenerateKMCList(){
 
 	int n_events = 0;
-	int n_to_bind_i = GetNumToBind_I();
-	n_events += n_to_bind_i; 
-	UpdateFreeTetheredList();
-	int n_to_bind_i_teth = GetNumToBind_I_Tethered();
-	n_events += n_to_bind_i_teth; 
-	UpdateSingleBoundList();
-	int n_to_bind_ii = GetNumToBind_II();
-	n_events += n_to_bind_ii;
-	UpdateBoundITethered();
-	int n_to_bind_ii_teth = GetNumToBind_II_Tethered();
-	n_events += n_to_bind_ii_teth;
-	int n_to_unbind_i = GetNumToUnbind_I();
-	n_events += n_to_unbind_i; 
-	while(n_to_bind_ii + n_to_unbind_i > n_bound_i_){
-		if(n_to_bind_ii > 0){
-			n_to_bind_ii--;
-			n_events--;
+	UpdateSerializedKMCPopulations();
+	UpdateSerializedKMCEvents();
+
+	int n_bind_i,
+		n_bind_ii, 
+		n_unbind_i, 
+		n_unbind_ii[dist_cutoff_ + 1];
+
+	n_bind_i = serial_kmc_[0].n_entries_;
+	n_events += n_bind_i;
+	n_bind_ii = serial_kmc_[1].n_entries_;
+	n_unbind_i = serial_kmc_[2].n_entries_;
+	// Make sure we don't have more events than a given population
+	while(n_bind_ii + n_unbind_i > n_bound_i_){
+		double ran = properties_->gsl.GetRanProb();
+		double p_tot = p_bind_ii_ + p_unbind_i_;
+		if(ran < p_bind_ii_/p_tot
+		&& n_bind_ii > 0){
+			n_bind_ii--;
 		}
-		else{
-			n_to_unbind_i--;
-			n_events--;
-		}
-	}
-	int n_to_unbind_ii[dist_cutoff_ + 1]; 
-	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		n_to_unbind_ii[x_dist] = GetNumToUnbind_II(x_dist);
-		n_events += n_to_unbind_ii[x_dist];
-	}
-	UpdateBoundIITethered();
-	int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
-	int n_to_unbind_i_teth[2*teth_cutoff + 1];
-	int n_to_unbind_ii_to_teth[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	int n_to_unbind_ii_from_teth[2*teth_cutoff + 1][dist_cutoff_ + 1];
-	for(int x_dub = 0; x_dub <= 2*teth_cutoff; x_dub++){
-		n_to_unbind_i_teth[x_dub] = GetNumToUnbind_I_Tethered(x_dub);
-		n_events += n_to_unbind_i_teth[x_dub];
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			n_to_unbind_ii_to_teth[x_dub][x_dist] = 
-				GetNumToUnbind_II_To_Teth(x_dub, x_dist);
-			n_events += n_to_unbind_ii_to_teth[x_dub][x_dist];
-			n_to_unbind_ii_from_teth[x_dub][x_dist] =
-				GetNumToUnbind_II_From_Teth(x_dub, x_dist);
-			n_events += n_to_unbind_ii_from_teth[x_dub][x_dist];
-		}
-		// FIXME add while loop to correct statistics
-	}
-	int n_to_teth_free = GetNumToTether_Free();
-	n_events += n_to_teth_free;
-	int n_to_unteth_free = GetNumToUntether_Free();
-	n_events += n_to_unteth_free;
-	while(n_to_bind_i_teth + n_to_unteth_free > n_free_tethered_){
-		if(n_to_bind_i_teth > 0){
-			n_to_bind_i_teth--;
-			n_events--;
-		}
-		else{
-			n_to_unteth_free--;
-			n_events--;
+		else if(n_unbind_i > 0){
+			n_unbind_i--;
 		}
 	}
-	int kmc_index = 0;
-	if(n_events > 0){
-		int pre_list[n_events];
-		// "1" corresponds to a stage 1 binding event
-		for(int i_event = 0; i_event < n_to_bind_i; i_event++){
-			pre_list[kmc_index] = 10;
-			kmc_index++;
-		}
-		// "11" corresponds to a stethered tage 1 binding event
-		for(int i_event = 0; i_event < n_to_bind_i_teth; i_event++){
-			pre_list[kmc_index] = 11;
-			kmc_index++; 
-		}
-		// "2" corresponds to a stage 2 binding event
-		for(int i_event = 0; i_event < n_to_bind_ii; i_event++){
-			pre_list[kmc_index] = 20;
-			kmc_index++;
-		}
-		for(int i_event = 0; i_event < n_to_bind_ii_teth; i_event++){
-			pre_list[kmc_index] = 21;
-			kmc_index++;
-		}
-		// "3" corresponds to a stage 1 (single head) unbinding event
-		for(int i_event = 0; i_event < n_to_unbind_i; i_event++){
-			pre_list[kmc_index] = 30;
-			kmc_index++;
-		}
-		for(int x_dub = 0; x_dub <= 2*teth_cutoff; x_dub++){
-			int n_to_unbind_teth = n_to_unbind_i_teth[x_dub];
-			for(int i_event = 0; i_event < n_to_unbind_teth; i_event++){
-				pre_list[kmc_index] = 300 + x_dub; 
+	n_events += n_bind_ii;
+	n_events += n_unbind_i;
+	for(int x(0); x <= dist_cutoff_; x++){
+		n_unbind_ii[x] = serial_kmc_[3 + x].n_entries_;
+		n_events += n_unbind_ii[x];
+	}
+	// If tethering is disabled, build KMC list at this point
+	if(!parameters_->motors.tethers_active){
+		if(n_events > 0){
+			int pre_list[n_events];
+			int kmc_index = 0;
+			// "10" corresponds to a stage 1 binding event
+			for(int i_event = 0; i_event < n_bind_i; i_event++){
+				pre_list[kmc_index] = 10;
 				kmc_index++;
 			}
-			for(int x_dist = 0; x_dist <=dist_cutoff_; x_dist++){
-				int n_to_unbind_to = n_to_unbind_ii_to_teth[x_dub][x_dist];	
-				for(int i_event = 0; i_event < n_to_unbind_to; i_event++){
-					pre_list[kmc_index] = 4000 + 10*x_dub + x_dist;
-					kmc_index++;
+			// "20" corresponds to a stage 2 binding event
+			for(int i_event = 0; i_event < n_bind_ii; i_event++){
+				pre_list[kmc_index] = 20;
+				kmc_index++;
+			}
+			// "30" corresponds to a stage 1 (single head) unbinding event
+			for(int i_event = 0; i_event < n_unbind_i; i_event++){
+				pre_list[kmc_index] = 30;
+				kmc_index++;
+			}
+			// "40 + x" corresponds to a stage 2 unbinding event;
+			// x is the specific xlink x_dist we wish to unbind 
+			for(int x = 0; x <= dist_cutoff_; x++){
+				for(int i_event = 0; i_event < n_unbind_ii[x]; i_event++){
+					pre_list[kmc_index] = 40 + x;
+					kmc_index++; 
 				}
-				int n_to_unbind_fr = n_to_unbind_ii_from_teth[x_dub][x_dist];
-				for(int i_event = 0; i_event < n_to_unbind_fr; i_event++){
-					pre_list[kmc_index] = 5000 + 10*x_dub + x_dist; 
-					kmc_index++;
-				}
-
+			}
+			kmc_list_.resize(n_events);
+			if(n_events > 1)
+				gsl_ran_shuffle(properties_->gsl.rng_, pre_list, 
+						n_events, sizeof(int));
+			// Transfer shuffled array into our class kmc vector 
+			for(int i_event = 0; i_event < n_events; i_event++){
+				kmc_list_[i_event] = pre_list[i_event];
 			}
 		}
-		// "40 + x" corresponds to a stage 2 unbinding event, where
-		// x is the specific xlink x_dist we wish to unbind 
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			int n_to_unbind = n_to_unbind_ii[x_dist];
-			for(int i_event = 0; i_event < n_to_unbind; i_event++){
-				pre_list[kmc_index] = 40 + x_dist;
+		else kmc_list_.clear();
+	}
+	// Otherwise, get tether stats and then build KMC list
+	else{
+		int n_bind_i_teth, 
+			n_bind_ii_teth, 
+			n_unbind_i_teth[2*teth_cutoff_ + 1],
+			n_unbind_ii_to_teth[2*teth_cutoff_ + 1][dist_cutoff_ + 1],
+			n_unbind_ii_fr_teth[2*teth_cutoff_ + 1][dist_cutoff_ + 1],
+			n_tether_free,
+			n_untether_free;
+
+		n_bind_i_teth = serial_kmc_[4 + dist_cutoff_].n_entries_;
+		n_events += n_bind_i_teth;
+		n_bind_ii_teth = serial_kmc_[5 + dist_cutoff_].n_entries_;
+		n_events += n_bind_ii_teth;
+
+		int offset1 = 5 + dist_cutoff_;
+		int offset2 = 6 + dist_cutoff_ + 2*teth_cutoff_;
+		int offset3 = 7 + 2*dist_cutoff_ + 2*teth_cutoff_
+					+ (dist_cutoff_ + 1)*2*teth_cutoff_;
+		
+		int n_unbind_i_teth_tot = 0;
+		// Scan over tether extension
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+			n_unbind_i_teth[x_dub] =  
+				serial_kmc_[offset1 + 1 + x_dub].n_entries_;
+			n_events += n_unbind_i_teth[x_dub];
+			n_unbind_i_teth_tot += n_unbind_i_teth[x_dub];
+			// Scan over xlink extension
+			for(int x = 0; x <= dist_cutoff_; x++){
+				n_unbind_ii_to_teth[x_dub][x] = 
+					serial_kmc_[offset2 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_;
+				n_unbind_ii_fr_teth[x_dub][x] =
+					serial_kmc_[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_;
+				// Make sure there aren't more events than available xlinks
+				while((n_unbind_ii_to_teth[x_dub][x] 
+				+ n_unbind_ii_fr_teth[x_dub][x])
+				> n_bound_ii_tethered_[x_dub][x]){
+					double ran = properties_->gsl.GetRanProb();
+					double p_to = p_unbind_ii_to_teth_[x_dub][x];
+					double p_fr = p_unbind_ii_from_teth_[x_dub][x];
+					double p_tot = p_to + p_fr; 
+					if(ran < p_to/p_tot
+					&& n_unbind_ii_to_teth[x_dub][x] > 0){
+						n_unbind_ii_to_teth[x_dub][x]--;
+					}
+					else if(n_unbind_ii_fr_teth[x_dub][x] > 0){
+						n_unbind_ii_fr_teth[x_dub][x]--;
+					}
+				}
+				n_events += n_unbind_ii_to_teth[x_dub][x];
+				n_events += n_unbind_ii_fr_teth[x_dub][x];
+			}
+		}
+		// Make sure there aren't more unbind/bind events than avail. xlinks
+		while(n_bind_ii_teth+n_unbind_i_teth_tot > n_bound_i_tethered_tot_){
+			double p_bind = p_bind_ii_ * GetWeightBindIITethered();
+			double p_unbind_tot = 0;
+			for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
+				if(n_unbind_i_teth[x_dub] > 0){
+					p_unbind_tot += p_unbind_i_tethered_[x_dub];
+				}
+			}
+			double p_tot = p_bind + p_unbind_tot;
+			double ran = properties_->gsl.GetRanProb();
+			if(ran < p_bind/p_tot
+			&& n_bind_ii_teth > 0){
+				n_bind_ii_teth--;
+				n_events--;
+			}
+			else if(n_unbind_i_teth_tot > 0){
+				double ran2 = properties_->gsl.GetRanProb();
+				double p_cum = 0;
+				for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
+					for (int x_dubb(0); x_dubb <= x_dub; x_dubb++){
+						if(n_unbind_i_teth[x_dub] > 0){
+							p_cum += p_unbind_i_tethered_[x_dub];
+						}
+					}
+					if(ran < p_cum/p_unbind_tot){
+						n_unbind_i_teth[x_dub]--;
+						n_unbind_i_teth_tot--;
+						n_events--;
+					}
+				}
+			}
+		}
+
+		int offset4 = 8 + 3*dist_cutoff_ + 2*teth_cutoff_
+					+ (dist_cutoff_ + 1)*4*teth_cutoff_;
+
+		n_tether_free = serial_kmc_[offset4 + 1].n_entries_;
+		n_events += n_tether_free;
+		n_untether_free = serial_kmc_[offset4 + 2].n_entries_;
+		while(n_bind_i_teth + n_untether_free > n_free_tethered_){
+			double ran = properties_->gsl.GetRanProb();
+			double p_tot = p_bind_i_tethered_ + p_untether_free_;
+			if(ran < p_bind_i_tethered_/p_tot
+			&& n_bind_i_teth > 0){
+				n_bind_i_teth--;
+				n_events--;
+			}
+			else if(n_tether_free > 0){
+				n_untether_free--;
+			}
+		}
+		n_events += n_untether_free;
+		if(n_events > 0){
+			int pre_list[n_events];
+			int kmc_index = 0;
+			// "1" corresponds to a stage 1 binding event
+			for(int i_event = 0; i_event < n_bind_i; i_event++){
+				pre_list[kmc_index] = 10;
+				kmc_index++;
+			}
+			// "11" corresponds to a tethered stage 1 binding event
+			for(int i_event = 0; i_event < n_bind_i_teth; i_event++){
+				pre_list[kmc_index] = 11;
 				kmc_index++; 
 			}
+			// "2" corresponds to a stage 2 binding event
+			for(int i_event = 0; i_event < n_bind_ii; i_event++){
+				pre_list[kmc_index] = 20;
+				kmc_index++;
+			}
+			for(int i_event = 0; i_event < n_bind_ii_teth; i_event++){
+				pre_list[kmc_index] = 21;
+				kmc_index++;
+			}
+			// "3" corresponds to a stage 1 (single head) unbinding event
+			for(int i_event = 0; i_event < n_unbind_i; i_event++){
+				pre_list[kmc_index] = 30;
+				kmc_index++;
+			}
+			for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+				int n_to_unbind_teth = n_unbind_i_teth[x_dub];
+				for(int i_event = 0; i_event < n_to_unbind_teth; i_event++){
+					pre_list[kmc_index] = 300 + x_dub; 
+					kmc_index++;
+				}
+				for(int x = 0; x <=dist_cutoff_; x++){
+					for(int i = 0; i < n_unbind_ii_to_teth[x_dub][x]; i++){
+						pre_list[kmc_index] = 4000 + 10*x_dub + x;
+						kmc_index++;
+					}
+					for(int i = 0; i < n_unbind_ii_fr_teth[x_dub][x]; i++){
+						pre_list[kmc_index] = 5000 + 10*x_dub + x; 
+						kmc_index++;
+					}
+				}
+			}
+			// "40 + x" corresponds to a stage 2 unbinding event, where
+			// x is the specific xlink x_dist we wish to unbind 
+			for(int x = 0; x <= dist_cutoff_; x++){
+				for(int i_event = 0; i_event < n_unbind_ii[x]; i_event++){
+					pre_list[kmc_index] = 40 + x;
+					kmc_index++; 
+				}
+			}
+			for(int i_event = 0; i_event < n_tether_free; i_event++){
+				pre_list[kmc_index] = 50;
+				kmc_index++;
+			}
+			for(int i_event = 0; i_event < n_untether_free; i_event++){
+				pre_list[kmc_index] = 60;
+				kmc_index++;
+			}
+			kmc_list_.resize(n_events);
+			if(n_events > 1)
+				gsl_ran_shuffle(properties_->gsl.rng_, pre_list, 
+						n_events, sizeof(int));
+			// Transfer shuffled array into our class kmc vector 
+			for(int i_event = 0; i_event < n_events; i_event++){
+				kmc_list_[i_event] = pre_list[i_event];
+			}
 		}
-		for(int i_event = 0; i_event < n_to_teth_free; i_event++){
-			pre_list[kmc_index] = 50;
-			kmc_index++;
-		}
-		for(int i_event = 0; i_event < n_to_unteth_free; i_event++){
-			pre_list[kmc_index] = 60;
-			kmc_index++;
-		}
-		// Shuffle using GSL (why an array is necessary in the 1st place)
-		if(n_events > 1)
-			gsl_ran_shuffle(properties_->gsl.rng_, pre_list, 
-					n_events, sizeof(int));
-		kmc_list_.resize(n_events);
-		// Transfer shuffled array into our class kmc vector 
-		for(int j_event = 0; j_event < n_events; j_event++){
-			kmc_list_[j_event] = pre_list[j_event];
+		else{
+			kmc_list_.clear();
 		}
 	}
-	else{
-		kmc_list_.clear();
+}
+
+void AssociatedProteinManagement::UpdateSerializedKMCPopulations(){
+
+	UpdateAllLists();
+
+	// for bind_i
+	serial_kmc_pop_[0].n_entries_ = properties_->microtubules.n_unoccupied_;
+
+	// for bind_ii
+	serial_kmc_pop_[1].n_entries_ = n_bound_i_;
+
+	// for unbind_i
+	serial_kmc_pop_[2].n_entries_ = n_bound_i_;
+
+	// for unbind_ii
+	for(int x(0); x <= dist_cutoff_; x++){
+		serial_kmc_pop_[3 + x].n_entries_ = n_bound_ii_[x];
+	}
+
+	// If tethering is enabled, update those populations as well
+	if(parameters_->motors.tethers_active){
+
+		// for bind_i_teth
+		serial_kmc_pop_[4 + dist_cutoff_].n_entries_ = n_free_tethered_;
+
+		// for bind_ii_teth
+		serial_kmc_pop_[5 + dist_cutoff_].n_entries_ 
+			= n_bound_i_tethered_tot_;
+		
+		int offset1 = 5 + dist_cutoff_;
+		int offset2 = 6 + dist_cutoff_ + 2*teth_cutoff_;
+		int offset3 = 7 + 2*dist_cutoff_ + 2*teth_cutoff_
+					+ (dist_cutoff_ + 1)*2*teth_cutoff_;
+
+		for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
+			// for unbind_i_teth
+			serial_kmc_pop_[offset1 + 1 + x_dub].n_entries_ =
+				n_bound_i_tethered_[x_dub];
+			for(int x(0); x <= dist_cutoff_; x++){
+				// for unbind_ii_to_teth
+				serial_kmc_pop_[offset2 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_bound_ii_tethered_[x_dub][x];
+				// for unbind_ii_fr_teth
+				serial_kmc_pop_[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub]
+					.n_entries_ = n_bound_ii_tethered_[x_dub][x];
+			}
+		}
+
+		int offset4 = 8 + 3*dist_cutoff_ + 2*teth_cutoff_
+					+ (dist_cutoff_ + 1)*4*teth_cutoff_;
+
+		// for tether_free
+		serial_kmc_pop_[offset4 + 1].n_entries_ = 
+			properties_->kinesin4.n_bound_untethered_;
+		// for untether_free
+		serial_kmc_pop_[offset4 + 2].n_entries_ = n_free_tethered_;
+	}
+}
+
+void AssociatedProteinManagement::UpdateSerializedKMCEvents(){
+
+	// Run through serialized population types
+	#pragma omp parallel for
+	for(int i_pop = 0; i_pop < serial_kmc_pop_.size(); i_pop++){
+		// If population is greater than 0, sample KMC funct
+		if(serial_kmc_pop_[i_pop].n_entries_ > 0){
+			// Get iterator pointing to sampling funct
+			auto itr = 
+				kmc_sampling_functs_.find(serial_kmc_pop_[i_pop].type_);
+			// Make sure iterator was properly found
+			if(itr != kmc_sampling_functs_.end()){
+				// Function itself is 'second' in map's key-funct pair
+				auto funct = itr->second;
+				// Get number of KMC events
+				int n_entries = funct(serial_kmc_pop_[i_pop].x_dist_,
+						serial_kmc_pop_[i_pop].x_dist_dub_);
+				serial_kmc_[i_pop].n_entries_ = n_entries;
+				/*
+				if(n_entries > 0){
+					printf("%i events for ", n_entries);
+					std::cout << serial_dif_[i_pop].type_ << std::endl;
+					printf("(x=%i, 2x=%i)\n", serial_dif_[i_pop].x_dist_,
+							serial_dif_[i_pop].x_dist_dub_);
+				}
+				*/
+			}
+			else{
+				printf("Error in update serial_kmc_events, cant find ");
+				std::cout << serial_kmc_pop_[i_pop].type_ << std::endl;
+				exit(1);
+			}	
+		}
+		// if population size is 0, number of diffusion events is also 0
+		else{
+			serial_kmc_[i_pop].n_entries_ = 0;
+		}
 	}
 }
 
@@ -2543,200 +2587,6 @@ double AssociatedProteinManagement::GetWeightBindIITethered(){
 	return weights_summed;
 }
 
-int AssociatedProteinManagement::GetNumToBind_I(){
-	
-	properties_->microtubules.UpdateUnoccupied();
-	int n_unocc = properties_->microtubules.n_unoccupied_;
-	double p_bind = p_bind_i_;
-	if(n_unocc > 0){
-		int n_to_bind = 
-			properties_->gsl.SampleBinomialDist(p_bind, n_unocc);
-		return n_to_bind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToBind_I_Tethered(){
-
-	double weights_summed = 0;
-	for(int i_xlink = 0; i_xlink < n_free_tethered_; i_xlink++){
-		AssociatedProtein *xlink = free_tethered_[i_xlink];
-		xlink->UpdateTethNeighborSites(); 
-		int n_neighbs = xlink->n_teth_neighbor_sites_; 
-		for(int i_neighb = 0; i_neighb < n_neighbs; i_neighb++){
-			Tubulin *site = xlink->teth_neighbor_sites_[i_neighb];
-			double weight = xlink->GetTethBindingWeight(site); 
-			weights_summed += weight;
-		}
-	}
-	double p_bind = p_bind_i_tethered_;
-	double n_avg = p_bind * weights_summed;
-	if(n_avg > 0){
-		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
-		return n_to_bind; 
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToBind_II(){
-	
-	double weights_summed = 0;
-	// Sum over all single-bound xlinks
-	for(int i_xlink = 0; i_xlink < n_bound_i_; i_xlink++){
-		AssociatedProtein *xlink = bound_i_[i_xlink];
-		xlink->UpdateNeighborSites();
-		// Get weight of every possible orientation w/ neighbor
-		int n_neighbors = xlink->n_neighbor_sites_;
-		for(int i_neighb = 0; i_neighb < n_neighbors; i_neighb++){
-			Tubulin *site = xlink->neighbor_sites_[i_neighb];
-			double weight = xlink->GetBindingWeight(site);
-			weights_summed += weight;
-		}
-	}
-	// Scale summed weights by an effective conc. to get  n_bound at equil
-	double n_avg = p_bind_ii_ * weights_summed; 
-	if(n_avg > 0){
-		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg);
-		return n_to_bind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToBind_II_Tethered(){
-	
-	double weights_summed = 0;
-	// Sum over all single-bound tethered xlinks
-	for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
-		int n_bound = n_bound_i_tethered_[x_dub];
-		for(int i_xlink(0); i_xlink < n_bound; i_xlink++){
-			AssociatedProtein *xlink = bound_i_tethered_[x_dub][i_xlink];
-			xlink->UpdateTethNeighborSitesII(); 
-			int n_neighbs = xlink->n_teth_neighbor_sites_ii_;
-			for(int i_neighb(0); i_neighb < n_neighbs; i_neighb++){
-				Tubulin *site = xlink->teth_neighbor_sites_ii_[i_neighb];
-				double weight = xlink->GetTethBindingWeightII(site); 
-				weights_summed += weight;
-			}
-		}
-	}
-	double n_avg = p_bind_ii_ * weights_summed;
-	if(n_avg > 0){
-		int n_to_bind = properties_->gsl.SamplePoissonDist(n_avg); 
-//		printf("weight: %g\n", weights_summed);
-//		printf("out of %g, bind %i (p %g)\n", n_avg, n_to_bind, p_bind_ii_);
-		return n_to_bind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUnbind_I(){
-
-	int n_bound = n_bound_i_;
-	double p_unbind = p_unbind_i_; 
-	if(n_bound > 0){
-		int n_to_unbind = 
-			properties_->gsl.SampleBinomialDist(p_unbind, n_bound);
-		return n_to_unbind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUnbind_I_Tethered(int x_dist_dub){
-
-	int n_bound = n_bound_i_tethered_[x_dist_dub];
-	double p_unbind = p_unbind_i_tethered_[x_dist_dub];
-	if(n_bound > 0){
-		int n_to_unbind = 
-			properties_->gsl.SampleBinomialDist(p_unbind, n_bound);
-		return n_to_unbind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUnbind_II(int x_dist){
-
-	int n_bound = n_bound_ii_[x_dist];
-	double p_unbind = p_unbind_ii_[x_dist];
-	if(n_bound > 0){
-		int n_to_unbind = 
-			properties_->gsl.SampleBinomialDist(p_unbind, n_bound);
-		return n_to_unbind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUnbind_II_To_Teth(int x_dist_dub, 
-		int x_dist){
-
-	int n_bound = n_bound_ii_tethered_[x_dist_dub][x_dist];
-	int p_unbind = p_unbind_ii_to_teth_[x_dist_dub][x_dist];
-	if(n_bound > 0){
-		int n_to_unbind = 
-			properties_->gsl.SampleBinomialDist(p_unbind, n_bound);
-		return n_to_unbind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUnbind_II_From_Teth(int x_dist_dub, 
-		int x_dist){
-
-	int n_bound = n_bound_ii_tethered_[x_dist_dub][x_dist];
-	int p_unbind = p_unbind_ii_from_teth_[x_dist_dub][x_dist];
-	if(n_bound > 0){
-		int n_to_unbind = 
-			properties_->gsl.SampleBinomialDist(p_unbind, n_bound);
-		return n_to_unbind;
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToTether_Free(){
-
-	int n_unteth = properties_->kinesin4.GetNumBoundUntethered();
-	double p_teth = p_tether_free_; 
-	if(n_unteth > 0){
-		int n_to_teth =
-			properties_->gsl.SampleBinomialDist(p_teth, n_unteth);
-		return n_to_teth; 
-	}
-	else{
-		return 0;
-	}
-}
-
-int AssociatedProteinManagement::GetNumToUntether_Free(){
-
-	int n_teth = n_free_tethered_; 
-	double p_unteth = p_untether_free_;
-	if(n_teth > 0){
-		int n_to_unteth = 
-			properties_->gsl.SampleBinomialDist(p_unteth, n_teth);
-		return n_to_unteth; 
-	}
-	else{
-		return 0;
-	}
-}
-
 void AssociatedProteinManagement::RunKMC(){
 	
 	int x_dist;		// extension of xlink for stage2 unbinding
@@ -2753,16 +2603,16 @@ void AssociatedProteinManagement::RunKMC(){
 				x_dist = kmc_event % 10;
 				kmc_event = 40;
 			}
-			if(kmc_event >= 300 && kmc_event < 400){
+			else if(kmc_event >= 300 && kmc_event < 400){
 				x_dub = kmc_event % 100;
 				kmc_event = 31;	
 			}
-			if(kmc_event >= 4000 && kmc_event < 5000){
+			else if(kmc_event >= 4000 && kmc_event < 5000){
 				x_dist = kmc_event % 10;
 				x_dub = (kmc_event % 1000 - x_dist) / 10;
 				kmc_event = 41;
 			}
-			if(kmc_event >= 5000 && kmc_event < 6000){
+			else if(kmc_event >= 5000 && kmc_event < 6000){
 				x_dist = kmc_event % 10;
 				x_dub = (kmc_event % 1000 - x_dist) / 10;
 				kmc_event = 42;
@@ -2849,48 +2699,6 @@ void AssociatedProteinManagement::RunKMC_Bind_I(){
 	}
 }
 
-void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
-
-	UpdateFreeTetheredList();
-	properties_->microtubules.UpdateUnoccupied();
-	if(n_free_tethered_ > 0
-	&& properties_->microtubules.n_unoccupied_> 0){
-		int i_xlink = properties_->gsl.GetRanInt(n_free_tethered_);
-		AssociatedProtein* xlink = free_tethered_[i_xlink];
-		if(xlink->motor_->heads_active_ == 0){
-			printf("error in xlink bind_i_teth\n");
-			exit(1);
-		}
-		Tubulin* site = xlink->GetWeightedTethNeighborSite();
-		/*
-		int attempts = 0;
-		while(site == nullptr){
-			if(attempts > 10*n_free_tethered_){
-				break;
-			}
-			i_xlink = properties_->gsl.GetRanInt(n_free_tethered_);
-			xlink = free_tethered_[i_xlink];
-			site = xlink->GetWeightedTethNeighborSite(); 
-			attempts++; 
-		}
-		*/
-		if(site != nullptr){
-			// Update site details
-			site->xlink_ = xlink; 
-			site->occupied_ = true;
-			// Update xlink details
-			xlink->site_one_ = site; 
-			xlink->heads_active_++; 
-		}
-		else{
-			printf("failed to XLINK Bind_I_Free_Tethered\n");
-		}
-	}
-	else{
-		printf("Error in XLINK bind_i_free_teth; no avail xlinks\n");
-	}
-}
-
 void AssociatedProteinManagement::RunKMC_Bind_II(){
 
 	// Make sure stage 1 xlinks and unoccupied sites are available
@@ -2908,7 +2716,6 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 			}
 		}
 		Tubulin *site = xlink->GetWeightedNeighborSite();
-		/*
 		int attempts = 0;
 		while(site == nullptr){
 			// roll for a new distance after a certain # of tries
@@ -2920,7 +2727,6 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 			site = xlink->GetWeightedNeighborSite();
 			attempts++;
 		}
-		*/
 		if(site != nullptr){
 			// Place  xlink onto site
 			site->xlink_ = xlink;
@@ -2940,99 +2746,6 @@ void AssociatedProteinManagement::RunKMC_Bind_II(){
 	}
 	else{
 		printf("Error in xlink Bind_II: no unoccupied sites\n");
-//		exit(1);
-	}
-}
-
-void AssociatedProteinManagement::RunKMC_Bind_II_Tethered(){
-
-	// Make sure stage 1 xlinks and unoccupied sites are available
-	UpdateBoundITethered();
-	properties_->microtubules.UpdateUnoccupied();
-	if(n_bound_i_tethered_tot_ > 0
-	&& properties_->microtubules.n_unoccupied_> 0){
-		/* Get a weighted teth extension */
-		int x_dist_dub = -1;
-		// total weight summed over all extensions
-		double weight_tot(0);
-		// cumulative weight up to and including some specific extension
-		double weight_cum[2*teth_cutoff_ + 1] = { };
-		// scan over all all extensions, add up weights appropriately
-		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
-			double weight = xlinks_[0].teth_binding_weight_lookup_[x_dub];
-			weight_cum[x_dub] = weight * n_bound_i_tethered_[x_dub];
-			weight_tot += weight_cum[x_dub];
-			// XXX i am not sure if this is correct
-			if(weight_cum[x_dub] > 0){
-				for(int x_dub_dub = 0; x_dub_dub < x_dub; x_dub_dub++){
-					weight_cum[x_dub] += weight_cum[x_dub_dub];
-				}
-			}
-		}
-		// now that we have weight_tot, we can use weight_cum[i] to
-		// map the available x_dub populations onto different ranges 
-		// in [0, 1), which allows us to use GetRanProb() to select one
-		double ran = properties_->gsl.GetRanProb();
-		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
-			if(ran <= weight_cum[x_dub] / weight_tot){
-				x_dist_dub = x_dub;
-				break;
-			}
-		}
-		if(x_dist_dub == -1){
-			printf("error in xlink bind_ii_teth ZERO\n");
-			exit(1);
-		}
-		int n_bound = n_bound_i_tethered_[x_dist_dub];
-		if(n_bound > 0){
-			// Randomly pick single-bound xlink
-			int i_xl = properties_->gsl.GetRanInt(n_bound);
-			AssociatedProtein *xlink = bound_i_tethered_[x_dist_dub][i_xl];
-			if(xlink->tethered_ == false){
-				printf("error in xlink bind_ii_teth ONE\n");
-				exit(1);
-			}
-			else if(xlink->motor_->heads_active_ == 0){
-				printf("error in xlink bind_ii_teth TWO\n");
-				exit(1);
-			}
-			Tubulin *site = xlink->GetWeightedTethNeighborSiteII();
-			int attempts = 0;
-			while(site == nullptr){
-				// roll for a new distance after a certain # of tries
-				if(attempts > 10*n_bound){
-					break;
-				}
-				i_xl = properties_->gsl.GetRanInt(n_bound);
-				xlink = bound_i_tethered_[x_dist_dub][i_xl];	
-				site = xlink->GetWeightedTethNeighborSiteII();
-				attempts++;
-			}
-			if(site != nullptr){
-				// Place  xlink onto site
-				site->xlink_ = xlink;
-				site->occupied_ = true;
-				// Update xlink details
-				xlink->heads_active_++;
-				if(xlink->site_one_ == nullptr)
-					xlink->site_one_ = site;
-				else if(xlink->site_two_ == nullptr)
-					xlink->site_two_ = site;
-				// Update statistics
-				xlink->UpdateExtension();
-				xlink->motor_->UpdateExtension();
-			}
-			else{
-				printf("failed to bind_ii_teth xlink\n");
-			}
-		}
-		else{
-			printf("error in xlink bind_ii_teth \n");
-			exit(1);
-		}
-	}
-	else{
-		printf("Error in xlink Bind_II_Tethered: no unoccupied sites\n");
 //		exit(1);
 	}
 }
@@ -3076,6 +2789,184 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 	}
 }
 
+void AssociatedProteinManagement::RunKMC_Unbind_II(int x_dist){
+
+	UpdateDoubleBoundList();
+	if(n_bound_ii_[x_dist] > 0){
+		// Randomly pick a double-bound xlink
+		int i_entry = properties_->gsl.GetRanInt(n_bound_ii_[x_dist]);
+		AssociatedProtein* xlink = bound_ii_[x_dist][i_entry];
+		if(x_dist != xlink->x_dist_){
+			printf("error in xink unbind_ii \n");
+			exit(1);
+		}
+		if(xlink->tethered_ == true){
+			if(xlink->motor_->heads_active_ != 0){
+				printf("error in xlink unbind_ii NON TETH\n");
+				exit(1);
+			}
+		}
+		Tubulin* site;
+		double ran = properties_->gsl.GetRanProb();
+		if(ran < 0.5)
+			site = xlink->site_one_;
+		else
+			site = xlink->site_two_;
+		// Remove xlink from site
+		site->xlink_ = nullptr;
+		site->occupied_ = false;
+		// Update xlink details
+		if(ran < 0.5)
+			xlink->site_one_ = nullptr;
+		else
+			xlink->site_two_ = nullptr;
+		xlink->heads_active_--;
+	}
+	else{
+		printf("Error in RunKMC_Unbind_II:no double bound xlinks\n");
+		exit(1);
+	}
+}
+
+void AssociatedProteinManagement::RunKMC_Bind_I_Tethered(){
+
+	UpdateFreeTetheredList();
+	properties_->microtubules.UpdateUnoccupied();
+	if(n_free_tethered_ > 0
+	&& properties_->microtubules.n_unoccupied_> 0){
+		int i_xlink = properties_->gsl.GetRanInt(n_free_tethered_);
+		AssociatedProtein* xlink = free_tethered_[i_xlink];
+		if(xlink->motor_->heads_active_ == 0){
+			printf("error in xlink bind_i_teth\n");
+			exit(1);
+		}
+		Tubulin* site = xlink->GetWeightedTethNeighborSite();
+		if(site != nullptr){
+			// Update site details
+			site->xlink_ = xlink; 
+			site->occupied_ = true;
+			// Update xlink details
+			xlink->site_one_ = site; 
+			xlink->heads_active_++; 
+		}
+		else{
+			printf("failed to XLINK Bind_I_Free_Tethered\n");
+		}
+	}
+	else{
+		printf("Error in XLINK bind_i_free_teth; no avail xlinks\n");
+	}
+}
+
+void AssociatedProteinManagement::RunKMC_Bind_II_Tethered(){
+
+	// Make sure stage 1 xlinks and unoccupied sites are available
+	UpdateBoundITethered();
+	properties_->microtubules.UpdateUnoccupied();
+	if(n_bound_i_tethered_tot_ > 0
+	&& properties_->microtubules.n_unoccupied_> 0){
+		/* Get a weighted teth extension */
+		int x_dist_dub = -1;
+		// total weight summed over all extensions
+		double weight_tot(0);
+		// cumulative weight up to and including some specific extension
+		double weight_cum[2*teth_cutoff_ + 1] = { };
+		// scan over all all extensions, add up weights appropriately
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+			double weight = xlinks_[0].teth_binding_weight_lookup_[x_dub];
+			weight_cum[x_dub] = weight * n_bound_i_tethered_[x_dub];
+			weight_tot += weight_cum[x_dub];
+			if(weight_cum[x_dub] > 0){
+				for(int x_dub_dub = 0; x_dub_dub <= x_dub; x_dub_dub++){
+					weight_cum[x_dub] += weight_cum[x_dub_dub];
+				}
+			}
+		}
+		// now that we have weight_tot, we can use weight_cum[i] to
+		// map the available x_dub populations onto different ranges 
+		// in [0, 1), which allows us to use GetRanProb() to select one
+		double ran = properties_->gsl.GetRanProb();
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+			if(ran <= weight_cum[x_dub] / weight_tot){
+				x_dist_dub = x_dub;
+				break;
+			}
+		}
+		if(x_dist_dub == -1){
+			printf("error in xlink bind_ii_teth ZERO\n");
+			exit(1);
+		}
+		int n_bound = n_bound_i_tethered_[x_dist_dub];
+		if(n_bound > 0){
+			// Randomly pick single-bound xlink
+			int i_xl = properties_->gsl.GetRanInt(n_bound);
+			AssociatedProtein *xlink = bound_i_tethered_[x_dist_dub][i_xl];
+			if(xlink->tethered_ == false){
+				printf("error in xlink bind_ii_teth ONE\n");
+				exit(1);
+			}
+			else if(xlink->motor_->heads_active_ == 0){
+				printf("error in xlink bind_ii_teth TWO\n");
+				exit(1);
+			}
+			Tubulin *site = xlink->GetWeightedTethNeighborSiteII();
+			int attempts = 0;
+			int switches = 0;
+			bool searching = true;
+			while(site == nullptr
+			&& searching){
+				// roll for a new distance after a certain # of tries
+				if(attempts > 50*n_bound){
+					switches++;
+					// stop the search after a certain # of dist switches
+					if(switches > 50*n_bound_i_tethered_tot_){
+						searching = false;
+						break;
+					}
+					double ran = properties_->gsl.GetRanProb();
+					for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+						if(ran <= weight_cum[x_dub] / weight_tot){
+							x_dist_dub = x_dub;
+							break;
+						}
+					}
+					n_bound = n_bound_i_tethered_[x_dist_dub];
+					attempts = 0;
+				}
+				i_xl = properties_->gsl.GetRanInt(n_bound);
+				xlink = bound_i_tethered_[x_dist_dub][i_xl];	
+				site = xlink->GetWeightedTethNeighborSiteII();
+				attempts++;
+			}
+			if(site != nullptr){
+				// Place  xlink onto site
+				site->xlink_ = xlink;
+				site->occupied_ = true;
+				// Update xlink details
+				xlink->heads_active_++;
+				if(xlink->site_one_ == nullptr)
+					xlink->site_one_ = site;
+				else if(xlink->site_two_ == nullptr)
+					xlink->site_two_ = site;
+				// Update statistics
+				xlink->UpdateExtension();
+				xlink->motor_->UpdateExtension();
+			}
+			else{
+				printf("failed to bind_ii_teth xlink\n");
+			}
+		}
+		else{
+			printf("error in xlink bind_ii_teth \n");
+			exit(1);
+		}
+	}
+	else{
+		printf("Error in xlink Bind_II_Tethered: no unoccupied sites\n");
+//		exit(1);
+	}
+}
+
 void AssociatedProteinManagement::RunKMC_Unbind_I_Tethered(int x_dist_dub){
 
 	UpdateBoundITethered();
@@ -3105,45 +2996,6 @@ void AssociatedProteinManagement::RunKMC_Unbind_I_Tethered(int x_dist_dub){
 	}
 	else{
 		printf("Error in RunKMC_Unbind: no bound xlinks\n");
-		exit(1);
-	}
-}
-
-void AssociatedProteinManagement::RunKMC_Unbind_II(int x_dist){
-
-	UpdateDoubleBoundList();
-	if(n_bound_ii_[x_dist] > 0){
-		// Randomly pick a double-bound xlink
-		int i_entry = properties_->gsl.GetRanInt(n_bound_ii_[x_dist]);
-		AssociatedProtein* xlink = bound_ii_[x_dist][i_entry];
-		if(x_dist != xlink->x_dist_){
-			printf("error in xink unbind_ii \n");
-			exit(1);
-		}
-		Tubulin* site;
-		double ran = properties_->gsl.GetRanProb();
-		if(ran < 0.5)
-			site = xlink->site_one_;
-		else
-			site = xlink->site_two_;
-		// Remove xlink from site
-		site->xlink_ = nullptr;
-		site->occupied_ = false;
-		// Update xlink details
-		if(ran < 0.5)
-			xlink->site_one_ = nullptr;
-		else
-			xlink->site_two_ = nullptr;
-		xlink->heads_active_--;
-		if(xlink->tethered_ == true){
-			if(xlink->motor_->heads_active_ != 0){
-				printf("error in xlink unbind_ii NON TETH\n");
-				exit(1);
-			}
-		}
-	}
-	else{
-		printf("Error in RunKMC_Unbind_II:no double bound xlinks\n");
 		exit(1);
 	}
 }

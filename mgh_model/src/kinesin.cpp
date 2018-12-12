@@ -66,7 +66,7 @@ void Kinesin::CalculateCutoffs(){
 			else
 				U = (k_spring_/2)*dr*dr; 
 			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 1000){
+			if(boltzmann_weight > 10000){
 				comp_cutoff_ = x_dist / 2;
 				break;
 			}
@@ -83,7 +83,7 @@ void Kinesin::CalculateCutoffs(){
 			else
 				U = (k_spring_/2)*dr*dr; 
 			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 1000){
+			if(boltzmann_weight > 10000){
 				dist_cutoff_ = x_dist / 2;
 				break;
 			}
@@ -304,6 +304,7 @@ void Kinesin::UpdateExtension(){
 		x_dist_doubled_ = x_dist_dub; 
 		if(x_dist_doubled_ > 2*dist_cutoff_
 		|| x_dist_doubled_ < 2*comp_cutoff_){
+//			printf("UNTETHERED 2x=%i\n", x_dist_doubled_);
 			ForceUntether(); 
 		}
 		else{
@@ -612,6 +613,8 @@ AssociatedProtein* Kinesin::GetWeightedNeighborXlink(){
 		exit(1);
 	}
 	UpdateNeighborXlinks();
+	if(n_neighbor_xlinks_ == 0) 
+		return nullptr;
 	double stalk_coord = GetStalkCoordinate();
 	double p_tot = 0;
 	for(int i_xlink = 0; i_xlink < n_neighbor_xlinks_; i_xlink++){

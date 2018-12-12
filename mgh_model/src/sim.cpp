@@ -31,13 +31,9 @@ int main(int argc, char *argv[]){
 		if(world_size > 1 ) MPI_Barrier(MPI_COMM_WORLD);
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
-//		properties.prc1.RunKMC();
-//		properties.prc1.RunDiffusion();
-//			properties.microtubules.RunDiffusion();
-//		if(i_step % 100 == 0){
-//			printf("%i ACTIVE MOTS:\n", properties.kinesin4.n_active_);
-//			properties.wallace.PrintMicrotubules(0);
-//		}
+		properties.prc1.RunKMC();
+		properties.prc1.RunDiffusion();
+		properties.microtubules.RunDiffusion();
 	}
 
 	// Cleanup stuff

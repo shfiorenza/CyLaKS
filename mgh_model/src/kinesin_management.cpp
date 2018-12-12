@@ -719,45 +719,49 @@ Kinesin* KinesinManagement::GetBoundUntetheredMotor(){
 
 void KinesinManagement::UpdateAllLists(){
 
+	/*
 	#pragma omp parallel
 	{
-	#pragma omp single
+		#pragma omp single
 		{
-			#pragma omp task
+	*/
+//			#pragma omp task
 			properties_->microtubules.UpdateUnoccupied();
-			#pragma omp task
+//			#pragma omp task
 			UpdateBoundI();
-			#pragma omp task
+//			#pragma omp task
 			UpdateBoundIBindable();
-			#pragma omp task
+//			#pragma omp task
 			UpdateBoundII();
-			#pragma omp task
+//			#pragma omp task
 			UpdateStepable();
 			if(parameters_->motors.tethers_active){
-				#pragma omp task
+//				#pragma omp task
 				properties_->prc1.UpdateUntethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateFreeTethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBoundUntethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBindableToTeth();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBindableFromTeth();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBoundITethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBoundIITethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBoundIITethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateBoundTethered();
-				#pragma omp task
+//				#pragma omp task
 				UpdateStepableTethered();
 			}
+	/*
 		#pragma omp taskwait
 		}
 	}
+	*/
 }
 
 void KinesinManagement::UpdateFreeTethered(){
@@ -2255,7 +2259,8 @@ void KinesinManagement::KMC_Tether_Bound(){
 		int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
 		Kinesin *motor = bound_untethered_[i_motor];
 		AssociatedProtein* xlink = motor->GetWeightedNeighborXlink();
-		/*
+		// it's possible to pick a motor w/ no neighbs, 
+		// so make sure we reroll if that is the case
 		int attempts = 0; 
 		while(xlink == nullptr){
 			if(attempts > 10*n_bound_untethered_){
@@ -2266,7 +2271,6 @@ void KinesinManagement::KMC_Tether_Bound(){
 			xlink = motor->GetWeightedNeighborXlink();
 			attempts++;
 		}
-		*/
 		if(xlink != nullptr){
 			// Update motor and xlink details
 			motor->xlink_ = xlink;

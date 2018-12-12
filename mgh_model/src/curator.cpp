@@ -645,6 +645,9 @@ void Curator::UpdateTimestep(int i_step){
 				printf("Done!");
 			}
 		}
+		if(i_step % 100 == 0){
+			PrintMicrotubules(0);
+		}
 	}
 }
 

@@ -141,6 +141,7 @@ class AssociatedProteinManagement{
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
 
+		void UpdateAllLists();
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();
@@ -148,6 +149,7 @@ class AssociatedProteinManagement{
 		void UpdateFreeTetheredList();
 		void UpdateUntethered();
 		
+		void UpdateAllSiteLists();
 		void UpdateSingleUntetheredSites();
 		void UpdateDoubleUntetheredSites();
 		void UpdateSingleTetheredSites();
@@ -157,20 +159,8 @@ class AssociatedProteinManagement{
 		AssociatedProtein* GetUntetheredXlink();
 
 		void GenerateDiffusionList();
-		int GetNumToStepI_Forward();
-		int GetNumToStepI_Backward();
-		int GetNumToStepII_ToRest(int x_dist);
-		int GetNumToStepII_FromRest(int x_dist);
-		// Tether extensions taken into account for the below
-		// x_dist_dub refers to tether extension, and is double its
-		// real value (can have half-integer values). x_dist is the 
-		// actual extension of the crosslink in no of x-sites
-		int GetNumToStepI_ToTethRest(int x_dist_dub);
-		int GetNumToStepI_FromTethRest(int x_dist_dub);
-		int GetNumToStepII_ToBothRest(int x_dist_dub, int x_dist);
-		int GetNumToStepII_FromBothRest(int x_dist_dub, int x_dist);
-		int GetNumToStepII_ToSelf_FromTeth(int x_dist_dub, int x_dist);
-		int GetNumToStepII_FromSelf_ToTeth(int x_dist_dub,int x_dist);
+		void UpdateSerializedDifPopulations();
+		void UpdateSerializedDifEvents();
 
 		void RunDiffusion();
 		void RunDiffusionI_Forward();
@@ -190,17 +180,6 @@ class AssociatedProteinManagement{
 		double GetWeightBindII(); 
 		double GetWeightBindITethered();
 		double GetWeightBindIITethered();
-		int GetNumToBind_I();
-		int GetNumToBind_I_Tethered();
-		int GetNumToBind_II();
-		int GetNumToBind_II_Tethered();
-		int GetNumToUnbind_I();
-		int GetNumToUnbind_I_Tethered(int x_dist_dub);
-		int GetNumToUnbind_II(int x_dist);
-		int GetNumToUnbind_II_To_Teth(int x_dist_dub, int x_dist);
-		int GetNumToUnbind_II_From_Teth(int x_dist_dub, int x_dist);
-		int GetNumToTether_Free();
-		int GetNumToUntether_Free();
 
 		void RunKMC();
 		void RunKMC_Bind_I();

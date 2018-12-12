@@ -88,28 +88,15 @@ void MicrotubuleManagement::UpdateUnoccupied(){
 	int n_mts = parameters_->microtubules.count;
 	int mt_length = parameters_->microtubules.length;
 	n_unoccupied_ = 0; 
-	int i_unoccupied = 0; 
-	int n_occupied = 0;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
 		Microtubule *mt = &mt_list_[i_mt];
-		// XXX BOUNDARY SITES INCLUDED - DISABLE FOR ALPHA/BETA !! XXX 
-		for(int i_site = 0; i_site <= mt_length - 1; i_site++){
+		for(int i_site(0); i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false){
-				unoccupied_list_[i_unoccupied] = site; 
-				i_unoccupied++;
+				unoccupied_list_[n_unoccupied_] = site; 
 				n_unoccupied_++;
 			}
-			else{
-				n_occupied++; 
-			}
 		}
-	}
-	if(n_unoccupied_ + n_occupied != n_sites_tot_){
-		printf("something awful in update_unoccupied_list bruh: \n");
-		printf("%i != %i + %i\n", n_sites_tot_, 
-				n_unoccupied_, n_occupied);
-		exit(1);
 	}
 }
 
@@ -146,7 +133,7 @@ void MicrotubuleManagement::RunDiffusion(){
 	}
 	/* To ensure smooth diffusion without having to use timesteps of 
 	  ~1e-7 seconds, divide all forces by N and run loop N times */
-	int n_iterations = 100;
+	int n_iterations = 1;
 	double delta_t_eff = delta_t / n_iterations; 
 	double sigma = sqrt(2 * kbT * delta_t_eff / gamma); 
 	for(int i_itr = 0; i_itr < n_iterations; i_itr++){

@@ -11,8 +11,11 @@ class AssociatedProtein{
 	private:
 
 	public:
+		// see kinesin header for description of variables
 		int ID_;
 		int speciesID_ = 1;
+		int active_index_;
+
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
 		int n_teth_neighbor_sites_ = 0;

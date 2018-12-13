@@ -58,13 +58,12 @@ xlink_data_file = fopen(xlinkFile);
 xlink_raw_data = fread(xlink_data_file, [n_mts * n_sites * n_datapoints], '*int');
 fclose(xlink_data_file);
 xlink_data = reshape(xlink_raw_data, n_sites, n_mts, n_datapoints);
-%{
+
 teth_data_file = fopen(tethFile);
 teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double');
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
-%}
-teth_data = zeros([n_sites n_mts n_datapoints]) - 1;
+%teth_data = zeros([n_sites n_mts n_datapoints]) - 1;
 
 end_frame = start_frame + n_frames - 1;
 if(end_frame > n_datapoints)

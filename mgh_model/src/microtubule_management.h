@@ -34,7 +34,7 @@ class MicrotubuleManagement{
 		void OccupiedCheck(int i_mt, int i_site);
 
 		void UpdateNeighbors();
-		void UpdateUnoccupiedList();
+		void UpdateUnoccupied();
 
 		Tubulin* GetUnoccupiedSite();
 

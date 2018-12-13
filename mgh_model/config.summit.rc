@@ -1,0 +1,6 @@
+module purge
+module load intel
+module load impi
+module load gsl
+module list
+

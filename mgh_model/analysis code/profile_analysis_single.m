@@ -1,8 +1,9 @@
 clear all
 % Often-changed variables
-n_sites = 250;
+n_sites = 500;
 xlink_conc = 0.6;
-simName = sprintf('Endtag_%#.1f_%i', xlink_conc, n_sites);
+simName = 'test2'
+%simName = sprintf('Endtag_%#.1f_%i', xlink_conc, n_sites);
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

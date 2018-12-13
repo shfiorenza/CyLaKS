@@ -114,12 +114,11 @@ void AssociatedProtein::PopulateTethBindingLookupTable(){
 			weight = exp(-dr*dr*k_teth/(4*kbT));
 		}
 		teth_binding_weight_lookup_[x_dist_dub] = weight;
-		//		printf("weight for 2x = %i is %g\n", x_dist_dub, weight);
+//		printf("weight for 2x = %i is %g\n", x_dist_dub, weight);
 	}
-	//	properties_->wallace.PauseSim(2);
 }
 
-// input CURRENT x_dist_dub and PROPOSED x_dist
+// input: CURRENT x_dist_dub of tether and PROPOSED x_dist xlink
 void AssociatedProtein::PopulateTethBindingIILookupTable(){
 
 	int teth_dist_cutoff = properties_->kinesin4.dist_cutoff_;
@@ -260,12 +259,11 @@ void AssociatedProtein::UpdateNeighborSites(){
 		int i_entry = 0;
 		for(int dist = -dist_cutoff_; dist <= dist_cutoff_; dist++){
 			int i_neighbor = (site_coord - adj_mt->coord_) + dist;
-			// Start index at first bulk site (1) if i_neighb is 0 or neg
-			// XXX BOUNDARIES CURRENTLY ACCESSED--DISABLE FOR ALPHA/BETA XXX
+			// Start index at first site (0) if i_neighb is 0 or neg
 			if(i_neighbor < 0){
 				dist -= (i_neighbor + 1); // - 1;
 			}
-			// End scan once last bulk site (mt_length - 2) has been checked
+			// End scan once last site (mt_length - 1) has been checked
 			else if(i_neighbor > mt_length - 1){
 				break;
 			} 
@@ -301,12 +299,11 @@ void AssociatedProtein::UpdateTethNeighborSites(){
 			for(int x_dist = -teth_cutoff; x_dist <= teth_cutoff; x_dist++){
 				int i_site = i_stalk + x_dist; 
 //				printf("i_site is %i (x_dist %i)\n", i_site, x_dist);
-				// Start index at first bulk site (1) if site index is <= 0
-				// XXX BOUNDARY SITES ACCESSIBLE -- DISABLE FOR ALPHA/BETA XXX
+				// Start index at first site (0) if site index is <= 0
 				if(i_site < 0){
 					x_dist -= (i_site + 1);
 				}
-				// End scan at last bulk site (mt_length - 2)
+				// End scan at last site (mt_length - 1)
 				else if(i_site > mt_length - 1){
 					break;
 				}
@@ -347,12 +344,11 @@ void AssociatedProtein::UpdateTethNeighborSitesII(){
 		int i_entry = 0;
 		for(int dist = -dist_cutoff_; dist <= dist_cutoff_; dist++){
 			int i_neighbor = (site_coord - adj_mt->coord_) + dist;
-			// Start index at first bulk site (1) if i_neighb is 0 or neg
-			// XXX BOUNDARIES CURRENTLY ACCESSED--DISABLE FOR ALPHA/BETA XXX
+			// Start index at first site (0) if i_neighb is 0 or neg
 			if(i_neighbor < 0){
-				dist -= (i_neighbor + 1); // - 1;
+				dist -= (i_neighbor + 1);
 			}
-			// End scan once last bulk site (mt_length - 2) has been checked
+			// End scan once last bulk site (mt_length - 1) has been checked
 			else if(i_neighbor > mt_length - 1){
 				break;
 			} 
@@ -422,10 +418,6 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 		x_dist_ = 0;
 		extension_ = 0; 
 		cosine_ = 0;
-		properties_->prc1.n_sites_ii_untethered_[x_dist_pre] -= 2;
-		properties_->prc1.n_sites_i_untethered_++;
-		properties_->prc1.n_double_bound_[x_dist_pre]--;
-		properties_->prc1.n_single_bound_++;
 	}
 	else if(motor_->heads_active_ > 0){
 		// Update motor ext (unbinding 2nd head changes anchor coord) 
@@ -455,28 +447,11 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 			printf("error in xlink force unbind!!\n");
 			exit(1);
 		}
-		properties_->prc1.n_sites_ii_tethered_[x_dub_pre][x_dist_pre] -= 2;
 		heads_active_--;
 		x_dist_ = 0;
 		extension_ = 0; 
 		cosine_ = 0;
 		motor_->UpdateExtension();
-		// If untether event didn't occur, update tethered and motor stats
-		if(tethered_ == true){
-			int x_dub_post = motor_->x_dist_doubled_;
-			properties_->prc1.n_sites_i_tethered_[x_dub_post]++;
-			// Update kinesin stats
-			KinesinManagement *kinesin4 = &properties_->kinesin4;
-			if(motor_->heads_active_ == 2){
-				kinesin4->n_bound_ii_tethered_[x_dub_pre]--;
-				kinesin4->n_bound_ii_tethered_[x_dub_post]++;
-			}
-		}
-		// If untether event DOES occur, counteract force_untether stats
-		else{
-			// NOT a typo; see kinesin ForceUntether
-			properties_->prc1.n_sites_i_tethered_[x_dub_pre]++;
-		}
 	}
 	// xlinks tethered to free motors diffuse as if untethered
 	else{
@@ -495,37 +470,39 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 		x_dist_ = 0;
 		extension_ = 0; 
 		cosine_ = 0;
-		properties_->prc1.n_sites_ii_untethered_[x_dist_pre] -= 2;
-		properties_->prc1.n_sites_i_untethered_++;
-		properties_->prc1.n_double_bound_[x_dist_pre]--;
-		properties_->prc1.n_single_bound_++;
 	}
 }
 
 void AssociatedProtein::UntetherSatellite(){
 
 	if(tethered_ == true){
+		// Remove satellite motor from active_ list, replace with last entry
+		int i_last = properties_->kinesin4.n_active_ - 1;
+		Kinesin *last_entry = properties_->kinesin4.active_[i_last];
+		int i_this = motor_->active_index_;
+		if(i_this != i_last){
+			properties_->kinesin4.active_[i_this] = last_entry;
+			last_entry->active_index_ = i_this;
+		}
+		properties_->kinesin4.n_active_--;
+		// Update motor details
 		motor_->tethered_ = false;
 		motor_->xlink_ = nullptr;
+		// Update xlink details
 		tethered_ = false;
 		motor_ = nullptr;
-		properties_->prc1.n_sites_i_untethered_--;
-		properties_->kinesin4.n_free_tethered_--;
 	}
 	else{
 		printf("Error in xlink UntethSatellite()\n");
 		exit(1);
 	}
-
 }
 
 int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 
-	Microtubule *mt = site->mt_;
 	if(heads_active_ == 2){
 		double anchor_coord = GetAnchorCoordinate();
-		int i_site = site->index_;
-		int site_coord = mt->coord_ + i_site;
+		int site_coord = site->index_ + site->mt_->coord_;
 		if(site_coord == anchor_coord){
 			double ran = properties_->gsl.GetRanProb();
 			if(ran < 0.5)
@@ -738,7 +715,7 @@ Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
 		// twice the distance teth is drom rest
 		int dist_from_rest_dub = abs(x_dub - rest_dist_dub);
 		// if unbinding causes teth to go from slack to spring or
-		// vise versa, always choose the site that makes it go slack
+		// vise versa, always choose the site that makes it taut
 		if(dx_teth_dub > dist_from_rest_dub){
 			if(dx_dub_one > dx_dub_two)
 				return site_one_; 
@@ -759,7 +736,7 @@ Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
 		}
 	}
 	else{
-		printf("Error in get_site_closer_to_teth_rest XLINK\n");
+		printf("Error in get_site_farther_fr_teth_rest XLINK\n");
 		exit(1);
 	}
 }

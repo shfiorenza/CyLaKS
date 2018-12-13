@@ -13,6 +13,8 @@ class Kinesin{
 	public:
 		int ID_;				// Unique ID of this kinesin in resevoir
 		int speciesID_ = 2;		// Unique ID of this species (kinesin)
+		int active_index_; 		// index of this motor in active_ list
+
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
@@ -22,7 +24,7 @@ class Kinesin{
 		int x_dist_doubled_;		// in no. of sites 
 		int dist_cutoff_;			// max value x_dist (not 2x) can be
 		int comp_cutoff_;			// min value x_dist (not 2x) can be
-		double rest_dist_;		// spring extension is ~0 for this
+		double rest_dist_;			// spring extension is ~0 for this
 
 		double r_0_;			
 		double k_spring_;
@@ -68,15 +70,15 @@ class Kinesin{
 		void UpdateNeighborSites();
 
 		void UpdateExtension();
-		void ForceUntether(int x_dub_pre);
+		void ForceUntether();
 
 		void UntetherSatellite();
 
 		bool AtCutoff();
 
 		int GetDirectionTowardRest();
-		double GetRestLengthCoordinate(); 	// coord where ext ~ 0 when bound
-		double GetStalkCoordinate(); // tail originates from stalk
+		double GetRestLengthCoordinate(); // coord where ext ~ 0 when bound
+		double GetStalkCoordinate(); 	  // tail originates from stalk
 		double GetTetheringWeight(AssociatedProtein *xlink);
 		double GetBindingWeight(Tubulin *site);
 		double GetTetherForce(Tubulin *site);

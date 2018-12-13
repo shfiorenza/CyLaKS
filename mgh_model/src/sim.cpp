@@ -1,45 +1,45 @@
-/* Main simulation file */
 #include "master_header.h"
 
 int main(int argc, char *argv[]){
-   
+
+    int threads_provided, world_rank, world_size;
 	system_parameters parameters;
 	system_properties properties;
 
-	// Check that the user has input the correct number of arguments 
-	if(argc != 3){
-		fprintf(stderr, "\nWrong number of command-line arguments in main\n");
-		fprintf(stderr, "Usage: %s parameters.yaml sim_name\n\n", argv[0]);
-		exit(1);
-	}
+	// Initialize MPI with capacity for multiple threads per node
+    MPI_Init_thread(NULL, NULL, MPI_THREAD_MULTIPLE, &threads_provided);
+	// Check that MPI node initiated its threads properly
+	properties.wallace.CheckMPI(threads_provided);
+	// Get world rank and size
+	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
 
-	// Use our experimental curator, Wallace, to parse parameters, 
-	// initialize objects used in the sim, and open files for data writing 
+	// Check that input has the correct number of arguments
+	properties.wallace.CheckArguments(argv[0], argc);
+	// Parse parameters from yaml file into parameter structure
 	properties.wallace.ParseParameters(&parameters, argv[1]);
+	// Initialize sim objects (MTs, kinesin, MAPs, etc.)
 	properties.wallace.InitializeSimulation(&properties);
-	properties.wallace.GenerateDataFiles(argv[2]);
+	// Generate data files (on root node only)
+	if(world_rank == 0) properties.wallace.GenerateDataFiles(argv[2]);
+	// Synchronize MPI nodes (if necessary)
+	if(world_size > 1) MPI_Barrier(MPI_COMM_WORLD);
 
-	// Run kinetic Monte Carlo loop n_steps times 
+	// Main KMC loop
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
-		// Wallace keeps track of outputting data, etc
+		// Synchronize MPI nodes (if necessary)
+		if(world_size > 1 ) MPI_Barrier(MPI_COMM_WORLD);
 		properties.wallace.UpdateTimestep(i_step);
-		// Explicit KMC actions (binding, stepping, etc)
 		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
-		// Diffusion
-//XXX	properties.kinesin4.RunDiffusion();
 		properties.prc1.RunDiffusion();
-		// MTs go last because they sum up all the forces and stuff
-		if(parameters.microtubules.diffusion == true){
-			properties.microtubules.RunDiffusion();
-		}
-		// Some good ole-fashioned ASCII printout
-		if(parameters.microtubules.printout == true)
-			if(i_step % 1 == 0)
-				properties.wallace.PrintMicrotubules(0);
+		properties.microtubules.RunDiffusion();
 	}
 
+	// Cleanup stuff
+	if(world_rank == 0) properties.wallace.CloseDataFiles();
 	properties.wallace.OutputSimDuration();
-	properties.wallace.CleanUp();
+	properties.gsl.CleanUp();
+	MPI_Finalize(); 
 	return 0;
 }

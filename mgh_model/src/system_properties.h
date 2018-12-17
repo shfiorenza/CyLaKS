@@ -15,6 +15,10 @@ struct system_properties{
 	AssociatedProteinManagement prc1; 
 	
 	int current_step_;
+	double t_motors_ = 0;
+	double t_xlinks_dif_ = 0;
+	double t_xlinks_kmc_ = 0;
+	double t_MTs_ = 0;
 
 	FILE *occupancy_file_, 
 		 *motor_ID_file_, *xlink_ID_file_, 

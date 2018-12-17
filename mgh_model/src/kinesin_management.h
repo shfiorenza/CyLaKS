@@ -27,9 +27,14 @@ class KinesinManagement{
 		struct pop_t{
 			int n_entries_ = -1;
 			std::string type_ = std::string("wut"); 
-			int x_dist_ = -1;
 			int x_dist_dub_ = -1;
+			int index_ = -1;
 		}; 
+
+		typedef std::vector<pop_t>::iterator pop_iterator;
+		typedef std::vector<std::pair<std::vector<pop_t>::iterator,
+					std::vector<pop_t>::iterator> > pop_chunk_vector; 	
+		pop_chunk_vector chunks;
 
 	public:
 		int n_motors_ = 0;
@@ -104,6 +109,7 @@ class KinesinManagement{
 		// Serialized (in regards to teth extension) vectors that store
 		// number of entries, the population/event label, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
+		int n_active_pops_;
 		std::vector<pop_t> serial_pop_; 
 		std::vector<pop_t> serial_kmc_;
 		// Map of population/event label to sampling function;
@@ -151,20 +157,20 @@ class KinesinManagement{
 
 		void RunKMC();
 		void KMC_Bind_I();
-		void KMC_Bind_I_Tethered();
 		void KMC_Bind_II();	
+		void KMC_Unbind_I();
+		void KMC_Unbind_II();
+		void KMC_Step();
+		void KMC_Bind_I_Tethered();
 		void KMC_Bind_II_To_Teth_Rest(int x_dist_doubled);
 		void KMC_Bind_II_From_Teth_Rest(int x_dist_doubled);	
-		void KMC_Unbind_I();
 		void KMC_Unbind_I_Tethered(int x_dist_doubled);
-		void KMC_Unbind_II();
 		void KMC_Unbind_II_To_Teth_Rest(int x_dist_doubled);	
 		void KMC_Unbind_II_From_Teth_Rest(int x_dist_doubled);
 		void KMC_Tether_Free();
 		void KMC_Tether_Bound(); 
 		void KMC_Untether_Free();
 		void KMC_Untether_Bound(int x_dist_doubled); 
-		void KMC_Step();
 		void KMC_Step_To_Teth_Rest(int x_dist_doubled);
 		void KMC_Step_From_Teth_Rest(int x_dist_doubled);
 };

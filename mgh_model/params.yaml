@@ -1,6 +1,6 @@
 ---
 seed: 329954438
-n_steps: 20000000
+n_steps: 2000000
 n_datapoints: 100000
 data_threshold: 0
 delta_t: 5e-06
@@ -8,7 +8,7 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 2
-  length: 2500
+  length: 500
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -44,7 +44,7 @@ motors:
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 0.2
+  concentration: 2.0
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

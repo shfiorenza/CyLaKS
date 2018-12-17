@@ -120,6 +120,7 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 void MicrotubuleManagement::RunDiffusion(){
 
 
+	double start = MPI_Wtime();
 	int n_mts = parameters_->microtubules.count;
 	int current_step = properties_->current_step_; 
 	double delta_t = parameters_->delta_t;
@@ -214,4 +215,6 @@ void MicrotubuleManagement::RunDiffusion(){
 			}
 		}
 	}
+	double finish = MPI_Wtime();
+	properties_->t_MTs_ += (finish - start);
 }

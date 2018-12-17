@@ -29,11 +29,12 @@ int main(int argc, char *argv[]){
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
 		// Synchronize MPI nodes (if necessary)
 		if(world_size > 1 ) MPI_Barrier(MPI_COMM_WORLD);
+//		printf("starting step %i\n", i_step);
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
-		properties.prc1.RunKMC();
+//		properties.prc1.RunKMC();
 		properties.prc1.RunDiffusion();
-		properties.microtubules.RunDiffusion();
+//		properties.microtubules.RunDiffusion();
 	}
 
 	// Cleanup stuff

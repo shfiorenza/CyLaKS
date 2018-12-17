@@ -66,7 +66,7 @@ void Kinesin::CalculateCutoffs(){
 			else
 				U = (k_spring_/2)*dr*dr; 
 			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 10000){
+			if(boltzmann_weight > 1000){
 				comp_cutoff_ = x_dist / 2;
 				break;
 			}
@@ -83,7 +83,7 @@ void Kinesin::CalculateCutoffs(){
 			else
 				U = (k_spring_/2)*dr*dr; 
 			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 10000){
+			if(boltzmann_weight > 1000){
 				dist_cutoff_ = x_dist / 2;
 				break;
 			}

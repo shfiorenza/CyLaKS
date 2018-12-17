@@ -645,7 +645,7 @@ void Curator::UpdateTimestep(int i_step){
 				printf("Done!");
 			}
 		}
-		if(i_step % 100 == 0){
+		if(i_step % 1000 == 0){
 			PrintMicrotubules(0);
 		}
 	}
@@ -668,6 +668,10 @@ void Curator::OutputSimDuration(){
 	fclose(stream_);
 */	
 	printf(" Time to execute: %f seconds.\n\n", sim_duration_);
+	printf("   -Motors: %f\n", properties_->t_motors_);
+	printf("   -Xlinks (KMC): %f\n", properties_->t_xlinks_kmc_);
+	printf("   -Xlinks (Diffusion): %f\n", properties_->t_xlinks_dif_);
+	printf("   -MTs: %f\n", properties_->t_MTs_);
 }
 
 void Curator::CloseDataFiles(){

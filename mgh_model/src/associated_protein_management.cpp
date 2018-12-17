@@ -1614,18 +1614,28 @@ void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
 	// Update all dif. pop. lists
 	UpdateAllSiteLists();
 
+	n_active_dif_pops_ = 0;
+
 	// for i_fwd
 	serial_dif_pop_[0].n_entries_ = n_sites_i_untethered_;
+	if(serial_dif_pop_[0].n_entries_ > 0)
+		n_active_dif_pops_++;
 
 	// for i_bck
 	serial_dif_pop_[1].n_entries_ = n_sites_i_untethered_;
+	if(serial_dif_pop_[1].n_entries_ > 0)
+		n_active_dif_pops_++;
 
 	// for ii_to/fr_self
 	for(int x(0); x <= dist_cutoff_; x++){
 		serial_dif_pop_[2 + x].n_entries_ = 
 			n_sites_ii_untethered_[x];
+		if(serial_dif_pop_[2 + x].n_entries_ > 0)
+			n_active_dif_pops_++;
 		serial_dif_pop_[3 + dist_cutoff_ + x].n_entries_ = 
 			n_sites_ii_untethered_[x];
+		if(serial_dif_pop_[3 + dist_cutoff_ + x].n_entries_ > 0)
+			n_active_dif_pops_++;
 	}
 
 	if(parameters_->motors.tethers_active){
@@ -1644,9 +1654,13 @@ void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
 			// for i_to_teth
 			serial_dif_pop_[offset1 + 1 + x_dub].n_entries_ =
 				n_sites_i_tethered_[x_dub];
+			if(serial_dif_pop_[offset1 + 1 + x_dub].n_entries_ > 0)
+				n_active_dif_pops_++;
 			// for i_fr_teth
 			serial_dif_pop_[offset2 + 1 + x_dub].n_entries_ = 
 				n_sites_i_tethered_[x_dub];
+			if(serial_dif_pop_[offset2 + 1 + x_dub].n_entries_ > 0)
+				n_active_dif_pops_++;
 			for(int x = 0; x <= dist_cutoff_; x++){
 				// FIXME
 				// god damn this is ugly plz remove soon
@@ -1661,46 +1675,66 @@ void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
 				// for ii_to_both
 				serial_dif_pop_[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub]
 					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
+				if(serial_dif_pop_
+				[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
+					n_active_dif_pops_++;
 				// for ii_fr_both
 				serial_dif_pop_[offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub]
 					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
+				if(serial_dif_pop_
+				[offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
+					n_active_dif_pops_++;
 				// for ii_to_self_fr_teth
 				serial_dif_pop_[offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub]
 					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
+				if(serial_dif_pop_
+				[offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
+					n_active_dif_pops_++;
 				// for ii_fr_self_to_teth
 				serial_dif_pop_[offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub]
 					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
+				if(serial_dif_pop_
+				[offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
+					n_active_dif_pops_++;
 			}
 		}
 	}
+
 }
 
 void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 
-	// Run through serialized population types
-	#pragma omp parallel for
+	std::vector<pop_t> active_pops(n_active_dif_pops_);
+	std::vector<int> active_indices(n_active_dif_pops_);
+	int i_active = 0;
 	for(int i_pop = 0; i_pop < serial_dif_pop_.size(); i_pop++){
-		// If population is greater than 0, sample diffusion funct
 		if(serial_dif_pop_[i_pop].n_entries_ > 0){
+			active_pops[i_active] = serial_dif_pop_[i_pop];
+			active_indices[i_active] = i_pop;
+			i_active++;
+		}
+		else serial_dif_[i_pop].n_entries_ = 0;
+	}
+	// Run through serialized population types
+	for(int i_pop = 0; i_pop < n_active_dif_pops_; i_pop++){
+		// If population is greater than 0, sample diffusion funct
+		if(active_pops[i_pop].n_entries_ > 0){
 			// Get iterator pointing to sampling funct
-			auto itr = 
-				dif_sampling_functs_.find(serial_dif_pop_[i_pop].type_);
+			auto itr = dif_sampling_functs_.find(active_pops[i_pop].type_);
 			// Make sure iterator was properly found
 			if(itr != dif_sampling_functs_.end()){
 				// Function itself is 'second' in map's key-funct pair
 				auto funct = itr->second;
 				// Get number of diffusion events
-				int n_entries = funct(serial_dif_pop_[i_pop].x_dist_,
-						serial_dif_pop_[i_pop].x_dist_dub_);
+				int n_entries = funct(active_pops[i_pop].x_dist_,
+						active_pops[i_pop].x_dist_dub_);
 				serial_dif_[i_pop].n_entries_ = n_entries;
-				/*
 				if(n_entries > 0){
 					printf("%i events for ", n_entries);
 					std::cout << serial_dif_[i_pop].type_ << std::endl;
 					printf("(x=%i, 2x=%i)\n", serial_dif_[i_pop].x_dist_,
 							serial_dif_[i_pop].x_dist_dub_);
 				}
-				*/
 			}
 			else{
 				printf("Error in update serial_dif_events, cant find ");
@@ -1710,7 +1744,8 @@ void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 		}
 		// if population size is 0, number of diffusion events is also 0
 		else{
-			serial_dif_[i_pop].n_entries_ = 0;
+			printf("wuuut\n");
+			exit(1);
 		}
 	}
 }
@@ -1718,6 +1753,7 @@ void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 void AssociatedProteinManagement::RunDiffusion(){
 
 //	printf("start of xlink diffusion cycle\n");
+	double start = MPI_Wtime();
 	GenerateDiffusionList();
 	if(dif_list_.empty() == false){
 		int n_events = dif_list_.size();
@@ -1814,6 +1850,8 @@ void AssociatedProteinManagement::RunDiffusion(){
 			}
 		}
 	}
+	double finish = MPI_Wtime();
+	properties_->t_xlinks_dif_ += (finish - start);
 }
 
 void AssociatedProteinManagement::RunDiffusionI_Forward(){
@@ -2492,7 +2530,6 @@ void AssociatedProteinManagement::UpdateSerializedKMCPopulations(){
 void AssociatedProteinManagement::UpdateSerializedKMCEvents(){
 
 	// Run through serialized population types
-	#pragma omp parallel for
 	for(int i_pop = 0; i_pop < serial_kmc_pop_.size(); i_pop++){
 		// If population is greater than 0, sample KMC funct
 		if(serial_kmc_pop_[i_pop].n_entries_ > 0){
@@ -2592,6 +2629,7 @@ void AssociatedProteinManagement::RunKMC(){
 	int x_dist;		// extension of xlink for stage2 unbinding
 	int x_dub;		// twice the extension of tether for stage1&2 binding
 //	printf("Start of xlink KMC cycle\n");
+	double start = MPI_Wtime();
 	GenerateKMCList();
 	if(kmc_list_.empty() == false){
 		int n_events = kmc_list_.size();
@@ -2667,6 +2705,8 @@ void AssociatedProteinManagement::RunKMC(){
 			}
 		}
 	}
+	double finish = MPI_Wtime();
+	properties_->t_xlinks_kmc_ += (finish - start);
 }
 
 void AssociatedProteinManagement::RunKMC_Bind_I(){

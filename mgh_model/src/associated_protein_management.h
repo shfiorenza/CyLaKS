@@ -116,6 +116,7 @@ class AssociatedProteinManagement{
 		// Serialized (in regards to self/teth extension) vectors that store
 		// number of entries, the population/event label, x, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
+		int n_active_dif_pops_;
 		std::vector<pop_t> serial_dif_pop_; 
 		std::vector<pop_t> serial_dif_;
 		std::vector<pop_t> serial_kmc_pop_;

@@ -30,11 +30,10 @@ class KinesinManagement{
 			int x_dist_dub_ = -1;
 			int index_ = -1;
 		}; 
-
-		typedef std::vector<pop_t>::iterator pop_iterator;
-		typedef std::vector<std::pair<std::vector<pop_t>::iterator,
-					std::vector<pop_t>::iterator> > pop_chunk_vector; 	
-		pop_chunk_vector chunks;
+		// Map of population/event label to sampling function;
+		// see InitializeFUnctionMap() for function definitions
+		typedef std::pair<std::string, std::function<int(int)> > funct_pair;
+		std::vector<funct_pair> sampling_functs_;
 
 	public:
 		int n_motors_ = 0;
@@ -112,9 +111,7 @@ class KinesinManagement{
 		int n_active_pops_;
 		std::vector<pop_t> serial_pop_; 
 		std::vector<pop_t> serial_kmc_;
-		// Map of population/event label to sampling function;
-		// see InitializeFUnctionMap() for function definitions
-		std::map<std::string, std::function<int(int)> > sampling_functs_;
+//		std::map<std::string, std::function<int(int)> > sampling_functs_;
 
 	private:
 		void GenerateMotors();

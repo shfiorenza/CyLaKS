@@ -7,7 +7,7 @@ BINDIR = bin
 SRCEXT = cpp
 
 COMPILE_FLAGS = -std=c++14 -fopenmp
-RCOMPILE_FLAGS = -D NDEBUG -O2 -march=native
+RCOMPILE_FLAGS = -D NDEBUG -O3 -march=native
 DCOMPILE_FLAGS = -D DEBUG -Og -g
 LINK_FLAGS = -fopenmp 
 GSLINCS = `pkg-config --cflags gsl`

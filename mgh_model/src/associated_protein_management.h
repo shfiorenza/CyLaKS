@@ -1,7 +1,7 @@
 #ifndef _ASSOCIATED_PROTEIN_MANAGEMENT_H
 #define _ASSOCIATED_PROTEIN_MANAGEMENT_H
 #include "associated_protein.h"
-#include <map>
+#include <unordered_map>
 #include <string>
 #include <functional>
 
@@ -21,39 +21,60 @@ class AssociatedProteinManagement{
 		// Structure to hold the size and type of a population
 		struct pop_t{
 			int n_entries_ = -1;
-			std::string type_ = std::string("wut");
 			int x_dist_ = -1;
 			int x_dist_dub_ = -1;
+			std::string event_ = std::string("event type");
+			int i_event_ = -1;
+			std::string type_ = std::string("pop. type");
+			int i_pop_ = -1; 
 		};
+
+		int n_distinct_dif_pops_ = 0;
+		int n_distinct_kmc_pops_ = 0;
+		std::vector<std::pair<std::string, int> > dif_pop_indices_; 
+		// pattern: ["type"][x_dub][x]
+		typedef std::pair<std::string, std::vector<std::vector<int*> > > 
+			pop_size_pair;
+		std::vector<pop_size_pair> dif_pop_sizes_;
+		std::vector<pop_size_pair> kmc_pop_sizes_; 
+
+		typedef std::pair<std::string,std::function<int(int,int,int)> >
+			funct_pair;
+		std::vector<funct_pair> dif_sampling_functs_; 
+		std::vector<funct_pair> kmc_sampling_functs_;
 
 	public:
 		int n_xlinks_ = 0;
 		// xlinks actively bound to some MT or motor; dynamically updated
 		int n_active_ = 0;
 
-		int n_bound_i_ = 0;
 		int n_free_tethered_ = 0;
-		int n_bound_untethered_ = 0;
+		int n_bound_i_ = 0;
 		int n_bound_i_tethered_tot_ = 0;		// needed?
-		std::vector<int> n_bound_i_tethered_;
-		// Each possible spring extension has its own double bound list
+		int n_bound_untethered_ = 0;
+		std::vector<int> n_bound_i_bindable_;
 		std::vector<int> n_bound_ii_;
+		std::vector<int> n_bound_i_tethered_;
+		std::vector< std::vector<int> > n_bound_i_tethered_bindable_;
 		std::vector< std::vector<int> > n_bound_ii_tethered_;
 		
 		// Only one population for singly-bound untethered xlink heads
-        int n_sites_i_untethered_ = 0;
+        int n_sites_i_ = 0;
 		// Population for each xlink extension
-		std::vector<int> n_sites_ii_untethered_;
+		std::vector<int> n_sites_ii_;
 		// Population for each tether extension
 		std::vector<int> n_sites_i_tethered_;
 		// Population for each teth AND each xlink extension
-		std::vector< std::vector<int> > n_sites_ii_tethered_;
 		std::vector< std::vector<int> > n_sites_ii_tethered_same_; 
 		std::vector< std::vector<int> > n_sites_ii_tethered_oppo_; 
 
 		int teth_cutoff_; 		// see kinesin header (is dist_cutoff_ there)
 		int dist_cutoff_;		// see assoc. protein header
 		int rest_dist_;			// see assoc. protein header
+
+		// characteristic time to diffuse one site (~8nm) for bound_i/ii
+		double tau_i_;	
+		double tau_ii_;		
 
 		// Stand-alone xlink diffusion probabilities
 		double p_diffuse_i_fwd_;
@@ -68,35 +89,38 @@ class AssociatedProteinManagement{
 		std::vector< std::vector<double> > p_diffuse_ii_to_self_from_teth_;
 		std::vector< std::vector<double> > p_diffuse_ii_from_self_to_teth_;
 
-		// characteristic time to diffuse one site (~8nm) for bound_i/ii
-		double tau_i_;	
-		double tau_ii_;		
-
 		// Kinematics probabilities
 		double p_bind_i_;			
-		double p_bind_i_tethered_; 
-		double p_bind_ii_; 
+		double p_bind_i_tethered_; 	// make vector?? FIXME
+		double p_bind_ii_; 		// deletethis FIXME
 		double p_unbind_i_;		
 		double p_tether_free_; 
 		double p_untether_free_;
-		std::vector<double> p_unbind_ii_;
 		std::vector<double> p_unbind_i_tethered_;	
+		std::vector<double> p_bind_ii_x; //XXX
+		std::vector<double> p_unbind_ii_;
+		std::vector<double> p_bind_ii_to_teth_;		//XXX
+		std::vector<double> p_bind_ii_from_teth_;	//XXX
 		std::vector< std::vector<double> > p_unbind_ii_to_teth_;
 		std::vector< std::vector<double> > p_unbind_ii_from_teth_;
 
 		// 1-D vectors, index is simply xlink entry
 		std::vector<AssociatedProtein> xlinks_;
 		std::vector<AssociatedProtein*> active_;
-		std::vector<AssociatedProtein*> bound_i_;
 		std::vector<AssociatedProtein*> free_tethered_;
+		std::vector<AssociatedProtein*> bound_i_;
 		std::vector<AssociatedProtein*> bound_untethered_;
 		// 2-D vectors, 1st index is x_dist, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_ii_;
+		std::vector< std::vector<AssociatedProtein*> > bound_i_bindable_;
+		// 1st index is x_dist_dub, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_i_tethered_;
 		// 3-D vectors, 1st index is x_dist_dub, 2nd is x_dist, 3rd is entry
 		// e.g. vec_[16][2][0] is the 1st xlink w/ x_dist_dub=16, x_dist=2
 		std::vector< std::vector< std::vector<AssociatedProtein*> > >
 			bound_ii_tethered_;
+		std::vector< std::vector< std::vector<AssociatedProtein*> > > 
+			bound_i_tethered_bindable_;
 
 		// Following vectors refer to sites that xlinks are bound
 		// to, but the same indexing convention as above applies
@@ -116,22 +140,16 @@ class AssociatedProteinManagement{
 		// Serialized (in regards to self/teth extension) vectors that store
 		// number of entries, the population/event label, x, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
-		int n_active_dif_pops_;
 		std::vector<pop_t> serial_dif_pop_; 
 		std::vector<pop_t> serial_dif_;
 		std::vector<pop_t> serial_kmc_pop_;
 		std::vector<pop_t> serial_kmc_;
-		// Map of population/event label to sampling function;
-		// see InitializeFUnctionMap() for function definitions
-		std::map<std::string, std::function<int(int, int)> > 
-			dif_sampling_functs_;
-		std::map<std::string, std::function<int(int, int)> > 
-			kmc_sampling_functs_;
 
 	private:
 		void GenerateXLinks();
 		void SetParameters();
 		void InitializeLists();
+		void InitializePopulationMap();
 		void InitializeDifSerialPop();
 		void InitializeKMCSerialPop();
 		void InitializeDifSamplingFunctions();
@@ -188,8 +206,10 @@ class AssociatedProteinManagement{
 		void RunKMC_Unbind_I();
 		void RunKMC_Unbind_II(int x_dist);
 		void RunKMC_Bind_I_Tethered();
-		void RunKMC_Bind_II_Tethered();
+		void RunKMC_Bind_II_Tethered();	// delete XXX
 		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
+		void RunKMC_Bind_II_To_Teth(int x_dist_dub, int x_dist); //XXX
+		void RunKMC_Bind_II_From_Teth(int x_dist_dub, int x_dist);	//XXX
 		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Tether_Free();

@@ -85,13 +85,10 @@ void MicrotubuleManagement::UpdateNeighbors(){
 
 void MicrotubuleManagement::UpdateUnoccupied(){
 
-	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length;
 	n_unoccupied_ = 0; 
-	for(int i_mt = 0; i_mt < n_mts; i_mt++){
-		Microtubule *mt = &mt_list_[i_mt];
-		for(int i_site(0); i_site < mt_length; i_site++){
-			Tubulin *site = &mt->lattice_[i_site];
+	for(int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++){
+		for(int i_st = 0; i_st < parameters_->microtubules.length; i_st++){
+			Tubulin *site = &mt_list_[i_mt].lattice_[i_st];
 			if(site->occupied_ == false){
 				unoccupied_list_[n_unoccupied_] = site; 
 				n_unoccupied_++;

@@ -1,13 +1,13 @@
 #ifndef _MICROTUBULE_MANAGEMENT_H
 #define _MICROTUBULE_MANAGEMENT_H
 #include "microtubule.h" 	// Includes <vector> lib as well
+#include "omp.h" 
 class Tubulin;
 struct system_parameters;
 struct system_properties;
 
 class MicrotubuleManagement{
 	private:
-
 	public:
 		int n_sites_tot_ = 0;
 		int n_unoccupied_ = 0;

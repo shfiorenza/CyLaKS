@@ -32,7 +32,7 @@ int main(int argc, char *argv[]){
 //		printf("starting step %i\n", i_step);
 		properties.wallace.UpdateTimestep(i_step);
 		properties.kinesin4.RunKMC();
-//		properties.prc1.RunKMC();
+		properties.prc1.RunKMC();
 		properties.prc1.RunDiffusion();
 //		properties.microtubules.RunDiffusion();
 	}

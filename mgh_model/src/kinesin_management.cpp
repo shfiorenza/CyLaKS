@@ -430,22 +430,6 @@ void KinesinManagement::InitializeSerialPop(){
 	}
 	// Copy into serial_kmc_ vector
 	serial_kmc_ = serial_pop_;
-
-	int n_threads = omp_get_max_threads();
-	chunks.reserve(n_threads);
-	int chunk_size[n_threads];
-	for(int i_thread = 0; i_thread < n_threads; i_thread++){
-		chunk_size[i_thread] = serial_pop_.size() / n_threads;
-		if(i_thread < serial_pop_.size() % n_threads)
-			chunk_size[i_thread]++;
-	}
-	pop_iterator cur_iter = serial_pop_.begin();
-	for(int i_thread = 0; i_thread < n_threads; i_thread++){
-		pop_iterator last_iter = cur_iter;
-		std::advance(cur_iter, chunk_size[i_thread]);
-		chunks.push_back(std::make_pair(last_iter, cur_iter));
-	}
-	chunks.push_back(std::make_pair(cur_iter, serial_pop_.end()));
 }
 
 void KinesinManagement::InitializeSamplingFunctions(){
@@ -464,7 +448,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 		}
 		else return 0;
 	};
-	sampling_functs_.insert(std::make_pair("bind_i", bind_i));
+	sampling_functs_.push_back(std::make_pair("bind_i", bind_i));
 
 	// If tethering isn't enabled, population types are simple
 	if(!parameters_->motors.tethers_active){
@@ -478,7 +462,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii", bind_ii));
+		sampling_functs_.push_back(std::make_pair("bind_ii", bind_ii));
 		// Function that gets num to unbind_i
 		auto unbind_i = [&](int x_dub){
 			if(n_bound_i_ > 0){
@@ -489,7 +473,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_i", unbind_i));
+		sampling_functs_.push_back(std::make_pair("unbind_i", unbind_i));
 		// Function that gets num to unbind_ii
 		auto unbind_ii = [&](int x_dub){
 			if(n_bound_ii_ > 0){
@@ -500,7 +484,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_ii", unbind_ii));
+		sampling_functs_.push_back(std::make_pair("unbind_ii", unbind_ii));
 		// Function that gets num to step
 		auto step = [&](int x_dub){
 			if(n_stepable_ > 0){
@@ -511,7 +495,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("step", step));
+		sampling_functs_.push_back(std::make_pair("step", step));
 	}
 	// Otherwise, serialize all populations of different tether extension
 	else{
@@ -528,7 +512,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_i_tethered", 
+		sampling_functs_.push_back(std::make_pair("bind_i_tethered", 
 					bind_i_tethered));
 		// Function that gets num to bind_ii
 		auto bind_ii = [&](int x_dub){
@@ -540,7 +524,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii", bind_ii));
+		sampling_functs_.push_back(std::make_pair("bind_ii", bind_ii));
 		// Functions that gets num to bind_ii_to/fr_teth
 		auto bind_ii_to_teth = [&](int x_dub){
 			if(n_bound_i_bindable_to_teth_[x_dub] > 0){
@@ -551,7 +535,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii_to_teth", 
+		sampling_functs_.push_back(std::make_pair("bind_ii_to_teth", 
 					bind_ii_to_teth));
 		auto bind_ii_fr_teth = [&](int x_dub){
 			if(n_bound_i_bindable_fr_teth_[x_dub] > 0){
@@ -562,7 +546,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("bind_ii_fr_teth", 
+		sampling_functs_.push_back(std::make_pair("bind_ii_fr_teth", 
 					bind_ii_fr_teth));
 		// Function that gets num to unbind_i
 		auto unbind_i = [&](int x_dub){
@@ -574,7 +558,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_i", unbind_i));
+		sampling_functs_.push_back(std::make_pair("unbind_i", unbind_i));
 		// Function that gets num to unbind_i_tethered
 		auto unbind_i_tethered = [&](int x_dub){
 			if(n_bound_i_tethered_[x_dub] > 0){
@@ -585,7 +569,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_i_tethered", 
+		sampling_functs_.push_back(std::make_pair("unbind_i_tethered", 
 					unbind_i_tethered));
 		// Function that gets num to unbind_ii
 		auto unbind_ii = [&](int x_dub){
@@ -597,7 +581,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_ii", unbind_ii));
+		sampling_functs_.push_back(std::make_pair("unbind_ii", unbind_ii));
 		// Functions that get num to unbind_ii_to/fr_teth
 		auto unbind_ii_to_teth = [&](int x_dub){
 			if(n_bound_ii_tethered_[x_dub] > 0){
@@ -608,7 +592,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_ii_to_teth", 
+		sampling_functs_.push_back(std::make_pair("unbind_ii_to_teth", 
 					bind_ii_to_teth));
 		auto unbind_ii_fr_teth = [&](int x_dub){
 			if(n_bound_ii_tethered_[x_dub] > 0){
@@ -619,7 +603,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("unbind_ii_fr_teth", 
+		sampling_functs_.push_back(std::make_pair("unbind_ii_fr_teth", 
 					bind_ii_fr_teth));
 		// Function that gets num tether_free
 		auto tether_free = [&](int x_dub){
@@ -631,7 +615,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("tether_free", tether_free));
+		sampling_functs_.push_back(std::make_pair("tether_free", tether_free));
 		// Function that gets num tether_bound
 		auto tether_bound = [&](int x_dub){
 			if(n_bound_untethered_ > 0){
@@ -645,7 +629,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;	
 		};
-		sampling_functs_.insert(std::make_pair("tether_bound", 
+		sampling_functs_.push_back(std::make_pair("tether_bound", 
 					tether_bound));
 		// Function that gets num untether_free
 		auto untether_free = [&](int x_dub){
@@ -657,7 +641,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;	
 		};
-		sampling_functs_.insert(std::make_pair("untether_free", 
+		sampling_functs_.push_back(std::make_pair("untether_free", 
 					untether_free));
 		// Function that gets num untether_bound
 		auto untether_bound = [&](int x_dub){
@@ -669,7 +653,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("untether_bound", 
+		sampling_functs_.push_back(std::make_pair("untether_bound", 
 					untether_bound));
 		// Function that gets num to step
 		auto step = [&](int x_dub){
@@ -681,7 +665,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("step", step));
+		sampling_functs_.push_back(std::make_pair("step", step));
 		// Functions that get num to step_to/fr_teth
 		auto step_to_teth = [&](int x_dub){
 			if(n_stepable_to_teth_[x_dub] > 0){
@@ -692,7 +676,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("step_to_teth", 
+		sampling_functs_.push_back(std::make_pair("step_to_teth", 
 				step_to_teth));	
 		auto step_fr_teth = [&](int x_dub){
 			if(n_stepable_fr_teth_[x_dub] > 0){
@@ -703,7 +687,7 @@ void KinesinManagement::InitializeSamplingFunctions(){
 			}
 			else return 0;
 		};
-		sampling_functs_.insert(std::make_pair("step_fr_teth", 
+		sampling_functs_.push_back(std::make_pair("step_fr_teth", 
 					step_fr_teth));
 	}
 }
@@ -1596,73 +1580,31 @@ void KinesinManagement::UpdateSerializedPopulations(){
 
 void KinesinManagement::UpdateSerializedEvents(){
 
-	/*
-	int n_threads = omp_get_max_threads();
-	std::vector<pop_t> active_pop(n_active_pops_);
-	std::vector<int> active_indices(n_active_pops_);
-	int i_active = 0;
+	#pragma omp parallel for schedule(static)
 	for(int i_pop = 0; i_pop < serial_pop_.size(); i_pop++){
 		if(serial_pop_[i_pop].n_entries_ > 0){
-			active_pop[i_active] = serial_pop_[i_pop];
-			active_indices[i_active] = i_pop;
-			i_active++;
-		}
-		else serial_kmc_[i_pop].n_entries_ = 0;
-	}
-	#pragma omp parallel
-	for(int i_pop = 0; i_pop < n_active_pops_; i_pop++){
-		if(active_pop[i_pop].n_entries_ > 0){
-			// Get iterator pointing to appropriate sampling function
-			auto itr = sampling_functs_.find(active_pop[i_pop].type_);
-			// Ensure sampling function was properly found
+			// Find iterator pointing to appropriate sampling function
+			auto itr = std::find_if(
+					sampling_functs_.begin(), 
+					sampling_functs_.end(), 
+					[&](const funct_pair &ref)
+					{
+						return ref.first == serial_kmc_[i_pop].type_;
+					});
+			// Make sure iterator was properly found
 			if(itr != sampling_functs_.end()){
-				// Function itself is 'second' in map's pair entry
-				auto funct = itr->second;
 				// Get number of KMC events expected for this population
-				int n_events = funct(active_pop[i_pop].x_dist_dub_);
-				serial_kmc_[active_indices[i_pop]].n_entries_ = n_events;
+				serial_kmc_[i_pop].n_entries_ = itr->second(
+						serial_pop_[i_pop].x_dist_dub_);
 			}
-			// If sampling function was not properly found, exit
 			else{
-				printf("error in cereal events\n");
-				std::cout << active_pop[i_pop].type_ << std::endl;
+				printf("ummm cant find ");
+				std::cout << serial_kmc_[i_pop].type_ << std::endl;
 				exit(1);
 			}
 		}
 		// If population is 0, no. of kmc events is automatically 0
-		else{
-			printf("fuckin error bro\n");
-			exit(1);
-		}
-	}
-
-	*/
-	int n_threads = omp_get_max_threads();
-	#pragma omp parallel
-	{
-		#pragma omp for
-		for(int i = 0; i < n_threads; i++){
-			for(auto it = chunks[i].first; it != chunks[i].second; ++it){
-				// If population is greater than 0, sample for events
-				if(it->n_entries_ > 0){
-					// Get iterator pointing to appropriate function
-					auto itr = sampling_functs_.find(it->type_);
-					// Ensure sampling function was properly found
-					if(itr != sampling_functs_.end()){
-						// Function itself is 'second' in map's pair entry
-						auto funct = itr->second;
-						// Get number of KMC events expected
-						int n_events = funct(it->x_dist_dub_);
-						serial_kmc_[it->index_].n_entries_ = n_events;
-					}
-				}
-				// If population is 0, no. of kmc events is automatically 0
-				else{
-					serial_kmc_[it->index_].n_entries_ = 0;
-				}
-			}
-		}
-
+		else serial_kmc_[i_pop].n_entries_ = 0;
 	}
 }
 

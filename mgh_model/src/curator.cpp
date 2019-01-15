@@ -671,6 +671,9 @@ void Curator::OutputSimDuration(){
 	printf("   -Motors: %f\n", properties_->t_motors_);
 	printf("   -Xlinks (KMC): %f\n", properties_->t_xlinks_kmc_);
 	printf("   -Xlinks (Diffusion): %f\n", properties_->t_xlinks_dif_);
+	printf("      -Serial updates: %f\n", properties_->t_xlinks_dif_upd_);
+	printf("      -Stat corrections: %f\n", properties_->t_xlinks_dif_cor_);
+	printf("      -Execution: %f\n", properties_->t_xlinks_dif_exe_);
 	printf("   -MTs: %f\n", properties_->t_MTs_);
 }
 

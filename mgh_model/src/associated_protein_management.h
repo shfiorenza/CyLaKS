@@ -9,34 +9,23 @@ struct system_properties;
 
 //XXX	to-do:
 //XXX		-see kinesin_mgmt header
-//XXX		-rename functs
-//XXX		-rearrange KMC functs
-
 
 class AssociatedProteinManagement{
 	private:
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
-		// Structure to hold the size and type of a population
-		struct pop_t{
-			int n_entries_ = -1;
-			int x_dist_ = -1;
-			int x_dist_dub_ = -1;
-			std::string event_ = std::string("event type");
-			int i_event_ = -1;
-			std::string type_ = std::string("pop. type");
-			int i_pop_ = -1; 
+
+		// Structure that holds all pertinent info for a given MC event:
+		struct event{
+			int *pop_ptr_ = nullptr; 	// Pointer to population size variable
+			int x_dist_ = -1;			// x_dist of crosslinker extension
+			int x_dist_dub_ = -1;		// 2*x_dist of tether extension
+			std::string type_ = std::string("event_type");
+			int i_event_ = -1;			// Serialized index of this event type
+			int n_events_ = -1;			// Number of predicted events 
 		};
 
-		int n_distinct_dif_pops_ = 0;
-		int n_distinct_kmc_pops_ = 0;
-		// pair: ["pop type"][pop_size[x][x_dub]]
-		typedef std::pair<std::string, std::vector<std::vector<int*> > > 
-			pop_size_pair;
-		std::vector<pop_size_pair> dif_pop_sizes_;
-		std::vector<pop_size_pair> kmc_pop_sizes_; 
-
-		// pair: ["funct name"][std::function(x_dub, x, index)]
+		// pair: ["event_type"] and [std::function(x_dub, x, index)]
 		typedef std::pair<std::string,std::function<int(int,int,int)> >
 			funct_pair;
 		std::vector<funct_pair> dif_sampling_functs_; 
@@ -139,18 +128,15 @@ class AssociatedProteinManagement{
 		// Serialized (in regards to self/teth extension) vectors that store
 		// number of entries, the population/event label, x, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
-		std::vector<pop_t> serial_dif_pop_; 
-		std::vector<pop_t> serial_dif_;
-		std::vector<pop_t> serial_kmc_pop_;
-		std::vector<pop_t> serial_kmc_;
+		std::vector<event> serial_dif_;
+		std::vector<event> serial_kmc_;
 
 	private:
 		void GenerateXLinks();
 		void SetParameters();
 		void InitializeLists();
-		void InitializePopulationSizeMap();		// XXX
-		void InitializeDifSerialPop();		// XXX
-		void InitializeKMCSerialPop();		// XXX
+		void InitializeSerializedDif();
+		void InitializeSerializedKMC();
 		void InitializeDifSamplingFunctions();
 		void InitializeKMCSamplingFunctions();
 
@@ -177,7 +163,6 @@ class AssociatedProteinManagement{
 		AssociatedProtein* GetUntetheredXlink();
 
 		void GenerateDiffusionList();		// XXX
-		void UpdateSerializedDifPopulations();
 		void UpdateSerializedDifEvents();
 
 		void RunDiffusion();
@@ -193,7 +178,6 @@ class AssociatedProteinManagement{
 		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
 
 		void GenerateKMCList();				// XXX
-		void UpdateSerializedKMCPopulations();
 		void UpdateSerializedKMCEvents();
 		double GetWeightBindII(); 
 		double GetWeightBindITethered();

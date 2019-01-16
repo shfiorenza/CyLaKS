@@ -37,8 +37,8 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 	}
 
 	// initialize RNG for each crosslinker KMC event on each MPI node
-	// (there will always be more diffusion populations than KMC)
-	int n_xl_pop = properties->prc1.serial_dif_pop_.size();
+	// (there will always be more diffusion events than KMC)
+	int n_xl_pop = properties->prc1.serial_dif_.size();
 	crosslinker_rngs_.resize(n_xl_pop);
 	long seed_offset = seed + 1 + world_size*(n_kin_pop + 1) + n_kin_pop;
 	for(int i_pop(0); i_pop < n_xl_pop; i_pop++){

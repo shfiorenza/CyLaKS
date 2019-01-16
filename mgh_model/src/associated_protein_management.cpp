@@ -13,7 +13,7 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
 	GenerateXLinks();
 	SetParameters();
 	InitializeLists();
-	InitializePopulationMap();
+	InitializePopulationSizeMap();
 	InitializeDifSerialPop();
 	InitializeKMCSerialPop();
 	InitializeDifSamplingFunctions();
@@ -512,8 +512,12 @@ void AssociatedProteinManagement::InitializeLists(){
 	}
 }
 
-void AssociatedProteinManagement::InitializePopulationMap(){
+void AssociatedProteinManagement::InitializePopulationSizeMap(){
 
+	// XXX -- currently unfinished -- XXX //
+	//
+	// XXX IDEA: maybe just hold a pointer to the pop IN THE POP_T STRUCT??
+	//
 	/* Diffusion jawn */
 	//for sites_i
 	std::vector<std::vector<int*> > sites_i{{&n_sites_i_}};
@@ -568,6 +572,12 @@ void AssociatedProteinManagement::InitializeDifSerialPop(){
 				 + 8*dist_cutoff_*teth_cutoff_;
 	serial_dif_pop_.resize(tot_size);
 
+	// Use bracket-initialization to create pop_t structures, 
+	// then place them in serialized list (pop_t holds index)
+	// format: 
+	// {n_entries, x, x_dub, "event type", i_event, "pop type", i_pop}
+	// FIXME: i_pop currently not fully implemented (-1 for tether pops)
+
 	pop_t i_fwd = {0, 0, 0, "i_fwd", 0, "sites_i", 0};
 	serial_dif_pop_[0] = i_fwd; 
 
@@ -583,18 +593,17 @@ void AssociatedProteinManagement::InitializeDifSerialPop(){
 		serial_dif_pop_[3 + dist_cutoff_ + x] = ii_fr_self;
 	}
 
-	/*
 	// If tethers are enabled, initialize those populations as well
 	if(parameters_->motors.tethers_active){
 		int offset1 = 3 + 2*dist_cutoff_; 
 		int offset2 = 4 + 2*dist_cutoff_ + 2*teth_cutoff_;
 
 		for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
-			pop_t i_to_teth = {0, "i_to_teth", "sites_i_tethered",
-				x_dub, 0, offset1 + 1 + x_dub};
+			pop_t i_to_teth = {0, 0, x_dub, "i_to_teth", 
+				offset1 + 1 + x_dub, "sites_i_tethered", -1};
 			serial_dif_pop_[offset1 + 1 + x_dub] = i_to_teth; 
-			pop_t i_fr_teth = {0, "i_fr_teth", "sites_i_tethered",
-				x_dub,  0, offset2 + 1 + x_dub};
+			pop_t i_fr_teth = {0, 0, x_dub, "i_fr_teth", 
+				offset2 + 1 + x_dub, "sites_i_tethered", -1};
 			serial_dif_pop_[offset2 + 1 + x_dub] = i_fr_teth;
 		}
 
@@ -609,29 +618,29 @@ void AssociatedProteinManagement::InitializeDifSerialPop(){
 		for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
 			for(int x(0); x <= dist_cutoff_; x++){
 				int index = offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t ii_to_both = {0, "ii_to_both", 
-					"sites_ii_tethered_same", x_dub, x, index};
+				pop_t ii_to_both = {0, x, x_dub, "ii_to_both", 
+					index, "sites_ii_tethered_same", -1};
 				serial_dif_pop_[index] = ii_to_both; 
 
 				index = offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t ii_fr_both = {0, "ii_fr_both", 
-					"sites_ii_tethered_same", x_dub, x, index};
+				pop_t ii_fr_both = {0, x, x_dub, "ii_fr_both", 
+					index, "sites_ii_tethered_same", -1};
 				serial_dif_pop_[index] = ii_fr_both; 
 
 				index = offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t ii_to_self_fr_teth = {0,"ii_to_self_fr_teth",
-					"sites_ii_tethered_oppo", x_dub, x, index};
+				pop_t ii_to_self_fr_teth = {0, x, x_dub, 
+					"ii_to_self_fr_teth", index, 
+					"sites_ii_tethered_oppo", -1};
 				serial_dif_pop_[index] = ii_to_self_fr_teth;
 
 				index = offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t ii_fr_self_to_teth = {0,"ii_fr_self_to_teth",
-					"sites_ii_tethered_oppo", x_dub, x, index};
+				pop_t ii_fr_self_to_teth = {0, x, x_dub, 
+					"ii_fr_self_to_teth", index, 
+					"sites_ii_tethered_oppo", -1};
 				serial_dif_pop_[index] = ii_fr_self_to_teth;
 			}
 		}
 	}
-	*/
-
 	// Copy population info into serial_dif_
 	serial_dif_ = serial_dif_pop_;
 };
@@ -643,6 +652,12 @@ void AssociatedProteinManagement::InitializeKMCSerialPop(){
 		tot_size = 11 + 3*dist_cutoff_ + 6*teth_cutoff_ 
 				 + 4*dist_cutoff_*teth_cutoff_;
 	serial_kmc_pop_.resize(tot_size);
+	
+	// Use bracket-initialization to create pop_t structures, 
+	// then place them in serialized list (pop_t holds index)
+	// format for pop_t is: 
+	//   {n_entries, x, x_dub, "event type", i_event, "pop type", i_pop}
+	// FIXME: i_pop currently not fully implemented (-1 for tether pops)
 	
 	pop_t bind_i = {0, 0, 0, "bind_i", 0, "free", 0};
 	serial_kmc_pop_[0] = bind_i;
@@ -658,27 +673,22 @@ void AssociatedProteinManagement::InitializeKMCSerialPop(){
 		serial_kmc_pop_[3 + x] = unbind_ii;
 	}
 
-	/*
 	// If tethering is enabled, add those event populations as well
 	if(parameters_->motors.tethers_active){
-
-		// Format for pop_t structure is:
-		// {n_entries_, "event type", "pop. type", x_dub, x, index}
-
 		int offset1 = 3 + dist_cutoff_;
 
-		pop_t bind_i_teth = {0, "bind_i_teth", "free_tethered", 
-			-1, -1, offset1 + 1};
+		pop_t bind_i_teth = {0, 0, 0, "bind_i_teth", offset1 + 1,
+			"free_tethered", -1}; 
 		serial_kmc_pop_[offset1 + 1] = bind_i_teth;
 
-		pop_t bind_ii_teth = {0, "bind_ii_teth", "bound_i_tethered", 
-			-1, -1, offset1 + 2};
+		pop_t bind_ii_teth = {0, 0, 0, "bind_ii_teth", offset1 + 2,
+			"bound_i_tethered", -1};
 		serial_kmc_pop_[offset1 + 2] = bind_ii_teth;
 
 		for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
 			int index = offset1 + 3 + x_dub;
-			pop_t unbind_i_teth = {0, "unbind_i_teth", "bound_i_tethered", 
-				x_dub, -1, index};
+			pop_t unbind_i_teth = {0, 0, x_dub, "unbind_i_teth", index,
+				"bound_i_tethered", -1};
 			serial_kmc_pop_[index] = unbind_i_teth;
 		}
 
@@ -689,13 +699,13 @@ void AssociatedProteinManagement::InitializeKMCSerialPop(){
 		for(int x_dub(0); x_dub <= 2*teth_cutoff_; x_dub++){
 			for(int x(0); x <= dist_cutoff_; x++){
 				int index = offset2 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t unbind_ii_to_teth = {0,"unbind_ii_to_teth",
-					"bound_ii_tethered", x_dub, x, index};
+				pop_t unbind_ii_to_teth = {0, x, x_dub, "unbind_ii_to_teth",
+					index, "bound_ii_tethered", -1};
 				serial_kmc_pop_[index] = unbind_ii_to_teth;
 
 				index = offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub;
-				pop_t unbind_ii_fr_teth = {0,"unbind_ii_fr_teth",
-					"bound_ii_tethered", x_dub, x, index};
+				pop_t unbind_ii_fr_teth = {0, x, x_dub, "unbind_ii_fr_teth",
+					index, "bound_ii_tethered", -1};
 				serial_kmc_pop_[index] = unbind_ii_fr_teth;
 			}
 		}
@@ -703,16 +713,15 @@ void AssociatedProteinManagement::InitializeKMCSerialPop(){
 		int offset4 = 8 + 3*dist_cutoff_ + 2*teth_cutoff_
 					+ (dist_cutoff_ + 1)*4*teth_cutoff_;
 		
-		pop_t tether_free = {0, "tether_free", "free", -1, -1, 
-			offset4 + 1};
+		pop_t tether_free = {0, 0, 0, "tether_free", offset4 + 1, 
+			"free", -1};
 		serial_kmc_pop_[offset4 + 1] = tether_free;
 
-		pop_t untether_free = {0, "untether_free", "free_tethered", -1, -1,
-			offset4 + 2};
+		pop_t untether_free = {0, 0, 0, "untether_free", offset4 + 2, 
+			"free_tethered", -1};
 		serial_kmc_pop_[offset4 + 2] = untether_free;
 	}
 	// Copy population info into serial_kmc_
-	*/
 	serial_kmc_ = serial_kmc_pop_;
 };
 
@@ -1515,8 +1524,7 @@ AssociatedProtein* AssociatedProteinManagement::GetFreeXlink(){
 	int i_xlink = properties_->gsl.GetRanInt(n_xlinks_);
 	AssociatedProtein *xlink = &xlinks_[i_xlink];
 	int attempts = 0;
-	while(xlink->heads_active_ > 0
-	|| xlink->tethered_ == true){
+	while(xlink->heads_active_ > 0 || xlink->tethered_){
 		i_xlink++;
 		if(i_xlink == n_xlinks_)
 			i_xlink = 0;
@@ -1897,16 +1905,6 @@ void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
 			serial_dif_pop_[i_entry].n_entries_ = *itr->second
 				[serial_dif_pop_[i_entry].x_dist_dub_]
 				[serial_dif_pop_[i_entry].x_dist_];
-			/*
-			if(serial_dif_pop_[i_entry].n_entries_ > 0){
-				printf("%i entries for ", 
-						serial_dif_pop_[i_entry].n_entries_);
-				std::cout << serial_dif_pop_[i_entry].type_;
-				printf(" (2x:%i,x:%i\n", 
-					serial_dif_pop_[i_entry].x_dist_dub_, 
-					serial_dif_pop_[i_entry].x_dist_);
-			}
-			*/
 		}
 		else{
 			printf("Error! Cannot find ");
@@ -1915,98 +1913,12 @@ void AssociatedProteinManagement::UpdateSerializedDifPopulations(){
 			exit(1);
 		}
 	}
-
-	/*
-	// for i_fwd
-	serial_dif_pop_[0].n_entries_ = n_sites_i_;
-	if(serial_dif_pop_[0].n_entries_ > 0)
-		n_active_dif_pops_++;
-
-	// for i_bck
-	serial_dif_pop_[1].n_entries_ = n_sites_i_;
-	if(serial_dif_pop_[1].n_entries_ > 0)
-		n_active_dif_pops_++;
-
-	// for ii_to/fr_self
-	for(int x(0); x <= dist_cutoff_; x++){
-		serial_dif_pop_[2 + x].n_entries_ = 
-			n_sites_ii_[x];
-		if(serial_dif_pop_[2 + x].n_entries_ > 0)
-			n_active_dif_pops_++;
-		serial_dif_pop_[3 + dist_cutoff_ + x].n_entries_ = 
-			n_sites_ii_[x];
-		if(serial_dif_pop_[3 + dist_cutoff_ + x].n_entries_ > 0)
-			n_active_dif_pops_++;
-	}
-
-	if(parameters_->motors.tethers_active){
-
-		int offset1 = 3 + 2*dist_cutoff_; 
-		int offset2 = 4 + 2*dist_cutoff_ + 2*teth_cutoff_;
-		int offset3 = 5 + 2*dist_cutoff_ + 4*teth_cutoff_;
-		int offset4 = 6 + 3*dist_cutoff_ + 4*teth_cutoff_ 
-					+ (dist_cutoff_ + 1)*2*teth_cutoff_;
-		int offset5 = 7 + 4*dist_cutoff_ + 4*teth_cutoff_
-					+ (dist_cutoff_ + 1)*4*teth_cutoff_; 
-		int offset6 = 8 + 5*dist_cutoff_ + 4*teth_cutoff_
-					+ (dist_cutoff_ + 1)*6*teth_cutoff_;
-		
-		for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
-			// for i_to_teth
-			serial_dif_pop_[offset1 + 1 + x_dub].n_entries_ =
-				n_sites_i_tethered_[x_dub];
-			if(serial_dif_pop_[offset1 + 1 + x_dub].n_entries_ > 0)
-				n_active_dif_pops_++;
-			// for i_fr_teth
-			serial_dif_pop_[offset2 + 1 + x_dub].n_entries_ = 
-				n_sites_i_tethered_[x_dub];
-			if(serial_dif_pop_[offset2 + 1 + x_dub].n_entries_ > 0)
-				n_active_dif_pops_++;
-			for(int x = 0; x <= dist_cutoff_; x++){
-				// FIXME
-				// god damn this is ugly plz remove soon
-				if(x != serial_dif_pop_[offset3+1+x+(dist_cutoff_+1)*x_dub]
-					.x_dist_
-				|| x_dub != 
-				serial_dif_pop_[offset3+1+x+(dist_cutoff_+1)*x_dub].
-				x_dist_dub_){
-					printf("error in update serial dif pop\n");
-					exit(1);
-				}
-				// for ii_to_both
-				serial_dif_pop_[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub]
-					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
-				if(serial_dif_pop_
-				[offset3 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
-					n_active_dif_pops_++;
-				// for ii_fr_both
-				serial_dif_pop_[offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub]
-					.n_entries_ = n_sites_ii_tethered_same_[x_dub][x];
-				if(serial_dif_pop_
-				[offset4 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
-					n_active_dif_pops_++;
-				// for ii_to_self_fr_teth
-				serial_dif_pop_[offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub]
-					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
-				if(serial_dif_pop_
-				[offset5 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
-					n_active_dif_pops_++;
-				// for ii_fr_self_to_teth
-				serial_dif_pop_[offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub]
-					.n_entries_ = n_sites_ii_tethered_oppo_[x_dub][x];
-				if(serial_dif_pop_
-				[offset6 + 1 + x + (dist_cutoff_ + 1)*x_dub].n_entries_ > 0)
-					n_active_dif_pops_++;
-			}
-		}
-	}
-	*/
 }
 
 void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 
 	// Run through serialized population types
-	#pragma omp parallel for schedule(static)
+//	#pragma omp parallel for schedule(static)
 	for(int i_pop = 0; i_pop < serial_dif_pop_.size(); i_pop++){
 		// If population is greater than 0, sample KMC funct
 		if(serial_dif_pop_[i_pop].n_entries_ > 0){
@@ -2033,52 +1945,6 @@ void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 		// if population size is 0, number of diffusion events is also 0
 		else serial_dif_[i_pop].n_entries_ = 0;
 	}
-	/*
-	std::vector<pop_t> active_pops(n_active_dif_pops_);
-	int i_active = 0;
-	for(int i_pop = 0; i_pop < serial_dif_pop_.size(); i_pop++){
-		if(serial_dif_pop_[i_pop].n_entries_ > 0){
-			active_pops[i_active] = serial_dif_pop_[i_pop];
-			i_active++;
-		}
-		else serial_dif_[i_pop].n_entries_ = 0;
-	}
-	// Run through serialized population types
-	for(int i_pop = 0; i_pop < n_active_dif_pops_; i_pop++){
-		// If population is greater than 0, sample diffusion funct
-		if(active_pops[i_pop].n_entries_ > 0){
-			// Get iterator pointing to sampling funct
-			auto itr = dif_sampling_functs_.find(active_pops[i_pop].event_);
-			// Make sure iterator was properly found
-			if(itr != dif_sampling_functs_.end()){
-				// Function itself is 'second' in map's key-funct pair
-				auto funct = itr->second;
-				// Get number of diffusion events
-				int n_entries = funct(active_pops[i_pop].x_dist_dub_,
-						active_pops[i_pop].x_dist_,
-						active_pops[i_pop].index_);
-				serial_dif_[active_pops[i_pop].index_].n_entries_ = 
-					n_entries;
-				if(n_entries > 0){
-					printf("%i events for ", n_entries);
-					std::cout << serial_dif_[i_pop].event_ << std::endl;
-					printf("(x=%i, 2x=%i)\n", serial_dif_[i_pop].x_dist_,
-							serial_dif_[i_pop].x_dist_dub_);
-				}
-			}
-			else{
-				printf("Error in update serial_dif_events, cant find ");
-				std::cout << serial_dif_pop_[i_pop].event_ << std::endl;
-				exit(1);
-			}	
-		}
-		// if population size is 0, number of diffusion events is also 0
-		else{
-			printf("wuuut\n");
-			exit(1);
-		}
-	}
-	*/
 }
 
 void AssociatedProteinManagement::RunDiffusion(){
@@ -2865,7 +2731,7 @@ void AssociatedProteinManagement::UpdateSerializedKMCPopulations(){
 void AssociatedProteinManagement::UpdateSerializedKMCEvents(){
 
 	// Run through serialized population types
-	#pragma omp parallel for schedule(static)
+//	#pragma omp parallel for schedule(static)
 	for(int i_entry = 0; i_entry < serial_kmc_pop_.size(); i_entry++){
 		// If population is greater than 0, sample KMC funct
 		if(serial_kmc_pop_[i_entry].n_entries_ > 0){

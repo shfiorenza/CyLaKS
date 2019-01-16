@@ -33,7 +33,7 @@ motors:
   k_off_ii: 15
   velocity: 650
   diffusion_const: 0.0024
-  tethers_active: false
+  tethers_active: true
   k_tether_free: 0.1
   conc_eff_tether: 100
   k_untether_free: 0.025

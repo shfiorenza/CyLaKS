@@ -1,7 +1,6 @@
 #ifndef _ASSOCIATED_PROTEIN_MANAGEMENT_H
 #define _ASSOCIATED_PROTEIN_MANAGEMENT_H
 #include "associated_protein.h"
-#include <unordered_map>
 #include <string>
 #include <functional>
 
@@ -31,13 +30,13 @@ class AssociatedProteinManagement{
 
 		int n_distinct_dif_pops_ = 0;
 		int n_distinct_kmc_pops_ = 0;
-		std::vector<std::pair<std::string, int> > dif_pop_indices_; 
-		// pattern: ["type"][x_dub][x]
+		// pair: ["pop type"][pop_size[x][x_dub]]
 		typedef std::pair<std::string, std::vector<std::vector<int*> > > 
 			pop_size_pair;
 		std::vector<pop_size_pair> dif_pop_sizes_;
 		std::vector<pop_size_pair> kmc_pop_sizes_; 
 
+		// pair: ["funct name"][std::function(x_dub, x, index)]
 		typedef std::pair<std::string,std::function<int(int,int,int)> >
 			funct_pair;
 		std::vector<funct_pair> dif_sampling_functs_; 
@@ -91,16 +90,16 @@ class AssociatedProteinManagement{
 
 		// Kinematics probabilities
 		double p_bind_i_;			
-		double p_bind_i_tethered_; 	// make vector?? FIXME
-		double p_bind_ii_; 		// deletethis FIXME
+		double p_bind_i_tethered_; 	// FIXME make vector for diff. exts
+		double p_bind_ii_; 			// XXX	delete 
 		double p_unbind_i_;		
 		double p_tether_free_; 
 		double p_untether_free_;
 		std::vector<double> p_unbind_i_tethered_;	
-		std::vector<double> p_bind_ii_x; //XXX
+		std::vector<double> p_bind_ii_x; //XXX	implement
 		std::vector<double> p_unbind_ii_;
-		std::vector<double> p_bind_ii_to_teth_;		//XXX
-		std::vector<double> p_bind_ii_from_teth_;	//XXX
+		std::vector<double> p_bind_ii_to_teth_;		//XXX	implement
+		std::vector<double> p_bind_ii_from_teth_;	//XXX	implement
 		std::vector< std::vector<double> > p_unbind_ii_to_teth_;
 		std::vector< std::vector<double> > p_unbind_ii_from_teth_;
 
@@ -149,9 +148,9 @@ class AssociatedProteinManagement{
 		void GenerateXLinks();
 		void SetParameters();
 		void InitializeLists();
-		void InitializePopulationMap();
-		void InitializeDifSerialPop();
-		void InitializeKMCSerialPop();
+		void InitializePopulationSizeMap();		// XXX
+		void InitializeDifSerialPop();		// XXX
+		void InitializeKMCSerialPop();		// XXX
 		void InitializeDifSamplingFunctions();
 		void InitializeKMCSamplingFunctions();
 
@@ -160,7 +159,7 @@ class AssociatedProteinManagement{
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
 
-		void UpdateAllLists();
+		void UpdateAllLists();				// XXX
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();
@@ -177,7 +176,7 @@ class AssociatedProteinManagement{
 		AssociatedProtein* GetFreeXlink();
 		AssociatedProtein* GetUntetheredXlink();
 
-		void GenerateDiffusionList();
+		void GenerateDiffusionList();		// XXX
 		void UpdateSerializedDifPopulations();
 		void UpdateSerializedDifEvents();
 
@@ -193,7 +192,7 @@ class AssociatedProteinManagement{
 		void RunDiffusionII_ToSelf_FromTeth(int x_dist_dub, int x_dist);
 		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
 
-		void GenerateKMCList();
+		void GenerateKMCList();				// XXX
 		void UpdateSerializedKMCPopulations();
 		void UpdateSerializedKMCEvents();
 		double GetWeightBindII(); 
@@ -206,10 +205,10 @@ class AssociatedProteinManagement{
 		void RunKMC_Unbind_I();
 		void RunKMC_Unbind_II(int x_dist);
 		void RunKMC_Bind_I_Tethered();
-		void RunKMC_Bind_II_Tethered();	// delete XXX
+		void RunKMC_Bind_II_Tethered();	// XXX delete
 		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
-		void RunKMC_Bind_II_To_Teth(int x_dist_dub, int x_dist); //XXX
-		void RunKMC_Bind_II_From_Teth(int x_dist_dub, int x_dist);	//XXX
+		void RunKMC_Bind_II_To_Teth(int x_dist_dub, int x_dist); // XXX add
+		void RunKMC_Bind_II_From_Teth(int x_dist_dub, int x_dist);	// XXX add
 		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Tether_Free();

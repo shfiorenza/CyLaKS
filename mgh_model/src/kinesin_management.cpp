@@ -13,7 +13,7 @@ void KinesinManagement::Initialize(system_parameters *parameters,
     GenerateMotors();	
     SetParameters();	
 	InitializeLists();
-	InitializeSerialPop();
+	InitializeSerializedKMC();
 	InitializeSamplingFunctions();
 }
 
@@ -333,103 +333,110 @@ void KinesinManagement::InitializeLists(){
 	}
 }
 
-void KinesinManagement::InitializeSerialPop(){
+void KinesinManagement::InitializeSerializedKMC(){
 
 	int tot_size = 16 + 16*dist_cutoff_ + 1;
 	if(!parameters_->motors.tethers_active)
 		tot_size = 5;
-	serial_pop_.resize(tot_size);
+	serial_kmc_.resize(tot_size);
 
-	pop_t bind_i = {0, "bind_i", -1, 0};
-	serial_pop_[0] = bind_i;
+	event bind_i = 
+		{&properties_->microtubules.n_unoccupied_, 0, "bind_i", 0, 0};
+	serial_kmc_[0] = bind_i;
 
-	// If tether's aren't active, population types are relatively simple
 	if(!parameters_->motors.tethers_active){
-		pop_t bind_ii = {0, "bind_ii", -1, 1};
-		serial_pop_[1] = bind_ii;
+		event bind_ii = {&n_bound_i_bindable_, 0, "bind_ii", 1, 0};
+		serial_kmc_[1] = bind_ii;
 
-		pop_t unbind_i = {0, "unbind_i", -1, 2};
-		serial_pop_[2] = unbind_i;
+		event unbind_i = {&n_bound_i_, 0, "unbind_i", 2, 0};
+		serial_kmc_[2] = unbind_i;
 
-		pop_t unbind_ii = {0, "unbind_ii", -1, 3};
-		serial_pop_[3] = unbind_ii;
+		event unbind_ii = {&n_bound_ii_, 0, "unbind_ii", 3, 0};
+		serial_kmc_[3] = unbind_ii;
 
-		pop_t step = {0, "step", -1, 4};
-		serial_pop_[4] = step;
+		event step = {&n_stepable_, 0, "step", 4, 0};
+		serial_kmc_[4] = step;
 	}
 	// If tethers ARE active, serialize all extension-based events
 	else{
-		pop_t bind_i_tethered = {0, "bind_i_tethered", -1, 1};
-		serial_pop_[1] = bind_i_tethered;
+		event bind_i_tethered = {&n_free_tethered_, 0, 
+			"bind_i_tethered", 1, 0};
+		serial_kmc_[1] = bind_i_tethered;
 
-		pop_t bind_ii = {0, "bind_ii", -1, 2};
-		serial_pop_[2] = bind_ii;
+		event bind_ii = {&n_bound_i_bindable_, 0, "bind_ii", 2, 0};
+		serial_kmc_[2] = bind_ii;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
-			pop_t bind_ii_to_teth = {0, "bind_ii_to_teth", x_dub,
-				3 + x_dub};
-			pop_t bind_ii_fr_teth = {0, "bind_ii_fr_teth", x_dub,
-		   		4 + 2*dist_cutoff_ + x_dub};
-			serial_pop_[3 + x_dub] = bind_ii_to_teth;
-			serial_pop_[4 + 2*dist_cutoff_ + x_dub] = bind_ii_fr_teth; 
+			event bind_ii_to_teth = {&n_bound_i_bindable_to_teth_[x_dub], 
+				x_dub, "bind_ii_to_teth", 3 + x_dub, 0};
+			serial_kmc_[3 + x_dub] = bind_ii_to_teth;
+
+			event bind_ii_fr_teth = {&n_bound_i_bindable_fr_teth_[x_dub], 
+				x_dub, "bind_ii_fr_teth", 4 + 2*dist_cutoff_ + x_dub, 0};
+			serial_kmc_[4 + 2*dist_cutoff_ + x_dub] = bind_ii_fr_teth; 
 		}
 		int offset = 4 + 4*dist_cutoff_;
 
-		pop_t unbind_i = {0, "unbind_i", -1, offset + 1};
-		serial_pop_[offset + 1] = unbind_i;
+		event unbind_i = {&n_bound_i_, 0, "unbind_i", offset + 1, 0};
+		serial_kmc_[offset + 1] = unbind_i;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
-			pop_t unbind_i_tethered = {0, "unbind_i_tethered", x_dub,
-				offset + 2 + x_dub};
-			serial_pop_[offset + 2 + x_dub] = unbind_i_tethered;
+			event unbind_i_tethered = {&n_bound_i_tethered_[x_dub], 
+				x_dub, "unbind_i_tethered", offset + 2 + x_dub, 0};
+			serial_kmc_[offset + 2 + x_dub] = unbind_i_tethered;
 		}
 		int offset2 = 6 + 6*dist_cutoff_; 
 
-		pop_t unbind_ii = {0, "unbind_ii", -1, offset2 + 1};
-		serial_pop_[offset2 + 1] = unbind_ii;
+		event unbind_ii = {&n_bound_ii_, 0, "unbind_ii", offset2 + 1, 0};
+		serial_kmc_[offset2 + 1] = unbind_ii;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
-			pop_t unbind_to_teth = {0, "unbind_ii_to_teth", x_dub,
-				offset2 + 2 + x_dub};
-			pop_t unbind_fr_teth = {0, "unbind_ii_fr_teth", x_dub,
-				offset2 + 3 + 2*dist_cutoff_ + x_dub};
-			serial_pop_[offset2 + 2 + x_dub] = unbind_to_teth;
-			serial_pop_[offset2 + 3 + 2*dist_cutoff_ + x_dub] = 
+			event unbind_to_teth = {&n_bound_ii_tethered_[x_dub],
+			   	x_dub, "unbind_ii_to_teth", offset2 + 2 + x_dub, 0};
+			serial_kmc_[offset2 + 2 + x_dub] = unbind_to_teth;
+
+			event unbind_fr_teth = {&n_bound_ii_tethered_[x_dub], 
+				x_dub, "unbind_ii_fr_teth", 
+				offset2 + 3 + 2*dist_cutoff_ + x_dub, 0};
+			serial_kmc_[offset2 + 3 + 2*dist_cutoff_ + x_dub] = 
 				unbind_fr_teth;
 		}
 		int offset3 = 9 + 10*dist_cutoff_;
 
-		pop_t tether_free = {0, "tether_free", -1, offset3 + 1};
-		serial_pop_[offset3 + 1] = tether_free;
+		event tether_free = {&properties_->prc1.n_bound_untethered_, 
+			0,  "tether_free", offset3 + 1, 0};
+		serial_kmc_[offset3 + 1] = tether_free;
 
-		pop_t tether_bound = {0, "tether_bound", -1, offset3 + 2};
-		serial_pop_[offset3 + 2] = tether_bound;
+		event tether_bound = {&n_bound_untethered_, 0, "tether_bound", 
+			offset3 + 2, 0};
+		serial_kmc_[offset3 + 2] = tether_bound;
 
-		pop_t untether_free = {0, "untether_free", -1, offset3 + 3};
-		serial_pop_[offset3 + 3] = untether_free;
+		event untether_free = {&n_free_tethered_, 0, "untether_free",
+			offset3 + 3, 0};
+		serial_kmc_[offset3 + 3] = untether_free;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
-			pop_t untether_bound = {0, "untether_bound", x_dub,
-				offset3 + 4 + x_dub};
-			serial_pop_[offset3 + 4 + x_dub] = untether_bound; 
+			event untether_bound = {&n_bound_tethered_[x_dub], 
+				x_dub, "untether_bound", offset3 + 4 + x_dub, 0};
+			serial_kmc_[offset3 + 4 + x_dub] = untether_bound; 
 		}
 		int offset4 = 13 + 12*dist_cutoff_; 
 
-		pop_t step = {0, "step", -1, offset4 + 1};
-		serial_pop_[offset4 + 1] = step;
+		event step = {&n_stepable_, 0, "step", offset4 + 1, 0};
+		serial_kmc_[offset4 + 1] = step;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
-			pop_t step_to_teth = {0, "step_to_teth", x_dub,
-				offset4 + 2 + x_dub};
-			pop_t step_fr_teth = {0, "step_fr_teth", x_dub,
-				offset4 + 3 + 2*dist_cutoff_ + x_dub};
-			serial_pop_[offset4 + 2 + x_dub] = step_to_teth;
-			serial_pop_[offset4 + 3 + 2*dist_cutoff_ + x_dub] = 
+			event step_to_teth = {&n_stepable_to_teth_[x_dub], 
+				x_dub, "step_to_teth", offset4 + 2 + x_dub, 0};
+			serial_kmc_[offset4 + 2 + x_dub] = step_to_teth;
+
+			event step_fr_teth = {&n_stepable_fr_teth_[x_dub], 
+				x_dub, "step_fr_teth",
+				offset4 + 3 + 2*dist_cutoff_ + x_dub, 0};
+			serial_kmc_[offset4 + 3 + 2*dist_cutoff_ + x_dub] = 
 				step_fr_teth; 
 		}
 	}
-	// Copy into serial_kmc_ vector
-	serial_kmc_ = serial_pop_;
 }
 
 void KinesinManagement::InitializeSamplingFunctions(){
@@ -439,12 +446,12 @@ void KinesinManagement::InitializeSamplingFunctions(){
 	// then bind them to a string key via std::make_pair and store in map
 
 	// Function that gets num to bind_i
-	auto bind_i = [&](int x_dub){
+	auto bind_i = [&](int x_dub, int index){
 		if(properties_->microtubules.n_unoccupied_ > 0){
 			return properties_->gsl.SampleBinomialDist_Kinesin(
 					p_bind_i_, 
 					properties_->microtubules.n_unoccupied_, 
-					0);
+					index);
 		}
 		else return 0;
 	};
@@ -453,45 +460,46 @@ void KinesinManagement::InitializeSamplingFunctions(){
 	// If tethering isn't enabled, population types are simple
 	if(!parameters_->motors.tethers_active){
 		// Function that gets num to bind_ii
-		auto bind_ii = [&](int x_dub){
+		auto bind_ii = [&](int x_dub, int index){
 			if(n_bound_i_bindable_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_bind_ii_, 
 						n_bound_i_bindable_, 
-						1);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("bind_ii", bind_ii));
+
 		// Function that gets num to unbind_i
-		auto unbind_i = [&](int x_dub){
+		auto unbind_i = [&](int x_dub, int index){
 			if(n_bound_i_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_i_, 
 						n_bound_i_, 
-						2);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_i", unbind_i));
 		// Function that gets num to unbind_ii
-		auto unbind_ii = [&](int x_dub){
+		auto unbind_ii = [&](int x_dub, int index){
 			if(n_bound_ii_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_ii_,
 						n_bound_ii_,
-						3);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_ii", unbind_ii));
 		// Function that gets num to step
-		auto step = [&](int x_dub){
+		auto step = [&](int x_dub, int index){
 			if(n_stepable_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_step_, 
 						n_stepable_,
-						4);
+						index);
 			}
 			else return 0;
 		};
@@ -500,13 +508,13 @@ void KinesinManagement::InitializeSamplingFunctions(){
 	// Otherwise, serialize all populations of different tether extension
 	else{
 		// Function that gets num to bind_i_tethered
-		auto bind_i_tethered = [&](int x_dub){
+		auto bind_i_tethered = [&](int x_dub, int index){
 			if(n_free_tethered_ > 0){
 				double weight = GetWeightBindITethered(); 
 				if(weight > 0){
 					return properties_->gsl.SamplePoissonDist_Kinesin(
 							p_bind_i_tethered_ * weight,
-							1);
+							index);
 				}
 				else return 0;
 			}
@@ -515,115 +523,116 @@ void KinesinManagement::InitializeSamplingFunctions(){
 		sampling_functs_.push_back(std::make_pair("bind_i_tethered", 
 					bind_i_tethered));
 		// Function that gets num to bind_ii
-		auto bind_ii = [&](int x_dub){
+		auto bind_ii = [&](int x_dub, int index){
 			if(n_bound_i_bindable_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_bind_ii_, 
 						n_bound_i_bindable_, 
-						2);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("bind_ii", bind_ii));
 		// Functions that gets num to bind_ii_to/fr_teth
-		auto bind_ii_to_teth = [&](int x_dub){
+		auto bind_ii_to_teth = [&](int x_dub, int index){
 			if(n_bound_i_bindable_to_teth_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_bind_ii_to_teth_[x_dub], 
 						n_bound_i_bindable_to_teth_[x_dub], 
-						3 + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("bind_ii_to_teth", 
 					bind_ii_to_teth));
-		auto bind_ii_fr_teth = [&](int x_dub){
+		auto bind_ii_fr_teth = [&](int x_dub, int index){
 			if(n_bound_i_bindable_fr_teth_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_bind_ii_fr_teth_[x_dub], 
 						n_bound_i_bindable_fr_teth_[x_dub],
-						4 + 2*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("bind_ii_fr_teth", 
 					bind_ii_fr_teth));
 		// Function that gets num to unbind_i
-		auto unbind_i = [&](int x_dub){
+		auto unbind_i = [&](int x_dub, int index){
 			if(n_bound_i_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_i_, 
 						n_bound_i_, 
-						5 + 4*dist_cutoff_);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_i", unbind_i));
 		// Function that gets num to unbind_i_tethered
-		auto unbind_i_tethered = [&](int x_dub){
+		auto unbind_i_tethered = [&](int x_dub, int index){
 			if(n_bound_i_tethered_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_i_tethered_[x_dub],
 						n_bound_i_tethered_[x_dub], 
-						6 + 4*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_i_tethered", 
 					unbind_i_tethered));
 		// Function that gets num to unbind_ii
-		auto unbind_ii = [&](int x_dub){
+		auto unbind_ii = [&](int x_dub, int index){
 			if(n_bound_ii_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_ii_,
 						n_bound_ii_,
-						7 + 6*dist_cutoff_);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_ii", unbind_ii));
 		// Functions that get num to unbind_ii_to/fr_teth
-		auto unbind_ii_to_teth = [&](int x_dub){
+		auto unbind_ii_to_teth = [&](int x_dub, int index){
 			if(n_bound_ii_tethered_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_ii_to_teth_[x_dub], 
 						n_bound_ii_tethered_[x_dub], 
-						8 + 6*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_ii_to_teth", 
 					bind_ii_to_teth));
-		auto unbind_ii_fr_teth = [&](int x_dub){
+		auto unbind_ii_fr_teth = [&](int x_dub, int index){
 			if(n_bound_ii_tethered_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_unbind_ii_fr_teth_[x_dub], 
 						n_bound_ii_tethered_[x_dub], 
-						9 + 8*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("unbind_ii_fr_teth", 
 					bind_ii_fr_teth));
 		// Function that gets num tether_free
-		auto tether_free = [&](int x_dub){
+		auto tether_free = [&](int x_dub, int index){
 			if(properties_->prc1.n_bound_untethered_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_tether_free_, 
 						properties_->prc1.n_bound_untethered_, 
-						10 + 10*dist_cutoff_);
+						index);
 			}
 			else return 0;
 		};
-		sampling_functs_.push_back(std::make_pair("tether_free", tether_free));
+		sampling_functs_.push_back(std::make_pair("tether_free", 
+					tether_free));
 		// Function that gets num tether_bound
-		auto tether_bound = [&](int x_dub){
+		auto tether_bound = [&](int x_dub, int index){
 			if(n_bound_untethered_ > 0){
 				double weight = GetWeightTetherBound();
 				if(weight > 0){
 					return properties_->gsl.SamplePoissonDist_Kinesin(
 							p_tether_bound_ * weight, 
-							11 + 10*dist_cutoff_);
+							index);
 				}
 				else return 0;
 			}
@@ -632,58 +641,58 @@ void KinesinManagement::InitializeSamplingFunctions(){
 		sampling_functs_.push_back(std::make_pair("tether_bound", 
 					tether_bound));
 		// Function that gets num untether_free
-		auto untether_free = [&](int x_dub){
+		auto untether_free = [&](int x_dub, int index){
 			if(n_free_tethered_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_untether_free_, 
 						n_free_tethered_, 
-						12 + 10*dist_cutoff_);
+						index);
 			}
 			else return 0;	
 		};
 		sampling_functs_.push_back(std::make_pair("untether_free", 
 					untether_free));
 		// Function that gets num untether_bound
-		auto untether_bound = [&](int x_dub){
+		auto untether_bound = [&](int x_dub, int index){
 			if(n_bound_tethered_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_untether_bound_[x_dub], 
 						n_bound_tethered_[x_dub], 
-						13 + 10*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("untether_bound", 
 					untether_bound));
 		// Function that gets num to step
-		auto step = [&](int x_dub){
+		auto step = [&](int x_dub, int index){
 			if(n_stepable_ > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_step_, 
 						n_stepable_,
-						14 + 12*dist_cutoff_);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("step", step));
 		// Functions that get num to step_to/fr_teth
-		auto step_to_teth = [&](int x_dub){
+		auto step_to_teth = [&](int x_dub, int index){
 			if(n_stepable_to_teth_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_step_to_teth_[x_dub], 
 						n_stepable_to_teth_[x_dub], 
-						15 + 12*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
 		sampling_functs_.push_back(std::make_pair("step_to_teth", 
 				step_to_teth));	
-		auto step_fr_teth = [&](int x_dub){
+		auto step_fr_teth = [&](int x_dub, int index){
 			if(n_stepable_fr_teth_[x_dub] > 0){
 				return properties_->gsl.SampleBinomialDist_Kinesin(
 						p_step_fr_teth_[x_dub], 
 						n_stepable_fr_teth_[x_dub], 
-						16 + 14*dist_cutoff_ + x_dub);
+						index);
 			}
 			else return 0;
 		};
@@ -1092,7 +1101,6 @@ void KinesinManagement::UpdateStepableTethered(){
 void KinesinManagement::GenerateKMCList(){
 
 	int n_events(0);
-	UpdateSerializedPopulations();
 	UpdateSerializedEvents();
 
 	int n_bind_i,
@@ -1114,13 +1122,13 @@ void KinesinManagement::GenerateKMCList(){
 		n_step_to_teth[2*dist_cutoff_ + 1], 
 		n_step_fr_teth[2*dist_cutoff_ + 1];
 
-	n_bind_i = serial_kmc_[0].n_entries_; 
+	n_bind_i = serial_kmc_[0].n_events_; 
 	n_events += n_bind_i;
 
 	// Without tethers, only 5 events to manage
 	if(!parameters_->motors.tethers_active){
-		n_bind_ii = serial_kmc_[1].n_entries_;
-		n_unbind_i = serial_kmc_[2].n_entries_;
+		n_bind_ii = serial_kmc_[1].n_events_;
+		n_unbind_i = serial_kmc_[2].n_events_;
 		// Ensure there aren't more KMC events than singly-bound motors
 		while(n_unbind_i + n_bind_ii > n_bound_i_){
 			double p_tot = p_bind_ii_ + p_unbind_i_;
@@ -1136,8 +1144,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_ii;
 		n_events += n_unbind_i;
 
-		n_unbind_ii = serial_kmc_[3].n_entries_;
-		n_step = serial_kmc_[4].n_entries_;
+		n_unbind_ii = serial_kmc_[3].n_events_;
+		n_step = serial_kmc_[4].n_events_;
 		// Ensure there aren't more KMC events than doubly-bound motors
 		while(n_unbind_ii + n_step > n_stepable_){
 			double p_tot = p_step_ + p_unbind_ii_;
@@ -1155,8 +1163,8 @@ void KinesinManagement::GenerateKMCList(){
 	}
 	// If tethers are active, things are a bit more complicated
 	else{
-		n_bind_ii = serial_kmc_[2].n_entries_;
-		n_unbind_i = serial_kmc_[5 + 4*dist_cutoff_].n_entries_;
+		n_bind_ii = serial_kmc_[2].n_events_;
+		n_unbind_i = serial_kmc_[5 + 4*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than singly-bound motors
 		while(n_unbind_i + n_bind_ii > n_bound_i_){
 			double p_tot = p_bind_ii_ + p_unbind_i_;
@@ -1172,8 +1180,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_ii;
 		n_events += n_unbind_i;
 
-		n_unbind_ii = serial_kmc_[7 + 6*dist_cutoff_].n_entries_;
-		n_step = serial_kmc_[14 + 12*dist_cutoff_].n_entries_;
+		n_unbind_ii = serial_kmc_[7 + 6*dist_cutoff_].n_events_;
+		n_step = serial_kmc_[14 + 12*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than doubly-bound motors
 		while(n_unbind_ii + n_step > n_stepable_){
 			double p_tot = p_step_ + p_unbind_ii_;
@@ -1189,8 +1197,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_unbind_ii;
 		n_events += n_step;
 
-		n_bind_i_tethered = serial_kmc_[1].n_entries_;
-		n_untether_free = serial_kmc_[12 + 10*dist_cutoff_].n_entries_;
+		n_bind_i_tethered = serial_kmc_[1].n_events_;
+		n_untether_free = serial_kmc_[12 + 10*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than free tethered motors
 		while(n_untether_free + n_bind_i_tethered > n_free_tethered_){
 			double p_unteth = p_untether_free_;
@@ -1208,31 +1216,31 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_i_tethered;
 		n_events += n_untether_free;
 
-		n_tether_free = serial_kmc_[10 + 10*dist_cutoff_].n_entries_;
+		n_tether_free = serial_kmc_[10 + 10*dist_cutoff_].n_events_;
 		n_events += n_tether_free;
 		// FIXME correct tether_bound stat in loop??
-		n_tether_bound = serial_kmc_[11 + 10*dist_cutoff_].n_entries_;
+		n_tether_bound = serial_kmc_[11 + 10*dist_cutoff_].n_events_;
 		n_events += n_tether_bound;
 
 		// Handle the statistics of differnt tether extensions separately 
 		for(int x_dub = 2*comp_cutoff_; x_dub <= 2*dist_cutoff_; x_dub++){
 
 			n_bind_ii_to_teth[x_dub] = 
-				serial_kmc_[3 + x_dub].n_entries_;
+				serial_kmc_[3 + x_dub].n_events_;
 			n_bind_ii_fr_teth[x_dub] = 
-				serial_kmc_[4 + 2*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[4 + 2*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_i_tethered[x_dub] = 
-				serial_kmc_[6 + 4*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[6 + 4*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_ii_to_teth[x_dub] = 
-				serial_kmc_[8 + 6*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[8 + 6*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_ii_fr_teth[x_dub] = 
-				serial_kmc_[9 + 8*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[9 + 8*dist_cutoff_ + x_dub].n_events_;
 			n_untether_bound[x_dub] = 
-				serial_kmc_[13 + 10*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[13 + 10*dist_cutoff_ + x_dub].n_events_;
 			n_step_to_teth[x_dub] = 
-				serial_kmc_[15 + 12*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[15 + 12*dist_cutoff_ + x_dub].n_events_;
 			n_step_fr_teth[x_dub] = 
-				serial_kmc_[16 + 14*dist_cutoff_ + x_dub].n_entries_;
+				serial_kmc_[16 + 14*dist_cutoff_ + x_dub].n_events_;
 
 			int n_bind_to = n_bind_ii_to_teth[x_dub];
 			int n_bind_from = n_bind_ii_fr_teth[x_dub];
@@ -1453,158 +1461,40 @@ void KinesinManagement::GenerateKMCList(){
     }
 }
 
-void KinesinManagement::UpdateSerializedPopulations(){
-
-	// Update all pop. lists
-	UpdateAllLists();
-
-	n_active_pops_ = 0;
-
-	// for bind_i
-	serial_pop_[0].n_entries_ = properties_->microtubules.n_unoccupied_;
-	if(serial_pop_[0].n_entries_ > 0) 
-		n_active_pops_++;
-
-	// if tethers aren't enabled, kmc_events are relatively simple
-	if(!parameters_->motors.tethers_active){
-		// for bind_ii
-		serial_pop_[1].n_entries_ = n_bound_i_bindable_;
-		if(serial_pop_[1].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for unbind_i
-		serial_pop_[2].n_entries_ = n_bound_i_;
-		if(serial_pop_[2].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for unbind_ii
-		serial_pop_[3].n_entries_ = n_bound_ii_;
-		if(serial_pop_[3].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for to_step
-		serial_pop_[4].n_entries_ = n_stepable_;
-		if(serial_pop_[4].n_entries_ > 0) {
-			n_active_pops_++;
-		}
-	}
-	// if tethers ARE enabled, things are a lil more complex
-	else{
-		// for bind_i_tethered
-		serial_pop_[1].n_entries_ = n_free_tethered_;
-		if(serial_pop_[1].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for bind_ii
-		serial_pop_[2].n_entries_ = n_bound_i_bindable_; 
-		if(serial_pop_[2].n_entries_ > 0) 
-			n_active_pops_++;
-
-		int offset = 4 + 4*dist_cutoff_;
-		int offset2 = 6 + 6*dist_cutoff_; 
-		int offset3 = 9 + 10*dist_cutoff_; 
-		int offset4 = 13 + 12*dist_cutoff_; 
-
-		// for unbind_i 
-		serial_pop_[offset + 1].n_entries_ = n_bound_i_;
-		if(serial_pop_[offset + 1].n_entries_ > 0)
-			n_active_pops_++;
-
-		// for unbind_ii
-		serial_pop_[offset2 + 1].n_entries_ = n_bound_ii_;
-		if(serial_pop_[offset2 + 1].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for tether_free
-		serial_pop_[offset3 + 1].n_entries_ = 
-			properties_->prc1.n_bound_untethered_;  
-		if(serial_pop_[offset3 + 1].n_entries_ > 0)
-			n_active_pops_++;
-
-		// for tether_bound
-		serial_pop_[offset3 + 2].n_entries_ = n_bound_untethered_;
-		if(serial_pop_[offset3 + 2].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for untether_free
-		serial_pop_[offset3 + 3].n_entries_ = n_free_tethered_; 
-		if(serial_pop_[offset3 + 3].n_entries_ > 0) 
-			n_active_pops_++;
-
-		// for step
-		serial_pop_[offset4 + 1].n_entries_ = n_stepable_;
-		if(serial_pop_[offset4 + 1].n_entries_ > 0) 
-			n_active_pops_++;
-
-		for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
-			// for bind_ii_to/fr_teth
-			serial_pop_[3 + x_dub].n_entries_ = 
-				n_bound_i_bindable_to_teth_[x_dub];
-			if(serial_pop_[3 + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			serial_pop_[4 + 2*dist_cutoff_ + x_dub].n_entries_ = 
-				n_bound_i_bindable_fr_teth_[x_dub]; 
-			if(serial_pop_[4 + 2*dist_cutoff_ + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			// for unbind_i_tethered
-			serial_pop_[offset + 2 + x_dub].n_entries_ = 
-				n_bound_i_tethered_[x_dub]; 
-			if(serial_pop_[offset + 2 + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			// for unbind_ii_to/fr_teth
-			serial_pop_[offset2 + 2 + x_dub].n_entries_ =
-				n_bound_ii_tethered_[x_dub];
-			if(serial_pop_[offset2 + 2 + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			serial_pop_[offset2 + 3 + 2*dist_cutoff_ + x_dub].n_entries_ =
-				n_bound_ii_tethered_[x_dub];
-			if(serial_pop_[offset2+3+2*dist_cutoff_+x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			// for untether_bound
-			serial_pop_[offset3 + 4 + x_dub].n_entries_ = 
-				n_bound_tethered_[x_dub];
-			if(serial_pop_[offset3 + 4 + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			// for step_to/fr_teth
-			serial_pop_[offset4 + 2 + x_dub].n_entries_
-				= n_stepable_to_teth_[x_dub];
-			if(serial_pop_[offset4 + 2 + x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-			serial_pop_[offset4 + 3 + 2*dist_cutoff_ + x_dub].n_entries_
-				= n_stepable_fr_teth_[x_dub];	
-			if(serial_pop_[offset4+3+2*dist_cutoff_+x_dub].n_entries_ > 0) 
-				n_active_pops_++;
-		}
-	}
-}
-
 void KinesinManagement::UpdateSerializedEvents(){
 
-	#pragma omp parallel for schedule(static)
-	for(int i_pop = 0; i_pop < serial_pop_.size(); i_pop++){
-		if(serial_pop_[i_pop].n_entries_ > 0){
+	// Update all population lists
+	UpdateAllLists();
+
+//	#pragma omp parallel for schedule(static)
+	for(int i_entry = 0; i_entry < serial_kmc_.size(); i_entry++){
+		if(*serial_kmc_[i_entry].pop_ptr_ > 0){
+//			printf("index is %i for ", serial_kmc_[i_entry].i_event_); 
+//			std::cout << serial_kmc_[i_entry].type_ << std::endl;
 			// Find iterator pointing to appropriate sampling function
 			auto itr = std::find_if(
 					sampling_functs_.begin(), 
 					sampling_functs_.end(), 
 					[&](const funct_pair &ref)
 					{
-						return ref.first == serial_kmc_[i_pop].type_;
+						return ref.first == serial_kmc_[i_entry].type_;
 					});
 			// Make sure iterator was properly found
 			if(itr != sampling_functs_.end()){
 				// Get number of KMC events expected for this population
-				serial_kmc_[i_pop].n_entries_ = itr->second(
-						serial_pop_[i_pop].x_dist_dub_);
+				serial_kmc_[i_entry].n_events_ = itr->second(
+						serial_kmc_[i_entry].x_dist_dub_, 
+						serial_kmc_[i_entry].i_event_);
 			}
 			else{
 				printf("ummm cant find ");
-				std::cout << serial_kmc_[i_pop].type_ << std::endl;
+				std::cout << serial_kmc_[i_entry].type_;
+				printf(" in UpdateSerializedEvents() for MOTORS\n");
 				exit(1);
 			}
 		}
 		// If population is 0, no. of kmc events is automatically 0
-		else serial_kmc_[i_pop].n_entries_ = 0;
+		else serial_kmc_[i_entry].n_events_ = 0;
 	}
 }
 

@@ -1,7 +1,6 @@
 #ifndef _KINESIN_MANAGEMENT_H
 #define _KINESIN_MANAGEMENT_H
 #include "kinesin.h"
-#include <map>
 #include <string>
 #include <functional>
 
@@ -23,16 +22,20 @@ class KinesinManagement{
 	private:
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
-		// Structure to hold the size and type of population
-		struct pop_t{
-			int n_entries_ = -1;
-			std::string type_ = std::string("wut"); 
-			int x_dist_dub_ = -1;
-			int index_ = -1;
-		}; 
+
+		// Structure that holds all pertinent info for a given MC event:
+		struct event{
+			int *pop_ptr_ = nullptr; 	// Pointer to population size variable
+			int x_dist_dub_ = -1;		// 2*x_dist of tether extension
+			std::string type_ = std::string("event_type");
+			int i_event_ = -1;			// Serialized index of this event type
+			int n_events_ = -1;			// Number of predicted events 
+		};
+
 		// Map of population/event label to sampling function;
 		// see InitializeFUnctionMap() for function definitions
-		typedef std::pair<std::string, std::function<int(int)> > funct_pair;
+		typedef std::pair<std::string, std::function<int(int, int)> > 
+			funct_pair;
 		std::vector<funct_pair> sampling_functs_;
 
 	public:
@@ -108,16 +111,13 @@ class KinesinManagement{
 		// Serialized (in regards to teth extension) vectors that store
 		// number of entries, the population/event label, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
-		int n_active_pops_;
-		std::vector<pop_t> serial_pop_; 
-		std::vector<pop_t> serial_kmc_;
-//		std::map<std::string, std::function<int(int)> > sampling_functs_;
+		std::vector<event> serial_kmc_;
 
 	private:
 		void GenerateMotors();
 		void SetParameters();
 		void InitializeLists();
-		void InitializeSerialPop(); 
+		void InitializeSerializedKMC(); 
 		void InitializeSamplingFunctions();
 
 	public:
@@ -147,7 +147,6 @@ class KinesinManagement{
 		void UpdateStepableTethered();
 
 		void GenerateKMCList();
-		void UpdateSerializedPopulations(); 
 		void UpdateSerializedEvents();
 		double GetWeightBindITethered();
 		double GetWeightTetherBound();

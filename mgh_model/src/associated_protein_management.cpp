@@ -2588,7 +2588,6 @@ void AssociatedProteinManagement::UpdateSerializedKMCEvents(){
 	// Update all population lists
 	UpdateAllLists();
 
-	// Run through serialized population types
 //	#pragma omp parallel for schedule(static)
 	for(int i_entry = 0; i_entry < serial_kmc_.size(); i_entry++){
 		// If population is greater than 0, sample KMC funct

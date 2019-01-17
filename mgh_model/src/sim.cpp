@@ -33,7 +33,7 @@ int main(int argc, char *argv[]){
 		properties.kinesin4.RunKMC();
 		properties.prc1.RunKMC();
 		properties.prc1.RunDiffusion();
-//		properties.microtubules.RunDiffusion();
+		properties.microtubules.RunDiffusion();
 	}
 
 	// Cleanup stuff

@@ -11,12 +11,9 @@ struct system_properties;
 //XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
 //				- wait, would this break reproducability??
 //					- potentially random order in lists; same RNG
-//XXX	- experiment with #pragma omp parallel for in UpdateLists()
-//XXX   - investigate using sampling_functs_['name'] rather than find()
 //XXX 	- reorganize KMC functions so non-tether group is first
 //			- this will let us do gen_kmc_event in 2 independent pieces
 //				- don't need to initialize all arrays if tethers disabled!
-//XXX	- parallelize update_serial_pops
 
 class KinesinManagement{
 	private:
@@ -152,9 +149,18 @@ class KinesinManagement{
 		double GetWeightTetherBound();
 
 		void RunKMC();
-		void KMC_Bind_I();
+
+		void KMC_Bind();	// Only bind ADP heads; converts to NULL
+
+		void KMC_Powerstroke(); // Only for NULL heads; converts to ATP
+
+		void KMC_Hydrolysis();  // Only for ATP heads; converts to ADP-P 
+
+		void KMC_Unbind(); 	// Only unbind ADP-P heads; converts to ADP
+
+//		void KMC_Bind_I();
 		void KMC_Bind_II();	
-		void KMC_Unbind_I();
+		void KMC_Unbind_I();	// only unbind ADP-bound heads
 		void KMC_Unbind_II();
 		void KMC_Step();
 		void KMC_Bind_I_Tethered();

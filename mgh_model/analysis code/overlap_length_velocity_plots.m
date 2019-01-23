@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 n_sites = 500;
-simName = 'slide_scan/SlideScan_1.2';
+simName = 'slide';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 2000000;
@@ -68,7 +68,7 @@ title('Sliding velocity over time');
 ylabel('Sliding velocity (nm/s)');
 xlabel('Time (s)');
 xlim([start_time + 1 end_time - 1]);
-ylim([-200 200]);
+ylim([-100 100]);
 %axis tight
 grid on
 grid minor

@@ -1,5 +1,6 @@
 #ifndef _TUBULIN_H
 #define _TUBULIN_H
+#include "kinesin.h"
 
 class Microtubule;
 class Kinesin;
@@ -18,7 +19,7 @@ class Tubulin{
 		bool occupied_ = false;
 
 		Microtubule *mt_ = nullptr;
-		Kinesin *motor_ = nullptr; 
+		Kinesin::head *motor_head_ = nullptr; 
 		AssociatedProtein *xlink_ = nullptr;
 
 		system_parameters *parameters_ = nullptr;

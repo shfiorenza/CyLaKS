@@ -11,19 +11,130 @@ void Kinesin::Initialize(system_parameters *parameters,
 	parameters_ = parameters;
 	properties_ = properties;
 	SetParameters();
+	/*
 	CalculateCutoffs();
 	InitiateNeighborLists(); 
 	PopulateTetheringLookupTable();
 	PopulateBindingLookupTable();
 	PopulateExtensionLookups();
+	*/
 }
 
 void Kinesin::SetParameters(){
 
+	head_one_.motor_ = this; 
+	head_one_.ligand_ = "ADP"; 
+	head_two_.motor_ = this;
+	head_two_.ligand_ = "ADP";
+	/*
 	r_0_ = parameters_->motors.r_0;
 	k_spring_ = parameters_->motors.k_spring;
 	k_slack_ = parameters_->motors.k_slack;
+	*/
 }
+
+void Kinesin::ChangeConformation(){
+
+	if(heads_active_ == 1){
+//		printf("\ndock pre: %g\n", GetDockedCoordinate());
+		head_one_.trailing_ = !head_one_.trailing_;
+		head_two_.trailing_ = !head_two_.trailing_;
+		frustrated_ = false;
+//		printf("dock post: %g\n", GetDockedCoordinate());
+	}
+	else if(heads_active_ == 2){
+		frustrated_ = true;
+	}
+	else{
+		printf("Error in Kinesin::ChangeConformation()\n");
+		exit(1);
+	}
+}
+
+double Kinesin::GetStalkCoordinate(){
+
+	if(heads_active_ == 1){
+		Tubulin *site = GetActiveHead()->site_;
+		double site_coord = site->index_ + mt_->coord_;
+		if(GetActiveHead()->trailing_){
+			return site_coord + ((double)mt_->delta_x_)/2;
+		}
+		else{
+			return site_coord - ((double)mt_->delta_x_)/2;
+		}
+	}
+	else if(heads_active_ == 2){
+		int i_one = head_one_.site_->index_;
+		int i_two = head_two_.site_->index_;
+		double avg_index = ((double)(i_one + i_two))/2;
+		double stalk_coord = mt_->coord_ + avg_index;
+		return stalk_coord;
+	}
+	else{
+		printf("error: can NOT get this stalk index bro.\n");
+		exit(1);
+	}
+}
+
+double Kinesin::GetDockedCoordinate(){
+
+	if(heads_active_ == 1){
+		Kinesin::head *active_head = GetActiveHead(); 
+		// finish checking for ADPP on active head here FIXME
+		Tubulin *site = GetActiveHead()->site_;
+		double site_coord = site->index_ + mt_->coord_;
+		if(GetActiveHead()->trailing_){
+			return site_coord + mt_->delta_x_;
+		}
+		else{
+			return site_coord - mt_->delta_x_;
+		}
+	}
+	else{
+		printf("Error in GetDockedCoordinate.\n");
+		exit(1);
+	}
+}
+
+Kinesin::head* Kinesin::GetActiveHead(){
+
+	if(heads_active_ == 1){
+		if(head_one_.site_ != nullptr) return &head_one_; 
+		else return &head_two_; 
+	}
+	else{
+		printf("error: cannot get active head, my dear brobro\n");
+		exit(1);
+	}
+}
+
+Kinesin::head* Kinesin::GetDockedHead(){
+
+	if(heads_active_ == 1){
+		Kinesin::head *active_head = GetActiveHead();
+		if(active_head->ligand_ == "ADPP"){
+			Kinesin::head *docked_head(NULL); 
+			if(active_head == &head_one_) docked_head = &head_two_;
+			else docked_head = &head_one_;
+			if(docked_head->ligand_ == "ADP"){
+				return docked_head; 
+			}
+			else{
+				printf("error! docked head doesn't have ADP bound??\n");
+				exit(1);
+			}
+		}
+		else{
+			printf("error SIR; can't be docked w/o fuggin ADPP\n");
+			exit(1);
+		}
+	}
+	else{
+		printf("error; cannot get docked head, madameeeeee\n");
+		exit(1);
+	}
+}
+
 
 void Kinesin::CalculateCutoffs(){
 
@@ -32,7 +143,7 @@ void Kinesin::CalculateCutoffs(){
 		int site_size = parameters_->microtubules.site_size; 
 		double r_y = parameters_->microtubules.y_dist / 2;
 		double kbT = parameters_->kbT; 
-		/* First, calculate rest_dist_ in number of sites */
+		// First, calculate rest_dist_ in number of sites
 		int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
 		double rest_scan[3]; 
 		double scan_force[3]; 
@@ -53,7 +164,7 @@ void Kinesin::CalculateCutoffs(){
 				rest_dist_ = rest_scan[i_scan + 1]; 
 			}	
 		}
-		/* Next, calculate compression distance cutoff */ 
+		// Next, calculate compression distance cutoff 
 		comp_cutoff_ = 0;
 		for(int x_dist = 2*rest_dist_; x_dist >= 0; x_dist--){
 			//increment by 0.5x
@@ -71,7 +182,7 @@ void Kinesin::CalculateCutoffs(){
 				break;
 			}
 		}
-		/* Finally, calculate extension distance cutoff */
+		// Finally, calculate extension distance cutoff
 		for(int x_dist = 2*rest_dist_; x_dist < 1000; x_dist++){
 			//increment by 0.5x
 			int r_x = x_dist * site_size / 2;
@@ -105,7 +216,7 @@ void Kinesin::InitiateNeighborLists(){
 	neighbor_sites_.resize(n_mts*(2*dist_cutoff_ + 1));
 }
 
-/* XXX currently the exact same as binding lookup table...appropriate? XXX */
+//  XXX currently the exact same as binding lookup table...appropriate? XXX
 void Kinesin::PopulateTetheringLookupTable(){
 
 	double r_y = parameters_->microtubules.y_dist / 2;
@@ -426,27 +537,6 @@ double Kinesin::GetRestLengthCoordinate(){
 	}
 }
 
-double Kinesin::GetStalkCoordinate(){
-
-	if(heads_active_ == 1){
-		Tubulin *site = GetActiveHeadSite();
-		double site_coord = site->index_ + mt_->coord_;
-		return site_coord; 
-	}
-	else if(heads_active_ == 2){
-		int i_one = front_site_->index_;
-		int i_two = rear_site_->index_;
-		double avg_index = ((double)(i_one + i_two))/2;
-		int mt_coord = mt_->coord_;
-		double stalk_coord = mt_coord + avg_index;
-		return stalk_coord;
-	}
-	else{
-		printf("error: can NOT get this stalk index bro.\n");
-		exit(1);
-	}
-}
-
 double Kinesin::GetTetheringWeight(AssociatedProtein *xlink){
 
 	double stalk_coord = GetStalkCoordinate();
@@ -516,6 +606,7 @@ double Kinesin::GetTetherForce(Tubulin *site){
 
 Tubulin* Kinesin::GetActiveHeadSite(){
 
+		/*
 	if(heads_active_ == 1){
 		if(front_site_ != nullptr
 		&& rear_site_ == nullptr)
@@ -532,10 +623,12 @@ Tubulin* Kinesin::GetActiveHeadSite(){
 		printf("how am i supposed to find an ACTIVE KINESIN HEAD?!\n");
 		exit(1);
 	}
+	*/
 }
 
 Tubulin* Kinesin::GetSiteCloserToRest(){
 
+	/*
 	if(tethered_ == true
 	&& heads_active_ == 2){
 		double anchor_coord = xlink_->GetAnchorCoordinate();
@@ -554,10 +647,12 @@ Tubulin* Kinesin::GetSiteCloserToRest(){
 		printf("Error in getting site closest to rest (motor)\n");
 		exit(1);
 	}
+*/
 }
 
 Tubulin* Kinesin::GetSiteFartherFromRest(){
 
+	/*
 	if(tethered_ == true){
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		double stalk_coord = GetStalkCoordinate();
@@ -575,6 +670,7 @@ Tubulin* Kinesin::GetSiteFartherFromRest(){
 		printf("Error in getting site farthest from rest (motor)\n");
 		exit(1);
 	}
+	*/
 }
 
 Tubulin* Kinesin::GetWeightedNeighborSite(){

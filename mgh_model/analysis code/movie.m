@@ -1,9 +1,9 @@
 clear all
 
 % Parameters from sim
-n_steps = 2000000;
+n_steps = 200000000;
 n_datapoints = 100000;
-delta_t = 0.0005; 
+delta_t = 0.000005; 
 n_sites = 500;
 n_mts = 2;
 xlink_cutoff = 7;
@@ -13,8 +13,8 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'test';
-movie_name = 'test.avi';
+simName = 'slide3';
+movie_name = 'slide_1nM.avi';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = 100000;
-frames_per_plot = 1000;
+frames_per_plot = 100;
 start_frame = 1;
 site_height = 1;
 site_width = 1;

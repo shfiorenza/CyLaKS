@@ -1,4 +1,4 @@
-%{
+
 clear all
 % Pseudo-constant variables
 motor_speciesID = 2;
@@ -11,18 +11,18 @@ fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers'};
 
 mt_lengths = [2, 4, 6, 8, 10, 14]; % in microns
-xlink_concs = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]; % in nanomolar
+%xlink_concs = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]; % in nanomolar
 
 n_lengths = length(mt_lengths);
-n_concs = length(xlink_concs);
+n_concs = 1;   %length(xlink_concs);
 
-final_data = zeros([n_concs n_lengths]);
+final_data = zeros([1 n_lengths]);
 
-for i_conc=1:1:n_concs
-    xlink_conc = xlink_concs(i_conc);
+%for i_conc=1:1:n_concs
+    %xlink_conc = xlink_concs(i_conc);
     for i_length=1:1:n_lengths
         n_sites = mt_lengths(i_length) * 125;
-        simName = sprintf('Endtag_%#.1f_%i', xlink_conc, n_sites);
+        simName = sprintf('endtag_%i', n_sites);
         fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
         
         motor_avg_occupancy = zeros([n_sites 1]);
@@ -58,10 +58,11 @@ for i_conc=1:1:n_concs
             end
         end
         endtag_length = endtag_site*0.008; 
-        final_data(i_conc, i_length) = endtag_length; 
+        final_data(i_length) = endtag_length; 
     end
-end
-%}
+%end
+
+
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])
 hold on
@@ -69,8 +70,8 @@ for i=1:1:n_concs
     plot(mt_lengths, final_data(i,:),'LineWidth',2);
 end
 
-legendLabel = cellstr(num2str(xlink_concs', '%#.1f nM PRC1'));
-title('Endtag length scaling for 1.5 nM kinesin-1 and PRC1 (no tethering)');
+%legendLabel = cellstr(num2str(xlink_concs', '%#.1f nM PRC1'));
+title('Endtag length scaling for 1.5 nM kinesin-1');
 xlabel('Length of microtubule (microns)');
 ylabel('Endtag length (microns)');
 ylim([0 0.3]);

@@ -28,14 +28,15 @@ void Curator::ParseParameters(system_parameters *params,
 	params->eta = input["eta"].as<double>();
 	/* Motor parameters below */ 
 	YAML::Node motors = input["motors"];
-	params->motors.k_on_i = motors["k_on_i"].as<double>();
-	params->motors.k_on_ii = motors["k_on_ii"].as<double>();
-	params->motors.concentration = motors["concentration"].as<double>();
-	params->motors.conc_eff_bind = motors["conc_eff_bind"].as<double>();
+	params->motors.k_on = motors["k_on"].as<double>();
+	params->motors.c_bulk = motors["c_bulk"].as<double>();
+	params->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
+	params->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
+	params->motors.c_ATP = motors["c_ATP"].as<double>();
+	params->motors.k_phosphorylate = motors["k_phosphorylate"].as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
-	params->motors.velocity = motors["velocity"].as<double>();
-	params->motors.diffusion_const = motors["diffusion_const"].as<double>();
+	params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
 	params->motors.tethers_active = motors["tethers_active"].as<bool>();
 	params->motors.k_tether_free = motors["k_tether_free"].as<double>();
 	params->motors.conc_eff_tether = motors["conc_eff_tether"].as<double>();
@@ -102,15 +103,16 @@ void Curator::ParseParameters(system_parameters *params,
 		printf("    kbT = %g pN*nm\n", params->kbT);
 		printf("    eta = %g (pN*s)/um^2\n", params->eta);
 		printf("\n  Kinesin (motor) parameters:\n");
-		printf("    k_on_i = %g /(nM*s)\n", params->motors.k_on_i);
-		printf("    k_on_ii = %g /(nM*s)\n", params->motors.k_on_ii);
-		printf("    concentration = %g nM\n", params->motors.concentration);
-		printf("    conc_eff_bind = %g nM\n", params->motors.conc_eff_bind);
+		printf("    k_on = %g /(nM*s)\n", params->motors.k_on);
+		printf("    c_bulk = %g nM\n", params->motors.c_bulk);
+		printf("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
+		printf("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
+		printf("    c_ATP = %g mM\n", params->motors.c_ATP);
 		printf("    k_off_i = %g /s\n", params->motors.k_off_i);
 		printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
-		printf("    velocity = %g nm/s\n", params->motors.velocity);
-		printf("    diffusion_const = %g um^2/s\n", 
-				params->motors.diffusion_const);
+		printf("    endpausing_active = %s\n", 
+				params->motors.endpausing_active ? "true" : "false");	
+		printf("\n");
 		printf("    tethers_active = %s\n", 
 				params->motors.tethers_active ? "true" : "false");	
 		if(params->motors.tethers_active){
@@ -347,8 +349,7 @@ void Curator::PrintMicrotubules(){
 
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-	if(parameters_->microtubules.printout == true
-	&& world_rank == 0){
+	if(world_rank == 0){
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length; 
 		// Figure out which MT is the farthest left 
@@ -398,28 +399,34 @@ void Curator::PrintMicrotubules(){
 						exit(1);
 					}
 				}
-				else if(site->motor_ != nullptr){
-					Kinesin *motor = site->motor_; 
+				else if(site->motor_head_ != nullptr){
+					Kinesin *motor = site->motor_head_->motor_; 
 					if(motor->heads_active_ == 1){
 						if(motor->tethered_ == false)
-							printf("m");
+							std::cout << site->motor_head_->ligand_;
+						//	printf("m");
 						else
 							printf("M");
 					}
 					else if(motor->heads_active_ == 2){
-						int i_front = motor->front_site_->index_;
-						int i_rear = motor->rear_site_->index_;
+						int i_front = motor->head_one_.site_->index_;
+						int i_rear = motor->head_two_.site_->index_;
 						if(i_front > i_rear){
 							if(i_site == i_rear){
-								if(motor->tethered_ == false)
+								if(motor->tethered_ == false){
 									printf("(");
+									std::cout << motor->head_two_.ligand_;
+									printf("|");
+								}
 								else
 									printf("%i", motor->x_dist_doubled_ / 10);
 								//	printf("[");
 							}
 							if(i_site == i_front){
-								if(motor->tethered_ == false)
+								if(motor->tethered_ == false){
+									std::cout << motor->head_one_.ligand_;
 									printf(")");
+								}
 								else
 	//								printf("]");
 									printf("%i", motor->x_dist_doubled_ % 10);
@@ -427,15 +434,20 @@ void Curator::PrintMicrotubules(){
 						} 
 						else if(i_front < i_rear){
 							if(i_site == i_front){	
-								if(motor->tethered_ == false)
+								if(motor->tethered_ == false){
 									printf("(");
+									std::cout << motor->head_one_.ligand_;
+									printf("|");
+								}
 								else
 									printf("%i", motor->x_dist_doubled_ / 10);
 								//	printf("[");
 							}
 							if(i_site == i_rear){
-								if(motor->tethered_ == false)
+								if(motor->tethered_ == false){
+									std::cout << motor->head_two_.ligand_;
 									printf(")");
+								}
 								else
 							//		printf("]");
 									printf("%i", motor->x_dist_doubled_ % 10);
@@ -564,13 +576,14 @@ void Curator::OutputData(){
 			}
 			// If occupied by motor, store its species ID to occupancy_file, 
 			// its unique ID to the motor ID file, and -1 to xlink ID file
-			else if(site->motor_ != nullptr){
-				occupancy_array[i_site] = site->motor_->speciesID_;
-				motor_ID_array[i_site] = site->motor_->ID_;
+			else if(site->motor_head_ != nullptr){
+				Kinesin *motor = site->motor_head_->motor_;
+				occupancy_array[i_site] = motor->speciesID_;
+				motor_ID_array[i_site] = motor->ID_;
 				xlink_ID_array[i_site] = -1;
-				if(site->motor_->tethered_ == true){
-					if(site->motor_->xlink_->heads_active_ > 0){
-						AssociatedProtein* xlink = site->motor_->xlink_;
+				if(motor->tethered_ == true){
+					if(motor->xlink_->heads_active_ > 0){
+						AssociatedProtein* xlink = motor->xlink_;
 						double anchor_coord = xlink->GetAnchorCoordinate();
 						tether_coord_array[i_site] = anchor_coord; 
 						double site_coord = site->index_ + site->mt_->coord_;
@@ -645,7 +658,8 @@ void Curator::UpdateTimestep(int i_step){
 				printf("Done!");
 			}
 		}
-		if(i_step % 1000 == 0){
+		if(i_step % 1000 == 0
+		&& parameters_->microtubules.printout){
 			PrintMicrotubules(0);
 		}
 	}

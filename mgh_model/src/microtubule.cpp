@@ -90,6 +90,7 @@ double Microtubule::GetNetForce(){
 			// If doubly-bound, get force from self and potentially teth
 			if(xlink->heads_active_ == 2){
 				forces_summed += xlink->GetExtensionForce(site);
+				/*
 				if(xlink->tethered_){
 					Kinesin* motor = xlink->motor_;
 					// Only bound motors have valid tether extensions
@@ -100,7 +101,9 @@ double Microtubule::GetNetForce(){
 						}
 					}
 				}
+				*/
 			}
+			/*
 			// Otherwise if singly-bound, check for tether force
 			else if(xlink->tethered_){
 				Kinesin* motor = xlink->motor_;
@@ -112,10 +115,12 @@ double Microtubule::GetNetForce(){
 					}
 				}
 			}
+			*/
 		}
+		/*
 		// Otherwise, check if occupied by motor head
-		else if(site->motor_ != nullptr){
-			Kinesin* motor = site->motor_;
+		else if(site->motor_head_ != nullptr){
+			Kinesin* motor = site->motor_head_->motor_;
 			// Motors can only exert a force if they are tethered
 			if(motor->tethered_){
 				AssociatedProtein* xlink = motor->xlink_;
@@ -128,7 +133,7 @@ double Microtubule::GetNetForce(){
 							forces_summed += motor->GetTetherForce(site);
 						}
 						// With 2 heads active, only get force from front
-						else if(site == motor->front_site_){
+						else if(site == motor->head_one_.site_){
 							forces_summed += motor->GetTetherForce(site);
 						}
 					}
@@ -140,12 +145,13 @@ double Microtubule::GetNetForce(){
 						forces_summed += motor->GetTetherForce(site);
 					}
 					// With 2 heads active, only get force from front
-					else if(site == motor->front_site_){
+					else if(site == motor->head_one_.site_){
 						forces_summed += motor->GetTetherForce(site);
 					}
 				}
 			}
 		}
+		*/
 	}
 	return forces_summed; 
 }
@@ -185,8 +191,8 @@ double Microtubule::GetNetForce_Motors(){
 			}
 		}
 		// Otherwise, check if occupied by motor head
-		else if(site->motor_ != nullptr){
-			Kinesin* motor = site->motor_;
+		else if(site->motor_head_ != nullptr){
+			Kinesin* motor = site->motor_head_->motor_;
 			// Motors can only exert a force if they are tethered
 			if(motor->tethered_){
 				AssociatedProtein* xlink = motor->xlink_;
@@ -198,8 +204,8 @@ double Microtubule::GetNetForce_Motors(){
 						if(motor->heads_active_ == 1){
 							forces_summed += motor->GetTetherForce(site);
 						}
-						// With 2 heads active, only get force from front
-						else if(site == motor->front_site_){
+						// With 2 heads active, only get force from first
+						else if(site == motor->head_one_.site_){
 							forces_summed += motor->GetTetherForce(site);
 						}
 					}
@@ -210,8 +216,8 @@ double Microtubule::GetNetForce_Motors(){
 					if(motor->heads_active_ == 1){
 						forces_summed += motor->GetTetherForce(site);
 					}
-					// With 2 heads active, only get force from front
-					else if(site == motor->front_site_){
+					// With 2 heads active, only get force from first
+					else if(site == motor->head_one_.site_){
 						forces_summed += motor->GetTetherForce(site);
 					}
 				}

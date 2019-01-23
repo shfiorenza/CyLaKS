@@ -145,7 +145,7 @@ class AssociatedProteinManagement{
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
 
-		void UpdateAllLists();				// XXX
+		void UpdateAllLists();				// FIXME
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();
@@ -195,7 +195,7 @@ class AssociatedProteinManagement{
 		void RunKMC_Bind_II_From_Teth(int x_dist_dub, int x_dist);	// XXX add
 		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
-		void RunKMC_Tether_Free();
+		void RunKMC_Tether_Free(); // FIXME
 		void RunKMC_Untether_Free();
 };
 #endif

@@ -8,7 +8,7 @@ n_mts = 2;
 xlink_cutoff = 7;
 
 % File info
-simName = 'test4';
+simName = 'slide';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';

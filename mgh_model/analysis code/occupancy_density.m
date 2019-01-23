@@ -13,7 +13,7 @@ end_time = n_steps * delta_t;
 unpin_time = 500;
 
 % File info
-simName = 'test';
+simName = 'slide';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';
@@ -103,7 +103,7 @@ fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
 
 % Plot overlap length data
-subplot(2, 1, 1)
+subplot(3, 1, 1)
 plot(linspace(start_time, end_time, n_datapoints), overlap_data * 0.008, ...
     'LineWidth', 2);
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
@@ -111,7 +111,7 @@ title('Overlap length in microns');
 ylabel('Overlap length (um)');
 legend('Overall overlap', 'location', 'northeastoutside');
 
-%{
+
 % Plot motor occupancy data
 subplot(3, 1, 2)
 plot(linspace(start_time, end_time, n_datapoints), motor_frac_overlap, ...
@@ -122,9 +122,10 @@ plot(linspace(start_time, end_time, n_datapoints), motor_frac_nonoverlap, ...
 title('Motor occupancy');
 ylabel({'Fraction of', 'sites occupied'});
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');
-%}
+ylim([0 0.15]);
+
 % Plot xlink occupancy data
-subplot(2, 1, 2)
+subplot(3, 1, 3)
 plot(linspace(start_time, end_time, n_datapoints), xlink_frac_overlap, ...
     'LineWidth', 2);
 hold on

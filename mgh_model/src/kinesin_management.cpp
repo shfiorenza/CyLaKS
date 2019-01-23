@@ -14,7 +14,7 @@ void KinesinManagement::Initialize(system_parameters *parameters,
     SetParameters();	
 	InitializeLists();
 	InitializeSerializedKMC();
-	InitializeSamplingFunctions();
+//	InitializeSamplingFunctions();
 }
 
 void KinesinManagement::GenerateMotors(){
@@ -34,6 +34,40 @@ void KinesinManagement::SetParameters(){
 
 	int world_rank;
 	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
+    double delta_t = parameters_->delta_t;
+
+	// Statistics for KMC
+    double k_on = parameters_->motors.k_on;
+    double c_motor = parameters_->motors.c_bulk;
+	p_bind_i_ = k_on * c_motor * delta_t;
+	double k_on_ATP = parameters_->motors.k_on_ATP;
+	double c_ATP = parameters_->motors.c_ATP;
+	p_bind_ATP_ = k_on_ATP * c_ATP * delta_t;
+	double k_phosphorylate = parameters_->motors.k_phosphorylate;
+	p_phosphorylate_ = k_phosphorylate * delta_t;
+	double c_eff = parameters_->motors.c_eff_bind;
+	p_bind_ii_ = k_on * c_eff * delta_t; 
+	double k_off_ii = parameters_->motors.k_off_ii;
+	p_unbind_ii_ = k_off_ii * delta_t; 
+	double k_off_i = parameters_->motors.k_off_i;
+	p_unbind_i_ = k_off_i * delta_t; 
+
+	if(world_rank == 0){
+		if(p_bind_i_ > 1) 
+			printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
+		if(p_bind_ATP_ > 1)
+			printf("WARNING: p_bind_ATP=%g for motors\n", p_bind_ATP_);	
+		if(p_phosphorylate_ > 1)
+			printf("WARNING: p_phos=%g for motors\n", p_phosphorylate_);	
+		if(p_bind_ii_ > 1)
+			printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
+		if(p_unbind_ii_ > 1)
+			printf("WARNING: p_unbind_ii=%g for motors\n", p_unbind_ii_);
+		if(p_unbind_i_ > 1)
+			printf("WARNING: p_unbind_i=%g for motors\n", p_unbind_i_);
+	}
+
 	rest_dist_ = motors_[0].rest_dist_;
 	comp_cutoff_ = motors_[0].comp_cutoff_;
 	dist_cutoff_ = motors_[0].dist_cutoff_;
@@ -44,25 +78,21 @@ void KinesinManagement::SetParameters(){
 		printf("  comp_cutoff is %i\n", comp_cutoff_);
 		printf("  dist_cutoff is %i\n", dist_cutoff_);
 	}
-    double delta_t = parameters_->delta_t;
 	double site_size = parameters_->microtubules.site_size;
 	double kbT = parameters_->kbT;
 	double r_0 = motors_[0].r_0_;
 	double k_spring = motors_[0].k_spring_;
 	double k_eff_slack = motors_[0].k_slack_;
 	double r_y = parameters_->microtubules.y_dist / 2;
-	// Statistics for KMC
-    double k_on_i = parameters_->motors.k_on_i;
-    double c_motor = parameters_->motors.concentration;
-	p_bind_i_ = k_on_i * c_motor * delta_t;
+
 	double c_eff_teth = parameters_->motors.conc_eff_tether;
 	if(!parameters_->motors.tethers_active){
 		c_eff_teth = 0;
 	}
-	p_bind_i_tethered_ = k_on_i * c_eff_teth * delta_t;
-	double k_on_ii = parameters_->motors.k_on_ii;
-	double c_eff_motor_bind = parameters_->motors.conc_eff_bind;
-	p_bind_ii_ = k_on_ii * c_eff_motor_bind * delta_t;
+//	p_bind_i_tethered_ = k_on_i * c_eff_teth * delta_t;
+//	double k_on_ii = parameters_->motors.k_on_ii;
+//	double c_eff_motor_bind = parameters_->motors.conc_eff_bind;
+//	p_bind_ii_ = k_on_ii * c_eff_motor_bind * delta_t;
 	if(world_rank == 0){
 		if(p_bind_i_ > 1){
 			printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
@@ -71,10 +101,10 @@ void KinesinManagement::SetParameters(){
 			printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
 		}
 	}
-	double k_off_i = parameters_->motors.k_off_i; 
-	p_unbind_i_ = k_off_i * delta_t;
-    double k_off = parameters_->motors.k_off_ii;
-	p_unbind_ii_ = k_off * delta_t;
+//	double k_off_i = parameters_->motors.k_off_i; 
+//	p_unbind_i_ = k_off_i * delta_t;
+  //  double k_off = parameters_->motors.k_off_ii;
+//	p_unbind_ii_ = k_off * delta_t;
 	p_bind_ii_to_teth_.resize(2*dist_cutoff_ + 1);
 	p_bind_ii_fr_teth_.resize(2*dist_cutoff_ + 1);
 	p_unbind_i_tethered_.resize(2*dist_cutoff_ + 1);
@@ -178,8 +208,8 @@ void KinesinManagement::SetParameters(){
 		k_untether_free = 0;
 	}
 	p_untether_free_ = k_untether_free * delta_t;
-    double motor_speed = parameters_->motors.velocity;
-	p_step_ = motor_speed * delta_t / site_size;
+//    double motor_speed = parameters_->motors.velocity;
+//	p_step_ = motor_speed * delta_t / site_size;
 	if(p_step_ > 1
 	&& world_rank == 0){
 		printf("WARNING: p_step=%g for motors\n", p_step_);
@@ -292,6 +322,15 @@ void KinesinManagement::InitializeLists(){
 
 	// One dimensional stuff
 	active_.resize(n_motors_);
+	docked_.resize(n_motors_); 
+	bound_NULL_.resize(n_motors_);
+	bound_ATP_.resize(n_motors_);
+	bound_ADPP_i_.resize(n_motors_);
+	bound_ADPP_ii_.resize(n_motors_);
+
+
+
+
 	free_tethered_.resize(n_motors_);
 	bound_i_.resize(n_motors_);
 	bound_i_bindable_.resize(n_motors_); 
@@ -335,110 +374,131 @@ void KinesinManagement::InitializeLists(){
 
 void KinesinManagement::InitializeSerializedKMC(){
 
-	int tot_size = 16 + 16*dist_cutoff_ + 1;
-	if(!parameters_->motors.tethers_active)
-		tot_size = 5;
-	serial_kmc_.resize(tot_size);
+	int tot_size = 6;
+/*
+	if(parameters_->motors.tethers_active)
+		tot_size = 16 + 16*dist_cutoff_ + 1;
+*/
+	serial_events_.resize(tot_size);
 
-	event bind_i = 
-		{&properties_->microtubules.n_unoccupied_, 0, "bind_i", 0, 0};
-	serial_kmc_[0] = bind_i;
+	// create modular binomial function to use in event data structures
+	auto binomial = [&](double p, int n, int ID){
+		if(n > 0){
+			return properties_->gsl.SampleBinomialDist_Kinesin(p, n, ID);
+		}
+		else return 0;
+	};
 
-	if(!parameters_->motors.tethers_active){
-		event bind_ii = {&n_bound_i_bindable_, 0, "bind_ii", 1, 0};
-		serial_kmc_[1] = bind_ii;
+	event bind_i = {"bind_i", "unocc", 
+			&properties_->microtubules.n_unoccupied_,
+			10, 0, 0, binomial, p_bind_i_, 0};
+	serial_events_[bind_i.index_] = bind_i;
 
-		event unbind_i = {&n_bound_i_, 0, "unbind_i", 2, 0};
-		serial_kmc_[2] = unbind_i;
+	event bind_ATP = {"bind_ATP", "bound_NULL", &n_bound_NULL_, 
+			20, 1, 0, binomial, p_bind_ATP_, 0};
+	serial_events_[bind_ATP.index_] = bind_ATP;
 
-		event unbind_ii = {&n_bound_ii_, 0, "unbind_ii", 3, 0};
-		serial_kmc_[3] = unbind_ii;
+	event phosphorylate = {"phosphorylate", "bound_ATP", &n_bound_ATP_,
+			30, 2, 0, binomial, p_phosphorylate_, 0};
+	serial_events_[phosphorylate.index_] = phosphorylate;
 
-		event step = {&n_stepable_, 0, "step", 4, 0};
-		serial_kmc_[4] = step;
-	}
+	event bind_ii = {"bind_ii", "docked", &n_docked_, 
+			40, 3, 0, binomial, p_bind_ii_, 0};
+	serial_events_[bind_ii.index_] = bind_ii;
+
+	event unbind_ii = {"unbind_ii", "bound_ADPP_ii", &n_bound_ADPP_ii_, 
+			50, 4, 0, binomial, p_unbind_ii_, 0};
+	serial_events_[unbind_ii.index_] = unbind_ii;
+
+	event unbind_i = {"unbind_i", "bound_ADPP_i", &n_bound_ADPP_i_, 
+			60, 5, 0, binomial, p_unbind_i_, 0};
+	serial_events_[unbind_i.index_] = unbind_i;
+
+	/*
 	// If tethers ARE active, serialize all extension-based events
-	else{
+	if(parameters_->motors.tethers_active){
 		event bind_i_tethered = {&n_free_tethered_, 0, 
 			"bind_i_tethered", 1, 0};
-		serial_kmc_[1] = bind_i_tethered;
+		serial_events_[1] = bind_i_tethered;
 
 		event bind_ii = {&n_bound_i_bindable_, 0, "bind_ii", 2, 0};
-		serial_kmc_[2] = bind_ii;
+		serial_events_[2] = bind_ii;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
 			event bind_ii_to_teth = {&n_bound_i_bindable_to_teth_[x_dub], 
 				x_dub, "bind_ii_to_teth", 3 + x_dub, 0};
-			serial_kmc_[3 + x_dub] = bind_ii_to_teth;
+			serial_events_[3 + x_dub] = bind_ii_to_teth;
 
 			event bind_ii_fr_teth = {&n_bound_i_bindable_fr_teth_[x_dub], 
 				x_dub, "bind_ii_fr_teth", 4 + 2*dist_cutoff_ + x_dub, 0};
-			serial_kmc_[4 + 2*dist_cutoff_ + x_dub] = bind_ii_fr_teth; 
+			serial_events_[4 + 2*dist_cutoff_ + x_dub] = bind_ii_fr_teth; 
 		}
 		int offset = 4 + 4*dist_cutoff_;
 
 		event unbind_i = {&n_bound_i_, 0, "unbind_i", offset + 1, 0};
-		serial_kmc_[offset + 1] = unbind_i;
+		serial_events_[offset + 1] = unbind_i;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
 			event unbind_i_tethered = {&n_bound_i_tethered_[x_dub], 
 				x_dub, "unbind_i_tethered", offset + 2 + x_dub, 0};
-			serial_kmc_[offset + 2 + x_dub] = unbind_i_tethered;
+			serial_events_[offset + 2 + x_dub] = unbind_i_tethered;
 		}
 		int offset2 = 6 + 6*dist_cutoff_; 
 
 		event unbind_ii = {&n_bound_ii_, 0, "unbind_ii", offset2 + 1, 0};
-		serial_kmc_[offset2 + 1] = unbind_ii;
+		serial_events_[offset2 + 1] = unbind_ii;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
 			event unbind_to_teth = {&n_bound_ii_tethered_[x_dub],
 			   	x_dub, "unbind_ii_to_teth", offset2 + 2 + x_dub, 0};
-			serial_kmc_[offset2 + 2 + x_dub] = unbind_to_teth;
+			serial_events_[offset2 + 2 + x_dub] = unbind_to_teth;
 
 			event unbind_fr_teth = {&n_bound_ii_tethered_[x_dub], 
 				x_dub, "unbind_ii_fr_teth", 
 				offset2 + 3 + 2*dist_cutoff_ + x_dub, 0};
-			serial_kmc_[offset2 + 3 + 2*dist_cutoff_ + x_dub] = 
+			serial_events_[offset2 + 3 + 2*dist_cutoff_ + x_dub] = 
 				unbind_fr_teth;
 		}
 		int offset3 = 9 + 10*dist_cutoff_;
 
 		event tether_free = {&properties_->prc1.n_bound_untethered_, 
 			0,  "tether_free", offset3 + 1, 0};
-		serial_kmc_[offset3 + 1] = tether_free;
+		serial_events_[offset3 + 1] = tether_free;
 
 		event tether_bound = {&n_bound_untethered_, 0, "tether_bound", 
 			offset3 + 2, 0};
-		serial_kmc_[offset3 + 2] = tether_bound;
+		serial_events_[offset3 + 2] = tether_bound;
 
 		event untether_free = {&n_free_tethered_, 0, "untether_free",
 			offset3 + 3, 0};
-		serial_kmc_[offset3 + 3] = untether_free;
+		serial_events_[offset3 + 3] = untether_free;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
 			event untether_bound = {&n_bound_tethered_[x_dub], 
 				x_dub, "untether_bound", offset3 + 4 + x_dub, 0};
-			serial_kmc_[offset3 + 4 + x_dub] = untether_bound; 
+			serial_events_[offset3 + 4 + x_dub] = untether_bound; 
 		}
 		int offset4 = 13 + 12*dist_cutoff_; 
 
 		event step = {&n_stepable_, 0, "step", offset4 + 1, 0};
-		serial_kmc_[offset4 + 1] = step;
+		serial_events_[offset4 + 1] = step;
 
 		for(int x_dub(0); x_dub <= 2*dist_cutoff_; x_dub++){
 			event step_to_teth = {&n_stepable_to_teth_[x_dub], 
 				x_dub, "step_to_teth", offset4 + 2 + x_dub, 0};
-			serial_kmc_[offset4 + 2 + x_dub] = step_to_teth;
+			serial_events_[offset4 + 2 + x_dub] = step_to_teth;
 
 			event step_fr_teth = {&n_stepable_fr_teth_[x_dub], 
 				x_dub, "step_fr_teth",
 				offset4 + 3 + 2*dist_cutoff_ + x_dub, 0};
-			serial_kmc_[offset4 + 3 + 2*dist_cutoff_ + x_dub] = 
+			serial_events_[offset4 + 3 + 2*dist_cutoff_ + x_dub] = 
 				step_fr_teth; 
 		}
 	}
+	*/
 }
 
+/*
 void KinesinManagement::InitializeSamplingFunctions(){
 
 	// Use lambda expressions to create functions that sample statistical
@@ -706,6 +766,7 @@ int KinesinManagement::GetNumBoundUntethered(){
 	UpdateBoundUntethered();
 	return n_bound_untethered_;
 }
+*/
 
 Kinesin* KinesinManagement::GetFreeMotor(){
 
@@ -727,15 +788,23 @@ Kinesin* KinesinManagement::GetFreeMotor(){
 	return motor;
 }
 
+/*
 Kinesin* KinesinManagement::GetBoundUntetheredMotor(){
 
 	UpdateBoundUntethered();
 	int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_); 
 	return bound_untethered_[i_motor];
 }
+*/
 
 void KinesinManagement::UpdateAllLists(){
 
+	UpdateDocked();
+	UpdateBoundNULL();
+	UpdateBoundATP();
+	UpdateBoundADPP_I();
+	UpdateBoundADPP_II();
+	/*
 	properties_->microtubules.UpdateUnoccupied();
 	UpdateBoundI();
 	UpdateBoundIBindable();
@@ -753,8 +822,137 @@ void KinesinManagement::UpdateAllLists(){
 		UpdateBoundTethered();
 		UpdateStepableTethered();
 	}
+	*/
 }
 
+void KinesinManagement::UpdateDocked(){
+
+	n_docked_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->heads_active_ == 1){
+			if(motor->GetActiveHead()->ligand_ == "ADPP"){
+				double site_coord = motor->GetDockedCoordinate();
+				int i_site = site_coord - motor->mt_->coord_;
+				if(i_site >= 0 
+				&& i_site <= parameters_->microtubules.length - 1){
+					// Ensure site isn't occupied (otherwise, cannot bind_ii)
+					if(!motor->mt_->lattice_[i_site].occupied_){
+						docked_[n_docked_] = motor->GetDockedHead(); 
+						n_docked_++;
+					}
+				}
+			}
+		}
+	}
+}
+
+void KinesinManagement::UpdateBoundNULL(){
+
+	n_bound_NULL_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->heads_active_ == 1){
+			if(motor->head_one_.site_ != nullptr
+			&& motor->head_one_.ligand_ == "NULL"){
+				bound_NULL_[n_bound_NULL_] = &motor->head_one_;
+				n_bound_NULL_++;
+			}
+			if(motor->head_two_.site_ != nullptr
+			&& motor->head_two_.ligand_ == "NULL"){
+				bound_NULL_[n_bound_NULL_] = &motor->head_two_;
+				n_bound_NULL_++;
+			}
+		}
+		else if(motor->heads_active_ == 2){
+			if(motor->head_one_.site_ != nullptr
+			&& motor->head_one_.ligand_ == "NULL"
+			&& motor->head_one_.trailing_){
+				bound_NULL_[n_bound_NULL_] = &motor->head_one_;
+				n_bound_NULL_++;
+			}
+			if(motor->head_two_.site_ != nullptr
+			&& motor->head_two_.ligand_ == "NULL"
+			&& motor->head_two_.trailing_){
+				bound_NULL_[n_bound_NULL_] = &motor->head_two_;
+				n_bound_NULL_++;
+			}
+		}
+	}
+}
+
+void KinesinManagement::UpdateBoundATP(){
+
+	n_bound_ATP_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->head_one_.site_ != nullptr
+		&& motor->head_one_.ligand_ == "ATP"){
+			bound_ATP_[n_bound_ATP_] = &motor->head_one_;
+			n_bound_ATP_++;
+		}
+		if(motor->head_two_.site_ != nullptr
+		&& motor->head_two_.ligand_ == "ATP"){
+			bound_ATP_[n_bound_ATP_] = &motor->head_two_;
+			n_bound_ATP_++;
+		}
+	}
+}
+
+void KinesinManagement::UpdateBoundADPP_I(){
+
+	n_bound_ADPP_i_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->heads_active_ == 1){
+			if(motor->head_one_.site_ != nullptr
+			&& motor->head_one_.ligand_ == "ADPP"){
+				bound_ADPP_i_[n_bound_ADPP_i_] = &motor->head_one_;
+				n_bound_ADPP_i_++;
+			}
+			if(motor->head_two_.site_ != nullptr
+			&& motor->head_two_.ligand_ == "ADPP"){
+				bound_ADPP_i_[n_bound_ADPP_i_] = &motor->head_two_;
+				n_bound_ADPP_i_++;
+			}
+		}
+	}
+}
+
+void KinesinManagement::UpdateBoundADPP_II(){
+
+	n_bound_ADPP_ii_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->heads_active_ == 2){
+			/*
+			if(motor->head_one_.ligand_ == "ADPP" 
+			&& motor->head_two_.ligand_ == "ADPP"){
+				if(motor->head_one_.trailing_){
+					bound_ADPP_ii_[n_bound_ADPP_ii_] = &motor->head_one_;
+					n_bound_ADPP_ii_++;
+				}
+				else{
+					bound_ADPP_ii_[n_bound_ADPP_ii_] = &motor->head_two_;
+					n_bound_ADPP_ii_++;
+				}
+			}
+			else{
+			*/
+				if(motor->head_one_.ligand_ == "ADPP"){
+					bound_ADPP_ii_[n_bound_ADPP_ii_] = &motor->head_one_;
+					n_bound_ADPP_ii_++;
+				}
+				if(motor->head_two_.ligand_ == "ADPP"){
+					bound_ADPP_ii_[n_bound_ADPP_ii_] = &motor->head_two_;
+					n_bound_ADPP_ii_++;
+				}
+//			}
+		}
+	}
+}
+
+/*
 void KinesinManagement::UpdateFreeTethered(){
 
 	n_free_tethered_ = 0;
@@ -1097,11 +1295,74 @@ void KinesinManagement::UpdateStepableTethered(){
 		}
 	}
 }
+*/
 
 void KinesinManagement::GenerateKMCList(){
 
-	int n_events(0);
+	UpdateAllLists();
 	UpdateSerializedEvents();
+
+//	if(n_bound_ADPP_i_ > 0 || n_docked_ > 0)
+//		printf("%i bound_i, %i docked\n", n_bound_ADPP_i_, n_docked_);
+	/*
+	printf("bind: %i, unbind: %i, n_bound: %i\n", 
+			serial_events_[3].n_events_, serial_events_[4].n_events_,
+			n_bound_ADPP_);
+	*/
+	// currently hardcoded ... FIXME eventually 
+	// Stat correcton; ensure there aren't more events than population size
+	while(serial_events_[3].n_events_ + serial_events_[5].n_events_ 
+	> n_bound_ADPP_i_){
+		double ran = properties_->gsl.GetRanProb();
+		double p_tot = serial_events_[3].p_event_ 
+					 + serial_events_[5].p_event_;
+		if(ran < serial_events_[3].p_event_/p_tot
+		&& serial_events_[3].n_events_ > 0)
+			serial_events_[3].n_events_--;
+		else if(serial_events_[5].n_events_ > 0) 
+			serial_events_[5].n_events_--;
+	}
+	// end jank hardcode ... XXX
+
+	int n_events = 0;
+	int pre_array[5*serial_events_.size()];
+	// Scan over all events; record those with >0 expected in this timestep
+	for(int i_entry = 0; i_entry < serial_events_.size(); i_entry++){
+		for(int i = 0; i < serial_events_[i_entry].n_events_; i++){
+			pre_array[n_events] = serial_events_[i_entry].num_code_;
+			n_events++; 
+			// Make sure we don't bamboozle ourselves here
+			if(n_events > 5 * serial_events_.size()){
+				printf("Error in GenerateKMCList for motors!!\n");
+				exit(1);
+			}
+		}
+	}
+	// If total expected events is greater than 0, construct kmc_list_
+	if(n_events > 0){
+		// Trim array to appropriate size/data
+		int reduced_array[n_events];
+		for(int i_entry = 0; i_entry < n_events; i_entry++){
+			reduced_array[i_entry] = pre_array[i_entry];
+		}
+		// If there are more than 1 expected events, shuffle their order
+		if(n_events > 1) gsl_ran_shuffle(properties_->gsl.rng_, 
+										 reduced_array, n_events, 
+										 sizeof(int));
+		// Transfer shuffled array into kmc_list_ structure
+        kmc_list_.resize(n_events);
+        for(int i_entry = 0; i_entry < n_events; i_entry++){
+            kmc_list_[i_entry] = reduced_array[i_entry];
+        }
+	}
+	// Otherwise, simply clear kmc_list_
+    else{
+        kmc_list_.clear();
+    }
+	// Conserve memory
+	kmc_list_.shrink_to_fit();
+
+	/*
 
 	int n_bind_i,
 		n_bind_ii, 
@@ -1122,13 +1383,13 @@ void KinesinManagement::GenerateKMCList(){
 		n_step_to_teth[2*dist_cutoff_ + 1], 
 		n_step_fr_teth[2*dist_cutoff_ + 1];
 
-	n_bind_i = serial_kmc_[0].n_events_; 
+	n_bind_i = serial_events_[0].n_events_; 
 	n_events += n_bind_i;
 
 	// Without tethers, only 5 events to manage
 	if(!parameters_->motors.tethers_active){
-		n_bind_ii = serial_kmc_[1].n_events_;
-		n_unbind_i = serial_kmc_[2].n_events_;
+		n_bind_ii = serial_events_[1].n_events_;
+		n_unbind_i = serial_events_[2].n_events_;
 		// Ensure there aren't more KMC events than singly-bound motors
 		while(n_unbind_i + n_bind_ii > n_bound_i_){
 			double p_tot = p_bind_ii_ + p_unbind_i_;
@@ -1144,8 +1405,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_ii;
 		n_events += n_unbind_i;
 
-		n_unbind_ii = serial_kmc_[3].n_events_;
-		n_step = serial_kmc_[4].n_events_;
+		n_unbind_ii = serial_events_[3].n_events_;
+		n_step = serial_events_[4].n_events_;
 		// Ensure there aren't more KMC events than doubly-bound motors
 		while(n_unbind_ii + n_step > n_stepable_){
 			double p_tot = p_step_ + p_unbind_ii_;
@@ -1163,8 +1424,8 @@ void KinesinManagement::GenerateKMCList(){
 	}
 	// If tethers are active, things are a bit more complicated
 	else{
-		n_bind_ii = serial_kmc_[2].n_events_;
-		n_unbind_i = serial_kmc_[5 + 4*dist_cutoff_].n_events_;
+		n_bind_ii = serial_events_[2].n_events_;
+		n_unbind_i = serial_events_[5 + 4*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than singly-bound motors
 		while(n_unbind_i + n_bind_ii > n_bound_i_){
 			double p_tot = p_bind_ii_ + p_unbind_i_;
@@ -1180,8 +1441,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_ii;
 		n_events += n_unbind_i;
 
-		n_unbind_ii = serial_kmc_[7 + 6*dist_cutoff_].n_events_;
-		n_step = serial_kmc_[14 + 12*dist_cutoff_].n_events_;
+		n_unbind_ii = serial_events_[7 + 6*dist_cutoff_].n_events_;
+		n_step = serial_events_[14 + 12*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than doubly-bound motors
 		while(n_unbind_ii + n_step > n_stepable_){
 			double p_tot = p_step_ + p_unbind_ii_;
@@ -1197,8 +1458,8 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_unbind_ii;
 		n_events += n_step;
 
-		n_bind_i_tethered = serial_kmc_[1].n_events_;
-		n_untether_free = serial_kmc_[12 + 10*dist_cutoff_].n_events_;
+		n_bind_i_tethered = serial_events_[1].n_events_;
+		n_untether_free = serial_events_[12 + 10*dist_cutoff_].n_events_;
 		// Ensure there aren't more KMC events than free tethered motors
 		while(n_untether_free + n_bind_i_tethered > n_free_tethered_){
 			double p_unteth = p_untether_free_;
@@ -1216,31 +1477,31 @@ void KinesinManagement::GenerateKMCList(){
 		n_events += n_bind_i_tethered;
 		n_events += n_untether_free;
 
-		n_tether_free = serial_kmc_[10 + 10*dist_cutoff_].n_events_;
+		n_tether_free = serial_events_[10 + 10*dist_cutoff_].n_events_;
 		n_events += n_tether_free;
 		// FIXME correct tether_bound stat in loop??
-		n_tether_bound = serial_kmc_[11 + 10*dist_cutoff_].n_events_;
+		n_tether_bound = serial_events_[11 + 10*dist_cutoff_].n_events_;
 		n_events += n_tether_bound;
 
 		// Handle the statistics of differnt tether extensions separately 
 		for(int x_dub = 2*comp_cutoff_; x_dub <= 2*dist_cutoff_; x_dub++){
 
 			n_bind_ii_to_teth[x_dub] = 
-				serial_kmc_[3 + x_dub].n_events_;
+				serial_events_[3 + x_dub].n_events_;
 			n_bind_ii_fr_teth[x_dub] = 
-				serial_kmc_[4 + 2*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[4 + 2*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_i_tethered[x_dub] = 
-				serial_kmc_[6 + 4*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[6 + 4*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_ii_to_teth[x_dub] = 
-				serial_kmc_[8 + 6*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[8 + 6*dist_cutoff_ + x_dub].n_events_;
 			n_unbind_ii_fr_teth[x_dub] = 
-				serial_kmc_[9 + 8*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[9 + 8*dist_cutoff_ + x_dub].n_events_;
 			n_untether_bound[x_dub] = 
-				serial_kmc_[13 + 10*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[13 + 10*dist_cutoff_ + x_dub].n_events_;
 			n_step_to_teth[x_dub] = 
-				serial_kmc_[15 + 12*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[15 + 12*dist_cutoff_ + x_dub].n_events_;
 			n_step_fr_teth[x_dub] = 
-				serial_kmc_[16 + 14*dist_cutoff_ + x_dub].n_events_;
+				serial_events_[16 + 14*dist_cutoff_ + x_dub].n_events_;
 
 			int n_bind_to = n_bind_ii_to_teth[x_dub];
 			int n_bind_from = n_bind_ii_fr_teth[x_dub];
@@ -1250,12 +1511,10 @@ void KinesinManagement::GenerateKMCList(){
 			// Make sure there aren't too many events for singly-bound teth'd
 			while(n_bind_to + n_bind_from + 
 			n_unbind_teth + n_unteth > n_bound_i_teth){
-				/*
 				printf("%i avail\n", n_bound_i_teth);
 				printf("%i, %i, %i, %i\n", n_bind_to, n_bind_from, 
 						n_unbind_teth, n_unteth);
 				printf("x_dub is %i\n", x_dub);
-				*/
 				double p_to = p_bind_ii_to_teth_[x_dub];
 				double p_from = p_bind_ii_fr_teth_[x_dub];
 				double p_unbind = p_unbind_i_tethered_[x_dub];
@@ -1459,45 +1718,32 @@ void KinesinManagement::GenerateKMCList(){
     else{
         kmc_list_.clear();
     }
+	*/
 }
 
 void KinesinManagement::UpdateSerializedEvents(){
 
-	// Update all population lists
-	UpdateAllLists();
-
 //	#pragma omp parallel for schedule(static)
-	for(int i_entry = 0; i_entry < serial_kmc_.size(); i_entry++){
-		if(*serial_kmc_[i_entry].pop_ptr_ > 0){
-//			printf("index is %i for ", serial_kmc_[i_entry].i_event_); 
-//			std::cout << serial_kmc_[i_entry].type_ << std::endl;
-			// Find iterator pointing to appropriate sampling function
-			auto itr = std::find_if(
-					sampling_functs_.begin(), 
-					sampling_functs_.end(), 
-					[&](const funct_pair &ref)
-					{
-						return ref.first == serial_kmc_[i_entry].type_;
-					});
-			// Make sure iterator was properly found
-			if(itr != sampling_functs_.end()){
-				// Get number of KMC events expected for this population
-				serial_kmc_[i_entry].n_events_ = itr->second(
-						serial_kmc_[i_entry].x_dist_dub_, 
-						serial_kmc_[i_entry].i_event_);
-			}
-			else{
-				printf("ummm cant find ");
-				std::cout << serial_kmc_[i_entry].type_;
-				printf(" in UpdateSerializedEvents() for MOTORS\n");
-				exit(1);
-			}
+	for(int i_entry = 0; i_entry < serial_events_.size(); i_entry++){
+		event *entry = &serial_events_[i_entry];
+		/*
+		printf("event \"");
+		std::cout << entry->label_;
+		printf("\" targets population \"");
+		std::cout << entry->target_pop_;
+		printf("\", which has a current size of %i\n", *entry->pop_ptr_);
+		*/
+		if(*entry->pop_ptr_ > 0){
+			entry->n_events_ = entry->sampling_funct_(entry->p_event_, 
+													 *entry->pop_ptr_, 
+													  entry->index_);
 		}
 		// If population is 0, no. of kmc events is automatically 0
-		else serial_kmc_[i_entry].n_events_ = 0;
+		else entry->n_events_ = 0;
 	}
 }
 
+/*
 double KinesinManagement::GetWeightBindITethered(){
 
 	double weights_summed = 0;
@@ -1533,13 +1779,50 @@ double KinesinManagement::GetWeightTetherBound(){
 	}
 	return weights_summed;
 }
+*/
 
 void KinesinManagement::RunKMC(){
 
 	double start = MPI_Wtime();
-//	printf("Start of Kinesin KMC cycle\n");
     GenerateKMCList();
-//	printf("End of Kinesin KMC gen list\n");
+
+	if(!kmc_list_.empty()){
+//		printf("\nStart of Kinesin KMC cycle\n");
+		for(int i_entry = 0; i_entry < kmc_list_.size(); i_entry++){
+			int event_code_ = kmc_list_[i_entry];
+			switch(event_code_){
+				case 10:
+//					printf("Bind_I\n");
+					KMC_Bind_I();
+					break;
+				case 20:
+//					printf("Bind_ATP\n");
+					KMC_Bind_ATP();
+					break;
+				case 30:
+//					printf("Phosphorylate\n");
+					KMC_Phosphorylate();
+					break;
+				case 40:
+//					printf("Bind_II\n");
+					KMC_Bind_II();
+					break;
+				case 50:
+//					printf("Unbind_II\n");
+//					properties_->wallace.PrintMicrotubules();
+					KMC_Unbind_II();
+					break;
+				case 60:
+//					printf("Unbind_I\n");
+//					properties_->wallace.PrintMicrotubules();
+					KMC_Unbind_I();
+					break;
+			}
+		}
+	}
+	double finish = MPI_Wtime();
+	properties_->t_motors_ += (finish - start);
+/*
     if(kmc_list_.empty() == false){
         int n_events = kmc_list_.size();
 //		printf("%i MOTOR KMC EVENTS\n", n_events);
@@ -1656,10 +1939,228 @@ void KinesinManagement::RunKMC(){
             }
         }
     }
-	double finish = MPI_Wtime();
-	properties_->t_motors_ += (finish - start);
+	*/
 }
 
+void KinesinManagement::KMC_Bind_I(){
+
+	properties_->microtubules.UpdateUnoccupied();
+	if(properties_->microtubules.n_unoccupied_ > 0){
+		// Get random free motor
+		Kinesin *motor = GetFreeMotor();
+		// Get random unoccupied site
+		Tubulin *site = properties_->microtubules.GetUnoccupiedSite();
+		// Update site details
+		site->motor_head_ = &motor->head_one_;
+		site->occupied_ = true;
+		// Update motor details
+		motor->mt_ = site->mt_;
+		motor->head_one_.site_ = site;
+		motor->head_one_.ligand_ = "NULL";
+		motor->head_one_.trailing_ = false;
+		motor->head_two_.trailing_ = true;
+		motor->heads_active_++;
+		// Update active_ list
+		active_[n_active_] = motor;
+		motor->active_index_ = n_active_;
+		n_active_++;
+
+	}
+	else{
+		printf("Failed to Bind_I (motors): no unoccupied sites.\n");
+	}
+}
+
+void KinesinManagement::KMC_Bind_ATP(){
+
+	UpdateBoundNULL();
+	if(n_bound_NULL_ > 0){
+		// Get a random bound_NULL motor
+		int i_entry = properties_->gsl.GetRanInt(n_bound_NULL_);
+		Kinesin::head *head = bound_NULL_[i_entry];
+		// Verify correctness
+		if(head->ligand_ != "NULL"
+		|| head->site_ == nullptr){
+			printf("Error in KMC_Bind_ATP()\n");
+			exit(1);
+		}
+		// Update motor head
+		head->ligand_ = "ATP";
+		Microtubule *mt = head->site_->mt_;
+//		if(!head->trailing_){
+			int i_site = head->site_->index_;
+			int dx = mt->delta_x_;
+			int mt_length = parameters_->microtubules.length - 1;
+			if(parameters_->motors.endpausing_active){
+				if(!(i_site == 0 && dx == -1) 
+				&& !(i_site == mt_length && dx == 1)){
+					if(!mt->lattice_[i_site + dx].occupied_){
+						head->motor_->ChangeConformation();
+					}
+				}
+			}
+			else head->motor_->ChangeConformation(); 
+			/*	
+		 	else {
+				if((i_site == 0 && dx == -1)
+				|| (i_site == mt_length && dx == 1)){
+					head->motor_->ChangeConformation();
+				}
+				else if(!mt->lattice_[i_site + dx].occupied_){
+					head->motor_->ChangeConformation();
+				}
+			}
+			*/
+//		}
+//		else printf("atp bound to trailing head\n");
+	}
+	else{
+		printf("Failed to Bind_ATP: no bound_NULL motors.\n");
+	}
+}
+
+void KinesinManagement::KMC_Phosphorylate(){
+
+	UpdateBoundATP();
+	if(n_bound_ATP_ > 0){
+		// Get a random bound_ATP motor
+		int i_entry = properties_->gsl.GetRanInt(n_bound_ATP_);
+		Kinesin::head *head = bound_ATP_[i_entry];
+		// Verify correctness
+		if(head->ligand_ != "ATP"
+		|| head->site_ == nullptr){
+			printf("Error in KMC_Phosphorylate()\n");
+			exit(1);
+		}
+		head->ligand_ = "ADPP";
+	}
+	else{
+		printf("Failed to Phosphorylate: no bound_ATP motors.\n");
+	}
+}
+
+void KinesinManagement::KMC_Bind_II(){
+
+	UpdateDocked();
+	if(n_docked_ > 0){
+		// Get a random docked motor
+		int i_entry = properties_->gsl.GetRanInt(n_docked_);
+		Kinesin::head *docked_head = docked_[i_entry];
+		Kinesin *motor = docked_head->motor_; 
+		// Verify correctness
+		if(docked_head->ligand_ != "ADP"
+		|| motor->GetActiveHead()->ligand_ != "ADPP"
+		|| motor->frustrated_){
+			printf("Error in KMC_Bind_II()\n");
+			exit(1);
+		}
+		// Verify that proposed site is unoccupied
+		int i_dock = motor->GetDockedCoordinate() - motor->mt_->coord_;
+		Tubulin *dock_site = &motor->mt_->lattice_[i_dock];
+		if(dock_site->occupied_){
+			printf("Error in KMC_Bind_II(): Dock is occupied!!\n");
+			exit(1);
+		}	
+		// Update site
+		dock_site->motor_head_ = docked_head; 
+		dock_site->occupied_ = true;
+		// Update motor
+		docked_head->site_ = dock_site;
+		docked_head->ligand_ = "NULL";
+		motor->heads_active_++;
+	}
+	else{
+		printf("Failed to Bind_II: no docked motors.\n");
+		properties_->wallace.PrintMicrotubules(2);
+	}
+}
+
+void KinesinManagement::KMC_Unbind_II(){
+
+	UpdateBoundADPP_II();
+	if(n_bound_ADPP_ii_ > 0){
+		// Get a random bound_ADPP motor head
+		int i_entry = properties_->gsl.GetRanInt(n_bound_ADPP_ii_);
+		Kinesin::head *head = bound_ADPP_ii_[i_entry];
+		if(head->site_ == nullptr
+		|| head->ligand_ != "ADPP"){
+			printf("Error in KMC_Unbind (motors): ");
+			std::cout << head->ligand_;
+			printf(" bound to head\n");
+			exit(1);
+		}
+		if(head->motor_->heads_active_ == 1){
+			printf("Error TWO in KMC_Unbind (motors).\n");
+			exit(1);
+		}
+		// Update site
+		head->site_->occupied_ = false;
+		head->site_->motor_head_ = nullptr;
+		// Update motor
+		head->site_ = nullptr;
+		head->ligand_ = "ADP";
+		head->motor_->heads_active_--;
+		if(head->motor_->frustrated_){
+			if(head->trailing_){
+//				printf("STEPPED TRAILING HEAD:\n");
+				head->motor_->ChangeConformation();
+				if(head->motor_->frustrated_){
+					printf("Error THREE in KMC_Unbind().\n");
+					exit(1);
+				}
+			}
+			else{
+//				printf("STEPPED LEADING HEAD:\n");
+				head->motor_->frustrated_ = false; 
+			}
+		}
+	}
+	else{
+		printf("Failed to KMC_Unbind_II: no bound_ADPP motors.\n");
+	}
+}
+
+void KinesinManagement::KMC_Unbind_I(){
+
+	UpdateBoundADPP_I();
+	if(n_bound_ADPP_i_ > 0){
+		// Get a random bound_ADPP motor head
+		int i_entry = properties_->gsl.GetRanInt(n_bound_ADPP_i_);
+		Kinesin::head *head = bound_ADPP_i_[i_entry];
+		if(head->site_ == nullptr
+		|| head->ligand_ != "ADPP"){
+			printf("Error in KMC_Unbind (motors): ");
+			std::cout << head->ligand_;
+			printf(" bound to head\n");
+			exit(1);
+		}
+		if(head->motor_->heads_active_ == 2){
+			printf("Error TWO in KMC_Unbind (motors).\n");
+			exit(1);
+		}
+		// Update site
+		head->site_->occupied_ = false;
+		head->site_->motor_head_ = nullptr;
+		// Update motor
+		head->site_ = nullptr;
+		head->ligand_ = "ADP";
+		head->motor_->heads_active_--;
+		head->motor_->mt_ = nullptr; 
+		// Remove this motor from active_, replace with last entry
+		Kinesin *last_entry = active_[n_active_ - 1];
+		int this_index = head->motor_->active_index_; 
+		if(this_index != n_active_ - 1){
+			active_[this_index] = last_entry; 
+			last_entry->active_index_ = this_index; 
+		}
+		n_active_--;
+	}
+	else{
+		printf("Failed to KMC_Unbind_I: no bound_ADPP motors.\n");
+	}
+}
+
+/*
 void KinesinManagement::KMC_Bind_I(){
 
     // Make sure that at least one unbound motor exists
@@ -1877,7 +2378,6 @@ void KinesinManagement::KMC_Bind_I_Tethered(){
 		int i_motor = properties_->gsl.GetRanInt(n_free_tethered_);
 		Kinesin *motor = free_tethered_[i_motor];
 		Tubulin *site = motor->GetWeightedNeighborSite();
-		/*
 		int attempts = 0;
 		while(site == nullptr){
 			if(attempts > 10*n_free_tethered_){
@@ -1888,7 +2388,6 @@ void KinesinManagement::KMC_Bind_I_Tethered(){
 			site = motor->GetWeightedNeighborSite();
 			attempts++;	
 		}
-		*/
 		if(site != nullptr){
 			// Update site details
 			site->motor_ = motor;
@@ -2380,3 +2879,4 @@ void KinesinManagement::KMC_Step_From_Teth_Rest(int x_dist_doubled){
 //		exit(1);
 	}
 }
+*/

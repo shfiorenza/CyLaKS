@@ -1,11 +1,11 @@
 clear all
 n_mts = 1;
-length_of_microtubule = 250;
+length_of_microtubule = 500;
 n_datapoints = 100000;
 
 starting_point = 00001;
-n_steps = 100000;
-ID = 23;
+n_steps = 10000;
+ID = 1;
 
 final_trajectory = zeros([n_steps 1]);
 

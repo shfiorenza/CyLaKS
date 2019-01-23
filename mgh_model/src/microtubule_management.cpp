@@ -37,7 +37,7 @@ void MicrotubuleManagement::GenerateMicrotubules(){
 
 void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site){
 
-	if(site->motor_ != nullptr || site->xlink_ != nullptr){
+	if(site->motor_head_ != nullptr || site->xlink_ != nullptr){
 		printf("Error @ site %i_%i: should be unoccupied\n", 
 				site->mt_->index_, site->index_);
 		exit(1);
@@ -46,7 +46,7 @@ void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site){
 
 void MicrotubuleManagement::UnoccupiedCheck(int i_mt, int i_site){
 
-	if(mt_list_[i_mt].lattice_[i_site].motor_ != nullptr
+	if(mt_list_[i_mt].lattice_[i_site].motor_head_ != nullptr
 	|| mt_list_[i_mt].lattice_[i_site].xlink_ != nullptr){
 		printf("Error @ site %i_%i: should be unoccupied\n", i_mt, i_site);
 		exit(1);
@@ -55,7 +55,7 @@ void MicrotubuleManagement::UnoccupiedCheck(int i_mt, int i_site){
 
 void MicrotubuleManagement::OccupiedCheck(Tubulin *site){
 	
-	if(site->motor_ == nullptr && site->xlink_ == nullptr){
+	if(site->motor_head_ == nullptr && site->xlink_ == nullptr){
 		printf("Error @ site %i_%i: should be occupied\n", site->mt_->index_, 
 														   site->index_);
 		exit(1);
@@ -64,7 +64,7 @@ void MicrotubuleManagement::OccupiedCheck(Tubulin *site){
 
 void MicrotubuleManagement::OccupiedCheck(int i_mt, int i_site){
 
-	if(mt_list_[i_mt].lattice_[i_site].motor_ == nullptr
+	if(mt_list_[i_mt].lattice_[i_site].motor_head_->motor_ == nullptr
 	&& mt_list_[i_mt].lattice_[i_site].xlink_ == nullptr){
 		printf("Error @ site %i_%i: should be occupied\n", i_mt, i_site);
 		exit(1);
@@ -74,13 +74,15 @@ void MicrotubuleManagement::OccupiedCheck(int i_mt, int i_site){
 void MicrotubuleManagement::UpdateNeighbors(){
 
 	int n_mts = parameters_->microtubules.count; 
-	for(int i_mt = 0; i_mt < n_mts; i_mt+=2){
-		Microtubule *mt = &mt_list_[i_mt];
-		Microtubule *mt_adj = &mt_list_[i_mt+1];
-		mt->neighbor_ = mt_adj;
-		mt_adj->neighbor_ = mt;
+	if(n_mts > 1){
+		for(int i_mt = 0; i_mt < n_mts; i_mt+=2){
+			Microtubule *mt = &mt_list_[i_mt];
+			Microtubule *mt_adj = &mt_list_[i_mt+1];
+			mt->neighbor_ = mt_adj;
+			mt_adj->neighbor_ = mt;
+		}
 	}
-
+	else mt_list_[0].neighbor_ = nullptr; 
 }
 
 void MicrotubuleManagement::UpdateUnoccupied(){

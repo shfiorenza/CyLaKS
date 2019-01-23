@@ -21,7 +21,7 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 	gsl_rng_set(rng_, seed);
 
 	// initialize RNG for each kinesin population on each MPI node
-	int n_kin_pop = properties->kinesin4.serial_kmc_.size();
+	int n_kin_pop = properties->kinesin4.serial_events_.size();
 	kinesin_rngs_.resize(n_kin_pop); 
 	long last_seed = seed; 
 	for(int i_pop(0); i_pop < n_kin_pop; i_pop++){

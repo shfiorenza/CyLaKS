@@ -1,6 +1,6 @@
 ---
-seed: 329954438
-n_steps: 3000000
+seed: 329954433
+n_steps: 200000000
 n_datapoints: 100000
 data_threshold: 0
 delta_t: 5e-06
@@ -21,18 +21,20 @@ microtubules:
     - 0
   immobile_until:
     - 9500
-    - 60
+    - 500
   printout: false
   diffusion: true
 motors:
-  k_on_i: 0.02
-  k_on_ii: 0.02
-  concentration: 1.5
-  conc_eff_bind: 700000
-  k_off_i: 600
-  k_off_ii: 15
-  velocity: 650
-  diffusion_const: 0.0024
+  k_on: 0.02
+  c_bulk: 1.5
+  c_eff_bind: 250000
+  k_on_ATP: 2500
+  c_ATP: 2
+  k_phosphorylate: 95
+  k_off_i: 40
+  k_off_ii: 100
+  endpausing_active: true
+
   tethers_active: false
   k_tether_free: 0.1
   conc_eff_tether: 100
@@ -44,7 +46,7 @@ motors:
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 0  # 2.0
+  concentration: 1.0    # 0.125  # 2.0
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

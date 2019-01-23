@@ -1,8 +1,8 @@
 
 clear all;
 % Often-changed variables
-n_sites = 1250;
-simName = 'mot500kb';
+n_sites = 250;
+simName = 'test';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.00005;
@@ -97,7 +97,7 @@ means = zeros([length(conc_eff) 1]);
         % run histfit with exponential fit
     hist = histfit(run_lengths, n_bins, 'exponential');
     
-    title('10 micron long MT; c\_motor = 0.5 nM; c\_eff\_bind = 700000 nM'); 
+    title('Run length histogram for 20 micron-long MT'); 
     xlabel('Run length (um)');
     ylabel('Counts');
    
@@ -122,7 +122,7 @@ means = zeros([length(conc_eff) 1]);
 %end
 
 %plot(conc_eff, means)
-
+%{
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600])
 title('10 micron long MT; c\_motor = 0.5 nM'); 
@@ -130,4 +130,5 @@ xlabel('Effective binding concentration of 2nd head (nM)');
 ylabel('Mean processivity (um)');
 grid on
 grid minor
+%}
 %semilogx(conc_eff, means, 'LineWidth', 2)

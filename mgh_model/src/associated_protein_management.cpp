@@ -968,16 +968,18 @@ void AssociatedProteinManagement::InitializeKMCSamplingFunctions(){
 };
 
 void AssociatedProteinManagement::UpdateAllLists(){
-
+	
 	UpdateSingleBoundList();
 	UpdateDoubleBoundList();
 	properties_->microtubules.UpdateUnoccupied();
 	if(parameters_->motors.tethers_active){
+		/*
 		UpdateBoundITethered();
 		UpdateBoundIITethered();
 		UpdateFreeTetheredList();
 		UpdateUntethered();
 		properties_->kinesin4.UpdateBoundUntethered();
+		*/
 	}
 }
 
@@ -3180,10 +3182,12 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(int x_dist_dub,
 
 void AssociatedProteinManagement::RunKMC_Tether_Free(){
 
-	int n_motors_unteth = properties_->kinesin4.GetNumBoundUntethered();
+	int n_motors_unteth = 0;
+		//properties_->kinesin4.GetNumBoundUntethered();
 	if(n_motors_unteth > 0){
 		AssociatedProtein *xlink = GetFreeXlink();
-		Kinesin *motor = properties_->kinesin4.GetBoundUntetheredMotor();
+		Kinesin *motor = nullptr;
+			//properties_->kinesin4.GetBoundUntetheredMotor();
 		// Update xlink and motor details
 		xlink->motor_ = motor;
 		xlink->tethered_ = true;

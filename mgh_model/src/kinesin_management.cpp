@@ -14,7 +14,6 @@ void KinesinManagement::Initialize(system_parameters *parameters,
     SetParameters();	
 	InitializeLists();
 	InitializeSerializedKMC();
-//	InitializeSamplingFunctions();
 }
 
 void KinesinManagement::GenerateMotors(){
@@ -32,9 +31,6 @@ void KinesinManagement::GenerateMotors(){
 
 void KinesinManagement::SetParameters(){
 
-	int world_rank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
     double delta_t = parameters_->delta_t;
 
 	// Statistics for KMC
@@ -44,8 +40,8 @@ void KinesinManagement::SetParameters(){
 	double k_on_ATP = parameters_->motors.k_on_ATP;
 	double c_ATP = parameters_->motors.c_ATP;
 	p_bind_ATP_ = k_on_ATP * c_ATP * delta_t;
-	double k_phosphorylate = parameters_->motors.k_phosphorylate;
-	p_phosphorylate_ = k_phosphorylate * delta_t;
+	double k_hydrolyze = parameters_->motors.k_hydrolyze;
+	p_hydrolyze_ = k_hydrolyze * delta_t;
 	double c_eff = parameters_->motors.c_eff_bind;
 	p_bind_ii_ = k_on * c_eff * delta_t; 
 	double k_off_ii = parameters_->motors.k_off_ii;
@@ -53,31 +49,30 @@ void KinesinManagement::SetParameters(){
 	double k_off_i = parameters_->motors.k_off_i;
 	p_unbind_i_ = k_off_i * delta_t; 
 
-	if(world_rank == 0){
-		if(p_bind_i_ > 1) 
-			printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
-		if(p_bind_ATP_ > 1)
-			printf("WARNING: p_bind_ATP=%g for motors\n", p_bind_ATP_);	
-		if(p_phosphorylate_ > 1)
-			printf("WARNING: p_phos=%g for motors\n", p_phosphorylate_);	
-		if(p_bind_ii_ > 1)
-			printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
-		if(p_unbind_ii_ > 1)
-			printf("WARNING: p_unbind_ii=%g for motors\n", p_unbind_ii_);
-		if(p_unbind_i_ > 1)
-			printf("WARNING: p_unbind_i=%g for motors\n", p_unbind_i_);
-	}
+	if(p_bind_i_ > 1) 
+		printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
+	if(p_bind_ATP_ > 1)
+		printf("WARNING: p_bind_ATP=%g for motors\n", p_bind_ATP_);	
+	if(p_hydrolyze_ > 1)
+		printf("WARNING: p_phos=%g for motors\n", p_hydrolyze_);	
+	if(p_bind_ii_ > 1)
+		printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
+	if(p_unbind_ii_ > 1)
+		printf("WARNING: p_unbind_ii=%g for motors\n", p_unbind_ii_);
+	if(p_unbind_i_ > 1)
+		printf("WARNING: p_unbind_i=%g for motors\n", p_unbind_i_);
 
 	rest_dist_ = motors_[0].rest_dist_;
 	comp_cutoff_ = motors_[0].comp_cutoff_;
 	dist_cutoff_ = motors_[0].dist_cutoff_;
-	if(world_rank == 0
-	&& parameters_->motors.tethers_active){
+
+	if(parameters_->motors.tethers_active){
 		printf("For motors:\n");
 		printf("  rest_dist is %g\n", rest_dist_);
 		printf("  comp_cutoff is %i\n", comp_cutoff_);
 		printf("  dist_cutoff is %i\n", dist_cutoff_);
 	}
+
 	double site_size = parameters_->microtubules.site_size;
 	double kbT = parameters_->kbT;
 	double r_0 = motors_[0].r_0_;
@@ -86,25 +81,9 @@ void KinesinManagement::SetParameters(){
 	double r_y = parameters_->microtubules.y_dist / 2;
 
 	double c_eff_teth = parameters_->motors.conc_eff_tether;
-	if(!parameters_->motors.tethers_active){
-		c_eff_teth = 0;
-	}
-//	p_bind_i_tethered_ = k_on_i * c_eff_teth * delta_t;
-//	double k_on_ii = parameters_->motors.k_on_ii;
-//	double c_eff_motor_bind = parameters_->motors.conc_eff_bind;
-//	p_bind_ii_ = k_on_ii * c_eff_motor_bind * delta_t;
-	if(world_rank == 0){
-		if(p_bind_i_ > 1){
-			printf("WARNING: p_bind_i=%g for motors\n", p_bind_i_);
-		}
-		if(p_bind_ii_ > 1){
-			printf("WARNING: p_bind_ii=%g for motors\n", p_bind_ii_);
-		}
-	}
-//	double k_off_i = parameters_->motors.k_off_i; 
-//	p_unbind_i_ = k_off_i * delta_t;
-  //  double k_off = parameters_->motors.k_off_ii;
-//	p_unbind_ii_ = k_off * delta_t;
+	if(!parameters_->motors.tethers_active) c_eff_teth = 0;
+	p_bind_i_tethered_ = k_on * c_eff_teth * delta_t;
+
 	p_bind_ii_to_teth_.resize(2*dist_cutoff_ + 1);
 	p_bind_ii_fr_teth_.resize(2*dist_cutoff_ + 1);
 	p_unbind_i_tethered_.resize(2*dist_cutoff_ + 1);
@@ -133,9 +112,9 @@ void KinesinManagement::SetParameters(){
 			dr_toward = r_fwd - r_0;
 			dr_from = r_bck - r_0; 
 		}
-		double U_tot,
-			   dU_to,
-			   dU_from;
+		double U_tot;
+		double dU_to;
+		double dU_from;
 		if(x_dist_dub == 2*rest_dist_){
 			U_tot = (k_eff_slack/2)*dr*dr;
 			dU_from = (k_eff_slack/2)*(dr_from*dr_from - dr*dr);
@@ -157,11 +136,11 @@ void KinesinManagement::SetParameters(){
 		double weight_to = exp(-dU_to/(2*kbT));
 		double weight_from = exp(-dU_from/(2*kbT));
 		if(x_dist_dub >= 2*dist_cutoff_
-		|| x_dist_dub <= 2*comp_cutoff_){
+				|| x_dist_dub <= 2*comp_cutoff_){
 			weight_from = 0;
 		}
 		if(x_dist_dub < 2*comp_cutoff_
-		|| x_dist_dub > 2*dist_cutoff_){
+				|| x_dist_dub > 2*dist_cutoff_){
 			weight_to = 0;
 		}
 		if(!parameters_->motors.tethers_active){
@@ -174,53 +153,36 @@ void KinesinManagement::SetParameters(){
 		p_unbind_i_tethered_[x_dist_dub] = weight_at * p_unbind_i_;
 		p_unbind_ii_to_teth_[x_dist_dub] = weight_to * p_unbind_ii_;
 		p_unbind_ii_fr_teth_[x_dist_dub] = weight_from * p_unbind_ii_; 
-		if(world_rank == 0){
-			if(p_bind_ii_to_teth_[x_dist_dub] > 1){
-				printf("WARNING: p_bind_ii_to_teth=%g for 2x=%i\n", 
-						p_bind_ii_to_teth_[x_dist_dub], x_dist_dub);
-			}
-			if(p_bind_ii_fr_teth_[x_dist_dub] > 1){
-				printf("WARNING: p_bind_ii_fr_teth=%g for 2x=%i\n", 
-						p_bind_ii_fr_teth_[x_dist_dub], x_dist_dub);
-			}
-			if(p_unbind_i_tethered_[x_dist_dub] > 1){
-				printf("WARNING: p_unbind_i_tethered=%g for 2x=%i\n", 
-						p_unbind_i_tethered_[x_dist_dub], x_dist_dub);
-			}
-			if(p_unbind_ii_to_teth_[x_dist_dub] > 1){
-				printf("WARNING: p_unbind_ii_to_teth=%g for 2x=%i\n", 
-						p_unbind_ii_to_teth_[x_dist_dub], x_dist_dub);
-			}
-			if(p_unbind_ii_fr_teth_[x_dist_dub] > 1){
-				printf("WARNING: p_unbind_ii_fr_teth=%g for 2x=%i\n", 
-						p_unbind_ii_fr_teth_[x_dist_dub], x_dist_dub);
-			}
-		}
+
+		if(p_bind_ii_to_teth_[x_dist_dub] > 1)
+			printf("WARNING: p_bind_ii_to_teth=%g for 2x=%i\n", 
+					p_bind_ii_to_teth_[x_dist_dub], x_dist_dub);
+		if(p_bind_ii_fr_teth_[x_dist_dub] > 1)
+			printf("WARNING: p_bind_ii_fr_teth=%g for 2x=%i\n", 
+					p_bind_ii_fr_teth_[x_dist_dub], x_dist_dub);
+		if(p_unbind_i_tethered_[x_dist_dub] > 1)
+			printf("WARNING: p_unbind_i_tethered=%g for 2x=%i\n", 
+					p_unbind_i_tethered_[x_dist_dub], x_dist_dub);
+		if(p_unbind_ii_to_teth_[x_dist_dub] > 1)
+			printf("WARNING: p_unbind_ii_to_teth=%g for 2x=%i\n", 
+					p_unbind_ii_to_teth_[x_dist_dub], x_dist_dub);
+		if(p_unbind_ii_fr_teth_[x_dist_dub] > 1)
+			printf("WARNING: p_unbind_ii_fr_teth=%g for 2x=%i\n", 
+					p_unbind_ii_fr_teth_[x_dist_dub], x_dist_dub);
 	}
 	double k_tether_free = parameters_->motors.k_tether_free;
-	if(!parameters_->motors.tethers_active){
-		k_tether_free = 0;
-	}
+	if(!parameters_->motors.tethers_active) k_tether_free = 0;
 	p_tether_free_ = k_tether_free * c_motor * delta_t;
 	p_tether_bound_ = k_tether_free * c_eff_teth * delta_t;
 	double k_untether_free = parameters_->motors.k_untether_free;
-	if(!parameters_->motors.tethers_active){
-		k_untether_free = 0;
-	}
+	if(!parameters_->motors.tethers_active) k_untether_free = 0;
 	p_untether_free_ = k_untether_free * delta_t;
-//    double motor_speed = parameters_->motors.velocity;
-//	p_step_ = motor_speed * delta_t / site_size;
-	if(p_step_ > 1
-	&& world_rank == 0){
-		printf("WARNING: p_step=%g for motors\n", p_step_);
-	}
-	// Generate untethering and stepping rates for all tether extensions	
+
+	// Generate untethering rates for all tether extensions	
 	// Everything is 2*dist_cutoff to allow for half-integer distances, 
 	// so the 3rd entry will correspond to a distance of 1.5, etc. 
 	double k_unteth = parameters_->motors.k_untether;
-	if(!parameters_->motors.tethers_active){
-		k_unteth = 0;
-	}
+	if(!parameters_->motors.tethers_active) k_unteth = 0;
 	p_untether_bound_.resize(2*dist_cutoff_ + 1);
 	// Generate stepping rates based on extension of tether: rates are 
 	// increased if stepping towards rest length, and reduced if stepping
@@ -251,16 +213,6 @@ void KinesinManagement::SetParameters(){
 				p_to = 0;
 				p_from = 0;
 			}
-			if(world_rank == 0){
-				if(p_to > 1){
-					printf("WARNING: p_step_to=%g for 2x=%i\n", 
-							p_to, x_dist_dub);
-				}
-				if(p_from > 1){
-					printf("WARNING: p_step_from=%g for 2x=%i\n", 
-							p_from, x_dist_dub);
-				}
-			}
 			if(x_dist_dub >= 2*dist_cutoff_){
 				p_step_to_teth_[x_dist_dub] = p_to;
 				p_step_fr_teth_[x_dist_dub] = 0;
@@ -273,6 +225,13 @@ void KinesinManagement::SetParameters(){
 				p_step_to_teth_[x_dist_dub] = p_to; 
 				p_step_fr_teth_[x_dist_dub] = 0;
 			}
+
+			if(p_to > 1)
+				printf("WARNING: p_step_to=%g for 2x=%i\n", 
+						p_to, x_dist_dub);
+			if(p_from > 1)
+				printf("WARNING: p_step_from=%g for 2x=%i\n", 
+						p_from, x_dist_dub);
 		}
 		// Otherwise, use k_eff for slack
 		else{
@@ -287,16 +246,6 @@ void KinesinManagement::SetParameters(){
 			if(!parameters_->motors.tethers_active){
 				p_to = 0;
 				p_from = 0;
-			}
-			if(world_rank == 0){
-				if(p_to > 1){
-					printf("WARNING: p_step_to=%g for 2x=%i\n", 
-							p_to, x_dist_dub);
-				}
-				if(p_from > 1){
-					printf("WARNING: p_step_from=%g for 2x=%i\n", 
-							p_from, x_dist_dub);
-				}
 			}
 			if(x_dist_dub < 2*comp_cutoff_){
 				p_step_to_teth_[x_dist_dub] = 0;
@@ -314,6 +263,13 @@ void KinesinManagement::SetParameters(){
 				p_step_to_teth_[x_dist_dub] = 0;
 				p_step_fr_teth_[x_dist_dub] = 0;
 			}
+
+			if(p_to > 1)
+				printf("WARNING: p_step_to=%g for 2x=%i\n", 
+						p_to, x_dist_dub);
+			if(p_from > 1)
+				printf("WARNING: p_step_from=%g for 2x=%i\n", 
+						p_from, x_dist_dub);
 		}
 	}
 }
@@ -398,9 +354,9 @@ void KinesinManagement::InitializeSerializedKMC(){
 			20, 1, 0, binomial, p_bind_ATP_, 0};
 	serial_events_[bind_ATP.index_] = bind_ATP;
 
-	event phosphorylate = {"phosphorylate", "bound_ATP", &n_bound_ATP_,
-			30, 2, 0, binomial, p_phosphorylate_, 0};
-	serial_events_[phosphorylate.index_] = phosphorylate;
+	event hydrolyze = {"hydrolyze", "bound_ATP", &n_bound_ATP_,
+			30, 2, 0, binomial, p_hydrolyze_, 0};
+	serial_events_[hydrolyze.index_] = hydrolyze;
 
 	event bind_ii = {"bind_ii", "docked", &n_docked_, 
 			40, 3, 0, binomial, p_bind_ii_, 0};
@@ -1299,16 +1255,17 @@ void KinesinManagement::UpdateStepableTethered(){
 
 void KinesinManagement::GenerateKMCList(){
 
+	sys_time start = sys_clock::now();
+
 	UpdateAllLists();
 	UpdateSerializedEvents();
 
-//	if(n_bound_ADPP_i_ > 0 || n_docked_ > 0)
-//		printf("%i bound_i, %i docked\n", n_bound_ADPP_i_, n_docked_);
-	/*
-	printf("bind: %i, unbind: %i, n_bound: %i\n", 
-			serial_events_[3].n_events_, serial_events_[4].n_events_,
-			n_bound_ADPP_);
-	*/
+	sys_time finish = sys_clock::now();
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_motors_[1] += elapsed.count();
+
+	start = sys_clock::now();
+
 	// currently hardcoded ... FIXME eventually 
 	// Stat correcton; ensure there aren't more events than population size
 	while(serial_events_[3].n_events_ + serial_events_[5].n_events_ 
@@ -1322,7 +1279,6 @@ void KinesinManagement::GenerateKMCList(){
 		else if(serial_events_[5].n_events_ > 0) 
 			serial_events_[5].n_events_--;
 	}
-	// end jank hardcode ... XXX
 
 	int n_events = 0;
 	int pre_array[5*serial_events_.size()];
@@ -1362,6 +1318,9 @@ void KinesinManagement::GenerateKMCList(){
 	// Conserve memory
 	kmc_list_.shrink_to_fit();
 
+	finish = sys_clock::now();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_motors_[2] += elapsed.count();
 	/*
 
 	int n_bind_i,
@@ -1783,8 +1742,10 @@ double KinesinManagement::GetWeightTetherBound(){
 
 void KinesinManagement::RunKMC(){
 
-	double start = MPI_Wtime();
+	sys_time start1 = sys_clock::now();
     GenerateKMCList();
+
+	sys_time start2 = sys_clock::now();
 
 	if(!kmc_list_.empty()){
 //		printf("\nStart of Kinesin KMC cycle\n");
@@ -1800,8 +1761,8 @@ void KinesinManagement::RunKMC(){
 					KMC_Bind_ATP();
 					break;
 				case 30:
-//					printf("Phosphorylate\n");
-					KMC_Phosphorylate();
+//					printf("Hydrolyze\n");
+					KMC_Hydrolyze();
 					break;
 				case 40:
 //					printf("Bind_II\n");
@@ -1820,8 +1781,11 @@ void KinesinManagement::RunKMC(){
 			}
 		}
 	}
-	double finish = MPI_Wtime();
-	properties_->t_motors_ += (finish - start);
+	sys_time finish = sys_clock::now(); 
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	properties_->wallace.t_motors_[0] += elapsed.count();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	properties_->wallace.t_motors_[3] += elapsed.count();
 /*
     if(kmc_list_.empty() == false){
         int n_events = kmc_list_.size();
@@ -2019,7 +1983,7 @@ void KinesinManagement::KMC_Bind_ATP(){
 	}
 }
 
-void KinesinManagement::KMC_Phosphorylate(){
+void KinesinManagement::KMC_Hydrolyze(){
 
 	UpdateBoundATP();
 	if(n_bound_ATP_ > 0){
@@ -2029,13 +1993,13 @@ void KinesinManagement::KMC_Phosphorylate(){
 		// Verify correctness
 		if(head->ligand_ != "ATP"
 		|| head->site_ == nullptr){
-			printf("Error in KMC_Phosphorylate()\n");
+			printf("Error in KMC_Hydrolyze()\n");
 			exit(1);
 		}
 		head->ligand_ = "ADPP";
 	}
 	else{
-		printf("Failed to Phosphorylate: no bound_ATP motors.\n");
+		printf("Failed to Hydrolyze: no bound_ATP motors.\n");
 	}
 }
 

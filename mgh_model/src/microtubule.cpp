@@ -90,7 +90,6 @@ double Microtubule::GetNetForce(){
 			// If doubly-bound, get force from self and potentially teth
 			if(xlink->heads_active_ == 2){
 				forces_summed += xlink->GetExtensionForce(site);
-				/*
 				if(xlink->tethered_){
 					Kinesin* motor = xlink->motor_;
 					// Only bound motors have valid tether extensions
@@ -101,9 +100,7 @@ double Microtubule::GetNetForce(){
 						}
 					}
 				}
-				*/
 			}
-			/*
 			// Otherwise if singly-bound, check for tether force
 			else if(xlink->tethered_){
 				Kinesin* motor = xlink->motor_;
@@ -115,9 +112,7 @@ double Microtubule::GetNetForce(){
 					}
 				}
 			}
-			*/
 		}
-		/*
 		// Otherwise, check if occupied by motor head
 		else if(site->motor_head_ != nullptr){
 			Kinesin* motor = site->motor_head_->motor_;
@@ -151,7 +146,6 @@ double Microtubule::GetNetForce(){
 				}
 			}
 		}
-		*/
 	}
 	return forces_summed; 
 }

@@ -1,15 +1,15 @@
-CC=mpicc
-CXX=mpicxx
+CC=icc
+CXX=icpc
 
 SRCDIR = src
 OBJDIR = obj
 BINDIR = bin
 SRCEXT = cpp
 
-COMPILE_FLAGS = -std=c++14 -fopenmp
+COMPILE_FLAGS = -std=c++14 
 RCOMPILE_FLAGS = -D NDEBUG -O3 -march=native
 DCOMPILE_FLAGS = -D DEBUG -Og -g
-LINK_FLAGS = -fopenmp 
+LINK_FLAGS = 
 GSLINCS = `pkg-config --cflags gsl`
 GSLLIBS = `pkg-config --libs gsl`
 YAMLINCS = -I./libs/yaml-cpp/include

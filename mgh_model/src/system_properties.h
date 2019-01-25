@@ -16,23 +16,6 @@ struct system_properties{
 	
 	int current_step_;
 
-	double t_motors_ = 0;
-	double t_motors_upd_ = 0;
-	double t_motors_cor_ = 0;
-	double t_motors_exe_ = 0;
-
-	double t_xlinks_dif_ = 0;
-	double t_xlinks_dif_upd_ = 0;
-	double t_xlinks_dif_cor_ = 0;
-	double t_xlinks_dif_exe_ = 0;
-
-	double t_xlinks_kmc_ = 0;
-	double t_xlinks_kmc_upd_ = 0;
-	double t_xlinks_kmc_cor_ = 0;
-	double t_xlinks_kmc_exe_ = 0;
-
-	double t_MTs_ = 0;
-
 	FILE *occupancy_file_, 
 		 *motor_ID_file_, *xlink_ID_file_, 
 		 *tether_coord_file_, *mt_coord_file_, 

@@ -8,7 +8,7 @@ struct kinesin_parameters{
 	double c_eff_bind;		// For 2nd ADP head when 1st is bound; nM
 	double k_on_ATP; 		// ATP binding rate to mots; 1/(micromolar*s) 
 	double c_ATP;			// Bulk concentration of ATP; micromolar
-	double k_phosphorylate; // Rate that ATP->ADPP occurs in motors; 1/s
+	double k_hydrolyze; 	// Rate that ATP->ADPP occurs in motors; 1/s
 	double k_off_i;			// Unbinding rate for ADPP-bound heads; 1/s
 	double k_off_ii;
 	bool endpausing_active;

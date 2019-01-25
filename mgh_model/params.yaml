@@ -1,6 +1,6 @@
 ---
 seed: 329954433
-n_steps: 200000000
+n_steps: 20000000
 n_datapoints: 100000
 data_threshold: 0
 delta_t: 5e-06
@@ -26,11 +26,11 @@ microtubules:
   diffusion: true
 motors:
   k_on: 0.02
-  c_bulk: 1.5
+  c_bulk: 0     # 1.5
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
-  k_phosphorylate: 95
+  k_hydrolyze: 95
   k_off_i: 40
   k_off_ii: 100
   endpausing_active: true

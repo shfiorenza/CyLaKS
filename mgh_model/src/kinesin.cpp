@@ -590,8 +590,7 @@ double Kinesin::GetTetherForce(Tubulin *site){
 					force = -1 * force_mag * cosine_;
 				return force;
 			}
-			else
-				return 0; 
+			else return 0; 
 		}
 		else{
 			printf("error in get teth force TWO (motor)\n");

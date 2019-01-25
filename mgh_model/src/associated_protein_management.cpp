@@ -34,8 +34,6 @@ void AssociatedProteinManagement::GenerateXLinks(){
 
 void AssociatedProteinManagement::SetParameters(){
 
-	int world_rank;
-	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank); 
 	double delta_t = parameters_->delta_t;
 	double site_size = parameters_->microtubules.site_size;
 	// DIFFUSION STATISTICS FOR SELF BELOW
@@ -51,8 +49,7 @@ void AssociatedProteinManagement::SetParameters(){
 	teth_cutoff_ = properties_->kinesin4.dist_cutoff_; 
 	dist_cutoff_ = xlinks_[0].dist_cutoff_;
 	rest_dist_ = xlinks_[0].rest_dist_;
-	if(world_rank == 0
-	&& parameters_->motors.tethers_active){
+	if(parameters_->motors.tethers_active){
 		printf("\nFor crosslinkers:\n");
 		printf("  rest_dist is %i\n", rest_dist_);
 		printf("  dist_cutoff is %i\n\n", dist_cutoff_);
@@ -83,16 +80,6 @@ void AssociatedProteinManagement::SetParameters(){
 			double weight_from = exp(-dU_from_rest/(2*kbT));
 			double p_to = weight_to * delta_t / tau_ii_;
 			double p_from = weight_from * delta_t / tau_ii_;
-			if(world_rank == 0){
-				if(p_to > 1){
-					printf("WARNING: p_diffuse_to_rest=%g for x=%i\n", 
-							p_to, x_dist);
-				}
-				if(2*p_from > 1){
-					printf("WARNING: 2*p_diffuse_from_rest=%g for x=%i\n", 
-							2*p_from, x_dist);
-				}
-			}
 			if(x_dist == rest_dist_){
 				p_diffuse_ii_to_rest_[x_dist] = 0;
 				p_diffuse_ii_from_rest_[x_dist] = 2*p_from;
@@ -105,6 +92,13 @@ void AssociatedProteinManagement::SetParameters(){
 				p_diffuse_ii_to_rest_[x_dist] = p_to;
 				p_diffuse_ii_from_rest_[x_dist] = p_from;
 			}
+
+			if(p_to > 1)
+				printf("WARNING: p_diffuse_to_rest=%g for x=%i\n", 
+						p_to, x_dist);
+			if(2*p_from > 1)
+				printf("WARNING: 2*p_diffuse_from_rest=%g for x=%i\n", 
+						2*p_from, x_dist);
 		}
 		else{
 			printf("woah mayne. xlink set parameters \n");
@@ -200,16 +194,12 @@ void AssociatedProteinManagement::SetParameters(){
 		}
 		double p_to_teth_i = weight_to_teth * delta_t / tau_i_;
 		double p_from_teth_i = weight_from_teth * delta_t / tau_i_;
-		if(world_rank == 0){
-			if(p_to_teth_i > 1){
-				printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
-						p_to_teth_i, x_dist_dub);
-			}
-			if(p_from_teth_i > 1){
-				printf("WARNING: p_diffuse_from_teth_i=%g for 2x=%i\n", 
-						p_from_teth_i, x_dist_dub);
-			}
-		}
+		if(p_to_teth_i > 1)
+			printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
+					p_to_teth_i, x_dist_dub);
+		if(p_from_teth_i > 1)
+			printf("WARNING: p_diffuse_from_teth_i=%g for 2x=%i\n", 
+					p_from_teth_i, x_dist_dub);
 		// Input probabilities for stage_i / tethered xlinks
 		p_diffuse_i_to_teth_rest_[x_dist_dub] = p_to_teth_i;
 		p_diffuse_i_from_teth_rest_[x_dist_dub] = p_from_teth_i;
@@ -257,32 +247,6 @@ void AssociatedProteinManagement::SetParameters(){
 					 * delta_t / tau_ii_;
 				double p_from_both = weight_from * weight_from_teth
 					* delta_t / tau_ii_;
-				if(world_rank == 0){
-					if(p_to_both > 1){
-						printf("WARNING: p_diff_to_both=%g", 
-							   p_to_both);	
-						printf(" for 2x=%i, x=%i\n", 
-								x_dist_dub, x_dist);
-					}
-					if(p_to_self_from_teth > 1){
-						printf("WARNING: p_diff_to_self_fr_teth=%g", 
-								p_to_self_from_teth);	
-						printf(" for 2x=%i, x=%i\n", 
-								x_dist_dub, x_dist);
-					}
-					if(p_from_self_to_teth > 1){
-						printf("WARNING: p_diff_fr_self_to_teth=%g", 
-								p_from_self_to_teth);	
-						printf(" for 2x=%i, x=%i\n", 
-								x_dist_dub, x_dist);
-					}
-					if(p_from_both > 1){
-						printf("WARNING: p_diff_fr_both=%g", 
-								p_from_both);	
-						printf(" for 2x=%i, x=%i\n", 
-								x_dist_dub, x_dist);
-					}
-				}
 				p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist]
 					= p_to_both;
 				p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist]
@@ -291,6 +255,31 @@ void AssociatedProteinManagement::SetParameters(){
 					= p_from_self_to_teth; 
 				p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist]
 					= p_from_both; 
+
+				if(p_to_both > 1){
+					printf("WARNING: p_diff_to_both=%g", 
+							p_to_both);	
+					printf(" for 2x=%i, x=%i\n", 
+							x_dist_dub, x_dist);
+				}
+				if(p_to_self_from_teth > 1){
+					printf("WARNING: p_diff_to_self_fr_teth=%g", 
+							p_to_self_from_teth);	
+					printf(" for 2x=%i, x=%i\n", 
+							x_dist_dub, x_dist);
+				}
+				if(p_from_self_to_teth > 1){
+					printf("WARNING: p_diff_fr_self_to_teth=%g", 
+							p_from_self_to_teth);	
+					printf(" for 2x=%i, x=%i\n", 
+							x_dist_dub, x_dist);
+				}
+				if(p_from_both > 1){
+					printf("WARNING: p_diff_fr_both=%g", 
+							p_from_both);	
+					printf(" for 2x=%i, x=%i\n", 
+							x_dist_dub, x_dist);
+				}
 			}
 			else{
 				printf("woah mayne. xlink set parameters TWOO \n");
@@ -348,11 +337,9 @@ void AssociatedProteinManagement::SetParameters(){
 			weight_at_teth = 0;
 		}
 		double p_unbind_teth = weight_at_teth * p_unbind_i_;
-		if(p_unbind_teth > 1
-		&& world_rank == 0){
+		if(p_unbind_teth > 1)
 			printf("WARNING: p_unbind_teth (XLINK)=%g for 2x=%i\n", 
 					p_unbind_teth, x_dist_dub);
-		}
 		p_unbind_i_tethered_[x_dist_dub] = p_unbind_teth; 
 		// XXX variable shift in delta-E based on x_dist XXX
 		// Run through x_dists to get probs for stage_ii / tethered xlinks
@@ -419,16 +406,12 @@ void AssociatedProteinManagement::SetParameters(){
 			}
 			double p_unbind_to = weight_to_teth * p_unbind_ii_[x_dist];
 			double p_unbind_from = weight_from_teth * p_unbind_ii_[x_dist];
-			if(world_rank == 0){
-				if(p_unbind_to > 1){
-					printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
-							p_unbind_to, x_dist_dub, x_dist);
-				}
-				if(p_unbind_from > 1){
-					printf("WARNING: p_unbind_from = %g for 2x=%i, x=%i\n", 
-							p_unbind_from, x_dist_dub, x_dist);
-				}
-			}
+			if(p_unbind_to > 1)
+				printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
+						p_unbind_to, x_dist_dub, x_dist);
+			if(p_unbind_from > 1)
+				printf("WARNING: p_unbind_from = %g for 2x=%i, x=%i\n", 
+						p_unbind_from, x_dist_dub, x_dist);
 			p_unbind_ii_to_teth_[x_dist_dub][x_dist] = p_unbind_to;
 			p_unbind_ii_from_teth_[x_dist_dub][x_dist] = p_unbind_from; 
 		}
@@ -1497,13 +1480,15 @@ AssociatedProtein* AssociatedProteinManagement::GetUntetheredXlink(){
 
 void AssociatedProteinManagement::GenerateDiffusionList(){
 
-	int n_events = 0;
-	double start = MPI_Wtime();
-	UpdateSerializedDifEvents();
-	double finish = MPI_Wtime();
-	properties_->t_xlinks_dif_upd_ += (finish - start);
+	sys_time start = sys_clock::now();
 
-	start = MPI_Wtime();
+	UpdateSerializedDifEvents();
+
+	sys_time finish = sys_clock::now();
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_xlinks_dif_[1] += elapsed.count();
+
+	start = sys_clock::now();
 	/*
 	event populations[n_distinct_dif_pops_][25]; 
 	int indices[n_distinct_dif_pops_]{ }; 
@@ -1515,6 +1500,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	}
 	*/
 
+	int n_events = 0;
 	int n_i_fwd,
 		n_i_bck,
 		n_ii_to[dist_cutoff_ + 1],
@@ -1822,8 +1808,10 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 		else dif_list_.clear();	
 	}
 	dif_list_.shrink_to_fit();
-	finish = MPI_Wtime();
-	properties_->t_xlinks_dif_cor_ += (finish - start);
+
+	finish = sys_clock::now();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_xlinks_dif_[2] += elapsed.count();
 }
 
 void AssociatedProteinManagement::UpdateSerializedDifEvents(){
@@ -1866,14 +1854,17 @@ void AssociatedProteinManagement::UpdateSerializedDifEvents(){
 void AssociatedProteinManagement::RunDiffusion(){
 
 //	printf("start of xlink diffusion cycle\n");
-	double start = MPI_Wtime();
+	sys_time start1 = sys_clock::now();
+
 	GenerateDiffusionList();
+	
+	sys_time start2 = sys_clock::now();
+
 	if(dif_list_.empty() == false){
 		int n_events = dif_list_.size();
 //		printf("%i XLINK DIFFUSION EVENTS\n", n_events);
 		int x_dist, 			// refers to dist (in sites) of xlink ext
 			x_dist_dub;			// refers to 2*dist ('') of motor ext
-		double start_b = MPI_Wtime();
 		for(int i_event = 0; i_event < n_events; i_event++){
 			int diff_event = dif_list_[i_event];
 			if(diff_event >= 300 && diff_event < 400){
@@ -1963,11 +1954,12 @@ void AssociatedProteinManagement::RunDiffusion(){
 					break;
 			}
 		}
-		double finish_b = MPI_Wtime();
-		properties_->t_xlinks_dif_exe_ += (finish_b - start_b);
 	}
-	double finish = MPI_Wtime();
-	properties_->t_xlinks_dif_ += (finish - start);
+	sys_time finish = sys_clock::now();
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	properties_->wallace.t_xlinks_dif_[0] += elapsed.count();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	properties_->wallace.t_xlinks_dif_[3] += elapsed.count();
 }
 
 void AssociatedProteinManagement::RunDiffusionI_Forward(){
@@ -2332,9 +2324,17 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth(
 
 void AssociatedProteinManagement::GenerateKMCList(){
 
-	int n_events = 0;
+	sys_time start = sys_clock::now();
+
 	UpdateSerializedKMCEvents();
 
+	sys_time finish = sys_clock::now();
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_xlinks_kmc_[1] += elapsed.count();
+
+	start = sys_clock::now();
+
+	int n_events = 0;
 	int n_bind_i,
 		n_bind_ii, 
 		n_unbind_i, 
@@ -2583,6 +2583,9 @@ void AssociatedProteinManagement::GenerateKMCList(){
 		}
 	}
 	kmc_list_.shrink_to_fit();
+	finish = sys_clock::now();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	properties_->wallace.t_xlinks_kmc_[2] += elapsed.count();
 }
 
 void AssociatedProteinManagement::UpdateSerializedKMCEvents(){
@@ -2682,11 +2685,16 @@ double AssociatedProteinManagement::GetWeightBindIITethered(){
 
 void AssociatedProteinManagement::RunKMC(){
 	
+//	printf("Start of xlink KMC cycle\n");
+	
+	sys_time start1 = sys_clock::now();
+
+	GenerateKMCList();
+
+	sys_time start2 = sys_clock::now();
+
 	int x_dist;		// extension of xlink for stage2 unbinding
 	int x_dub;		// twice the extension of tether for stage1&2 binding
-//	printf("Start of xlink KMC cycle\n");
-	double start = MPI_Wtime();
-	GenerateKMCList();
 	if(kmc_list_.empty() == false){
 		int n_events = kmc_list_.size();
 //		printf("%i XLINK KMC EVENTS\n", n_events);
@@ -2761,8 +2769,11 @@ void AssociatedProteinManagement::RunKMC(){
 			}
 		}
 	}
-	double finish = MPI_Wtime();
-	properties_->t_xlinks_kmc_ += (finish - start);
+	sys_time finish = sys_clock::now();
+	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	properties_->wallace.t_xlinks_kmc_[0] += elapsed.count();
+	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	properties_->wallace.t_xlinks_kmc_[3] += elapsed.count();
 }
 
 void AssociatedProteinManagement::RunKMC_Bind_I(){

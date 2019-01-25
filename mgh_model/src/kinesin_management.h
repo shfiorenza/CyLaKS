@@ -17,9 +17,6 @@ struct system_properties;
 
 class KinesinManagement{
 	private:
-		system_parameters *parameters_ = nullptr;
-		system_properties *properties_ = nullptr;
-
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
 			std::string label_;
@@ -34,17 +31,19 @@ class KinesinManagement{
 			int n_events_ = -1;			// Number of predicted events 
 		};
 
+		system_parameters *parameters_ = nullptr;
+		system_properties *properties_ = nullptr;
+
 	public:
+		// Total number of motors in system; static
 		int n_motors_ = 0;
-		// motors actively bound to some MT or xlink; dynamically updated
+		// Motors actively bound to some MT or xlink; dynamically updated
 		int n_active_ = 0;	
 		
-		// As a general rule, populations are 
-		// untethered unless otherwise specified 
-		int n_docked_ = 0;		// unbound but other head is bound_ADPP
+		// Populations are untethered unless otherwise specified 
+		int n_docked_ = 0; 
 		int n_bound_NULL_ = 0;
 		int n_bound_ATP_ = 0;
-		int n_bound_ATP_mobile_ = 0; 
 		int n_bound_ADPP_i_ = 0;
 		int n_bound_ADPP_ii_ = 0;
 
@@ -77,7 +76,7 @@ class KinesinManagement{
 		// Kinematics probabilities 
 		double p_bind_i_;
 		double p_bind_ATP_;
-		double p_phosphorylate_;
+		double p_hydrolyze_;
 		double p_bind_ii_;
 		double p_unbind_ii_;
 		double p_unbind_i_;
@@ -154,10 +153,9 @@ class KinesinManagement{
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
 		Kinesin* GetFreeMotor();
-		/*
+
 		int GetNumBoundUntethered();
 		Kinesin* GetBoundUntetheredMotor();
-		*/
 
 		void UpdateAllLists();
 		void UpdateDocked();
@@ -165,7 +163,7 @@ class KinesinManagement{
 		void UpdateBoundATP();
 		void UpdateBoundADPP_II();
 		void UpdateBoundADPP_I();
-		/*
+
 		void UpdateFreeTethered();
 		void UpdateBoundI(); 
 		void UpdateBoundIBindable();
@@ -178,7 +176,6 @@ class KinesinManagement{
 		void UpdateBoundIITethered();
 		void UpdateBoundTethered(); 
 		void UpdateStepableTethered();
-		*/
 
 		void GenerateKMCList();
 		void UpdateSerializedEvents();
@@ -190,10 +187,18 @@ class KinesinManagement{
 		void RunKMC();
 		void KMC_Bind_I();	// Bind free ADP head; convert to NULL
 		void KMC_Bind_ATP();	// Bind ATP to NULL bound heads
-		void KMC_Phosphorylate(); // Convert ATP to ADPP on a bound head
+		void KMC_Hydrolyze(); // Convert ATP to ADPP on a bound head
 		void KMC_Bind_II();	// Bind docked head; other head must be ADPP
 		void KMC_Unbind_II(); 	// Unbind ADPP heads; converts to ADP
 		void KMC_Unbind_I();
+
+		void KMC_Bind_I_Tethered(int x_dub);
+		void KMC_Unbind_I_Tethered(int x_dub);
+		void KMC_Tether_Free();
+		void KMC_Tether_Bound(int x_dub);
+		void KMC_Untether_Free();
+		void KMC_Untether_Bound(int x_dub); 
+
 		/*
 		void KMC_Bind_I();
 		void KMC_Bind_II();	

@@ -10,11 +10,6 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 	parameters_ = parameters;
 	properties_ = properties;
 
-	int world_rank; 
-	MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-	int world_size;
-	MPI_Comm_size(MPI_COMM_WORLD, &world_size);
-
 	// initialize "root" RNG
 	long seed = parameters->seed; 
 	rng_ = gsl_rng_alloc(generator_type_);
@@ -25,7 +20,7 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 	kinesin_rngs_.resize(n_kin_pop); 
 	long last_seed = seed; 
 	for(int i_pop(0); i_pop < n_kin_pop; i_pop++){
-		long pop_seed = seed + 1 + world_rank*(n_kin_pop + 1) + i_pop;
+		long pop_seed = seed + 1 + i_pop;
 		kinesin_rngs_[i_pop] = gsl_rng_alloc(generator_type_);
 		gsl_rng_set(kinesin_rngs_[i_pop], pop_seed);
 		// Ensure seeds aren't duplicated amongst threads
@@ -40,9 +35,9 @@ void RandomNumberManagement::Initialize(system_parameters *parameters,
 	// (there will always be more diffusion events than KMC)
 	int n_xl_pop = properties->prc1.serial_dif_.size();
 	crosslinker_rngs_.resize(n_xl_pop);
-	long seed_offset = seed + 1 + world_size*(n_kin_pop + 1) + n_kin_pop;
+	long seed_offset = seed + 1  + n_kin_pop;
 	for(int i_pop(0); i_pop < n_xl_pop; i_pop++){
-		long pop_seed = seed_offset + 1 + world_rank*(n_xl_pop + 1) + i_pop;
+		long pop_seed = seed_offset + 1  + i_pop;
 		crosslinker_rngs_[i_pop] = gsl_rng_alloc(generator_type_);
 		gsl_rng_set(crosslinker_rngs_[i_pop], pop_seed);
 		if(pop_seed == last_seed){

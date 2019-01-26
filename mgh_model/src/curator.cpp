@@ -34,9 +34,8 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
 	params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
 	params->motors.tethers_active = motors["tethers_active"].as<bool>();
-	params->motors.k_tether_free = motors["k_tether_free"].as<double>();
-	params->motors.conc_eff_tether = motors["conc_eff_tether"].as<double>();
-	params->motors.k_untether_free = motors["k_untether_free"].as<double>();
+	params->motors.k_tether = motors["k_tether"].as<double>();
+	params->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
 	params->motors.k_untether = motors["k_untether"].as<double>();
 	params->motors.r_0 = motors["r_0"].as<double>();
 	params->motors.k_spring = motors["k_spring"].as<double>();
@@ -109,12 +108,8 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    tethers_active = %s\n", 
 			params->motors.tethers_active ? "true" : "false");	
 	if(params->motors.tethers_active){
-		printf("    k_tether_free = %g /(nM*s)\n", 
-				params->motors.k_tether_free);
-		printf("    conc_eff_tether = %g nM\n", 
-				params->motors.conc_eff_tether);
-		printf("    k_untether_free = %g /s\n", 
-				params->motors.k_untether_free);
+		printf("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
+		printf("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
 		printf("    k_untether = %g /s\n", params->motors.k_untether);
 		printf("    r_0 = %g nm\n", params->motors.r_0);
 		printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
@@ -557,7 +552,7 @@ void Curator::OutputData(){
 	// Scan through kinesin4/prc1 statistics to get extension occupancies 
 	for(int i_ext = 0; i_ext <= 2*motor_ext_cutoff; i_ext++){
 		KinesinManagement *kinesin4 = &properties_->kinesin4; 
-		motor_extension_array[i_ext] = kinesin4->n_bound_ii_tethered_[i_ext];
+		motor_extension_array[i_ext] = kinesin4->n_bound_tethered_[i_ext];
 	}
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 

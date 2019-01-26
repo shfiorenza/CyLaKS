@@ -14,16 +14,12 @@ struct kinesin_parameters{
 	bool endpausing_active;
 
 	bool tethers_active;
-	double k_tether_free;   // Bulk (not bound) tethering rate; 1/(nM*s)
-	double conc_eff_tether;	// Effective concentration of first head
-							//   when tethered but not bound; nM
-	double k_untether_free; // Untethering rate when free; 1/s
+	double k_tether;		// Tethering rate; 1/(nM*s)
+	double c_eff_tether;	// Effective concentration of free_tethered motors
 	double k_untether;		// Untethering rate when bound; 1/s
 	double r_0;				// Rest length of stalk (or tether); nm
 	double k_spring;		// Spring constant of tether; pN/nm
-	double k_slack;			// Spring constant of tether when shorter than
-							//  rest length--similar to floppy rope; pN/nm
-	double stall_force;		// Force at which the motor can no longer step
-							//  and has a velocity of 0; pN 
+	double k_slack;			// '' but when shorter than rest length
+	double stall_force;		// Force at which the motor can't step; pN
 };
 #endif

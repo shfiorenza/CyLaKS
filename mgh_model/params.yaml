@@ -36,9 +36,8 @@ motors:
   endpausing_active: true
 
   tethers_active: false
-  k_tether_free: 0.1
-  conc_eff_tether: 100
-  k_untether_free: 0.025
+  k_tether: 0.1
+  c_eff_tether: 100
   k_untether: 0.068
   r_0: 120
   k_spring: 0.3

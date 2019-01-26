@@ -1,17 +1,17 @@
-CC=icc
-CXX=icpc
+CC=gcc
+CXX=g++
 
 SRCDIR = src
 OBJDIR = obj
 BINDIR = bin
 SRCEXT = cpp
 
-COMPILE_FLAGS = -std=c++14 
+COMPILE_FLAGS = -std=c++17 
 RCOMPILE_FLAGS = -D NDEBUG -O3 -march=native
 DCOMPILE_FLAGS = -D DEBUG -Og -g
-LINK_FLAGS = 
-GSLINCS = `pkg-config --cflags gsl`
-GSLLIBS = `pkg-config --libs gsl`
+LINK_FLAGS = -static
+GSLINCS = -I./libs/gsl/include
+GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
 YAMLINCS = -I./libs/yaml-cpp/include
 YAMLLIBS = -Wl,-rpath=./libs/yaml-cpp/static -L./libs/yaml-cpp/static -lyaml-cpp
 INCLUDES = $(GSLINCS) $(YAMLINCS)

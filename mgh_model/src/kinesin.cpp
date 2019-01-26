@@ -144,11 +144,11 @@ void Kinesin::CalculateCutoffs(){
 		double r_y = parameters_->microtubules.y_dist / 2;
 		double kbT = parameters_->kbT; 
 		// First, calculate rest_dist_ in number of sites
-		int rough_rest_dist = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
+		int roughly_rest = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
 		double rest_scan[3]; 
 		double scan_force[3]; 
 		for(int i_scan = -1; i_scan <= 1; i_scan++){
-			rest_scan[i_scan + 1] = rough_rest_dist + (i_scan * 0.5);
+			rest_scan[i_scan + 1] = roughly_rest + ((double)i_scan * 0.5);
 			double rest_scan_length = rest_scan[i_scan + 1] * site_size;
 			double r_scan = sqrt(r_y*r_y+rest_scan_length*rest_scan_length); 
 			if(r_scan >= r_0_)

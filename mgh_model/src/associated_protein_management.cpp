@@ -291,7 +291,7 @@ void AssociatedProteinManagement::SetParameters(){
 	double k_on = parameters_->xlinks.k_on; 
 	double c_xlink = parameters_->xlinks.concentration;
 	p_bind_i_ = k_on * c_xlink * delta_t;
-	double c_eff_teth = parameters_->motors.conc_eff_tether;
+	double c_eff_teth = parameters_->motors.c_eff_tether;
 	if(!parameters_->motors.tethers_active){
 		c_eff_teth = 0;
 	}
@@ -416,8 +416,8 @@ void AssociatedProteinManagement::SetParameters(){
 			p_unbind_ii_from_teth_[x_dist_dub][x_dist] = p_unbind_from; 
 		}
 	}
-	double k_teth = parameters_->motors.k_tether_free;
-	double k_unteth = parameters_->motors.k_untether_free;
+	double k_teth = parameters_->motors.k_tether;
+	double k_unteth = parameters_->motors.k_untether;
 	if(!parameters_->motors.tethers_active){
 		k_teth = 0;
 		k_unteth = 0;

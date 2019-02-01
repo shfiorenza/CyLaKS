@@ -7,7 +7,8 @@ struct system_properties;
 
 using sys_clock = std::chrono::high_resolution_clock;
 using sys_time = sys_clock::time_point;
-using t_microsec = std::chrono::microseconds;
+using t_unit = std::chrono::nanoseconds;
+const int n_per_sec_ = 1e9; 
 
 class Curator{
 	private:

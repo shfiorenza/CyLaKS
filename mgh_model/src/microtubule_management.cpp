@@ -154,11 +154,11 @@ void MicrotubuleManagement::RunDiffusion(){
 	}
 
 	sys_time finish = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
 	properties_->wallace.t_MTs_[1] += elapsed.count(); 
 
 	sys_time start2 = sys_clock::now();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
 
 	/*	Calculate MT displacements for this timestep */
 	int displacement[n_mts];
@@ -189,7 +189,7 @@ void MicrotubuleManagement::RunDiffusion(){
 	}
 
 	finish = sys_clock::now();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
 	properties_->wallace.t_MTs_[2] += elapsed.count();
 
 	start2 = sys_clock::now();
@@ -215,8 +215,8 @@ void MicrotubuleManagement::RunDiffusion(){
 	}
 
 	finish = sys_clock::now();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
 	properties_->wallace.t_MTs_[3] += elapsed.count();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
 	properties_->wallace.t_MTs_[0] += elapsed.count();
 }

@@ -1,9 +1,9 @@
 clear all
 
 % Parameters from sim
-n_steps = 200000000;
-n_datapoints = 100000;
-delta_t = 0.000005; 
+n_steps = 10000000;
+n_datapoints = 10000;
+delta_t = 0.00001; 
 n_sites = 500;
 n_mts = 2;
 xlink_cutoff = 7;
@@ -27,8 +27,8 @@ xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
-n_frames = 100000;
-frames_per_plot = 100;
+n_frames = n_datapoints;
+frames_per_plot = 10;
 start_frame = 1;
 site_height = 1;
 site_width = 1;
@@ -47,7 +47,6 @@ mt_data_file = fopen(mtFile);
 mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
-%mt_data = zeros([n_mts n_datapoints]);
 
 motor_data_file = fopen(motorFile);
 motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
@@ -63,7 +62,6 @@ teth_data_file = fopen(tethFile);
 teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double');
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
-%teth_data = zeros([n_sites n_mts n_datapoints]) - 1;
 
 end_frame = start_frame + n_frames - 1;
 if(end_frame > n_datapoints)

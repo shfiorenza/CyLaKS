@@ -151,7 +151,7 @@ class AssociatedProteinManagement{
 		void UpdateDoubleBoundList();
 		void UpdateBoundIITethered();
 		void UpdateFreeTetheredList();
-		void UpdateUntethered();
+		void UpdateBoundUntethered();
 		
 		void UpdateAllSiteLists();
 		void UpdateSingleUntetheredSites();
@@ -160,7 +160,7 @@ class AssociatedProteinManagement{
 		void UpdateDoubleTetheredSites();
 
 		AssociatedProtein* GetFreeXlink();
-		AssociatedProtein* GetUntetheredXlink();
+		AssociatedProtein* GetBoundUntetheredXlink();
 
 		void GenerateDiffusionList();		// XXX
 		void UpdateSerializedDifEvents();

@@ -15,41 +15,28 @@ class Kinesin{
 		// e.g. ...lookup_[1] is an x-dist of 1/2 of a site
 		std::vector<double> cosine_lookup_;
 		std::vector<double> extension_lookup_;
-		std::vector<double> binding_weight_lookup_;
-		std::vector<double> tethering_weight_lookup_;
-
-		// Neighbor xlinks are for when the motor is bound but untethered
-		std::vector<AssociatedProtein*> neighbor_xlinks_;
+		// "creation" refers to creating a state with some extension
+		std::vector<double> creation_weight_lookup_;
 		// Neighbor sites are for when the motor is tethered but unbound
 		std::vector<Tubulin*> neighbor_sites_;
+		// Neighbor xlinks are for when the motor is bound but untethered
+		std::vector<AssociatedProtein*> neighbor_xlinks_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 		
 	public:
 		struct head{
-			Kinesin *motor_ = nullptr; 
-			Tubulin *site_ = nullptr; 
+			Kinesin *motor_; 
+			Tubulin *site_; 
 			bool trailing_; 
-			std::string ligand_ = "NULL"; 
+			std::string ligand_; 
 		};
 
 		int ID_;				// Unique ID of this kinesin in resevoir
 		int speciesID_ = 2;		// Unique ID of this species (kinesin)
 		int active_index_; 		// index of this motor in active_ list
 		int heads_active_ = 0;
-
-		bool frustrated_ = false;
-		bool tethered_ = false;
-
-		head head_one_,
-			 head_two_; 
-
-		Microtubule *mt_ = nullptr; 		
-		AssociatedProtein *xlink_ = nullptr; 
-
-
-
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
 		
@@ -60,52 +47,53 @@ class Kinesin{
 		int comp_cutoff_;			// min value x_dist (not 2x) can be
 		double rest_dist_;			// spring extension is ~0 for this
 
-		double r_0_;			
-		double k_spring_;
-		double k_slack_;
+		double r_0_;			// in nm
+		double k_spring_;		// in pN / nm
+		double k_slack_;		// in pN / nm
 		double extension_;		// in nm
 		double cosine_;			// of motor tether angle w.r.t. horizontal
 
+		bool frustrated_ = false;
+		bool tethered_ = false;
+
+		head head_one_ = {this, nullptr, false, "ADP"},
+			 head_two_ = {this, nullptr, true, "ADP"};
+
+		Microtubule *mt_ = nullptr; 		
+		AssociatedProtein *xlink_ = nullptr; 
+
 	private:
 		void SetParameters();
-
-
 		void CalculateCutoffs();
-		void InitiateNeighborLists();
-		void PopulateTetheringLookupTable();
-		void PopulateBindingLookupTable();
-		void PopulateExtensionLookups();
+		void InitializeNeighborLists();
+		void InitializeExtensionLookup();
+		void InitializeCreationWeightLookup();
 
 	public:
 		Kinesin();
 		void Initialize(system_parameters *parameters, 
 				system_properties *properties, int ID);
 		
-		void ChangeConformation();
-
-		double GetStalkCoordinate(); 	  // tail originates from stalk
-		double GetDockedCoordinate();
 		head* GetActiveHead();
 		head* GetDockedHead();
+		double GetStalkCoordinate(); 	  // tail originates from stalk
+		double GetDockedCoordinate();
+		void ChangeConformation();
 
-
-
-		void UpdateNeighborXlinks();
+		bool AtCutoff();
 		void UpdateNeighborSites();
+		void UpdateNeighborXlinks();
 		void UpdateExtension();
 		void ForceUntether();
 		void UntetherSatellite();
 
-		bool AtCutoff();
-
 		int GetDirectionTowardRest();
 		double GetRestLengthCoordinate(); // coord where ext ~ 0 when bound
-		double GetTetheringWeight(AssociatedProtein *xlink);
-		double GetBindingWeight(Tubulin *site);
 		double GetTetherForce(Tubulin *site);
-		Tubulin* GetActiveHeadSite();
-		Tubulin* GetSiteCloserToRest();
-		Tubulin* GetSiteFartherFromRest();
+		double GetTotalBindingWeight();
+		double GetBindingWeight(Tubulin *site);
+		double GetTotalTetheringWeight();
+		double GetTetheringWeight(AssociatedProtein *xlink);
 		Tubulin* GetWeightedNeighborSite();
 		AssociatedProtein* GetWeightedNeighborXlink();
 };

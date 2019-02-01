@@ -32,7 +32,8 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
-	params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
+	params->motors.endpausing_active 
+		= motors["endpausing_active"].as<bool>();
 	params->motors.tethers_active = motors["tethers_active"].as<bool>();
 	params->motors.k_tether = motors["k_tether"].as<double>();
 	params->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
@@ -104,7 +105,6 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
 	printf("    endpausing_active = %s\n", 
 			params->motors.endpausing_active ? "true" : "false");	
-	printf("\n");
 	printf("    tethers_active = %s\n", 
 			params->motors.tethers_active ? "true" : "false");	
 	if(params->motors.tethers_active){
@@ -334,7 +334,7 @@ void Curator::PrintMicrotubules(){
 				else if(xlink->heads_active_ == 2)
 					if(xlink->tethered_ == false){
 						printf("x");			
-						//						printf("%i", xlink->x_dist_);
+//						printf("%i", xlink->x_dist_);
 					}	
 					else
 						printf("X");
@@ -372,7 +372,7 @@ void Curator::PrintMicrotubules(){
 								printf(")");
 							}
 							else
-								//								printf("]");
+//								printf("]");
 								printf("%i", motor->x_dist_doubled_ % 10);
 						}
 					} 
@@ -393,7 +393,7 @@ void Curator::PrintMicrotubules(){
 								printf(")");
 							}
 							else
-								//		printf("]");
+						//		printf("]");
 								printf("%i", motor->x_dist_doubled_ % 10);
 						}
 					}
@@ -446,10 +446,8 @@ void Curator::PrintMicrotubules(){
 
 void Curator::PrintMicrotubules(double pause_duration){
 
-	if(parameters_->microtubules.printout == true){
-		PrintMicrotubules();
-		if(pause_duration > 0) PauseSim(pause_duration);
-	}
+	PrintMicrotubules();
+	if(pause_duration > 0) PauseSim(pause_duration);
 }
 
 void Curator::OutputData(){
@@ -467,7 +465,7 @@ void Curator::OutputData(){
 	FILE *motor_force_file = properties_->motor_force_file_;
 	FILE *xlink_force_file = properties_->xlink_force_file_;
 	FILE *total_force_file = properties_->total_force_file_;
-	// Create arrays to store data at each timestep; ptrs to write it to file 
+	// Create arrays to store data; ptrs to write it to file 
 	double mt_coord_array[n_mts];
 	double *mt_coord_ptr = mt_coord_array;
 	// For extension statistics, data is on a per-extension basis
@@ -499,7 +497,7 @@ void Curator::OutputData(){
 		// Run through all sites on this particular MT
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
-			// If unoccupied, store the speciesID of tubulin to occupancy file
+			// If unoccupied, store the speciesID of tubulin to occupancy
 			// and an ID of -1 (null) to motor/xlink ID files 
 			if(site->occupied_ == false){
 				occupancy_array[i_site] = site->speciesID_;
@@ -527,16 +525,15 @@ void Curator::OutputData(){
 						AssociatedProtein* xlink = motor->xlink_;
 						double anchor_coord = xlink->GetAnchorCoordinate();
 						tether_coord_array[i_site] = anchor_coord; 
-						double site_coord = site->index_ + site->mt_->coord_;
-						double teth_dist = abs(anchor_coord - site_coord);
-						if(teth_dist > 18){
+						double stalk_coord = motor->GetStalkCoordinate();
+						double teth_dist = abs(anchor_coord - stalk_coord);
+						if(teth_dist > motor->dist_cutoff_){
 							printf("woah, teth dist is %g\n", teth_dist);
 						}
 					}
+					else tether_coord_array[i_site] = -1;
 				}
-				else{
-					tether_coord_array[i_site] = -1;
-				}
+				else tether_coord_array[i_site] = -1;
 			}
 		}
 		mt_coord_array[i_mt] = mt->coord_; 
@@ -547,7 +544,7 @@ void Curator::OutputData(){
 		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
 		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
 		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
-		fwrite(teth_coord_ptr, sizeof(double), mt_length, tether_coord_file); 
+		fwrite(teth_coord_ptr, sizeof(double), mt_length, tether_coord_file);
 	}	
 	// Scan through kinesin4/prc1 statistics to get extension occupancies 
 	for(int i_ext = 0; i_ext <= 2*motor_ext_cutoff; i_ext++){
@@ -607,30 +604,32 @@ void Curator::PauseSim(double duration){
 void Curator::OutputSimDuration(){
 
 	finish_ = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish_ - start_);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish_ - start_);
 	sim_duration_ = elapsed.count();
 	/*	
 	 	stream_ = OpenFile("sim_duration.dat", "w");
 		fprintf(stream_, "Time to execute sim: %f seconds.\n", sim_duration_);
 		fclose(stream_);
 	*/	
-	printf("\nTime to execute: %.2f seconds.\n", sim_duration_/1000000);
-	printf("   -Motors: %.2f\n", t_motors_[0]/1000000);
-	printf("      -Calculating statistics: %.2f\n", t_motors_[1]/1000000);
-	printf("      -Constructing list: %.2f\n", t_motors_[2]/1000000);
-	printf("      -Execution: %.2f\n", t_motors_[3]/1000000);
-	printf("   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/1000000);
-	printf("      -Calculating statistics: %.2f\n", t_xlinks_kmc_[1]/1000000);
-	printf("      -Constructing list: %.2f\n", t_xlinks_kmc_[2]/1000000);
-	printf("      -Execution: %.2f\n", t_xlinks_kmc_[3]/1000000);
-	printf("   -Xlinks (Diffusion): %.2f\n", t_xlinks_dif_[0]/1000000);
-	printf("      -Calculating statistics: %.2f\n", t_xlinks_dif_[1]/1000000);
-	printf("      -Constructing list: %.2f\n", t_xlinks_dif_[2]/1000000);
-	printf("      -Execution: %.2f\n", t_xlinks_dif_[3]/1000000);
-	printf("   -MTs: %.2f\n", t_MTs_[0]/1000000);
-	printf("      -Summing forces: %.2f\n", t_MTs_[1]/1000000);
-	printf("      -Calculating displacement: %.2f\n", t_MTs_[2]/1000000);
-	printf("      -Execution: %.2f\n", t_MTs_[3]/1000000);
+	printf("\nTime to execute: %.2f seconds.\n", sim_duration_/n_per_sec_);
+	printf("   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
+	printf("      -Calculating statistics: %.2f\n", t_motors_[1]/n_per_sec_);
+	printf("      -Constructing list: %.2f\n", t_motors_[2]/n_per_sec_);
+	printf("      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
+	printf("   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
+	printf("      -Calculating statistics: %.2f\n", 
+			t_xlinks_kmc_[1]/n_per_sec_);
+	printf("      -Constructing list: %.2f\n", t_xlinks_kmc_[2]/n_per_sec_);
+	printf("      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
+	printf("   -Xlinks (Diffusion): %.2f\n", t_xlinks_dif_[0]/n_per_sec_);
+	printf("      -Calculating statistics: %.2f\n", 
+			t_xlinks_dif_[1]/n_per_sec_);
+	printf("      -Constructing list: %.2f\n", t_xlinks_dif_[2]/n_per_sec_);
+	printf("      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
+	printf("   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
+	printf("      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
+	printf("      -Calculating displacement: %.2f\n", t_MTs_[2]/n_per_sec_);
+	printf("      -Execution: %.2f\n", t_MTs_[3]/n_per_sec_);
 }
 
 void Curator::CloseDataFiles(){

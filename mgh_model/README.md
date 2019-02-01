@@ -6,5 +6,5 @@ For makefile:
 # DEBUG mode
     make sim
 
-# RELEASE mode (LIKE 100X FASTER COMPUTATIONAL TIME BRO!!!)
+# RELEASE mode (optimized compiler flags; MUCH faster runtime)
 	make CFG=release sim

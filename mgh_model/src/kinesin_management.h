@@ -3,49 +3,52 @@
 #include "kinesin.h"
 #include <string>
 #include <functional>
-
 struct system_parameters;
 struct system_properties;
-
-//XXX to-do:
-//XXX   - make UpdateAllLists() one for loop w/ a shitton of conditions
-//				- wait, would this break reproducability??
-//					- potentially random order in lists; same RNG
-//XXX 	- reorganize KMC functions so non-tether group is first
-//			- this will let us do gen_kmc_event in 2 independent pieces
-//				- don't need to initialize all arrays if tethers disabled!
 
 class KinesinManagement{
 	private:
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
+			event(int i, int code, std::string l, std::string t_p,
+					std::function<int(double, int, int)> p_dist, 
+					int *pop, double p): index_(i), kmc_code_(code),
+					label_(l), target_pop_(t_p), prob_dist_(p_dist), 
+					pop_ptr_(pop), p_occur_(p) {}
+			void SampleStatistics()
+			{
+				if(*pop_ptr_ > 0)
+					n_expected_ = prob_dist_(p_occur_, *pop_ptr_, index_); 
+				else n_expected_ = 0; 
+			}
+		private:
+			std::function<int(double, int, int)> prob_dist_;
+		public:
+			int index_ = -1;			// Serialized unique index of event
+			int kmc_code_ = -1;			// Encodes which KMC_ funct to call
 			std::string label_;			// Name of event
 			std::string target_pop_; 	// Name of pop. this event targets
-			int index_ = -1;			// Serialized index of event
-			int num_code_ = 0;
-			std::function<int(double, int, int)> *sample_stats_;
+			double p_occur_ = 0;		// Probability of event occuring
 			int *pop_ptr_ = nullptr; 	// Pointer to pop. size variable
-			double p_event_ = 0;		// Probability of event
-			int n_events_ = -1;			// Number of predicted events 
-			std::function<void(int)> *execute_event_; 
+			int n_expected_ = 0;		// Number of predicted events 
 		};
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 
 	public:
-		int n_motors_ = 0;		// Total number of motors in system
-		int n_active_ = 0;		// Motors actively bound to some MT or xlink
-
 		// Populations are untethered/mixed unless otherwise specified 
+		int n_motors_ = 0;		// Total number of motors in system
+		int n_active_ = 0;		// Motors actively bound to some MT/xlink
 		int n_free_tethered_ = 0;
 		int n_docked_ = 0; 
 		int n_bound_NULL_ = 0;
 		int n_bound_ATP_ = 0;
 		int n_bound_ADPP_i_ = 0;
-		int n_bound_ADPP_i_tethered_ = 0; 
 		int n_bound_ADPP_ii_ = 0;
 		int n_bound_untethered_ = 0;
-		std::vector<int> n_bound_tethered_;		// Indexed by x_dub
+		// Below population sizes are indexed by x_dub
+		std::vector<int> n_bound_tethered_;
+		std::vector<int> n_bound_ADPP_i_tethered_; 
 		
 		// See kinesin header for meaningful description of below
 		int dist_cutoff_;
@@ -54,36 +57,35 @@ class KinesinManagement{
 
 		// Event probabilities 
 		double p_bind_i_;
+		double p_bind_i_tethered_;
 		double p_bind_ATP_;
 		double p_hydrolyze_;
 		double p_bind_ii_;
 		double p_unbind_ii_;
 		double p_unbind_i_;
 		double p_tether_free_;
+		double p_tether_bound_;
 		double p_untether_free_;	
 		// Below event probabilities are indexed by x_dub
-		std::vector<double> p_bind_i_tethered_;
 		std::vector<double> p_unbind_i_tethered_;	
-		std::vector<double> p_tether_bound_;
 		std::vector<double> p_untether_bound_;
 
 		// 1-D vectors, index is simply motor entry
 		std::vector<Kinesin> motors_; 
 		std::vector<Kinesin*> active_;
-
+		std::vector<Kinesin*> free_tethered_;
+		std::vector<Kinesin*> bound_untethered_;
 		std::vector<Kinesin::head*> docked_; 
 		std::vector<Kinesin::head*> bound_NULL_;
 		std::vector<Kinesin::head*> bound_ATP_;
 		std::vector<Kinesin::head*> bound_ADPP_i_;
-		std::vector<Kinesin::head*> bound_ADPP_i_tethered_;
-		std::vector<Kinesin::head*> bound_ADPP_ii_;	// FIXME
-		std::vector<Kinesin*> free_tethered_;
-		std::vector<Kinesin*> bound_untethered_;
+		std::vector<Kinesin::head*> bound_ADPP_ii_;
 		// 2-D vectors, indices are simply [x_dub][motor_entry]
 		std::vector< std::vector<Kinesin*> > bound_tethered_;
+		std::vector< std::vector<Kinesin::head*> > bound_ADPP_i_tethered_;
 
-		std::vector<event> serial_events_;
-		std::vector<event> kmc_list_;
+		std::vector<event> events_;		// Holds all possible KMC events
+		std::vector<int> kmc_list_;		// Holds codes of KMC functs to exe
 
 	private:
 		void GenerateMotors();
@@ -94,11 +96,13 @@ class KinesinManagement{
 	public:
 		KinesinManagement();
 		void Initialize(system_parameters *parameters, 
-						system_properties *properties);
+				system_properties *properties);
 
+		int GetNumBoundUntethered();
+		double GetWeight_BindTethered();
+		double GetWeight_TetherBound();
 		Kinesin* GetFreeMotor();
 		Kinesin* GetBoundUntetheredMotor();
-		int GetNumBoundUntethered();
 
 		void UpdateAllLists();
 		void UpdateFreeTethered();
@@ -106,7 +110,7 @@ class KinesinManagement{
 		void UpdateBoundNULL();
 		void UpdateBoundATP();
 		void UpdateBoundADPP_I();
-		void UpdateBoundADPP_I_Tethered();	//XXX
+		void UpdateBoundADPP_I_Tethered();
 		void UpdateBoundADPP_II();
 		void UpdateBoundUntethered();
 		void UpdateBoundTethered();
@@ -116,7 +120,7 @@ class KinesinManagement{
 
 		void RunKMC();
 		void KMC_Bind_I();	// Bind free ADP head; convert to NULL
-		void KMC_Bind_I_Tethered(int x_dub);
+		void KMC_Bind_I_Tethered();
 		void KMC_Bind_ATP();	// Bind ATP to NULL bound heads
 		void KMC_Hydrolyze(); // Convert ATP to ADPP on a bound head
 		void KMC_Bind_II();	// Bind docked head; other head must be ADPP
@@ -124,7 +128,7 @@ class KinesinManagement{
 		void KMC_Unbind_I();
 		void KMC_Unbind_I_Tethered(int x_dub);
 		void KMC_Tether_Free();
-		void KMC_Tether_Bound(int x_dub);
+		void KMC_Tether_Bound();
 		void KMC_Untether_Free();
 		void KMC_Untether_Bound(int x_dub); 
 };

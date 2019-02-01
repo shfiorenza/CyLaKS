@@ -122,15 +122,15 @@ void AssociatedProteinManagement::SetParameters(){
 	double r_rest_teth = 
 		sqrt(site_size*rest_dist_teth*site_size*rest_dist_teth
 		+ r_y_teth*r_y_teth);
-	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_dist_cutoff; x_dist_dub++){
-		p_diffuse_ii_to_both_rest_[x_dist_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_to_self_from_teth_[x_dist_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_from_self_to_teth_[x_dist_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_from_both_rest_[x_dist_dub].resize(dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
+		p_diffuse_ii_to_both_rest_[x_dub].resize(dist_cutoff_ + 1);
+		p_diffuse_ii_to_self_from_teth_[x_dub].resize(dist_cutoff_ + 1);
+		p_diffuse_ii_from_self_to_teth_[x_dub].resize(dist_cutoff_ + 1);
+		p_diffuse_ii_from_both_rest_[x_dub].resize(dist_cutoff_ + 1);
 		// Calc x-distances (in nm) for tether
-		double r_x_teth = x_dist_dub * site_size / 2;
-		double r_x_teth_bck = (x_dist_dub - 1) * site_size / 2;
-		double r_x_teth_fwd = (x_dist_dub + 1) * site_size / 2;
+		double r_x_teth = x_dub * site_size / 2;
+		double r_x_teth_bck = (x_dub - 1) * site_size / 2;
+		double r_x_teth_fwd = (x_dub + 1) * site_size / 2;
 		// Calc total r values 
 		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
 		double r_teth_bck = sqrt(r_x_teth_bck*r_x_teth_bck 
@@ -151,7 +151,7 @@ void AssociatedProteinManagement::SetParameters(){
 		}
 		double dU_from_teth, 
 			   dU_to_teth;
-		if(x_dist_dub == 2*rest_dist_teth){
+		if(x_dub == 2*rest_dist_teth){
 			if(r_0_teth > r_rest_teth){
 				dU_from_teth = (k_teth_slack/2)
 					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
@@ -178,13 +178,13 @@ void AssociatedProteinManagement::SetParameters(){
 					   * (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
 		}
 		double weight_to_teth;
-		if(x_dist_dub < 2*teth_comp_cutoff)
+		if(x_dub < 2*teth_comp_cutoff)
 			weight_to_teth = 0;
 		else
 			weight_to_teth = exp(-dU_to_teth/(2*kbT));	
 		double weight_from_teth;
-		if(x_dist_dub < 2*teth_dist_cutoff - 1
-		&& x_dist_dub > 2*teth_comp_cutoff + 1)
+		if(x_dub < 2*teth_dist_cutoff - 1
+		&& x_dub > 2*teth_comp_cutoff + 1)
 			weight_from_teth = exp(-dU_from_teth/(2*kbT));
 		else
 			weight_from_teth = 0; 
@@ -196,13 +196,13 @@ void AssociatedProteinManagement::SetParameters(){
 		double p_from_teth_i = weight_from_teth * delta_t / tau_i_;
 		if(p_to_teth_i > 1)
 			printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
-					p_to_teth_i, x_dist_dub);
+					p_to_teth_i, x_dub);
 		if(p_from_teth_i > 1)
 			printf("WARNING: p_diffuse_from_teth_i=%g for 2x=%i\n", 
-					p_from_teth_i, x_dist_dub);
+					p_from_teth_i, x_dub);
 		// Input probabilities for stage_i / tethered xlinks
-		p_diffuse_i_to_teth_rest_[x_dist_dub] = p_to_teth_i;
-		p_diffuse_i_from_teth_rest_[x_dist_dub] = p_from_teth_i;
+		p_diffuse_i_to_teth_rest_[x_dub] = p_to_teth_i;
+		p_diffuse_i_from_teth_rest_[x_dub] = p_from_teth_i;
 		// Run through x_dists to get probs for stage_ii / tethered xlinks
 		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
 			double r_x = x_dist * site_size;
@@ -218,13 +218,13 @@ void AssociatedProteinManagement::SetParameters(){
 			if(dr >= 0){
 				// Get corresponding changes in potential energy
 				double dU_to_rest = (k_spring/2)*(dr_to*dr_to - dr*dr);
-				double dU_from_rest = (k_spring/2)*(dr_from*dr_from - dr*dr);
+				double dU_fr_rest = (k_spring/2)*(dr_from*dr_from - dr*dr);
 				// Weights according to Lanksy et al.
 				double weight_to;
 				double weight_from;
 			   	if(x_dist == rest_dist_){
 					weight_to = 0;
-					weight_from = 2*exp(-dU_from_rest/(2*kbT));
+					weight_from = 2*exp(-dU_fr_rest/(2*kbT));
 				}
 				else if(x_dist == dist_cutoff_){
 					weight_to = exp(-dU_to_rest/(2*kbT));
@@ -232,7 +232,7 @@ void AssociatedProteinManagement::SetParameters(){
 				}
 				else{
 					weight_to = exp(-dU_to_rest/(2*kbT));
-					weight_from = exp(-dU_from_rest/(2*kbT));
+					weight_from = exp(-dU_fr_rest/(2*kbT));
 				}
 				if(!parameters_->motors.tethers_active){
 					weight_to = 0;
@@ -247,38 +247,38 @@ void AssociatedProteinManagement::SetParameters(){
 					 * delta_t / tau_ii_;
 				double p_from_both = weight_from * weight_from_teth
 					* delta_t / tau_ii_;
-				p_diffuse_ii_to_both_rest_[x_dist_dub][x_dist]
+				p_diffuse_ii_to_both_rest_[x_dub][x_dist]
 					= p_to_both;
-				p_diffuse_ii_to_self_from_teth_[x_dist_dub][x_dist]
+				p_diffuse_ii_to_self_from_teth_[x_dub][x_dist]
 					= p_to_self_from_teth;
-				p_diffuse_ii_from_self_to_teth_[x_dist_dub][x_dist]
+				p_diffuse_ii_from_self_to_teth_[x_dub][x_dist]
 					= p_from_self_to_teth; 
-				p_diffuse_ii_from_both_rest_[x_dist_dub][x_dist]
+				p_diffuse_ii_from_both_rest_[x_dub][x_dist]
 					= p_from_both; 
 
 				if(p_to_both > 1){
 					printf("WARNING: p_diff_to_both=%g", 
 							p_to_both);	
 					printf(" for 2x=%i, x=%i\n", 
-							x_dist_dub, x_dist);
+							x_dub, x_dist);
 				}
 				if(p_to_self_from_teth > 1){
 					printf("WARNING: p_diff_to_self_fr_teth=%g", 
 							p_to_self_from_teth);	
 					printf(" for 2x=%i, x=%i\n", 
-							x_dist_dub, x_dist);
+							x_dub, x_dist);
 				}
 				if(p_from_self_to_teth > 1){
 					printf("WARNING: p_diff_fr_self_to_teth=%g", 
 							p_from_self_to_teth);	
 					printf(" for 2x=%i, x=%i\n", 
-							x_dist_dub, x_dist);
+							x_dub, x_dist);
 				}
 				if(p_from_both > 1){
 					printf("WARNING: p_diff_fr_both=%g", 
 							p_from_both);	
 					printf(" for 2x=%i, x=%i\n", 
-							x_dist_dub, x_dist);
+							x_dub, x_dist);
 				}
 			}
 			else{
@@ -315,11 +315,11 @@ void AssociatedProteinManagement::SetParameters(){
 	p_unbind_i_tethered_.resize(2*teth_dist_cutoff + 1);
 	p_unbind_ii_to_teth_.resize(2*teth_dist_cutoff + 1);
 	p_unbind_ii_from_teth_.resize(2*teth_dist_cutoff + 1);
-	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_dist_cutoff; x_dist_dub++){
-		p_unbind_ii_to_teth_[x_dist_dub].resize(dist_cutoff_ + 1); 
-		p_unbind_ii_from_teth_[x_dist_dub].resize(dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
+		p_unbind_ii_to_teth_[x_dub].resize(dist_cutoff_ + 1); 
+		p_unbind_ii_from_teth_[x_dub].resize(dist_cutoff_ + 1);
 		// Calc x-distances (in nm) for tether
-		double r_x_teth = x_dist_dub * site_size / 2;
+		double r_x_teth = x_dub * site_size / 2;
 		// Calc total r values 
 		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
 		// Calc tether extensions for current dist and stepping to/from rest
@@ -330,7 +330,7 @@ void AssociatedProteinManagement::SetParameters(){
 		else
 			U_at_teth = (k_teth_slack/2)*dr_teth*dr_teth;
 		double weight_at_teth = exp(U_at_teth/(2*kbT));
-		if(x_dist_dub < 2*teth_comp_cutoff){
+		if(x_dub < 2*teth_comp_cutoff){
 			weight_at_teth = 0;
 		}
 		if(!parameters_->motors.tethers_active){
@@ -339,8 +339,8 @@ void AssociatedProteinManagement::SetParameters(){
 		double p_unbind_teth = weight_at_teth * p_unbind_i_;
 		if(p_unbind_teth > 1)
 			printf("WARNING: p_unbind_teth (XLINK)=%g for 2x=%i\n", 
-					p_unbind_teth, x_dist_dub);
-		p_unbind_i_tethered_[x_dist_dub] = p_unbind_teth; 
+					p_unbind_teth, x_dub);
+		p_unbind_i_tethered_[x_dub] = p_unbind_teth; 
 		// XXX variable shift in delta-E based on x_dist XXX
 		// Run through x_dists to get probs for stage_ii / tethered xlinks
 		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
@@ -365,7 +365,7 @@ void AssociatedProteinManagement::SetParameters(){
 			double dr_teth_from = r_teth_from - r_0_teth; 
 			double dU_to_teth, 
 				   dU_from_teth;
-			int x_from_rest_dub = abs(2*rest_dist_teth - x_dist_dub);
+			int x_from_rest_dub = abs(2*rest_dist_teth - x_dub);
 			int dx_teth_dub = 2 * dx_teth;
 			// Check if we're crossing over equil. point of tether 
 			if(dx_teth_dub > x_from_rest_dub){
@@ -396,7 +396,7 @@ void AssociatedProteinManagement::SetParameters(){
 			}
 			double weight_to_teth = exp(-dU_to_teth/(2*kbT));
 			double weight_from_teth = exp(-dU_from_teth/(2*kbT));
-			if(x_dist_dub < 2*teth_comp_cutoff){
+			if(x_dub < 2*teth_comp_cutoff){
 				weight_to_teth = 0;
 				weight_from_teth = 0;
 			}
@@ -408,12 +408,12 @@ void AssociatedProteinManagement::SetParameters(){
 			double p_unbind_from = weight_from_teth * p_unbind_ii_[x_dist];
 			if(p_unbind_to > 1)
 				printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
-						p_unbind_to, x_dist_dub, x_dist);
+						p_unbind_to, x_dub, x_dist);
 			if(p_unbind_from > 1)
 				printf("WARNING: p_unbind_from = %g for 2x=%i, x=%i\n", 
-						p_unbind_from, x_dist_dub, x_dist);
-			p_unbind_ii_to_teth_[x_dist_dub][x_dist] = p_unbind_to;
-			p_unbind_ii_from_teth_[x_dist_dub][x_dist] = p_unbind_from; 
+						p_unbind_from, x_dub, x_dist);
+			p_unbind_ii_to_teth_[x_dub][x_dist] = p_unbind_to;
+			p_unbind_ii_from_teth_[x_dub][x_dist] = p_unbind_from; 
 		}
 	}
 	double k_teth = parameters_->motors.k_tether;
@@ -443,18 +443,18 @@ void AssociatedProteinManagement::InitializeLists(){
 	n_sites_i_tethered_.resize(2*teth_cutoff_ + 1);
 	n_sites_ii_tethered_same_.resize(2*teth_cutoff_ + 1);
 	n_sites_ii_tethered_oppo_.resize(2*teth_cutoff_ + 1);
-	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_cutoff_; x_dist_dub++){
-		n_bound_i_tethered_[x_dist_dub] = 0;
-		n_sites_i_tethered_[x_dist_dub] = 0;
-		n_bound_i_tethered_bindable_[x_dist_dub].resize(dist_cutoff_ + 1);
-		n_bound_ii_tethered_[x_dist_dub].resize(dist_cutoff_ + 1);
-		n_sites_ii_tethered_same_[x_dist_dub].resize(dist_cutoff_ + 1);
-		n_sites_ii_tethered_oppo_[x_dist_dub].resize(dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*teth_cutoff_; x_dub++){
+		n_bound_i_tethered_[x_dub] = 0;
+		n_sites_i_tethered_[x_dub] = 0;
+		n_bound_i_tethered_bindable_[x_dub].resize(dist_cutoff_ + 1);
+		n_bound_ii_tethered_[x_dub].resize(dist_cutoff_ + 1);
+		n_sites_ii_tethered_same_[x_dub].resize(dist_cutoff_ + 1);
+		n_sites_ii_tethered_oppo_[x_dub].resize(dist_cutoff_ + 1);
 		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			n_bound_i_tethered_bindable_[x_dist_dub][x_dist] = 0;
-			n_bound_ii_tethered_[x_dist_dub][x_dist] = 0;
-			n_sites_ii_tethered_same_[x_dist_dub][x_dist] = 0;
-			n_sites_ii_tethered_oppo_[x_dist_dub][x_dist] = 0; 
+			n_bound_i_tethered_bindable_[x_dub][x_dist] = 0;
+			n_bound_ii_tethered_[x_dub][x_dist] = 0;
+			n_sites_ii_tethered_same_[x_dub][x_dist] = 0;
+			n_sites_ii_tethered_oppo_[x_dub][x_dist] = 0; 
 		}
 	}
 	// Lists
@@ -956,13 +956,11 @@ void AssociatedProteinManagement::UpdateAllLists(){
 	UpdateDoubleBoundList();
 	properties_->microtubules.UpdateUnoccupied();
 	if(parameters_->motors.tethers_active){
-		/*
 		UpdateBoundITethered();
 		UpdateBoundIITethered();
 		UpdateFreeTetheredList();
-		UpdateUntethered();
+		UpdateBoundUntethered();
 		properties_->kinesin4.UpdateBoundUntethered();
-		*/
 	}
 }
 
@@ -998,11 +996,14 @@ void AssociatedProteinManagement::UpdateBoundITethered(){
 		&& xlink->tethered_ == true){
 			if(xlink->motor_->heads_active_ > 0){
 				xlink->motor_->UpdateExtension(); 
-				int x_dub = xlink->motor_->x_dist_doubled_;
-				int index = n_bound_i_tethered_[x_dub];
-				bound_i_tethered_[x_dub][index] = xlink;
-				n_bound_i_tethered_[x_dub]++; 
-				n_bound_i_tethered_tot_++;
+				// Make sure we didn't force an untether event
+				if(xlink->tethered_){
+					int x_dub = xlink->motor_->x_dist_doubled_;
+					int index = n_bound_i_tethered_[x_dub];
+					bound_i_tethered_[x_dub][index] = xlink;
+					n_bound_i_tethered_[x_dub]++; 
+					n_bound_i_tethered_tot_++;
+				}
 			}
 		}
 	}
@@ -1047,12 +1048,16 @@ void AssociatedProteinManagement::UpdateBoundIITethered(){
 		&& xlink->tethered_ == true){
 			if(xlink->motor_->heads_active_ > 0){
 				xlink->UpdateExtension();
-				int x_dist = xlink->x_dist_; 
 				xlink->motor_->UpdateExtension(); 
-				int x_dub = xlink->motor_->x_dist_doubled_;
-				int index = n_bound_ii_tethered_[x_dub][x_dist]; 
-				bound_ii_tethered_[x_dub][x_dist][index] = xlink;
-				n_bound_ii_tethered_[x_dub][x_dist]++; 
+				// Make sure we didn't force an untether or unbind event
+				if(xlink->heads_active_ == 2
+				&& xlink->tethered_){
+					int x_dist = xlink->x_dist_; 
+					int x_dub = xlink->motor_->x_dist_doubled_;
+					int index = n_bound_ii_tethered_[x_dub][x_dist]; 
+					bound_ii_tethered_[x_dub][x_dist][index] = xlink;
+					n_bound_ii_tethered_[x_dub][x_dist]++; 
+				}
 			}
 		}
 	}
@@ -1077,7 +1082,7 @@ void AssociatedProteinManagement::UpdateFreeTetheredList(){
 	}
 }
 
-void AssociatedProteinManagement::UpdateUntethered(){
+void AssociatedProteinManagement::UpdateBoundUntethered(){
 	
 	n_bound_untethered_ = 0;
 	for(int i_xlink = 0; i_xlink < n_active_; i_xlink++){
@@ -1464,9 +1469,9 @@ AssociatedProtein* AssociatedProteinManagement::GetFreeXlink(){
 	return xlink;
 }
 
-AssociatedProtein* AssociatedProteinManagement::GetUntetheredXlink(){
+AssociatedProtein* AssociatedProteinManagement::GetBoundUntetheredXlink(){
 
-	UpdateUntethered();
+//	UpdateBoundUntethered();
 	if(n_bound_untethered_ > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_bound_untethered_);
 		AssociatedProtein* xlink = bound_untethered_[i_entry];
@@ -1485,7 +1490,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	UpdateSerializedDifEvents();
 
 	sys_time finish = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start);
 	properties_->wallace.t_xlinks_dif_[1] += elapsed.count();
 
 	start = sys_clock::now();
@@ -1810,7 +1815,7 @@ void AssociatedProteinManagement::GenerateDiffusionList(){
 	dif_list_.shrink_to_fit();
 
 	finish = sys_clock::now();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start);
 	properties_->wallace.t_xlinks_dif_[2] += elapsed.count();
 }
 
@@ -1956,9 +1961,9 @@ void AssociatedProteinManagement::RunDiffusion(){
 		}
 	}
 	sys_time finish = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
 	properties_->wallace.t_xlinks_dif_[0] += elapsed.count();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
 	properties_->wallace.t_xlinks_dif_[3] += elapsed.count();
 }
 
@@ -2329,7 +2334,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 	UpdateSerializedKMCEvents();
 
 	sys_time finish = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start);
 	properties_->wallace.t_xlinks_kmc_[1] += elapsed.count();
 
 	start = sys_clock::now();
@@ -2584,7 +2589,7 @@ void AssociatedProteinManagement::GenerateKMCList(){
 	}
 	kmc_list_.shrink_to_fit();
 	finish = sys_clock::now();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start);
 	properties_->wallace.t_xlinks_kmc_[2] += elapsed.count();
 }
 
@@ -2770,9 +2775,9 @@ void AssociatedProteinManagement::RunKMC(){
 		}
 	}
 	sys_time finish = sys_clock::now();
-	auto elapsed = std::chrono::duration_cast<t_microsec>(finish - start1);
+	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
 	properties_->wallace.t_xlinks_kmc_[0] += elapsed.count();
-	elapsed = std::chrono::duration_cast<t_microsec>(finish - start2);
+	elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
 	properties_->wallace.t_xlinks_kmc_[3] += elapsed.count();
 }
 
@@ -2864,6 +2869,15 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 		// Randomly pick a singly-bound xlink
 		int i_entry = properties_->gsl.GetRanInt(n_bound_i_);
 		AssociatedProtein *xlink = bound_i_[i_entry];
+		Tubulin *site = xlink->GetActiveHeadSite();
+		// Remove xlink from site
+		site->xlink_ = nullptr;
+		site->occupied_ = false;
+		// Update xlink details
+		xlink->site_one_ = nullptr;
+		xlink->site_two_ = nullptr;
+		xlink->heads_active_--;
+		// If this xlink has a satellite motor, untether it
 		if(xlink->tethered_ == true){ 
 			if(xlink->motor_->heads_active_ == 0){
 				xlink->UntetherSatellite();
@@ -2873,14 +2887,6 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 				exit(1);
 			}
 		}
-		Tubulin *site = xlink->GetActiveHeadSite();
-		// Remove xlink from site
-		site->xlink_ = nullptr;
-		site->occupied_ = false;
-		// Update xlink details
-		xlink->site_one_ = nullptr;
-		xlink->site_two_ = nullptr;
-		xlink->heads_active_--;
 		// Remove this xlink from active_, replace with last entry
 		AssociatedProtein *last_entry = active_[n_active_ - 1];
 		int this_index = xlink->active_index_; 
@@ -3144,13 +3150,13 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_To_Teth(int x_dist_dub,
 		xlink->motor_->UpdateExtension();
 	}
 	else{
-		printf("Error in xlink Unbind_II_To_Teth: no doubly-bound xlinks\n");
+		printf("Error in Unbind_II_To_Teth: no doubly-bound xlinks\n");
 		exit(1);
 	}
 }
 
-void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(int x_dist_dub, 
-		int x_dist){
+void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(
+		int x_dist_dub, int x_dist){
 
 	UpdateBoundIITethered();
 	int n_bound = n_bound_ii_tethered_[x_dist_dub][x_dist];
@@ -3186,7 +3192,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(int x_dist_dub,
 		xlink->motor_->UpdateExtension();
 	}
 	else{
-		printf("Error in xlink Unbind_II_Fr_Teth: no doubly-bound xlinks\n");
+		printf("Error in Unbind_II_Fr_Teth: no doubly-bound xlinks\n");
 		exit(1);
 	}
 }

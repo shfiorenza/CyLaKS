@@ -15,6 +15,7 @@ void Kinesin::Initialize(system_parameters *parameters,
 	InitializeNeighborLists(); 
 	InitializeExtensionLookup();
 	InitializeCreationWeightLookup();
+	InitializeSteppingProbabilities();
 }
 
 void Kinesin::SetParameters(){
@@ -108,13 +109,13 @@ void Kinesin::InitializeExtensionLookup(){
 
 	double r_y = parameters_->microtubules.y_dist / 2;
 	double site_size = parameters_->microtubules.site_size;
-	extension_lookup_.resize(2*dist_cutoff_ + 1);
 	cosine_lookup_.resize(2*dist_cutoff_ + 1);
+	extension_lookup_.resize(2*dist_cutoff_ + 1);
 	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
-		double r_x = site_size * x_dist_doubled_ / 2;
+		double r_x = (double)x_dub * site_size / 2;
 		double r = sqrt(r_x*r_x + r_y*r_y);
-		extension_lookup_[x_dub] = r - r_0_;
 		cosine_lookup_[x_dub] = r_x / r;
+		extension_lookup_[x_dub] = r - r_0_;
 	}
 }
 
@@ -125,7 +126,7 @@ void Kinesin::InitializeCreationWeightLookup(){
 	double site_size = parameters_->microtubules.site_size;
 	creation_weight_lookup_.resize(2*dist_cutoff_ + 1);
 	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
-		double r_x = (double)(x_dub) * site_size / 2;
+		double r_x = (double)x_dub * site_size / 2;
 		double r = sqrt(r_x*r_x + r_y*r_y);
 		double dr = r - r_0_;
 		double weight = 0;
@@ -141,6 +142,46 @@ void Kinesin::InitializeCreationWeightLookup(){
 			weight = exp(-dr*dr*k_spring_/(4*kbT));
 		}
 		creation_weight_lookup_[x_dub] = weight;
+	}
+}
+
+void Kinesin::InitializeSteppingProbabilities(){
+
+	double r_y = parameters_->microtubules.y_dist / 2;
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
+	double f_stall = parameters_->motors.stall_force;
+	p_step_to_rest_.resize(2*dist_cutoff_ + 1);
+	p_step_fr_rest_.resize(2*dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
+		double r_x = (double)x_dub * site_size / 2;
+		double r = sqrt(r_x*r_x + r_y*r_y);
+		double dr = r - r_0_;
+		double k = 0;
+		if(x_dub <= 2*rest_dist_) k = k_slack_;
+		else k = k_spring_;
+		double force_mag = fabs(k * dr); 
+		double f_x = force_mag * cosine_lookup_[x_dub];
+		double p = 1 - (f_x/f_stall); 
+		if(f_x >= f_stall) p = 0;
+		if(x_dub < 2*comp_cutoff_ - 1){
+			p_step_to_rest_[x_dub] = 0;
+			p_step_fr_rest_[x_dub] = 0;
+		}
+		else if(x_dub <= 2*comp_cutoff_){
+			p_step_to_rest_[x_dub] = p;
+			p_step_fr_rest_[x_dub] = 0;
+		}
+		else if(x_dub < 2*dist_cutoff_ - 1){
+			p_step_to_rest_[x_dub] = p;
+			p_step_fr_rest_[x_dub] = p;
+		}
+		else{
+			p_step_to_rest_[x_dub] = p;
+			p_step_fr_rest_[x_dub] = 0; 
+		}
+//		printf("p_to=%g, p_fr=%g for 2x=%i\n", p_step_to_rest_[x_dub], 
+//				p_step_fr_rest_[x_dub], x_dub);
 	}
 }
 
@@ -230,19 +271,45 @@ double Kinesin::GetDockedCoordinate(){
 
 void Kinesin::ChangeConformation(){
 
-	if(heads_active_ == 1){
-//		printf("\ndock pre: %g\n", GetDockedCoordinate());
-		head_one_.trailing_ = !head_one_.trailing_;
-		head_two_.trailing_ = !head_two_.trailing_;
-		frustrated_ = false;
-//		printf("dock post: %g\n", GetDockedCoordinate());
+	if(!tethered_){
+		if(heads_active_ == 1){
+			frustrated_ = false;
+			head_one_.trailing_ = !head_one_.trailing_;
+			head_two_.trailing_ = !head_two_.trailing_;
+		}
+		else if(heads_active_ == 2) frustrated_ = true;
+		else printf("Error in Kinesin::ChangeConformation()\n");
 	}
-	else if(heads_active_ == 2){
-		frustrated_ = true;
+	else if(xlink_->heads_active_ == 0){
+		if(heads_active_ == 1){
+			frustrated_ = false;
+			head_one_.trailing_ = !head_one_.trailing_;
+			head_two_.trailing_ = !head_two_.trailing_;
+		} 
+		else if(heads_active_ == 2) frustrated_ = true;
+		else printf("Error in Kinesin::ChangeConformation()\n");
 	}
 	else{
-		printf("Error in Kinesin::ChangeConformation()\n");
-		exit(1);
+		if(heads_active_ == 1){
+			frustrated_ = false;
+			// Roll for conformational change
+			int dx_rest = GetDirectionTowardRest();
+			double ran = properties_->gsl.GetRanProb();
+			if(mt_->delta_x_ == dx_rest){
+				if(ran < p_step_to_rest_[x_dist_doubled_]){
+					head_one_.trailing_ = !head_one_.trailing_;
+					head_two_.trailing_ = !head_two_.trailing_;
+				}
+			}
+			else{
+				if(ran < p_step_fr_rest_[x_dist_doubled_]){
+					head_one_.trailing_ = !head_one_.trailing_;
+					head_two_.trailing_ = !head_two_.trailing_;
+				}
+			}
+		}
+		else if(heads_active_ == 2) frustrated_ = true;
+		else printf("Error in Kinesin::ChangeConformation()\n");
 	}
 }
 

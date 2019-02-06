@@ -11,22 +11,21 @@ class KinesinManagement{
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
 			event(int i, int code, std::string l, std::string t_p,
-					std::function<int(double, int, int)> p_dist, 
+					std::function<int(double, int)> p_dist, 
 					int *pop, double p): index_(i), kmc_code_(code),
 					label_(l), target_pop_(t_p), prob_dist_(p_dist), 
 					pop_ptr_(pop), p_occur_(p) {}
-			void SampleStatistics()
-			{
+			void SampleStatistics(){
 				if(*pop_ptr_ > 0)
-					n_expected_ = prob_dist_(p_occur_, *pop_ptr_, index_); 
+					n_expected_ = prob_dist_(p_occur_, *pop_ptr_); 
 				else n_expected_ = 0; 
 			}
 		private:
-			std::function<int(double, int, int)> prob_dist_;
+			std::function<int(double, int)> prob_dist_;
 		public:
 			int index_ = -1;			// Serialized unique index of event
 			int kmc_code_ = -1;			// Encodes which KMC_ funct to call
-			std::string label_;			// Name of event
+			std::string label_ = "BRUH";			// Name of event
 			std::string target_pop_; 	// Name of pop. this event targets
 			double p_occur_ = 0;		// Probability of event occuring
 			int *pop_ptr_ = nullptr; 	// Pointer to pop. size variable
@@ -47,8 +46,10 @@ class KinesinManagement{
 		int n_bound_ADPP_ii_ = 0;
 		int n_bound_untethered_ = 0;
 		// Below population sizes are indexed by x_dub
-		std::vector<int> n_bound_tethered_;
+		std::vector<int> n_docked_tethered_;
+		std::vector<int> n_bound_NULL_tethered_;
 		std::vector<int> n_bound_ADPP_i_tethered_; 
+		std::vector<int> n_bound_tethered_;
 		
 		// See kinesin header for meaningful description of below
 		int dist_cutoff_;
@@ -67,6 +68,8 @@ class KinesinManagement{
 		double p_tether_bound_;
 		double p_untether_free_;	
 		// Below event probabilities are indexed by x_dub
+		std::vector<double> p_bind_ATP_tethered_; 
+		std::vector<double> p_bind_ii_tethered_;
 		std::vector<double> p_unbind_i_tethered_;	
 		std::vector<double> p_untether_bound_;
 
@@ -81,11 +84,13 @@ class KinesinManagement{
 		std::vector<Kinesin::head*> bound_ADPP_i_;
 		std::vector<Kinesin::head*> bound_ADPP_ii_;
 		// 2-D vectors, indices are simply [x_dub][motor_entry]
-		std::vector< std::vector<Kinesin*> > bound_tethered_;
+		std::vector< std::vector<Kinesin::head*> > docked_tethered_;
+		std::vector< std::vector<Kinesin::head*> > bound_NULL_tethered_;
 		std::vector< std::vector<Kinesin::head*> > bound_ADPP_i_tethered_;
+		std::vector< std::vector<Kinesin*> > bound_tethered_;
 
 		std::vector<event> events_;		// Holds all possible KMC events
-		std::vector<int> kmc_list_;		// Holds codes of KMC functs to exe
+		std::vector<int> kmc_list_;	// Holds codes of KMC functs to exe
 
 	private:
 		void GenerateMotors();
@@ -107,7 +112,9 @@ class KinesinManagement{
 		void UpdateAllLists();
 		void UpdateFreeTethered();
 		void UpdateDocked();
+		void UpdateDockedTethered();
 		void UpdateBoundNULL();
+		void UpdateBoundNULLTethered();
 		void UpdateBoundATP();
 		void UpdateBoundADPP_I();
 		void UpdateBoundADPP_I_Tethered();
@@ -122,8 +129,10 @@ class KinesinManagement{
 		void KMC_Bind_I();	// Bind free ADP head; convert to NULL
 		void KMC_Bind_I_Tethered();
 		void KMC_Bind_ATP();	// Bind ATP to NULL bound heads
+		void KMC_Bind_ATP_Tethered(int x_dub); 
 		void KMC_Hydrolyze(); // Convert ATP to ADPP on a bound head
 		void KMC_Bind_II();	// Bind docked head; other head must be ADPP
+		void KMC_Bind_II_Tethered(int x_dub);
 		void KMC_Unbind_II(); 	// Unbind ADPP heads; converts to ADP
 		void KMC_Unbind_I();
 		void KMC_Unbind_I_Tethered(int x_dub);

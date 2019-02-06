@@ -1471,7 +1471,7 @@ AssociatedProtein* AssociatedProteinManagement::GetFreeXlink(){
 
 AssociatedProtein* AssociatedProteinManagement::GetBoundUntetheredXlink(){
 
-//	UpdateBoundUntethered();
+	UpdateBoundUntethered();
 	if(n_bound_untethered_ > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_bound_untethered_);
 		AssociatedProtein* xlink = bound_untethered_[i_entry];
@@ -3199,8 +3199,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(
 
 void AssociatedProteinManagement::RunKMC_Tether_Free(){
 
-	int n_motors_unteth = 0;
-		//properties_->kinesin4.GetNumBoundUntethered();
+	int n_motors_unteth = properties_->kinesin4.GetNumBoundUntethered();
 	if(n_motors_unteth > 0){
 		AssociatedProtein *xlink = GetFreeXlink();
 		Kinesin *motor = nullptr;

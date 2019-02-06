@@ -17,6 +17,8 @@ class Kinesin{
 		std::vector<double> extension_lookup_;
 		// "creation" refers to creating a state with some extension
 		std::vector<double> creation_weight_lookup_;
+		std::vector<double> p_step_to_rest_;
+		std::vector<double> p_step_fr_rest_;
 		// Neighbor sites are for when the motor is tethered but unbound
 		std::vector<Tubulin*> neighbor_sites_;
 		// Neighbor xlinks are for when the motor is bound but untethered
@@ -68,6 +70,7 @@ class Kinesin{
 		void InitializeNeighborLists();
 		void InitializeExtensionLookup();
 		void InitializeCreationWeightLookup();
+		void InitializeSteppingProbabilities();
 
 	public:
 		Kinesin();

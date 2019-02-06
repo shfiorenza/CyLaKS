@@ -349,8 +349,11 @@ void Curator::PrintMicrotubules(){
 					if(motor->tethered_ == false)
 						std::cout << site->motor_head_->ligand_;
 					//	printf("m");
-					else
-						printf("M");
+					else{
+						printf("[");
+						std::cout << site->motor_head_->ligand_;
+						printf("]");
+					}
 				}
 				else if(motor->heads_active_ == 2){
 					int i_front = motor->head_one_.site_->index_;

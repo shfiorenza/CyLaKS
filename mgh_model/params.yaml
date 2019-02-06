@@ -35,16 +35,16 @@ motors:
   k_off_ii: 100
   endpausing_active: true
   tethers_active: true
-  k_tether: 0.1
+  k_tether: 0.5
   c_eff_tether: 100
-  k_untether: 0.068
+  k_untether: 0.05
   r_0: 120
   k_spring: 0.3
-  k_slack: 0.05
+  k_slack: 0.06
   stall_force: 5
 xlinks:
   k_on: 0.0022
-  concentration: 0.2    # 0.125  # 2.0
+  concentration: 0.2
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

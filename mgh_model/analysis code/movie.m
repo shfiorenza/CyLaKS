@@ -1,4 +1,4 @@
-clear all
+clear all;
 
 % Parameters from sim
 n_steps = 10000000;
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = n_datapoints;
-frames_per_plot = 10;
+frames_per_plot = 100;
 start_frame = 1;
 site_height = 1;
 site_width = 1;

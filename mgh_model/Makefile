@@ -1,5 +1,10 @@
-CC=gcc
-CXX=g++
+ifeq ($(LOC), summit)
+    CC=icc
+    CXX=icpc
+else
+    CC=gcc
+    CXX=g++
+endif
 
 SRCDIR = src
 OBJDIR = obj
@@ -7,29 +12,32 @@ BINDIR = bin
 SRCEXT = cpp
 
 COMPILE_FLAGS = -std=c++17 
-RCOMPILE_FLAGS = -D NDEBUG -O3 -march=native
+RCOMPILE_FLAGS = -D NDEBUG -O2 -march=native
 DCOMPILE_FLAGS = -D DEBUG -Og -g
-LINK_FLAGS = -static
-GSLINCS = -I./libs/gsl/include
-GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
+LINK_FLAGS =
 YAMLINCS = -I./libs/yaml-cpp/include
 YAMLLIBS = -Wl,-rpath=./libs/yaml-cpp/static -L./libs/yaml-cpp/static -lyaml-cpp
+# If we're running on Summit, add appropriate flags
+ifeq ($(LOC), summit)
+    GSLINCS = `pkg-config --cflags gsl`
+    GSLLIBS = `pkg-config --libs gsl`
+    COMPILE_FLAGS += -xCORE-AVX2
+    LINK_FLAGS += -lm
+else
+    GSLINCS = -I./libs/gsl/include
+    GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
+    LINK_FLAGS += -static
+endif
 INCLUDES = $(GSLINCS) $(YAMLINCS)
 LIBS = $(GSLLIBS) $(YAMLLIBS)
 
-# If we're running on Summit, add appropriate flags
-ifeq ($(LOC), Summit)
-	COMPILE_FLAGS += -xCORE-AVX2
-	LINK_FLAGS += -lm
-endif
-
 # Combine compiler and linker flags
 ifeq ($(CFG),release)
-	export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
-	export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
+    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
+    export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
 else
-	export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
-	export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
+    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
+    export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
 endif
 
 SOURCES = $(shell find $(SRCDIR) -name '*.$(SRCEXT)' -printf '%T@\t%p\n' \

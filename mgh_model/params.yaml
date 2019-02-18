@@ -1,50 +1,50 @@
----
 seed: 329954433
-n_steps: 10000000
-n_datapoints: 10000
+n_steps: 1000000
+n_datapoints: 100000
 data_threshold: 0
-delta_t: 1e-05
+delta_t: 0.0001
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 2
-  length: 500
+  count: 1
+  length: 5000
   y_dist: 32
   site_size: 8
   radius: 12.5
   elevation: 50
   start_coord:
-    - 0
-    - 0
+  - 0
+  - 0
   imposed_velocity:
-    - 0
-    - 0
+  - 0
+  - 0
   immobile_until:
-    - 9500
-    - 500
+  - 9500
+  - 500
   printout: false
-  diffusion: true
+  diffusion: false
 motors:
   k_on: 0.02
-  c_bulk: 1.5
+  c_bulk: 0.05
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 95
-  k_off_i: 40
-  k_off_ii: 100
-  endpausing_active: true
-  tethers_active: true
-  k_tether: 0.5
+  k_hydrolyze: 110
+  k_off_i: 30
+  k_off_ii: 180
+  k_tether: 0.00167
   c_eff_tether: 100
-  k_untether: 0.05
+  k_untether: 0.5
   r_0: 120
-  k_spring: 0.3
-  k_slack: 0.06
-  stall_force: 5
+  k_spring: 0.1325
+  k_slack: 0.0265
+  stall_force: 6
+  applied_force: 6
+  tethers_active: false
+  endpausing_active: true
 xlinks:
   k_on: 0.0022
-  concentration: 0.2
+  concentration: 0
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

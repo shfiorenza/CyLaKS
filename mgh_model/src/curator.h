@@ -26,8 +26,6 @@ class Curator{
 		double t_xlinks_dif_[4]; 		//  - 2: time spent correcting stats
 		double t_MTs_[4];				//  - 3: time spent executing events
 
-//		FILE *stream_;
-
 		struct timespec pause_dur_;
 
 		sys_time start_;

@@ -16,8 +16,8 @@ vel = smooth(vel);
 %}
 
 app_force = [0,1,2,3,4,5,6];
-run_length = [1.17, 
-vel = [640, 
+run_length = [1.17,
+vel = [640, 620
 
 %{
 plot(conc, delta, 'LineWidth', 2);

@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
-n_sites = 2500;
-simName = 'test5';
+n_sites = 5000;
+simName = 'test6';
 % Pseudo-constant variables
 n_mts = 1;
 n_datapoints = 100000;
@@ -49,8 +49,9 @@ n_hits_double = n_hits_double / 2;
 single_fract = n_hits_single / (n_hits_double + n_hits_single);
 double_fract = n_hits_double / (n_hits_double + n_hits_single);
 
-labels = categorical({'Singly-bound', 'Doubly-bound'});
-bar(labels, [single_fract, double_fract]);
+data = [single_fract double_fract];
+labels = {'Singly-bound', 'Doubly-bound'};
+pie(data, labels);
 ylabel('Fractional time in state')
 title('Singly-bound vs doubly-bound kinesin')
 %{

@@ -281,9 +281,9 @@ void AssociatedProtein::UpdateNeighborSites(){
 
 void AssociatedProtein::UpdateTethNeighborSites(){
 
+	n_teth_neighbor_sites_ = 0;
 	if(tethered_ == true
 	&& heads_active_ == 0){
-		n_teth_neighbor_sites_ = 0;
 		int n_mts = parameters_->microtubules.count;
 		int mt_length = parameters_->microtubules.length;
 		int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
@@ -772,7 +772,7 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
 	UpdateTethNeighborSites();
 	double stalk_coord = motor_->GetStalkCoordinate();
 	double p_tot = 0; 
-	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
+	for(int i_site = 0; i_site < n_teth_neighbor_sites_; i_site++){
 		Tubulin *site = teth_neighbor_sites_[i_site];
 		double site_coord = site->index_ + site->mt_->coord_; 
 		double x_dist = fabs(stalk_coord - site_coord);

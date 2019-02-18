@@ -28,69 +28,92 @@ void Kinesin::SetParameters(){
 void Kinesin::CalculateCutoffs(){
 
 	// Only calculate cutoffs if tethering is enabled
-	if(parameters_->motors.tethers_active){
-		int site_size = parameters_->microtubules.site_size; 
-		double r_y = parameters_->microtubules.y_dist / 2;
-		double kbT = parameters_->kbT; 
-		// First, calculate rest_dist_ in number of sites
-		int roughly_rest = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
-		double rest_scan[3]; 
-		double scan_force[3]; 
-		for(int i_scan = -1; i_scan <= 1; i_scan++){
-			rest_scan[i_scan + 1] = roughly_rest + ((double)i_scan * 0.5);
-			double rest_scan_length = rest_scan[i_scan + 1] * site_size;
-			double r_scan = sqrt(r_y*r_y+rest_scan_length*rest_scan_length); 
-			if(r_scan >= r_0_)
-				scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
-			else
-				scan_force[i_scan + 1] = (r_scan - r_0_) * k_slack_; 
-		}
-		double min_force = 100; 
-		for(int i_scan = -1; i_scan <=1; i_scan++){
-			double force = fabs(scan_force[i_scan + 1]); 
-			if(force < min_force){
-				min_force = force;
-				rest_dist_ = rest_scan[i_scan + 1]; 
-			}	
-		}
-		// Next, calculate compression distance cutoff 
-		comp_cutoff_ = 0;
-		for(int x_dub = 2*rest_dist_; x_dub >= 0; x_dub--){
-			//increment by 0.5x
-			int r_x = x_dub * site_size / 2; 
-			double r = sqrt(r_y*r_y + r_x*r_x); 
-			double dr = r - r_0_; 
-			double U;
-			if(r < r_0_)
-				U = (k_slack_/2)*dr*dr;
-			else
-				U = (k_spring_/2)*dr*dr; 
-			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 100){
-				comp_cutoff_ = x_dub / 2;
-				break;
-			}
-		}
-		// Finally, calculate extension distance cutoff
-		for(int x_dub = 2*rest_dist_; x_dub < 1000; x_dub++){
-			//increment by 0.5x
-			int r_x = x_dub * site_size / 2;
-			double r = sqrt(r_y*r_y + r_x*r_x);
-			double dr = r - r_0_; 
-			double U;
-			if(r < r_0_)
-				U = (k_slack_/2)*dr*dr;
-			else
-				U = (k_spring_/2)*dr*dr; 
-			double boltzmann_weight = exp(U/(2*kbT)); 
-			if(boltzmann_weight > 100){
-				dist_cutoff_ = x_dub / 2;
-				break;
-			}
+	int site_size = parameters_->microtubules.site_size; 
+	double r_y = parameters_->microtubules.y_dist / 2;
+	double kbT = parameters_->kbT; 
+	// First, calculate rest_dist_ in number of sites
+	int roughly_rest = sqrt(r_0_*r_0_ - r_y*r_y) / site_size; 
+	double rest_scan[3]; 
+	double scan_force[3]; 
+	for(int i_scan = -1; i_scan <= 1; i_scan++){
+		rest_scan[i_scan + 1] = roughly_rest + ((double)i_scan * 0.5);
+		double rest_scan_length = rest_scan[i_scan + 1] * site_size;
+		double r_scan = sqrt(r_y*r_y+rest_scan_length*rest_scan_length); 
+		if(r_scan >= r_0_)
+			scan_force[i_scan + 1] = (r_scan - r_0_) * k_spring_;
+		else
+			scan_force[i_scan + 1] = (r_scan - r_0_) * k_slack_; 
+	}
+	double min_force = 100; 
+	for(int i_scan = -1; i_scan <=1; i_scan++){
+		double force = fabs(scan_force[i_scan + 1]); 
+		if(force < min_force){
+			min_force = force;
+			rest_dist_ = rest_scan[i_scan + 1]; 
+		}	
+	}
+	// Next, calculate compression distance cutoff 
+	comp_cutoff_ = 0;
+	for(int x_dub = 2*rest_dist_; x_dub >= 0; x_dub--){
+		//increment by 0.5x
+		int r_x = x_dub * site_size / 2; 
+		double r = sqrt(r_y*r_y + r_x*r_x); 
+		double dr = r - r_0_; 
+		double U;
+		if(r < r_0_)
+			U = (k_slack_/2)*dr*dr;
+		else
+			U = (k_spring_/2)*dr*dr; 
+		double boltzmann_weight = exp(U/(2*kbT)); 
+		if(boltzmann_weight > 100){
+			comp_cutoff_ = x_dub / 2;
+			break;
 		}
 	}
-	// If tethering isn't enabled, dist_cutoff_ set to 0
-	else {
+	// Finally, calculate extension distance cutoff
+	for(int x_dub = 2*rest_dist_; x_dub < 1000; x_dub++){
+		//increment by 0.5x
+		int r_x = x_dub * site_size / 2;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double dr = r - r_0_; 
+		double U;
+		if(r < r_0_)
+			U = (k_slack_/2)*dr*dr;
+		else
+			U = (k_spring_/2)*dr*dr; 
+		double boltzmann_weight = exp(U/(2*kbT)); 
+		if(boltzmann_weight > 100){
+			dist_cutoff_ = x_dub / 2;
+			break;
+		}
+	}
+	/*
+	// Artifical force perpetually applied to motors
+	double min_delta = 100;
+	double applied_force = parameters_->motors.applied_force;
+	if(ID_ == 0) printf("applied force is %g\n", applied_force);
+	for(int x_dub(2*comp_cutoff_); x_dub<=2*dist_cutoff_; x_dub++){
+		if(applied_force == 0){
+			applied_x_dub_ = 0;
+			break;
+		}
+		double r_x = (double)x_dub * site_size / 2;
+		double r = sqrt(r_y*r_y + r_x*r_x);
+		double dr = r - r_0_;
+//		printf("dr is %g for 2x=%i\n", dr, x_dub);
+		double F;
+		if(dr >= 0) F = k_spring_ * dr;
+		else F = -k_slack_ * dr;
+//		printf("F is %g for 2x=%i\n", F, x_dub);
+		double delta = fabs(F - applied_force);	
+		if(delta <= min_delta){
+			min_delta = delta;
+			applied_x_dub_ = x_dub;
+		}
+	}
+	*/
+//	printf("applied x_dub is %i\n", applied_x_dub_);
+	if(!parameters_->motors.tethers_active){
 		rest_dist_ = 0;
 		comp_cutoff_ = 0;
 		dist_cutoff_ = 0;
@@ -151,6 +174,23 @@ void Kinesin::InitializeSteppingProbabilities(){
 	double kbT = parameters_->kbT;
 	double site_size = parameters_->microtubules.site_size;
 	double f_stall = parameters_->motors.stall_force;
+	// First, handle applied force
+	if(parameters_->motors.applied_force > 0){
+		double f_app = parameters_->motors.applied_force;
+		/*
+		double sigma_i = 4.6;
+		double p_step = 1 - (f_app/f_stall)*exp(-f_app*sigma_i/kbT);
+		applied_p_step_ = p_step;
+		*/
+		double dr = f_app / k_spring_;
+		double r = r_0_ + dr;
+		double r_x = sqrt(r*r - r_y*r_y);
+		double cosine = r_x / r;
+		applied_p_step_ = std::pow((1 - (f_app/f_stall)*cosine), 1.0/5.0);
+		if(ID_ == 0)
+			printf("p_step scaled from 1 to %g\n", applied_p_step_);
+	}
+	// Next, handle tethering roces
 	p_step_to_rest_.resize(2*dist_cutoff_ + 1);
 	p_step_fr_rest_.resize(2*dist_cutoff_ + 1);
 	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
@@ -158,7 +198,7 @@ void Kinesin::InitializeSteppingProbabilities(){
 		double r = sqrt(r_x*r_x + r_y*r_y);
 		double dr = r - r_0_;
 		double k = 0;
-		if(x_dub <= 2*rest_dist_) k = k_slack_;
+		if(dr < 0) k = k_slack_;
 		else k = k_spring_;
 		double force_mag = fabs(k * dr); 
 		double f_x = force_mag * cosine_lookup_[x_dub];
@@ -274,8 +314,17 @@ void Kinesin::ChangeConformation(){
 	if(!tethered_){
 		if(heads_active_ == 1){
 			frustrated_ = false;
-			head_one_.trailing_ = !head_one_.trailing_;
-			head_two_.trailing_ = !head_two_.trailing_;
+			if(parameters_->motors.applied_force > 0){
+				double ran = properties_->gsl.GetRanProb();
+				if(ran < applied_p_step_){
+					head_one_.trailing_ = !head_one_.trailing_;
+					head_two_.trailing_ = !head_two_.trailing_;
+				}
+			}
+			else{
+				head_one_.trailing_ = !head_one_.trailing_;
+				head_two_.trailing_ = !head_two_.trailing_;
+			}
 		}
 		else if(heads_active_ == 2) frustrated_ = true;
 		else printf("Error in Kinesin::ChangeConformation()\n");

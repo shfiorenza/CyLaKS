@@ -42,6 +42,7 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.k_spring = motors["k_spring"].as<double>();
 	params->motors.k_slack = motors["k_slack"].as<double>();
 	params->motors.stall_force = motors["stall_force"].as<double>();
+	params->motors.applied_force = motors["applied_force"].as<double>();
 	/* Xlink parameters below */
 	YAML::Node xlinks = input["xlinks"];
 	params->xlinks.k_on = xlinks["k_on"].as<double>();
@@ -100,22 +101,22 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    c_bulk = %g nM\n", params->motors.c_bulk);
 	printf("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
 	printf("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
+	printf("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
 	printf("    c_ATP = %g mM\n", params->motors.c_ATP);
 	printf("    k_off_i = %g /s\n", params->motors.k_off_i);
 	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
-	printf("    endpausing_active = %s\n", 
-			params->motors.endpausing_active ? "true" : "false");	
+	printf("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
+	printf("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
+	printf("    k_untether = %g /s\n", params->motors.k_untether);
+	printf("    r_0 = %g nm\n", params->motors.r_0);
+	printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
+	printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
+	printf("    stall_force = %g pN\n", params->motors.stall_force);
+	printf("    applied_force = %g pN\n", params->motors.applied_force);
 	printf("    tethers_active = %s\n", 
 			params->motors.tethers_active ? "true" : "false");	
-	if(params->motors.tethers_active){
-		printf("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
-		printf("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
-		printf("    k_untether = %g /s\n", params->motors.k_untether);
-		printf("    r_0 = %g nm\n", params->motors.r_0);
-		printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
-		printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
-		printf("    stall_force = %g pN\n", params->motors.stall_force);
-	}
+	printf("    endpausing_active = %s\n", 
+			params->motors.endpausing_active ? "true" : "false");	
 	printf("\n  Crosslinker (xlink) parameters:\n");
 	printf("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
 	printf("    concentration = %g nM\n", params->xlinks.concentration);
@@ -210,7 +211,8 @@ void Curator::GenerateDataFiles(char* sim_name){
 		 motor_ID_file[160], xlink_ID_file[160], 
 		 tether_coord_file[160], mt_coord_file[160], 
 		 motor_extension_file[160], xlink_extension_file[160],
-		 motor_force_file[160], xlink_force_file[160], total_force_file[160];
+		 motor_force_file[160], xlink_force_file[160], total_force_file[160],
+		 runtime_file[160];
 	// Generate names of output files based on the input simulation name
 	sprintf(occupancy_file, "%s_occupancy.file", sim_name);
 	sprintf(motor_ID_file, "%s_motorID.file", sim_name);
@@ -222,6 +224,7 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(motor_force_file, "%s_motor_force.file", sim_name);
 	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
+	sprintf(runtime_file, "%s_runtime.dat", sim_name);
 	// Check to see if sim files already exist
 	if (FileExists(occupancy_file)){
 		printf("Simulation file with this name already exists!\n");
@@ -274,6 +277,9 @@ void Curator::GenerateDataFiles(char* sim_name){
 	// Open total force file, which stores the sum of ALL 
 	// forces coming from xlink and motor tether extensions
 	properties_->total_force_file_ = OpenFile(total_force_file, "w");
+	// Open runtime file, which tracks the time it took to execute
+	// various functions of the simulation
+	properties_->runtime_file_ = OpenFile(runtime_file, "w");
 }
 
 FILE* Curator::OpenFile(const char *file_name, const char *type){
@@ -609,12 +615,54 @@ void Curator::OutputSimDuration(){
 	finish_ = sys_clock::now();
 	auto elapsed = std::chrono::duration_cast<t_unit>(finish_ - start_);
 	sim_duration_ = elapsed.count();
-	/*	
-	 	stream_ = OpenFile("sim_duration.dat", "w");
-		fprintf(stream_, "Time to execute sim: %f seconds.\n", sim_duration_);
-		fclose(stream_);
-	*/	
-	printf("\nTime to execute: %.2f seconds.\n", sim_duration_/n_per_sec_);
+	// First, write data to runtime file
+	auto ptr = properties_->runtime_file_;
+	fprintf(properties_->runtime_file_, 
+			"Time to execute sim: %.2f seconds.\n", 
+			sim_duration_/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Calculating statistics: %.2f\n", 
+			t_motors_[1]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Constructing list: %.2f\n", 
+			t_motors_[2]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Calculating statistics: %.2f\n", 
+			t_xlinks_kmc_[1]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Constructing list: %.2f\n", 
+			t_xlinks_kmc_[2]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"   -Xlinks (Diffusion): %.2f\n", 
+			t_xlinks_dif_[0]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Calculating statistics: %.2f\n", 
+			t_xlinks_dif_[1]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Constructing list: %.2f\n", 
+			t_xlinks_dif_[2]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Calculating displacement: %.2f\n", 
+			t_MTs_[2]/n_per_sec_);
+	fprintf(properties_->runtime_file_, 
+			"      -Execution: %.2f\n", t_MTs_[3]/n_per_sec_);
+	// Next, print to terminal
+	printf("\nTime to execute sim: %.2f seconds.\n", 
+			sim_duration_/n_per_sec_);
 	printf("   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
 	printf("      -Calculating statistics: %.2f\n", t_motors_[1]/n_per_sec_);
 	printf("      -Constructing list: %.2f\n", t_motors_[2]/n_per_sec_);
@@ -647,4 +695,5 @@ void Curator::CloseDataFiles(){
 	fclose(properties_->motor_force_file_);
 	fclose(properties_->xlink_force_file_);
 	fclose(properties_->total_force_file_);
+	fclose(properties_->runtime_file_);
 }

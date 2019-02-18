@@ -1,4 +1,4 @@
-
+%{
 clear all;
 % Often-changed variables
 n_sites = 5000;
@@ -6,7 +6,7 @@ simName = 'MotorAppForce_0.0pN';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0001;
-n_steps = 1000000; %0
+n_steps = 10000000;
 n_datapoints = 100000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -157,13 +157,13 @@ for i_force=1:1:length(f_applied)
     mean_run_lengths(i_force) = mean_run;
     mean_velocities(i_force) = vel;
 end
-
+%}
 scaled_runs_expected = [1.2,0.76,0.44,0.273,0.164,0.098,0.0545];
-scaled_vel_expected = [640,597,555,469,341,171,100];
+scaled_vel_expected = [640,597,555,469,341,171,0];
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600])
-sgtitle('unbinding same as paper (sigma x2.5); v ~ (1 - F_x/F_s)^{1/5}');
+sgtitle('lambda = 1/4 for unbinding; v ~ (1-F/F_s)^{1/2}');
 subplot(1, 2, 1);
 plot(f_applied, mean_run_lengths, 'LineWidth', 2);
 hold on
@@ -173,7 +173,6 @@ xlabel('Force applied (pN)');
 ylabel('Mean processivity (um)');
 grid on
 grid minor
-legend({'Simulation', 'Expected'}, 'location', 'northeast');
 subplot(1, 2, 2);
 plot(f_applied, mean_velocities, 'LineWidth', 2);
 hold on
@@ -183,4 +182,4 @@ xlabel('Force applied (pN)');
 ylabel('Mean stepping velocity (nm/s)');
 grid on
 grid minor
-legend({'Simulation', 'Expected'}, 'location', 'northeast');
+legend({'Simulation', 'Experiment'}, 'location', 'northeast');

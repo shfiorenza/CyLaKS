@@ -1,11 +1,11 @@
 clear all
 
 % Parameters from sim
-n_steps = 2000000;
+n_steps = 100000000;
 n_sites = 500;
 n_mts = 2;
-n_datapoints = 100000;
-delta_t = 0.0005; 
+n_datapoints = 10000;
+delta_t = 0.00001; 
 xlinkSpeciesID = 1;
 motorSpeciesID = 2;
 start_time = 0;
@@ -13,7 +13,7 @@ end_time = n_steps * delta_t;
 unpin_time = 500;
 
 % File info
-simName = 'slide';
+simName = 'TethScan_0.005';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';

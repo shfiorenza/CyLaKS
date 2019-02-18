@@ -1,12 +1,12 @@
 clear all;
 % Often-changed variables
 n_sites = 500;
-simName = 'slide';
+simName = 'Slide_noteth';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 2000000;
-delta_t = 0.0005;
-n_datapoints = 100000;
+n_steps = 100000000;
+delta_t = 0.00001;
+n_datapoints = 10000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;
 length = n_sites * 0.008;
@@ -39,9 +39,11 @@ end
 % Calculate real time that passes per iteration to get an accurate velocity
 time_per_datapoint = delta_t * (n_steps / n_datapoints);
 % Use gradient function with above spacing to get slope of overlap length
-smoothed_overlap_data = smooth(final_overlap_data, 1000);
+smoothed_overlap_data = smooth(final_overlap_data, 50);
+%smoothed_overlap_data = final_overlap_data;
 slope_data = gradient(smoothed_overlap_data, time_per_datapoint);
-final_slope_data = slope_data;
+final_slope_data = smooth(slope_data, 50);
+final_overlap_data = smoothed_overlap_data;
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
@@ -68,7 +70,7 @@ title('Sliding velocity over time');
 ylabel('Sliding velocity (nm/s)');
 xlabel('Time (s)');
 xlim([start_time + 1 end_time - 1]);
-ylim([-100 100]);
+ylim([-250 250]);
 %axis tight
 grid on
 grid minor

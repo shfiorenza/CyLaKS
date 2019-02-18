@@ -2,10 +2,10 @@ clear all;
 
 % Parameters from sim
 n_steps = 10000000;
-n_datapoints = 10000;
+n_datapoints = 100000;
 delta_t = 0.00001; 
-n_sites = 500;
-n_mts = 2;
+n_sites = 2500;
+n_mts = 1;
 xlink_cutoff = 7;
 
 % Colors
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = n_datapoints;
-frames_per_plot = 100;
+frames_per_plot = 1000;
 start_frame = 1;
 site_height = 1;
 site_width = 1;

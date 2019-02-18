@@ -21,8 +21,8 @@ class KinesinManagement{
 				else n_expected_ = 0; 
 			}
 		private:
-			std::function<int(double, int)> prob_dist_;
 		public:
+			std::function<int(double, int)> prob_dist_;
 			int index_ = -1;			// Serialized unique index of event
 			int kmc_code_ = -1;			// Encodes which KMC_ funct to call
 			std::string label_ = "BRUH";			// Name of event
@@ -51,6 +51,8 @@ class KinesinManagement{
 		std::vector<int> n_bound_ADPP_i_tethered_; 
 		std::vector<int> n_bound_tethered_;
 		
+		double applied_force_ = 2;		// in pN
+
 		// See kinesin header for meaningful description of below
 		int dist_cutoff_;
 		int comp_cutoff_;

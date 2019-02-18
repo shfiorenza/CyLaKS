@@ -41,7 +41,7 @@ class Kinesin{
 		int heads_active_ = 0;
 		int n_neighbor_sites_ = 0;
 		int n_neighbor_xlinks_ = 0;
-		
+
 		// x_dist_dub is used to index the tether extension of motors, e.g.
 		// an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
 		int x_dist_doubled_;		// in no. of sites 
@@ -54,6 +54,9 @@ class Kinesin{
 		double k_slack_;		// in pN / nm
 		double extension_;		// in nm
 		double cosine_;			// of motor tether angle w.r.t. horizontal
+
+		// stats from perpetually applied force
+		double applied_p_step_;
 
 		bool frustrated_ = false;
 		bool tethered_ = false;

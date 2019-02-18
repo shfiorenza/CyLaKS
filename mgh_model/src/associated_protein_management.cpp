@@ -1861,7 +1861,8 @@ void AssociatedProteinManagement::RunDiffusion(){
 //	printf("start of xlink diffusion cycle\n");
 	sys_time start1 = sys_clock::now();
 
-	GenerateDiffusionList();
+	if(parameters_->xlinks.concentration > 0) GenerateDiffusionList();
+	else return;
 	
 	sys_time start2 = sys_clock::now();
 
@@ -2694,7 +2695,8 @@ void AssociatedProteinManagement::RunKMC(){
 	
 	sys_time start1 = sys_clock::now();
 
-	GenerateKMCList();
+	if(parameters_->xlinks.concentration > 0) GenerateKMCList();
+	else return;
 
 	sys_time start2 = sys_clock::now();
 
@@ -2898,7 +2900,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_I(){
 	}
 	else{
 		printf("Error in RunKMC_Unbind: no bound xlinks\n");
-		exit(1);
+//		exit(1);
 	}
 }
 
@@ -2937,7 +2939,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_II(int x_dist){
 	}
 	else{
 		printf("Error in RunKMC_Unbind_II:no double bound xlinks\n");
-		exit(1);
+//		exit(1);
 	}
 }
 
@@ -3109,7 +3111,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_I_Tethered(int x_dist_dub){
 	}
 	else{
 		printf("Error in RunKMC_Unbind: no bound xlinks\n");
-		exit(1);
+//		exit(1);
 	}
 }
 
@@ -3151,7 +3153,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_To_Teth(int x_dist_dub,
 	}
 	else{
 		printf("Error in Unbind_II_To_Teth: no doubly-bound xlinks\n");
-		exit(1);
+//		exit(1);
 	}
 }
 
@@ -3193,7 +3195,7 @@ void AssociatedProteinManagement::RunKMC_Unbind_II_From_Teth(
 	}
 	else{
 		printf("Error in Unbind_II_Fr_Teth: no doubly-bound xlinks\n");
-		exit(1);
+//		exit(1);
 	}
 }
 

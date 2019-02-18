@@ -24,8 +24,8 @@ int main(int argc, char *argv[]){
 	}
 
 	// Cleanup stuff
-	properties.wallace.CloseDataFiles();
 	properties.wallace.OutputSimDuration();
+	properties.wallace.CloseDataFiles();
 	properties.gsl.CleanUp();
 
 	return 0;

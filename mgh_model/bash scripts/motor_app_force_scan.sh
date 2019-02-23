@@ -2,7 +2,7 @@
 echo START MOTOR PROCESSIVITY SCAN
 cd ~
 cd Projects/overlap_analysis/mgh_model
-for k in {1,2,3,4,5,6};
+for k in {0,1,2,3,4,5,6};
 do 
 	FILE_NAME="MotorAppForce"
 	FILE_NAME+="_"

@@ -2,7 +2,7 @@ clear all
 
 % Parameters from sim
 n_steps = 100000000;
-n_sites = 500;
+n_sites = 1000;
 n_mts = 2;
 n_datapoints = 10000;
 delta_t = 0.00001; 
@@ -13,7 +13,7 @@ end_time = n_steps * delta_t;
 unpin_time = 500;
 
 % File info
-simName = 'TethScan_0.005';
+simName = 'slide_scan2/shift_600';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';
@@ -110,7 +110,7 @@ line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Overlap length in microns');
 ylabel('Overlap length (um)');
 legend('Overall overlap', 'location', 'northeastoutside');
-
+xlim([0 1000]);
 
 % Plot motor occupancy data
 subplot(3, 1, 2)
@@ -123,6 +123,7 @@ title('Motor occupancy');
 ylabel({'Fraction of', 'sites occupied'});
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');
 ylim([0 0.15]);
+xlim([0 1000]);
 
 % Plot xlink occupancy data
 subplot(3, 1, 3)
@@ -136,3 +137,4 @@ title('Crosslinker occupancy')
 xlabel('Time (s)');
 ylabel('Fraction of sites occupied');
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');
+xlim([0 1000]);

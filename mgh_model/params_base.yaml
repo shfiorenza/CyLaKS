@@ -7,7 +7,7 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 2
-  length: 500
+  length: 1000
   y_dist: 32
   site_size: 8
   radius: 12.5

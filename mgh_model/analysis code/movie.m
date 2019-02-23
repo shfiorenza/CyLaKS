@@ -2,18 +2,18 @@ clear all;
 
 % Parameters from sim
 n_steps = 10000000;
-n_datapoints = 100000;
-delta_t = 0.00001; 
-n_sites = 2500;
+n_datapoints = 10000;
+delta_t = 0.0001; 
+n_sites = 250;
 n_mts = 1;
-xlink_cutoff = 7;
+xlink_cutoff = 5;
 
 % Colors
 blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'test';
+simName = 'Endtag_0.4.0x_1250';
 movie_name = 'test.avi';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -28,7 +28,7 @@ tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = n_datapoints;
-frames_per_plot = 1000;
+frames_per_plot = 100;
 start_frame = 1;
 site_height = 1;
 site_width = 1;

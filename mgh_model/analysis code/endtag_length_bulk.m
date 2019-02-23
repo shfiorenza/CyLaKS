@@ -3,7 +3,7 @@ clear all
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 100000;
+n_datapoints = 10000;
 starting_point = 50000;
 active_datapoints = n_datapoints - starting_point;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -11,18 +11,20 @@ fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers'};
 
 mt_lengths = [2, 4, 6, 8, 10, 14]; % in microns
-%xlink_concs = [0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.2]; % in nanomolar
+xlink_concs = [0.0, 0.1, 0.4]; % in nanomolar
 
 n_lengths = length(mt_lengths);
-n_concs = 1;   %length(xlink_concs);
+n_concs = length(xlink_concs);
 
-final_data = zeros([1 n_lengths]);
+final_data = zeros([n_concs n_lengths]);
 
-%for i_conc=1:1:n_concs
-    %xlink_conc = xlink_concs(i_conc);
+sim_names = ["Endtag_00.0x_%i", "Endtag_0.1.0x_%i", "Endtag_0.4.0x_%i"];
+
+for i_conc=1:1:n_concs
+    xlink_conc = xlink_concs(i_conc);
     for i_length=1:1:n_lengths
         n_sites = mt_lengths(i_length) * 125;
-        simName = sprintf('endtag_%i', n_sites);
+        simName = sprintf(sim_names(i_conc), n_sites);
         fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
         
         motor_avg_occupancy = zeros([n_sites 1]);
@@ -60,8 +62,7 @@ final_data = zeros([1 n_lengths]);
         endtag_length = endtag_site*0.008; 
         final_data(i_length) = endtag_length; 
     end
-%end
-
+end
 
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])

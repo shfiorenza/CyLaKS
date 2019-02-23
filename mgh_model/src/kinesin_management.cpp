@@ -56,13 +56,7 @@ void KinesinManagement::SetParameters(){
 	/* artifical force perpetually applied to motors */
 	double app_force = parameters_->motors.applied_force;
 	if(app_force > 0){
-		/*
-		double dr = app_force / k_spring; 
-		double U_teth = k_spring * dr * dr / 2;
-	//	double weight = exp(U_teth/(6*kbT));
-	//	double weight = exp((app_force*app_force/(2*k_spring)) / (2*kbT)
-		*/
-		double sigma_off = 1.5;
+		double sigma_off = 1.2;
 		double weight = exp(app_force*sigma_off/kbT);
 		p_unbind_i_ = k_off_i * weight * delta_t;
 		printf("p_unbind_i_ scaled from %g to %g \n", k_off_i*delta_t, 
@@ -128,33 +122,35 @@ void KinesinManagement::SetParameters(){
 		// Calculate tether length for this x_dist 
 		double r_x = (double)x_dub * site_size / 2;
 		double r = sqrt(r_y*r_y + r_x*r_x);
+		double cosine = r_x / r;
 		// Calculate extension of tether for given x_dub
 		double dr = r - r_0; 
-		// Calculate potential energy of this tether extension
-		double U_teth;
-		if(dr > 0)
-			U_teth = k_spring * dr * dr / 2;
-		else
-			U_teth = k_slack * dr * dr / 2;
-		// Weight of creating this configuration
-		double weight_create = exp(-U_teth/(2*kbT));
-		// Weight of annihilating this configuration
-		double weight_annihilate = exp(U_teth/(2*kbT));
+		// Get appropriate spring constant
+		double k = 0;
+		if(dr < 0) k = k_slack;
+		else k = k_spring; 
+		// Calculate spring force and potential energy of this extension
+		double f_x = fabs(k * dr * cosine);
+		double U_teth = k * dr * dr / 2;
+		// Calculate weight
+		double weight = exp(U_teth/(2*kbT));
+		double sigma_off = 1.5;
+		double weight_alt = exp(f_x*sigma_off/kbT);
 		// If tethering is disabled, all weights are automatically zero
 		if(!parameters_->motors.tethers_active){
-			weight_create = 0;
-			weight_annihilate = 0; 
+			weight = 0;
+			weight_alt = 0; 
 		}
 		// Otherwise, only weights below comp_cutoff_ are zero
 		else if(x_dub < 2*comp_cutoff_){
-			weight_create = 0;
-			weight_annihilate = 0; 
+			weight = 0;
+			weight_alt = 0; 
 		}
 		// Calculate appropriately-weighted probabilities
 		p_bind_ATP_tethered_[x_dub] = p_bind_ATP_;
 		p_bind_ii_tethered_[x_dub] = p_bind_ii_; 
-		p_unbind_i_tethered_[x_dub] = weight_annihilate * p_unbind_base;
-		p_untether_bound_[x_dub] = weight_annihilate * p_unteth_base;
+		p_unbind_i_tethered_[x_dub] = weight_alt * p_unbind_base;
+		p_untether_bound_[x_dub] = weight * p_unteth_base;
 		// Sound the alarm if our timestep is too large
 		if(p_bind_ATP_tethered_[x_dub] > 1)
 			printf("WaRNING: p_bind_ATP_teth=%g for 2x=%i\n", 

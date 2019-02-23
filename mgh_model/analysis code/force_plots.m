@@ -1,11 +1,11 @@
 clear all;
 % Often-changed variables
-n_sites = 1000;
-simName = 'XlinkExp_2.0';
+n_sites = 500;
+simName = 'slide_scan/unteth_0.050';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 10000000;
-n_datapoints = 100000;
+n_datapoints = 10000;
 delta_t = 0.000005;
 starting_point = 0;
 unpin_time = 10;           % time at which top MT is able to slide (in sec)

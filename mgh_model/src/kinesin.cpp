@@ -13,8 +13,8 @@ void Kinesin::Initialize(system_parameters *parameters,
 	SetParameters();
 	CalculateCutoffs();
 	InitializeNeighborLists(); 
+	InitializeWeightLookup();
 	InitializeExtensionLookup();
-	InitializeCreationWeightLookup();
 	InitializeSteppingProbabilities();
 }
 
@@ -87,32 +87,6 @@ void Kinesin::CalculateCutoffs(){
 			break;
 		}
 	}
-	/*
-	// Artifical force perpetually applied to motors
-	double min_delta = 100;
-	double applied_force = parameters_->motors.applied_force;
-	if(ID_ == 0) printf("applied force is %g\n", applied_force);
-	for(int x_dub(2*comp_cutoff_); x_dub<=2*dist_cutoff_; x_dub++){
-		if(applied_force == 0){
-			applied_x_dub_ = 0;
-			break;
-		}
-		double r_x = (double)x_dub * site_size / 2;
-		double r = sqrt(r_y*r_y + r_x*r_x);
-		double dr = r - r_0_;
-//		printf("dr is %g for 2x=%i\n", dr, x_dub);
-		double F;
-		if(dr >= 0) F = k_spring_ * dr;
-		else F = -k_slack_ * dr;
-//		printf("F is %g for 2x=%i\n", F, x_dub);
-		double delta = fabs(F - applied_force);	
-		if(delta <= min_delta){
-			min_delta = delta;
-			applied_x_dub_ = x_dub;
-		}
-	}
-	*/
-//	printf("applied x_dub is %i\n", applied_x_dub_);
 	if(!parameters_->motors.tethers_active){
 		rest_dist_ = 0;
 		comp_cutoff_ = 0;
@@ -126,6 +100,31 @@ void Kinesin::InitializeNeighborLists(){
 	// Serialize this bitch so we just roll one random number 
 	neighbor_xlinks_.resize(n_mts*(2*dist_cutoff_ + 1));
 	neighbor_sites_.resize(n_mts*(2*dist_cutoff_ + 1));
+}
+
+void Kinesin::InitializeWeightLookup(){
+
+	double r_y = parameters_->microtubules.y_dist / 2;
+	double kbT = parameters_->kbT;
+	double site_size = parameters_->microtubules.site_size;
+	weight_lookup_.resize(2*dist_cutoff_ + 1);
+	weight_alt_lookup_.resize(2*dist_cutoff_ + 1);
+	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
+		double r_x = (double)x_dub * site_size / 2;
+		double r = sqrt(r_x*r_x + r_y*r_y);
+		double cosine = r_x / r;
+		double dr = r - r_0_;
+		double k = 0;
+		if(dr < 0) k = k_slack_;
+		else k = k_spring_;
+		double U_teth = k * dr * dr / 2;
+		double weight = exp(-U_teth/(2*kbT));
+		double f_x = fabs(dr * k * cosine);
+		double sigma_off = 1.5;
+		double weight_alt = exp(-f_x*sigma_off/kbT);
+		weight_lookup_[x_dub] = weight;
+		weight_alt_lookup_[x_dub] = weight_alt;
+	}
 }
 
 void Kinesin::InitializeExtensionLookup(){
@@ -142,32 +141,6 @@ void Kinesin::InitializeExtensionLookup(){
 	}
 }
 
-void Kinesin::InitializeCreationWeightLookup(){
-
-	double r_y = parameters_->microtubules.y_dist / 2;
-	double kbT = parameters_->kbT;
-	double site_size = parameters_->microtubules.site_size;
-	creation_weight_lookup_.resize(2*dist_cutoff_ + 1);
-	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
-		double r_x = (double)x_dub * site_size / 2;
-		double r = sqrt(r_x*r_x + r_y*r_y);
-		double dr = r - r_0_;
-		double weight = 0;
-		if(x_dub < 2*comp_cutoff_){
-			weight = 0;
-		}
-		// For compression, assume the tail can bend, lowering its k_spring
-		else if(dr < 0){
-			weight = exp(-dr*dr*k_slack_/(4*kbT));
-		}
-		// For extension, treat tail as a spring
-		else{
-			weight = exp(-dr*dr*k_spring_/(4*kbT));
-		}
-		creation_weight_lookup_[x_dub] = weight;
-	}
-}
-
 void Kinesin::InitializeSteppingProbabilities(){
 
 	double r_y = parameters_->microtubules.y_dist / 2;
@@ -178,31 +151,34 @@ void Kinesin::InitializeSteppingProbabilities(){
 	if(parameters_->motors.applied_force > 0){
 		double f_app = parameters_->motors.applied_force;
 		/*
-		double sigma_i = 4.6;
-		double p_step = 1 - (f_app/f_stall)*exp(-f_app*sigma_i/kbT);
+		double sigma_i = 1.84;
+		double p_step = exp(-f_app*sigma_i/kbT);
 		applied_p_step_ = p_step;
 		*/
 		double dr = f_app / k_spring_;
 		double r = r_0_ + dr;
 		double r_x = sqrt(r*r - r_y*r_y);
 		double cosine = r_x / r;
-		applied_p_step_ = std::pow((1 - (f_app/f_stall)*cosine), 1.0/5.0);
-		if(ID_ == 0)
+		double f_x = f_app * cosine;
+		double p = sqrt(1 - (f_x/f_stall)); 
+		applied_p_step_ = p;
+		if(ID_ == 0) 
 			printf("p_step scaled from 1 to %g\n", applied_p_step_);
 	}
-	// Next, handle tethering roces
+	// Next, handle tethering forces
 	p_step_to_rest_.resize(2*dist_cutoff_ + 1);
 	p_step_fr_rest_.resize(2*dist_cutoff_ + 1);
 	for(int x_dub = 0; x_dub <= 2*dist_cutoff_; x_dub++){
 		double r_x = (double)x_dub * site_size / 2;
 		double r = sqrt(r_x*r_x + r_y*r_y);
+		double cosine = r_x / r;
 		double dr = r - r_0_;
 		double k = 0;
 		if(dr < 0) k = k_slack_;
 		else k = k_spring_;
 		double force_mag = fabs(k * dr); 
-		double f_x = force_mag * cosine_lookup_[x_dub];
-		double p = 1 - (f_x/f_stall); 
+		double f_x = force_mag * cosine;
+		double p = sqrt(1 - (f_x/f_stall)); 
 		if(f_x >= f_stall) p = 0;
 		if(x_dub < 2*comp_cutoff_ - 1){
 			p_step_to_rest_[x_dub] = 0;
@@ -664,7 +640,7 @@ double Kinesin::GetBindingWeight(Tubulin *site){
 	// Multiply by 2 to guarentee an integer 
 	int x_dub = x_dist*2; 
 	// Get binding weight that corresponds to this adj. x-dist
-	return creation_weight_lookup_[x_dub]; 
+	return weight_alt_lookup_[x_dub]; 
 }
 
 double Kinesin::GetTotalTetheringWeight(){
@@ -685,7 +661,7 @@ double Kinesin::GetTetheringWeight(AssociatedProtein *xlink){
 	// Multiply by 2 to guarentee an integer
 	int x_dub = x_dist*2; 
 	// Get tethering weight that corressponds to this adj. x-dist
-	return creation_weight_lookup_[x_dub];
+	return weight_lookup_[x_dub];
 }
 
 Tubulin* Kinesin::GetWeightedNeighborSite(){

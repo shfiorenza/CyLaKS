@@ -1,13 +1,13 @@
 clear all
 % Often-changed variables
-n_sites = 500;
+n_sites = 1750;
 xlink_conc = 0.6;
-simName = 'endtag_500'
+simName = 'scan_endtag_300nM/Endtag_0.4.0x_1750';
 %simName = sprintf('Endtag_%#.1f_%i', xlink_conc, n_sites);
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 100000;
+n_datapoints = 10000;
 starting_point = 50000;
 active_datapoints = n_datapoints - starting_point;
 

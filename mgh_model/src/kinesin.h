@@ -15,8 +15,8 @@ class Kinesin{
 		// e.g. ...lookup_[1] is an x-dist of 1/2 of a site
 		std::vector<double> cosine_lookup_;
 		std::vector<double> extension_lookup_;
-		// "creation" refers to creating a state with some extension
-		std::vector<double> creation_weight_lookup_;
+		std::vector<double> weight_lookup_;
+		std::vector<double> weight_alt_lookup_;
 		std::vector<double> p_step_to_rest_;
 		std::vector<double> p_step_fr_rest_;
 		// Neighbor sites are for when the motor is tethered but unbound
@@ -71,8 +71,8 @@ class Kinesin{
 		void SetParameters();
 		void CalculateCutoffs();
 		void InitializeNeighborLists();
+		void InitializeWeightLookup();
 		void InitializeExtensionLookup();
-		void InitializeCreationWeightLookup();
 		void InitializeSteppingProbabilities();
 
 	public:
@@ -84,7 +84,7 @@ class Kinesin{
 		head* GetDockedHead();
 		double GetStalkCoordinate(); 	  // tail originates from stalk
 		double GetDockedCoordinate();
-		void ChangeConformation();
+		void ChangeConformation();	// FIXME add applied force w/ teth
 
 		bool AtCutoff();
 		void UpdateNeighborSites();

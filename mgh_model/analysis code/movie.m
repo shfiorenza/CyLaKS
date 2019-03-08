@@ -2,46 +2,59 @@ clear all;
 
 % Parameters from sim
 n_steps = 10000000;
-n_datapoints = 10000;
+n_datapoints = 100000;
+start_frame = 49901;
+end_frame = 50401;
+frames_per_plot = 1;
 delta_t = 0.0001; 
-n_sites = 250;
-n_mts = 1;
+n_sites = 125;
+n_mts = 2;
 xlink_cutoff = 5;
+cutoff = 19;
 
 % Colors
 blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'Endtag_0.4.0x_1250';
-movie_name = 'test.avi';
+simName = 'slide_vshort_b';
+movie_name = 'APS_mov_c.avi';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
+motorHeadFileName = '%s_motor_head_status.file';
 xlinkFileName = '%s_xlinkID.file';
 tethFileName = '%s_tether_coord.file';
 mtFile = sprintf(fileDirectory, sprintf(mtFileName, simName));
 motorFile = sprintf(fileDirectory, sprintf(motorFileName, simName));
+motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, simName));
 xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
 
 % Figure parameters (i.e., how they appear)
 n_frames = n_datapoints;
-frames_per_plot = 100;
-start_frame = 1;
 site_height = 1;
 site_width = 1;
+%{
+end_frame = start_frame + n_frames - 1;
+if(end_frame > n_datapoints)
+    end_frame = n_datapoints;
+end
+%}
+active_frames = end_frame - start_frame;
+time_per_frame = delta_t * (n_steps / n_frames);
 
 % Videowriter details
 v = VideoWriter(movie_name);
-v.FrameRate = (n_frames / frames_per_plot) / 60;
+v.FrameRate = (active_frames / frames_per_plot) / 30;
 open(v);
 frame_box = [0 0 1545 200];
 
 % Figure details
 fig1 = figure;
-set(fig1, 'Position', [0 100 1600 400])
+set(fig1, 'Position', [0 100 1000 250])
+%set(fig1, 'Position', [0 100 1600 400]);
 
 mt_data_file = fopen(mtFile);
 mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
@@ -53,6 +66,11 @@ motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int'
 fclose(motor_data_file);
 motor_data = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
 
+motor_head_status_file = fopen(motorHeadFile);
+motor_head_raw_data = fread(motor_head_status_file, [n_mts * n_sites * n_datapoints], '*bool');
+fclose(motor_head_status_file);
+motor_head_data = reshape(motor_head_raw_data, n_sites, n_mts, n_datapoints);
+
 xlink_data_file = fopen(xlinkFile);
 xlink_raw_data = fread(xlink_data_file, [n_mts * n_sites * n_datapoints], '*int');
 fclose(xlink_data_file);
@@ -63,13 +81,6 @@ teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double
 fclose(teth_data_file);
 teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
 
-end_frame = start_frame + n_frames - 1;
-if(end_frame > n_datapoints)
-    end_frame = n_datapoints;
-end
-
-time_per_frame = delta_t * (n_steps / n_frames);
-
 % Run through all datapoints; each one is a frame in our movie
 for i_data=start_frame:frames_per_plot:end_frame
     
@@ -77,7 +88,7 @@ for i_data=start_frame:frames_per_plot:end_frame
     clf;        
 
     % Set Axes properties
-    ax = axes('Units', 'normalized', 'Position', [0.01 0.12 0.98 0.76]);
+    ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
     ax.XLim = [0 (n_sites + 1)];
     ax.YLim = [-1 11];
     ax.TickLength = [0 0];
@@ -91,19 +102,24 @@ for i_data=start_frame:frames_per_plot:end_frame
     
     % Draw MTs
     for i_mt=1:1:n_mts
-        
         mt_pos = mt_data(i_mt, i_data)*site_width;
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
-        
         if(n_mts > 1)
-            second_pos = mt_data(2, i_data)*site_width;
+            second_pos = mt_data(2, i_data)*site_width;   
+            left = first_pos;
+            right = second_pos + n_sites + 1;
+            center = (left + right) / 2;
+            ax.XLim = [center-65 center+65];
+            %{
             if(first_pos < second_pos)
                 ax.XLim = [(first_pos) (second_pos + n_sites + 1)];
             else
                 ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
             end
+            %}
         else
+       
             ax.XLim = [first_pos first_pos + n_sites + 1];
             %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
@@ -113,20 +129,24 @@ for i_data=start_frame:frames_per_plot:end_frame
         
         % Draw motors
         motor_IDs = motor_data(:, i_mt, i_data);
+        motor_head_trailing = motor_head_data(:, i_mt, i_data);
         for i_motor=1:1:n_sites
             motor_pos = i_motor*site_width + mt_pos;
             motor_height = mt_height + site_height;
-            pseudo_height = motor_height + 2*site_height;
+            pseudo_height = motor_height + 1/2*site_height;
+            pseudo_dx = site_width;
+            mt_dx = -1;
             motor_center_y = motor_height + site_height/2;
             motor_center_x = motor_pos + site_width/2;
-            pseudo_center = mt_height + 7*site_height/2;
+            pseudo_center_y = pseudo_height + site_height/2;
             anchor_y = mt_height + 5*site_height/2;
             anchor_x = motor_pos + site_width;
             if(mod(i_mt, 2) == 0)
                 motor_height = mt_height - site_height;
-                pseudo_height = motor_height - 2*site_height;
+                pseudo_height = motor_height - 1/2*site_height;
+                mt_dx = 1;
                 motor_center_y = motor_height + site_height/2;
-                pseudo_center = mt_height - 5*site_height/2;
+                pseudo_center_y = pseudo_height + site_height/2;
                 anchor_y = mt_height - 3*site_height/2;
             end
             if motor_IDs(i_motor) ~= -1
@@ -138,11 +158,20 @@ for i_data=start_frame:frames_per_plot:end_frame
                             'LineWidth', 1.5, 'Color', 'black');
                     else
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        rectangle('Position', [motor_pos pseudo_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        line([motor_center_x, motor_center_x], [motor_center_y, pseudo_center], ...
+                            'FaceColor', blue, 'Curvature', [1 1]);
+                        line([motor_center_x, motor_center_x], [motor_center_y, anchor_y], ...
                             'LineWidth', 1.5, 'Color','black');
+                        if(motor_head_trailing(i_motor))
+                            rectangle('Position', [motor_pos-mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x-mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        else
+                             rectangle('Position', [motor_pos+mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x+mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        end
                     end
                 elseif i_motor == n_sites
                     if motor_IDs(i_motor) == motor_IDs(i_motor - 1)
@@ -152,11 +181,20 @@ for i_data=start_frame:frames_per_plot:end_frame
                             [anchor_y, motor_center_y], 'LineWidth', 1.5, 'Color', 'black');
                     else
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        rectangle('Position', [motor_pos pseudo_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        line([motor_center_x, motor_center_x], [motor_center_y, pseudo_center], ...
+                            'FaceColor', blue, 'Curvature', [1 1]);
+                        line([motor_center_x, motor_center_x], [motor_center_y, anchor_y], ...
                             'LineWidth', 1.5, 'Color','black');
+                        if(motor_head_trailing(i_motor))
+                            rectangle('Position', [motor_pos-mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x-mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        else
+                             rectangle('Position', [motor_pos+mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x+mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        end
                     end
                 else
                     if motor_IDs(i_motor) == motor_IDs(i_motor + 1)
@@ -171,11 +209,20 @@ for i_data=start_frame:frames_per_plot:end_frame
                             [anchor_y, motor_center_y], 'LineWidth', 1.5, 'Color', 'black');
                     else
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        rectangle('Position', [motor_pos pseudo_height site_width site_height], ...
-                            'FaceColor', 'r', 'Curvature', [1 1]);
-                        line([motor_center_x, motor_center_x], [motor_center_y, pseudo_center], ...
+                            'FaceColor', blue, 'Curvature', [1 1]);
+                        line([motor_center_x, motor_center_x], [motor_center_y, anchor_y], ...
                             'LineWidth', 1.5, 'Color','black');
+                        if(motor_head_trailing(i_motor))
+                            rectangle('Position', [motor_pos-mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x-mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        else
+                             rectangle('Position', [motor_pos+mt_dx*pseudo_dx pseudo_height site_width site_height], ...
+                                'FaceColor', blue, 'Curvature', [1 1]);
+                             line([motor_center_x+mt_dx*pseudo_dx, motor_center_x], [pseudo_center_y, anchor_y], ...
+                                'LineWidth', 1.5, 'Color', 'black');
+                        end
                     end
                 end
             end
@@ -252,9 +299,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                     plot(xs,ys,'LineWidth', 1, 'Color', 'm');
                 end
             end
-        end
-        
-        
+        end    
         % Array of tether coords for this MT
         teth_coords = teth_data(:, i_mt, i_data);
         for i_teth=1:1:n_sites - 1
@@ -269,11 +314,19 @@ for i_data=start_frame:frames_per_plot:end_frame
                 end
                 if(teth_coords(i_teth) ~= teth_coords(i_teth + 1))
                     start_pos = i_teth*site_width + mt_pos;
+                    if(i_teth > 1)
+                        if(motor_IDs(i_teth) ~= motor_IDs(i_teth - 1) ...
+                        && motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
+                            start_pos = start_pos + site_width/2;
+                        end
+                    elseif(motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
+                        start_pos = start_pos + site_width/2;
+                    end                    
                     end_pos = teth_coords(i_teth)*site_width + (3/2)*site_width;
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
                     ne = 10; a = 10; ro = 0.5;
-                    if abs(xa - xb) < 18
+                    if abs(xa - xb) < cutoff
                         [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
                         plot(xs,ys,'LineWidth', 1, 'Color', 'black');
                     else
@@ -285,11 +338,12 @@ for i_data=start_frame:frames_per_plot:end_frame
             end 
         end
     end
-    dim = [0.0125 0.57 .3 .3];
+    dim = [0.0105 0.62 .3 .3];
     time = (i_data - 1) * time_per_frame;
-    str = sprintf('Time: %#.3g seconds', time);
+    time = time - 500;
+    str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');
-    
+
     frame = getframe(fig1); %, frame_box);
     writeVideo(v, frame);
 end

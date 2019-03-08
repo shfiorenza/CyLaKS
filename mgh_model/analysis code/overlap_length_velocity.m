@@ -1,7 +1,8 @@
 clear all;
 % Often-changed variables
-n_sites = 500;
-simName = 'slide_scan1/unteth_0.005';
+n_sites = 1000;
+simName = 'scan_multi_slide/shift_0_0';
+%simName = 'slide_vshort';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 100000000;
@@ -42,7 +43,7 @@ time_per_datapoint = delta_t * (n_steps / n_datapoints);
 smoothed_overlap_data = smooth(final_overlap_data, 10);
 %smoothed_overlap_data = final_overlap_data;
 slope_data = gradient(smoothed_overlap_data, time_per_datapoint);
-final_slope_data = smooth(abs(slope_data), 100);
+final_slope_data = smooth(slope_data, 100);
 final_overlap_data = smoothed_overlap_data;
 
 fig1 = figure();
@@ -57,8 +58,9 @@ title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
 ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
-xlim([start_time + 1 end_time - 1]);
-ylim([0 n_sites * 0.008]);
+xlim([495 end_time-1]);
+%xlim([start_time + 1 end_time - 1]);
+%ylim([0 n_sites * 0.008]);
 grid on
 grid minor
 

@@ -10,8 +10,11 @@ for i in {0,1,4}; do
 			if [ $i -le 9 ]; then
 				FILE_NAME+="0"
 			fi
+			if [ $i -eq 0 ]; then
+				FILE_NAME+="."
+			fi
 			FILE_NAME+="$XLINK_CONC"
-			FILE_NAME+=".0"
+#			FILE_NAME+=".0"
 			FILE_NAME+="x_"
 #			FILE_NAME+="$MOT_CONC"
 #			FILE_NAME+=".0"

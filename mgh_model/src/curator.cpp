@@ -212,7 +212,7 @@ void Curator::GenerateDataFiles(char* sim_name){
 		 tether_coord_file[160], mt_coord_file[160], 
 		 motor_extension_file[160], xlink_extension_file[160],
 		 motor_force_file[160], xlink_force_file[160], total_force_file[160],
-		 runtime_file[160];
+		 runtime_file[160], motor_head_status_file[160];
 	// Generate names of output files based on the input simulation name
 	sprintf(occupancy_file, "%s_occupancy.file", sim_name);
 	sprintf(motor_ID_file, "%s_motorID.file", sim_name);
@@ -225,8 +225,9 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
 	sprintf(runtime_file, "%s_runtime.dat", sim_name);
+	sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name);
 	// Check to see if sim files already exist
-	if (FileExists(occupancy_file)){
+	if(FileExists(occupancy_file)){
 		printf("Simulation file with this name already exists!\n");
 		printf("Do you wish to overwrite? y/n\n");
 		std::string response; 
@@ -280,6 +281,9 @@ void Curator::GenerateDataFiles(char* sim_name){
 	// Open runtime file, which tracks the time it took to execute
 	// various functions of the simulation
 	properties_->runtime_file_ = OpenFile(runtime_file, "w");
+	// bool; simply says if motor head is trailing or not
+	properties_->motor_head_status_file_ 
+		= OpenFile(motor_head_status_file, "w");
 }
 
 FILE* Curator::OpenFile(const char *file_name, const char *type){
@@ -474,6 +478,7 @@ void Curator::OutputData(){
 	FILE *motor_force_file = properties_->motor_force_file_;
 	FILE *xlink_force_file = properties_->xlink_force_file_;
 	FILE *total_force_file = properties_->total_force_file_;
+	FILE *motor_head_status_file = properties_->motor_head_status_file_;
 	// Create arrays to store data; ptrs to write it to file 
 	double mt_coord_array[n_mts];
 	double *mt_coord_ptr = mt_coord_array;
@@ -503,6 +508,8 @@ void Curator::OutputData(){
 			*occupancy_ptr = occupancy_array;
 		double tether_coord_array[mt_length];
 		double *teth_coord_ptr = tether_coord_array;
+		bool motor_head_status_array[mt_length] = { false };
+		bool *motor_head_status_ptr = motor_head_status_array;
 		// Run through all sites on this particular MT
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
@@ -529,6 +536,8 @@ void Curator::OutputData(){
 				occupancy_array[i_site] = motor->speciesID_;
 				motor_ID_array[i_site] = motor->ID_;
 				xlink_ID_array[i_site] = -1;
+				motor_head_status_array[i_site] 
+					= site->motor_head_->trailing_;
 				if(motor->tethered_ == true){
 					if(motor->xlink_->heads_active_ > 0){
 						AssociatedProtein* xlink = motor->xlink_;
@@ -554,6 +563,8 @@ void Curator::OutputData(){
 		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
 		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
 		fwrite(teth_coord_ptr, sizeof(double), mt_length, tether_coord_file);
+		fwrite(motor_head_status_ptr, sizeof(bool), mt_length, 
+				motor_head_status_file);
 	}	
 	// Scan through kinesin4/prc1 statistics to get extension occupancies 
 	for(int i_ext = 0; i_ext <= 2*motor_ext_cutoff; i_ext++){
@@ -696,4 +707,5 @@ void Curator::CloseDataFiles(){
 	fclose(properties_->xlink_force_file_);
 	fclose(properties_->total_force_file_);
 	fclose(properties_->runtime_file_);
+	fclose(properties_->motor_head_status_file_);
 }

@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
-n_sites = 500;
-simName = 'slide_scan/unteth_0.050';
+n_sites = 1000;
+simName = 'scan_slide_new/shift_0_0';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 10000000;
@@ -32,7 +32,7 @@ fig1 = figure();
 set(fig1, 'Position', [0, 0, 1600, 800]);
 
 sub1 = subplot(3, 1, 1);
-plot(linspace(start_time, end_time, n_datapoints), xlink_data(1, :));
+plot(linspace(start_time, end_time, n_datapoints), smooth(xlink_data(1, :)));
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Xlink forces');
 ylabel('Net force (pN)');
@@ -42,7 +42,7 @@ grid minor
 axis tight
 
 subplot(3, 1, 2)
-plot(linspace(start_time, end_time, n_datapoints), motor_data(1, :));
+plot(linspace(start_time, end_time, n_datapoints), smooth(motor_data(1, :), 100));
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Motor (tether) forces');
 ylabel('Net force (pN)');
@@ -52,7 +52,7 @@ grid minor
 axis tight
 
 subplot(3, 1, 3)
-plot(linspace(start_time, end_time, n_datapoints), total_data(1, :));
+plot(linspace(start_time, end_time, n_datapoints), smooth(total_data(1, :), 100));
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Total forces');
 xlabel('Time (sec)');

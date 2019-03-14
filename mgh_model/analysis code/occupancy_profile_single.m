@@ -1,10 +1,10 @@
 clear all
 % Often-changed variables
-n_sites = 1750;
-xlink_conc = 0.6;
-simName = 'test';
-simName = 'scan_endtag_300nM/Endtag_0.4.0x_1750';
-%simName = sprintf('Endtag_%#.1f_%i', xlink_conc, n_sites);
+n_sites = 1000;
+xlink_conc = 2.0;
+motor_conc = 20;
+simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
+%simName = 'endtag_scan/Endtag_2.0x_20.0m_1000';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -45,8 +45,8 @@ net_smoothed_avg = motor_smoothed_avg + xlink_smoothed_avg;
 
 endtag_site = 0;
 for i=1:n_sites
-    site_occupancy = net_smoothed_avg(i);
-    if(site_occupancy >= 0.5)
+    site_occupancy = xlink_smoothed_avg(i);
+    if(site_occupancy < 0.05)
         endtag_site = i;
         break;
     end
@@ -66,12 +66,12 @@ plot([endtag_length endtag_length], [0 1], ':r', 'LineWidth', 0.1);
 
 %%style stuff%%
 
-title({sprintf('Microtubule of length %g microns', n_sites*0.008), ...
-    sprintf('Endtag length: %g microns', endtag_length), ...
-    sprintf('Crosslinker concentration: %g nM', xlink_conc)});
+title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
+    sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
+    sprintf('Endtag length: %g microns', endtag_length)});
 xlabel({'Distance along microtubule relative to plus-end (microns)'});
 ylabel('Fraction of the time occupied');
-%xlim([0 100*0.008]);
+xlim([0 0.5]);
 ylim([0 1]);
 grid on
 grid minor

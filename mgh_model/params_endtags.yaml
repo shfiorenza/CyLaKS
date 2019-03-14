@@ -7,7 +7,7 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 1
-  length: 1750
+  length: 1000
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -20,17 +20,19 @@ microtubules:
   - 0
   immobile_until:
   - 9500
-  - 500
-  printout: false
-  diffusion: false
+  - 100
+  printout_on: false
+  diffusion_on: false
 motors:
   k_on: 0.02
-  c_bulk: 1.5
+  c_bulk: 200
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
+  no_ATP_until: 500
   k_hydrolyze: 110
   k_off_i: 30
+  k_off_i_NULL: 1 
   k_off_ii: 180
   k_tether: 0.00167
   c_eff_tether: 100
@@ -40,11 +42,11 @@ motors:
   k_slack: 0.0265
   stall_force: 6
   applied_force: 0
-  tethers_active: true
+  tethers_active: false
   endpausing_active: true
 xlinks:
   k_on: 0.0022
-  concentration: 0.4
+  concentration: 0.5
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

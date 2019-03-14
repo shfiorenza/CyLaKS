@@ -41,6 +41,7 @@ class KinesinManagement{
 		int n_free_tethered_ = 0;
 		int n_docked_ = 0; 
 		int n_bound_NULL_ = 0;
+		int n_bound_NULL_i_ = 0; 
 		int n_bound_ATP_ = 0;
 		int n_bound_ADPP_i_ = 0;
 		int n_bound_ADPP_ii_ = 0;
@@ -66,6 +67,7 @@ class KinesinManagement{
 		double p_bind_ii_;
 		double p_unbind_ii_;
 		double p_unbind_i_;
+		double p_unbind_i_NULL_;
 		double p_tether_free_;
 		double p_tether_bound_;
 		double p_untether_free_;	
@@ -82,6 +84,7 @@ class KinesinManagement{
 		std::vector<Kinesin*> bound_untethered_;
 		std::vector<Kinesin::head*> docked_; 
 		std::vector<Kinesin::head*> bound_NULL_;
+		std::vector<Kinesin::head*> bound_NULL_i_;
 		std::vector<Kinesin::head*> bound_ATP_;
 		std::vector<Kinesin::head*> bound_ADPP_i_;
 		std::vector<Kinesin::head*> bound_ADPP_ii_;
@@ -116,6 +119,7 @@ class KinesinManagement{
 		void UpdateDocked();
 		void UpdateDockedTethered();
 		void UpdateBoundNULL();
+		void UpdateBoundNULL_I();	//XXX
 		void UpdateBoundNULLTethered();
 		void UpdateBoundATP();
 		void UpdateBoundADPP_I();
@@ -128,15 +132,16 @@ class KinesinManagement{
 		void UpdateEvents();
 
 		void RunKMC();
-		void KMC_Bind_I();	// Bind free ADP head; convert to NULL
+		void KMC_Bind_I();		// Bind free ADP head; convert to NULL
 		void KMC_Bind_I_Tethered();
 		void KMC_Bind_ATP();	// Bind ATP to NULL bound heads
 		void KMC_Bind_ATP_Tethered(int x_dub); 
-		void KMC_Hydrolyze(); // Convert ATP to ADPP on a bound head
-		void KMC_Bind_II();	// Bind docked head; other head must be ADPP
+		void KMC_Hydrolyze(); 	// Convert ATP to ADPP on a bound head
+		void KMC_Bind_II();		// Bind docked head; other head must be ADPP
 		void KMC_Bind_II_Tethered(int x_dub);
-		void KMC_Unbind_II(); 	// Unbind ADPP heads; converts to ADP
+		void KMC_Unbind_II(); 		// Unbind ADPP heads; converts to ADP
 		void KMC_Unbind_I();
+		void KMC_Unbind_I_NULL();	// Unbind singly-bound NULL heads XXX
 		void KMC_Unbind_I_Tethered(int x_dub);
 		void KMC_Tether_Free();
 		void KMC_Tether_Bound();

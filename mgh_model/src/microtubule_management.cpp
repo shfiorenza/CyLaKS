@@ -128,8 +128,7 @@ void MicrotubuleManagement::RunDiffusion(){
 		unpin_step[i_mt] = unpin_time / delta_t; 
 		if(current_step >= unpin_step[i_mt]) MTs_active = true;
 	}
-	if(MTs_active
-	&& parameters_->microtubules.diffusion == true){
+	if(parameters_->microtubules.diffusion_on && MTs_active){
 		int n_iterations = 1;
 		double delta_t_eff = delta_t / n_iterations;
 		double site_size = parameters_->microtubules.site_size;

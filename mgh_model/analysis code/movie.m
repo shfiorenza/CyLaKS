@@ -1,24 +1,23 @@
 clear all;
-
 % Parameters from sim
-n_steps = 10000000;
-n_datapoints = 100000;
-start_frame = 49901;
-end_frame = 50401;
-frames_per_plot = 1;
-delta_t = 0.0001; 
 n_sites = 125;
 n_mts = 2;
+simName = 'test';
+% Pseudo-constant variables
+n_steps = 10000000;
+n_datapoints = 10000;
+start_frame = 1;
+end_frame = 10000;
+frames_per_plot = 100;
+delta_t = 0.00001; 
 xlink_cutoff = 5;
 cutoff = 19;
-
 % Colors
 blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-simName = 'slide_vshort_b';
-movie_name = 'APS_mov_c.avi';
+movie_name = 'test';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
@@ -53,8 +52,8 @@ frame_box = [0 0 1545 200];
 
 % Figure details
 fig1 = figure;
-set(fig1, 'Position', [0 100 1000 250])
-%set(fig1, 'Position', [0 100 1600 400]);
+%set(fig1, 'Position', [0 100 1000 250])
+set(fig1, 'Position', [0 100 1600 400]);
 
 mt_data_file = fopen(mtFile);
 mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
@@ -340,7 +339,7 @@ for i_data=start_frame:frames_per_plot:end_frame
     end
     dim = [0.0105 0.62 .3 .3];
     time = (i_data - 1) * time_per_frame;
-    time = time - 500;
+    %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');
 

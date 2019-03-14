@@ -29,8 +29,10 @@ void Curator::ParseParameters(system_parameters *params,
 	params->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
 	params->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
 	params->motors.c_ATP = motors["c_ATP"].as<double>();
+	params->motors.no_ATP_until = motors["no_ATP_until"].as<double>();
 	params->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
+	params->motors.k_off_i_NULL = motors["k_off_i_NULL"].as<double>();	
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
 	params->motors.endpausing_active 
 		= motors["endpausing_active"].as<bool>();
@@ -81,8 +83,8 @@ void Curator::ParseParameters(system_parameters *params,
 		printf("check vector entries in parameter file!\n\n");
 		exit(1);
 	}
-	params->microtubules.printout = mts["printout"].as<bool>();
-	params->microtubules.diffusion = mts["diffusion"].as<bool>();
+	params->microtubules.printout_on = mts["printout_on"].as<bool>();
+	params->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
 	// Store params pointer as parameters_ in Curator
 	parameters_ = params;
 	int n_steps = parameters_->n_steps;
@@ -101,9 +103,11 @@ void Curator::ParseParameters(system_parameters *params,
 	printf("    c_bulk = %g nM\n", params->motors.c_bulk);
 	printf("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
 	printf("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
-	printf("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
 	printf("    c_ATP = %g mM\n", params->motors.c_ATP);
+	printf("    no_ATP_until = %g seconds\n", params->motors.no_ATP_until);
+	printf("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
 	printf("    k_off_i = %g /s\n", params->motors.k_off_i);
+	printf("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
 	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
 	printf("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
 	printf("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
@@ -152,10 +156,10 @@ void Curator::ParseParameters(system_parameters *params,
 		double immo = params->microtubules.immobile_until[i_mt];	
 		printf("    immobile until = %g s for mt %i\n", immo, i_mt);
 	}
-	printf("    printout = %s\n", 
-			params->microtubules.printout ? "true" : "false");
-	printf("    diffusion = %s\n", 
-			params->microtubules.diffusion ? "true" : "false");
+	printf("    printout_on = %s\n", 
+			params->microtubules.printout_on? "true":"false");
+	printf("    diffusion_on = %s\n", 
+			params->microtubules.diffusion_on? "true":"false");
 	printf("\nTotal simulation duration: %g seconds\n", delta_t*n_steps);
 }
 
@@ -609,7 +613,7 @@ void Curator::UpdateTimestep(int i_step){
 		// Announce when simulation is done 
 		else if(delta == range_of_data_ - 1) printf("Done!");
 	}
-	if(parameters_->microtubules.printout && i_step % 1000 == 0)
+	if(parameters_->microtubules.printout_on && i_step % 1000 == 0)
 		PrintMicrotubules(0);
 }
 

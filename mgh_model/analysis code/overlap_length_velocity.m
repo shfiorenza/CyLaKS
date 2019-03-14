@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
-n_sites = 1000;
-simName = 'scan_multi_slide/shift_0_0';
+n_sites = 125;
+simName = 'test';
 %simName = 'slide_vshort';
 % Pseudo-constant variables
 n_mts = 2;

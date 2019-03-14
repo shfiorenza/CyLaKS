@@ -40,7 +40,7 @@ motors:
   k_slack: 0.0265
   stall_force: 6
   applied_force: 0
-  tethers_active: true
+  tethers_active: false
   endpausing_active: true
 xlinks:
   k_on: 0.0022

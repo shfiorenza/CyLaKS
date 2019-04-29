@@ -1,17 +1,17 @@
 
 clear all;
 % Often-changed variables
-n_sites = 500;
-simName = 'slide_scan/unteth_0.050';
+n_sites = 50000;
+simName = 'Processivity_18.0_170';
 % Pseudo-constant variables
-n_mts = 2;
-delta_t = 0.00001;
-n_steps = 100000000;
+n_mts = 1;
+delta_t = 0.0001;
+n_steps = 10000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
-time_cutoff = 0; %0.3;    %in seconds
+time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -50,7 +50,7 @@ for i_data = starting_point:1:n_datapoints - 1
                     n_active(i_mt) = n_active(i_mt) + 1;
                     active_motors(i_mt, n_active(i_mt)) = motor_ID;
                 end
-                % Otherwise if a motor is found, only count one head
+                % Otherwise if a motor is found, only count first head
             elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
                 % Record the motor's starting site if this is the first time
                 % seeing it (-1 means it was not seen last datapoint)

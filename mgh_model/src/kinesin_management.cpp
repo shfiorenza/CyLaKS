@@ -86,10 +86,10 @@ void KinesinManagement::SetParameters(){
 	comp_cutoff_ = motors_[0].comp_cutoff_;
 	dist_cutoff_ = motors_[0].dist_cutoff_;
 	if(parameters_->motors.tethers_active){
-		printf("\nFor motors:\n");
-		printf("  rest_dist is %g\n", rest_dist_);
-		printf("  comp_cutoff is %i\n", comp_cutoff_);
-		printf("  dist_cutoff is %i\n", dist_cutoff_);
+		properties_->wallace.Log("\nFor motors:\n");
+		properties_->wallace.Log("  rest_dist is %g\n", rest_dist_);
+		properties_->wallace.Log("  comp_cutoff is %i\n", comp_cutoff_);
+		properties_->wallace.Log("  dist_cutoff is %i\n", dist_cutoff_);
 	}
 	// Tethered statistics
 	double k_tether = parameters_->motors.k_tether;
@@ -843,17 +843,17 @@ void KinesinManagement::GenerateKMCList(){
 		}
 	}
 	int n_events = 0;
-	int pre_array[5*events_.size()];
+	int pre_array[1000*events_.size()];
 	// Scan over all events; record those with >0 expected in this timestep
 	for(int i_entry = 0; i_entry < events_.size(); i_entry++){
 		for(int i = 0; i < events_[i_entry].n_expected_; i++){
-			pre_array[n_events] = events_[i_entry].kmc_code_;
-			n_events++; 
 			// Make sure we don't bamboozle ourselves here
-			if(n_events > 5 * events_.size()){
+			if(n_events > 1000 * events_.size()){
 				printf("Error in GenerateKMCList for motors!!\n");
 				exit(1);
 			}
+			pre_array[n_events] = events_[i_entry].kmc_code_;
+			n_events++; 
 		}
 	}
 	// If total expected events is greater than 0, construct kmc_list_
@@ -1109,18 +1109,23 @@ void KinesinManagement::KMC_Bind_ATP(){
 		head->ligand_ = "ATP";
 		// If head is leading, change conformation
 		if(!head->trailing_){
+			Microtubule *mt = head->site_->mt_;
+			int i_site = head->site_->index_;
+			int dx = mt->delta_x_;
+			int mt_length = parameters_->microtubules.length - 1;
 			// If endpausing is active, don't step off MT boundary sites
 			if(parameters_->motors.endpausing_active){
-				Microtubule *mt = head->site_->mt_;
-				int i_site = head->site_->index_;
-				int dx = mt->delta_x_;
-				int mt_length = parameters_->microtubules.length - 1;
 				if(!(i_site == 0 && dx == -1) 
-				&& !(i_site == mt_length && dx == 1)){
-					head->motor_->ChangeConformation();
-				}
+				&& !(i_site == mt_length && dx == 1))
+					if(!mt->lattice_[i_site + dx].occupied_)
+						head->motor_->ChangeConformation();
 			}
-			else head->motor_->ChangeConformation(); 
+			//else head->motor_->ChangeConformation(); 
+			else if((i_site == 0 && dx == -1)
+				 && (i_site == mt_length && dx == 1))
+					head->motor_->ChangeConformation();
+			else if(!mt->lattice_[i_site + dx].occupied_)
+					head->motor_->ChangeConformation();
 		}
 	}
 	else{
@@ -1396,16 +1401,10 @@ void KinesinManagement::KMC_Unbind_I_NULL(){
 		head->motor_->heads_active_--;
 		head->motor_->mt_ = nullptr; 
 		// If this motor has a satellite xlink, untether it
-		if(head->motor_->xlink_ != nullptr){
+		if(head->motor_->tethered_){
 			if(head->motor_->xlink_->heads_active_ == 0){
 				head->motor_->UntetherSatellite();
 			}
-			/*
-			else{
-				printf("Error in KMC_Unbind_I: tethed to bound xlink?\n");
-				exit(1);
-			}
-			*/
 		}
 		if(!head->motor_->tethered_){
 			// Remove this motor from active_, replace with last entry

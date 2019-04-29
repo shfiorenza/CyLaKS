@@ -1,10 +1,10 @@
 clear all;
 % Parameters from sim
-n_sites = 125;
-n_mts = 2;
-simName = 'test';
+n_sites = 250;
+n_mts = 1;
+simName = 'scan_output_noscale/Endtag_36.0_250';
 % Pseudo-constant variables
-n_steps = 10000000;
+n_steps = 100000000;
 n_datapoints = 10000;
 start_frame = 1;
 end_frame = 10000;
@@ -105,7 +105,8 @@ for i_data=start_frame:frames_per_plot:end_frame
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         if(n_mts > 1)
-            second_pos = mt_data(2, i_data)*site_width;   
+            second_pos = mt_data(2, i_data)*site_width;
+            
             left = first_pos;
             right = second_pos + n_sites + 1;
             center = (left + right) / 2;
@@ -117,9 +118,10 @@ for i_data=start_frame:frames_per_plot:end_frame
                 ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
             end
             %}
+            
         else
        
-            ax.XLim = [first_pos first_pos + n_sites + 1];
+            ax.XLim = [first_pos first_pos + n_sites];
             %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
         

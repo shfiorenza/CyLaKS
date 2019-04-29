@@ -5,14 +5,9 @@ int main(int argc, char *argv[]){
 	system_parameters parameters;
 	system_properties properties;
 
-	// Check that input has the correct number of arguments
-	properties.wallace.CheckArguments(argv[0], argc);
-	// Parse parameters from yaml file into simulation's parameter struct
-	properties.wallace.ParseParameters(&parameters, argv[1]);
-	// Initialize sim objects (MTs, kinesin, MAPs, etc.)
-	properties.wallace.InitializeSimulation(&properties);
-	// Generate data files
-	properties.wallace.GenerateDataFiles(argv[2]);
+	// Initialize sim: parse params & make objects (MTs, kinesin, MAPs, etc)
+	properties.wallace.InitializeSimulation(argv[0], argv[1], argv[2], argc,
+			&properties, &parameters);
 
 	// Main KMC loop
 	for(int i_step = 0; i_step < parameters.n_steps; i_step++){
@@ -23,10 +18,6 @@ int main(int argc, char *argv[]){
 		properties.microtubules.RunDiffusion();
 	}
 
-	// Cleanup stuff
-	properties.wallace.OutputSimDuration();
-	properties.wallace.CloseDataFiles();
-	properties.gsl.CleanUp();
-
+	properties.wallace.CleanUp();
 	return 0;
 }

@@ -1,10 +1,12 @@
 clear all
 % Often-changed variables
-n_sites = 1000;
+n_sites = 1750;
+processivity = 6.0;
 xlink_conc = 2.0;
 motor_conc = 20;
-simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-%simName = 'endtag_scan/Endtag_2.0x_20.0m_1000';
+%simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
+simName = sprintf('output_end/Endtag_%#.1f_%i', processivity, n_sites);
+%simName = 'Endtag_1.2_1000b';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -44,9 +46,18 @@ xlink_smoothed_avg = smoothdata(xlink_avg_occupancy);
 net_smoothed_avg = motor_smoothed_avg + xlink_smoothed_avg;
 
 endtag_site = 0;
+curve = gradient(abs(gradient(motor_smoothed_avg,0.008)),0.5);
+endtag_curve = max(curve);
+
 for i=1:n_sites
-    site_occupancy = xlink_smoothed_avg(i);
-    if(site_occupancy < 0.05)
+    %{
+    if(curve(i) == endtag_curve)
+        endtag_site = i;
+        break;
+    end
+    %}
+    site_occupancy = net_smoothed_avg(i);
+    if(site_occupancy < 0.3)
         endtag_site = i;
         break;
     end
@@ -58,20 +69,26 @@ endtag_length = endtag_site*0.008;
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])
 plot(linspace(0, n_sites*0.008, n_sites), motor_smoothed_avg);
+
 hold on
-plot(linspace(0, n_sites*0.008, n_sites), xlink_smoothed_avg);
-plot(linspace(0, n_sites*0.008, n_sites), net_smoothed_avg);
+%plot(linspace(0, n_sites*0.008, n_sites), curve);
+%plot(linspace(0, n_sites*0.008, n_sites), xlink_smoothed_avg);
+%plot(linspace(0, n_sites*0.008, n_sites), net_smoothed_avg);
+
 % Put vertical red line where endtag starting position is
 plot([endtag_length endtag_length], [0 1], ':r', 'LineWidth', 0.1);
 
 %%style stuff%%
 
-title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
-    sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
+
+%title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
+    %sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
+title({sprintf('Processivity: %#.1f microns', processivity), ...
     sprintf('Endtag length: %g microns', endtag_length)});
+
 xlabel({'Distance along microtubule relative to plus-end (microns)'});
 ylabel('Fraction of the time occupied');
-xlim([0 0.5]);
+%xlim([0 0.5]);
 ylim([0 1]);
 grid on
 grid minor
@@ -80,4 +97,4 @@ axis.TickDir = 'out';
 axis.Box = 'off';
 axis.GridLineStyle = '-';
 set(findall(axis, 'Type', 'Line'), 'LineWidth', 2);
-legend(legendLabel, 'Location', 'northeast');
+%legend(legendLabel, 'Location', 'northeast');

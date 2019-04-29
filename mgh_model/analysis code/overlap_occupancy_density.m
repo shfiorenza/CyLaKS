@@ -14,6 +14,7 @@ unpin_time = 500;
 
 % File info
 simName = 'slide_scan2/shift_600';
+simName = 'slide_new_new_equil/shift_0_600';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 occupancyFileName = '%s_occupancy.file';
@@ -122,7 +123,7 @@ plot(linspace(start_time, end_time, n_datapoints), motor_frac_nonoverlap, ...
 title('Motor occupancy');
 ylabel({'Fraction of', 'sites occupied'});
 legend('In overlap', 'Outside overlap', 'location', 'northeastoutside');
-ylim([0 0.15]);
+%ylim([0 0.15]);
 xlim([0 1000]);
 
 % Plot xlink occupancy data

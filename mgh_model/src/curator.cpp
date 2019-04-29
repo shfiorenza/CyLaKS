@@ -4,12 +4,46 @@
 Curator::Curator(){
 }
 
-void Curator::ParseParameters(system_parameters *params, 
-							  char *param_file) {
+void Curator::InitializeSimulation(char *exe_name, char *param_file, 
+		char *sim_name, int argc, system_properties *properties, 
+		system_parameters *parameters){
+
+	properties_ = properties;
+	// Initiate log file -- records all output of the sim
+	OpenLog(sim_name);
+	// Check that input has correct number of arguments
+	CheckArguments(exe_name, argc);
+	// Parse parameters from input YAML file to local parameter structure
+	ParseParameters(parameters, param_file);
+	// Set local parameters
+	SetParameters();
+	// Initialize MTs, kinesin, etc. 
+	SetExperimentalStage();
+	// Generate files which data will be written to 
+	GenerateDataFiles(sim_name);
+}
+
+void Curator::OpenLog(char *sim_name){
+
+	char log_file[160];
+	sprintf(log_file, "%s.log", sim_name);
+	properties_->log_file_ = OpenFile(log_file, "w");
+}
+
+void Curator::CheckArguments(char *exe_name, int argc){
+
+	if(argc != 3){
+		Log("\nWrong number of command-line arguments in main\n");
+		Log("Usage: %s parameters.yaml sim_name\n\n", exe_name);
+		exit(1);
+	}
+}
+
+void Curator::ParseParameters(system_parameters *params, char *param_file){
 
 	// Check to make sure param file actually exists
 	if(!FileExists(param_file)){
-		printf("  Error: parameter file does not exist; aborting\n"); 
+		Log("  Error: parameter file does not exist; aborting\n"); 
 		exit(1);
 	}
 	// Parse parameter file into a YAML node
@@ -79,8 +113,8 @@ void Curator::ParseParameters(system_parameters *params,
 	if(params->microtubules.count > n_start_coords
 	|| params->microtubules.count > n_imp_vel
 	|| params->microtubules.count > n_immo){
-		printf("\nError! More MTs than given parameters; ");
-		printf("check vector entries in parameter file!\n\n");
+		Log("\nError! More MTs than given parameters; ");
+		Log("check vector entries in parameter file!\n\n");
 		exit(1);
 	}
 	params->microtubules.printout_on = mts["printout_on"].as<bool>();
@@ -89,85 +123,75 @@ void Curator::ParseParameters(system_parameters *params,
 	parameters_ = params;
 	int n_steps = parameters_->n_steps;
 	double delta_t = parameters_->delta_t;
-	printf("Reading params from %s:\n\n", param_file);
-	printf("  General simulation parameters:\n");
-	printf("    seed = %li\n", params->seed);
-	printf("    n_steps = %i\n", params->n_steps);
-	printf("    n_datapoints = %i\n", params->n_datapoints);
-	printf("    data_threshold = %i steps\n", params->data_threshold);
-	printf("    delta_t = %g s\n", params->delta_t);
-	printf("    kbT = %g pN*nm\n", params->kbT);
-	printf("    eta = %g (pN*s)/um^2\n", params->eta);
-	printf("\n  Kinesin (motor) parameters:\n");
-	printf("    k_on = %g /(nM*s)\n", params->motors.k_on);
-	printf("    c_bulk = %g nM\n", params->motors.c_bulk);
-	printf("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
-	printf("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
-	printf("    c_ATP = %g mM\n", params->motors.c_ATP);
-	printf("    no_ATP_until = %g seconds\n", params->motors.no_ATP_until);
-	printf("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
-	printf("    k_off_i = %g /s\n", params->motors.k_off_i);
-	printf("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
-	printf("    k_off_ii = %g /s\n", params->motors.k_off_ii);
-	printf("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
-	printf("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
-	printf("    k_untether = %g /s\n", params->motors.k_untether);
-	printf("    r_0 = %g nm\n", params->motors.r_0);
-	printf("    k_spring = %g pN/nm\n", params->motors.k_spring);
-	printf("    k_slack = %g pN/nm\n", params->motors.k_slack);
-	printf("    stall_force = %g pN\n", params->motors.stall_force);
-	printf("    applied_force = %g pN\n", params->motors.applied_force);
-	printf("    tethers_active = %s\n", 
-			params->motors.tethers_active ? "true" : "false");	
-	printf("    endpausing_active = %s\n", 
-			params->motors.endpausing_active ? "true" : "false");	
-	printf("\n  Crosslinker (xlink) parameters:\n");
-	printf("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
-	printf("    concentration = %g nM\n", params->xlinks.concentration);
-	printf("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);
-	printf("    k_off_i = %g /s\n", params->xlinks.k_off_i);
-	printf("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
-	printf("    diffusion_constant_i = %g um^2/s\n", 
+	Log("Reading params from %s:\n\n", param_file);
+	Log("  General simulation parameters:\n");
+	Log("    seed = %li\n", params->seed);
+	Log("    n_steps = %i\n", params->n_steps);
+	Log("    n_datapoints = %i\n", params->n_datapoints);
+	Log("    data_threshold = %i steps\n", params->data_threshold);
+	Log("    delta_t = %g s\n", params->delta_t);
+	Log("    kbT = %g pN*nm\n", params->kbT);
+	Log("    eta = %g (pN*s)/um^2\n", params->eta);
+	Log("\n  Kinesin (motor) parameters:\n");
+	Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
+	Log("    c_bulk = %g nM\n", params->motors.c_bulk);
+	Log("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
+	Log("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
+	Log("    c_ATP = %g mM\n", params->motors.c_ATP);
+	Log("    no_ATP_until = %g seconds\n", params->motors.no_ATP_until);
+	Log("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
+	Log("    k_off_i = %g /s\n", params->motors.k_off_i);
+	Log("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
+	Log("    k_off_ii = %g /s\n", params->motors.k_off_ii);
+	Log("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
+	Log("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
+	Log("    k_untether = %g /s\n", params->motors.k_untether);
+	Log("    r_0 = %g nm\n", params->motors.r_0);
+	Log("    k_spring = %g pN/nm\n", params->motors.k_spring);
+	Log("    k_slack = %g pN/nm\n", params->motors.k_slack);
+	Log("    stall_force = %g pN\n", params->motors.stall_force);
+	Log("    applied_force = %g pN\n", params->motors.applied_force);
+	Log("    tethers_active = %s\n", params->motors.tethers_active? 
+			"true" : "false");	
+	Log("    endpausing_active = %s\n", params->motors.endpausing_active? 
+			"true" : "false");	
+	Log("\n  Crosslinker (xlink) parameters:\n");
+	Log("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
+	Log("    concentration = %g nM\n", params->xlinks.concentration);
+	Log("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);
+	Log("    k_off_i = %g /s\n", params->xlinks.k_off_i);
+	Log("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
+	Log("    diffusion_constant_i = %g um^2/s\n", 
 			params->xlinks.diffusion_const_i);
-	printf("    diffusion_constant_ii = %g um^2/s\n", 
+	Log("    diffusion_constant_ii = %g um^2/s\n", 
 			params->xlinks.diffusion_const_ii);
-	printf("    r_0 = %g nm\n", params->xlinks.r_0);
-	printf("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
-	printf("\n  Microtubule (mt) parameters:\n");
-	printf("    count = %i\n", params->microtubules.count);
-	printf("    length = %i sites\n", params->microtubules.length);
-	printf("    y_dist = %g nm between MTs\n", 
-			params->microtubules.y_dist);
-	printf("    site_size = %g nm\n", params->microtubules.site_size);
-	printf("    radius = %g nm\n", params->microtubules.radius);
-	printf("    elevation = %g nm above surface\n", 
+	Log("    r_0 = %g nm\n", params->xlinks.r_0);
+	Log("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
+	Log("\n  Microtubule (mt) parameters:\n");
+	Log("    count = %i\n", params->microtubules.count);
+	Log("    length = %i sites\n", params->microtubules.length);
+	Log("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
+	Log("    site_size = %g nm\n", params->microtubules.site_size);
+	Log("    radius = %g nm\n", params->microtubules.radius);
+	Log("    elevation = %g nm above surface\n", 
 			params->microtubules.elevation);
 	for(int i_mt = 0; i_mt < n_start_coords; i_mt++){
 		double start_coord = params->microtubules.start_coord[i_mt];
-		printf("    start_coord = %g sites for mt %i\n", 
-				start_coord, i_mt);
+		Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
 	}
 	for(int i_mt = 0; i_mt < n_imp_vel; i_mt++){
 		double imp_vel = params->microtubules.imposed_velocity[i_mt];
-		printf("    imposed_velocity = %g nm/s for mt %i\n", 
-				imp_vel, i_mt);
+		Log("    imposed_velocity = %g nm/s for mt %i\n", imp_vel, i_mt);
 	}
 	for(int i_mt = 0; i_mt < n_immo; i_mt++){
 		double immo = params->microtubules.immobile_until[i_mt];	
-		printf("    immobile until = %g s for mt %i\n", immo, i_mt);
+		Log("    immobile until = %g s for mt %i\n", immo, i_mt);
 	}
-	printf("    printout_on = %s\n", 
-			params->microtubules.printout_on? "true":"false");
-	printf("    diffusion_on = %s\n", 
-			params->microtubules.diffusion_on? "true":"false");
-	printf("\nTotal simulation duration: %g seconds\n", delta_t*n_steps);
-}
-
-void Curator::InitializeSimulation(system_properties *properties){
-
-	properties_ = properties;
-	SetParameters();
-	SetExperimentalStage();
+	Log("    printout_on = %s\n", params->microtubules.printout_on? 
+			"true":"false");
+	Log("    diffusion_on = %s\n", params->microtubules.diffusion_on? 
+			"true":"false");
+	Log("\nTotal simulation duration: %g seconds\n", delta_t*n_steps);
 }
 
 void Curator::SetParameters(){
@@ -200,15 +224,6 @@ void Curator::SetExperimentalStage(){
 	properties_->gsl.Initialize(parameters_, properties_);
 }
 
-void Curator::CheckArguments(char *sim_name, int argc){
-
-	if(argc != 3){
-		printf("\nWrong number of command-line arguments in main\n");
-		printf("Usage: %s parameters.yaml sim_name\n\n", sim_name);
-		exit(1);
-	}
-}
-
 void Curator::GenerateDataFiles(char* sim_name){
 
 	char occupancy_file[160], 
@@ -216,7 +231,7 @@ void Curator::GenerateDataFiles(char* sim_name){
 		 tether_coord_file[160], mt_coord_file[160], 
 		 motor_extension_file[160], xlink_extension_file[160],
 		 motor_force_file[160], xlink_force_file[160], total_force_file[160],
-		 runtime_file[160], motor_head_status_file[160];
+		 motor_head_status_file[160];
 	// Generate names of output files based on the input simulation name
 	sprintf(occupancy_file, "%s_occupancy.file", sim_name);
 	sprintf(motor_ID_file, "%s_motorID.file", sim_name);
@@ -228,27 +243,26 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(motor_force_file, "%s_motor_force.file", sim_name);
 	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
-	sprintf(runtime_file, "%s_runtime.dat", sim_name);
 	sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name);
 	// Check to see if sim files already exist
 	if(FileExists(occupancy_file)){
-		printf("Simulation file with this name already exists!\n");
-		printf("Do you wish to overwrite? y/n\n");
+		Log("Simulation file with this name already exists!\n");
+		Log("Do you wish to overwrite? y/n\n");
 		std::string response; 
 		bool response_unacceptable = true;
 		while(response_unacceptable){
 			std::getline(std::cin, response);
 			if(response == "n"){
-				printf("Simulation terminated.\n");
+				Log("Simulation terminated.\n");
 				exit(1); 
 			}
 			else if(response == "y"){
-				printf("Very well.");
-			   	printf(" Overwriting data for sim '%s'\n\n", sim_name);
+				Log("Very well.");
+			   	Log(" Overwriting data for sim '%s'\n\n", sim_name);
 				response_unacceptable = false; 
 			}
 			else{
-				printf("bro I said y or n. try again plz\n");
+				Log("bro I said y or n. try again plz\n");
 			}
 		}
 	}
@@ -282,12 +296,15 @@ void Curator::GenerateDataFiles(char* sim_name){
 	// Open total force file, which stores the sum of ALL 
 	// forces coming from xlink and motor tether extensions
 	properties_->total_force_file_ = OpenFile(total_force_file, "w");
-	// Open runtime file, which tracks the time it took to execute
-	// various functions of the simulation
-	properties_->runtime_file_ = OpenFile(runtime_file, "w");
 	// bool; simply says if motor head is trailing or not
 	properties_->motor_head_status_file_ 
 		= OpenFile(motor_head_status_file, "w");
+}
+
+bool Curator::FileExists(std::string file_name){
+
+	struct stat buffer;
+	return (stat(file_name.c_str(), &buffer) != -1);
 }
 
 FILE* Curator::OpenFile(const char *file_name, const char *type){
@@ -300,10 +317,59 @@ FILE* Curator::OpenFile(const char *file_name, const char *type){
     return file_ptr;
 }
 
-bool Curator::FileExists(std::string file_name){
+void Curator::Log(const char *msg){
 
-	struct stat buffer;
-	return (stat(file_name.c_str(), &buffer) != -1);
+	int l_return = printf("%s", msg);
+	int l_freturn = fprintf(properties_->log_file_, "%s", msg);
+	if(l_return < 0 || l_freturn < 0){
+		Log("Error in Curator::Log_base brobro\n");
+		exit(1);
+	}
+};
+
+template <typename T> void Curator::Log(const char *msg, T arg){
+
+	int l_return = printf(msg, arg);
+	int l_freturn = fprintf(properties_->log_file_, msg, arg);
+	if(l_return < 0 || l_freturn < 0){
+		Log("Error in Curator::Log_arg brobro\n");
+		exit(1);
+	}
+};
+
+template <typename T1, typename T2> void Curator::Log(const char *msg, 
+		T1 arg1, T2 arg2){
+
+	int l_return = printf(msg, arg1, arg2);
+	int l_freturn = fprintf(properties_->log_file_, msg, arg1, arg2);
+	if(l_return < 0 || l_freturn < 0){
+		Log("Error in Curator::Log_2arg brobro\n");
+		exit(1);
+	}
+}
+
+void Curator::UpdateTimestep(int i_step){
+
+	properties_->current_step_ = i_step;
+	if(i_step == 0) start_ = sys_clock::now(); 
+	// Give updates on equilibrium process (every 10%)
+	if(i_step < data_threshold_ && i_step % equil_milestone_ == 0)
+		Log("Equilibration is %i percent complete (step # %i)\n", 
+				(int)(i_step/equil_milestone_)*10, i_step);
+	// Start data collection at appropriate step threshold
+	else if(i_step >= data_threshold_){
+		int delta = i_step - data_threshold_;
+		// Collect data every n_pickup timesteps
+		if(delta % n_pickup_ == 0) OutputData();
+		// Give updates on status of simulation every 10% 
+		if(delta % data_milestone_ == 0)
+			Log("Data collection is %i percent complete (step # %i)\n",
+					(int)(delta / data_milestone_)*10, i_step);
+		// Announce when simulation is done 
+		else if(delta == range_of_data_ - 1) Log("Done!\n");
+	}
+	if(parameters_->microtubules.printout_on && i_step % 1000 == 0)
+		PrintMicrotubules(0);
 }
 
 void Curator::PrintMicrotubules(){
@@ -325,7 +391,7 @@ void Curator::PrintMicrotubules(){
 		int mt_coord = mt->coord_;
 		int delta = mt_coord - leftmost_coord;
 		if(delta < 0){
-			printf("wat\n");
+			Log("wat\n");
 			exit(1);
 		}
 		for(int i_entry = 0; i_entry < delta; i_entry++){
@@ -467,6 +533,14 @@ void Curator::PrintMicrotubules(double pause_duration){
 	if(pause_duration > 0) PauseSim(pause_duration);
 }
 
+void Curator::PauseSim(double duration){
+
+	// Duration should be input in seconds
+	pause_dur_.tv_sec = (int) duration;	 
+	pause_dur_.tv_nsec = (duration - (int)duration)*100000000;
+	nanosleep(&pause_dur_, NULL);
+}
+
 void Curator::OutputData(){
 
 	int n_mts = parameters_->microtubules.count; 
@@ -550,7 +624,7 @@ void Curator::OutputData(){
 						double stalk_coord = motor->GetStalkCoordinate();
 						double teth_dist = abs(anchor_coord - stalk_coord);
 						if(teth_dist > motor->dist_cutoff_){
-							printf("woah, teth dist is %g\n", teth_dist);
+							Log("woah, teth dist is %g\n", teth_dist);
 						}
 					}
 					else tether_coord_array[i_site] = -1;
@@ -593,113 +667,33 @@ void Curator::OutputData(){
 	fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
 }
 
-void Curator::UpdateTimestep(int i_step){
-
-	properties_->current_step_ = i_step;
-	if(i_step == 0) start_ = sys_clock::now(); 
-	// Give updates on equilibrium process (every 10%)
-	if(i_step < data_threshold_ && i_step % equil_milestone_ == 0)
-		printf("Equilibration is %i percent complete (step # %i)\n", 
-				(int)(i_step/equil_milestone_)*10, i_step);
-	// Start data collection at appropriate step threshold
-	else if(i_step >= data_threshold_){
-		int delta = i_step - data_threshold_;
-		// Collect data every n_pickup timesteps
-		if(delta % n_pickup_ == 0) OutputData();
-		// Give updates on status of simulation every 10% 
-		if(delta % data_milestone_ == 0)
-			printf("Data collection is %i percent complete (step # %i)\n",
-					(int)(delta / data_milestone_)*10, i_step);
-		// Announce when simulation is done 
-		else if(delta == range_of_data_ - 1) printf("Done!");
-	}
-	if(parameters_->microtubules.printout_on && i_step % 1000 == 0)
-		PrintMicrotubules(0);
-}
-
-void Curator::PauseSim(double duration){
-
-	// Duration should be input in seconds
-	pause_dur_.tv_sec = (int) duration;	 
-	pause_dur_.tv_nsec = (duration - (int)duration)*100000000;
-	nanosleep(&pause_dur_, NULL);
-}
-
 void Curator::OutputSimDuration(){
 
 	finish_ = sys_clock::now();
 	auto elapsed = std::chrono::duration_cast<t_unit>(finish_ - start_);
 	sim_duration_ = elapsed.count();
-	// First, write data to runtime file
-	auto ptr = properties_->runtime_file_;
-	fprintf(properties_->runtime_file_, 
-			"Time to execute sim: %.2f seconds.\n", 
-			sim_duration_/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Calculating statistics: %.2f\n", 
-			t_motors_[1]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Constructing list: %.2f\n", 
-			t_motors_[2]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Calculating statistics: %.2f\n", 
-			t_xlinks_kmc_[1]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Constructing list: %.2f\n", 
-			t_xlinks_kmc_[2]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"   -Xlinks (Diffusion): %.2f\n", 
-			t_xlinks_dif_[0]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Calculating statistics: %.2f\n", 
-			t_xlinks_dif_[1]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Constructing list: %.2f\n", 
-			t_xlinks_dif_[2]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Calculating displacement: %.2f\n", 
-			t_MTs_[2]/n_per_sec_);
-	fprintf(properties_->runtime_file_, 
-			"      -Execution: %.2f\n", t_MTs_[3]/n_per_sec_);
-	// Next, print to terminal
-	printf("\nTime to execute sim: %.2f seconds.\n", 
-			sim_duration_/n_per_sec_);
-	printf("   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
-	printf("      -Calculating statistics: %.2f\n", t_motors_[1]/n_per_sec_);
-	printf("      -Constructing list: %.2f\n", t_motors_[2]/n_per_sec_);
-	printf("      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
-	printf("   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
-	printf("      -Calculating statistics: %.2f\n", 
-			t_xlinks_kmc_[1]/n_per_sec_);
-	printf("      -Constructing list: %.2f\n", t_xlinks_kmc_[2]/n_per_sec_);
-	printf("      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
-	printf("   -Xlinks (Diffusion): %.2f\n", t_xlinks_dif_[0]/n_per_sec_);
-	printf("      -Calculating statistics: %.2f\n", 
-			t_xlinks_dif_[1]/n_per_sec_);
-	printf("      -Constructing list: %.2f\n", t_xlinks_dif_[2]/n_per_sec_);
-	printf("      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
-	printf("   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
-	printf("      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
-	printf("      -Calculating displacement: %.2f\n", t_MTs_[2]/n_per_sec_);
-	printf("      -Execution: %.2f\n", t_MTs_[3]/n_per_sec_);
+	Log("\nTime to execute sim: %.2f seconds.\n", sim_duration_/n_per_sec_);
+	Log("   -Motors: %.2f\n", t_motors_[0]/n_per_sec_);
+	Log("      -Calculating stats: %.2f\n", t_motors_[1]/n_per_sec_);
+	Log("      -Constructing list: %.2f\n", t_motors_[2]/n_per_sec_);
+	Log("      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
+	Log("   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
+	Log("      -Calculating stats: %.2f\n", t_xlinks_kmc_[1]/n_per_sec_);
+	Log("      -Constructing list: %.2f\n", t_xlinks_kmc_[2]/n_per_sec_);
+	Log("      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
+	Log("   -Xlinks (Diffusion): %.2f\n", t_xlinks_dif_[0]/n_per_sec_);
+	Log("      -Calculating stats: %.2f\n", t_xlinks_dif_[1]/n_per_sec_);
+	Log("      -Constructing list: %.2f\n", t_xlinks_dif_[2]/n_per_sec_);
+	Log("      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
+	Log("   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
+	Log("      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
+	Log("      -Calculating displacement: %.2f\n", t_MTs_[2]/n_per_sec_);
+	Log("      -Execution: %.2f\n", t_MTs_[3]/n_per_sec_);
 }
 
 void Curator::CloseDataFiles(){
 
+	fclose(properties_->log_file_);
 	fclose(properties_->occupancy_file_);
 	fclose(properties_->motor_ID_file_);
 	fclose(properties_->xlink_ID_file_);
@@ -710,6 +704,12 @@ void Curator::CloseDataFiles(){
 	fclose(properties_->motor_force_file_);
 	fclose(properties_->xlink_force_file_);
 	fclose(properties_->total_force_file_);
-	fclose(properties_->runtime_file_);
 	fclose(properties_->motor_head_status_file_);
+}
+
+void Curator::CleanUp(){
+
+	OutputSimDuration();
+	CloseDataFiles();
+	properties_->gsl.CleanUp();
 }

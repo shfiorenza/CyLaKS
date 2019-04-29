@@ -16,12 +16,13 @@ struct system_properties{
 	
 	int current_step_;
 
-	FILE *occupancy_file_, 
+	FILE *log_file_,
+		 *occupancy_file_, 
 		 *motor_ID_file_, *xlink_ID_file_, 
 		 *tether_coord_file_, *mt_coord_file_, 
 		 *motor_extension_file_, *xlink_extension_file_, 
 		 *motor_force_file_, *xlink_force_file_, *total_force_file_, 
-		 *runtime_file_, *motor_head_status_file_; 
+		 *motor_head_status_file_; 
 };
 #endif
 

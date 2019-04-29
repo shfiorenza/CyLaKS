@@ -35,27 +35,34 @@ class Curator{
 		system_properties *properties_;
 
 	private:
-	
-	public:
-		Curator();
-		void ParseParameters(system_parameters *parameters, 
-							 char *param_file); 
-		void InitializeSimulation(system_properties *properties);
+		void OpenLog(char *sim_name);
+		void CheckArguments(char *exe_name, int argc);
+		void ParseParameters(system_parameters *params, char *param_file); 
 		void SetParameters();
 		void SetExperimentalStage();
-
-		void CheckArguments(char *sim_name, int argc);
-
 		void GenerateDataFiles(char *sim_name);
-		FILE* OpenFile(const char *file_name, const char *type);  
 		bool FileExists(std::string file_name);
+		FILE* OpenFile(const char *file_name, const char *type);  
 
-		void PrintMicrotubules();
-		void PrintMicrotubules(double pause_duration);
 		void OutputData();
-		void UpdateTimestep(int i_step);
-		void PauseSim(double duration); 
 		void OutputSimDuration();
 		void CloseDataFiles();
+
+	public:
+		Curator();
+		void InitializeSimulation(char *exe_name, char *param_file, 
+				char *sim_name, int argc, system_properties *properties, 
+				system_parameters *parameters);
+
+		void Log(const char *msg);
+		template <typename T> void Log(const char *msg, T arg);
+		template <typename T1, typename T2> void Log(const char *msg,
+				T1 arg1, T2 arg2);
+		void UpdateTimestep(int i_step);
+		void PrintMicrotubules();
+		void PrintMicrotubules(double pause_duration);
+		void PauseSim(double duration); 
+
+		void CleanUp();
 };
 #endif

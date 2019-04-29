@@ -63,7 +63,7 @@ clean:
 
 .PHONY : clean-output
 clean-output:
-	rm -f *.file *.dat
+	rm -f *.file *.log
 
 sim: dirs $(BINDIR)/sim; cp $(BINDIR)/sim sim
 

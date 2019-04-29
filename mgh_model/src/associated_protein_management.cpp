@@ -50,9 +50,9 @@ void AssociatedProteinManagement::SetParameters(){
 	dist_cutoff_ = xlinks_[0].dist_cutoff_;
 	rest_dist_ = xlinks_[0].rest_dist_;
 	if(parameters_->motors.tethers_active){
-		printf("\nFor crosslinkers:\n");
-		printf("  rest_dist is %i\n", rest_dist_);
-		printf("  dist_cutoff is %i\n\n", dist_cutoff_);
+		properties_->wallace.Log("\nFor crosslinkers:\n");
+		properties_->wallace.Log("  rest_dist is %i\n", rest_dist_);
+		properties_->wallace.Log("  dist_cutoff is %i\n\n", dist_cutoff_);
 	}
 	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
 	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);

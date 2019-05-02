@@ -7,7 +7,7 @@ private:
 	using vec_t = std::vector<double>;
 public:
 	int count;				// Number of MTs in simulation
-	int length;				// Length of each MT in sites (tubulin dimers)
+	std::vector<int> length; // Length of each MT in sites (tubulin dimers)
 	double y_dist;			// Vertical distance between each MT
 
 	double site_size; 		// Length of tubulin dimer; nm

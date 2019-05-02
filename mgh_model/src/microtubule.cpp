@@ -17,15 +17,15 @@ void Microtubule::Initialize(system_parameters *parameters,
 
 void Microtubule::SetParameters(){
 
-	n_sites_ = parameters_->microtubules.length;
-	coord_ = 0;
+	n_sites_ = parameters_->microtubules.length[index_];
+	coord_ = parameters_->microtubules.start_coord[index_];
 	if(index_%2 == 0){
 		polarity_ = 0;
 		plus_end_ = 0;
 		minus_end_ = n_sites_ - 1;
 		delta_x_ = -1;
 		mt_index_adj_ = index_ + 1; 	// FIXME
-		coord_ = parameters_->microtubules.start_coord[0];
+		neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
 	}
 	else if(index_%2 == 1){
 		polarity_ = 1;
@@ -33,9 +33,9 @@ void Microtubule::SetParameters(){
 		minus_end_ = 0;
 		delta_x_ = 1;
 		mt_index_adj_ = index_ - 1;		// FIXME 
-		coord_ = parameters_->microtubules.start_coord[1]; 
+		neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
 	}
-	int mt_length = parameters_->microtubules.length;
+	int mt_length = n_sites_;
 	double site_size = parameters_->microtubules.site_size;
 	double big_l = mt_length * site_size;
 	double radius = parameters_->microtubules.radius;

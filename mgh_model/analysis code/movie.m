@@ -1,8 +1,9 @@
 clear all;
 % Parameters from sim
-n_sites = 250;
-n_mts = 1;
-simName = 'scan_output_noscale/Endtag_36.0_250';
+mt_lengths = [1000, 200];
+max_sites = max(mt_lengths);
+n_mts = 2;
+simName = 'test';
 % Pseudo-constant variables
 n_steps = 100000000;
 n_datapoints = 10000;
@@ -17,7 +18,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-movie_name = 'test';
+movie_name = 'slide_400';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
@@ -61,39 +62,39 @@ fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
 motor_data_file = fopen(motorFile);
-motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
+motor_raw_data = fread(motor_data_file, [n_mts * max_sites * n_datapoints], '*int');
 fclose(motor_data_file);
-motor_data = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
+motor_data = reshape(motor_raw_data, max_sites, n_mts, n_datapoints);
 
 motor_head_status_file = fopen(motorHeadFile);
-motor_head_raw_data = fread(motor_head_status_file, [n_mts * n_sites * n_datapoints], '*bool');
+motor_head_raw_data = fread(motor_head_status_file, [n_mts * max_sites * n_datapoints], '*bool');
 fclose(motor_head_status_file);
-motor_head_data = reshape(motor_head_raw_data, n_sites, n_mts, n_datapoints);
+motor_head_data = reshape(motor_head_raw_data, max_sites, n_mts, n_datapoints);
 
 xlink_data_file = fopen(xlinkFile);
-xlink_raw_data = fread(xlink_data_file, [n_mts * n_sites * n_datapoints], '*int');
+xlink_raw_data = fread(xlink_data_file, [n_mts * max_sites * n_datapoints], '*int');
 fclose(xlink_data_file);
-xlink_data = reshape(xlink_raw_data, n_sites, n_mts, n_datapoints);
+xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
 
 teth_data_file = fopen(tethFile);
-teth_raw_data = fread(teth_data_file, [n_mts * n_sites * n_datapoints], '*double');
+teth_raw_data = fread(teth_data_file, [n_mts * max_sites * n_datapoints], '*double');
 fclose(teth_data_file);
-teth_data = reshape(teth_raw_data, n_sites, n_mts, n_datapoints);
+teth_data = reshape(teth_raw_data, max_sites, n_mts, n_datapoints);
 
 % Run through all datapoints; each one is a frame in our movie
 for i_data=start_frame:frames_per_plot:end_frame
     
     % Clear figure so that it only displays figures from current datapoint
     clf;        
-
+    
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
-    ax.XLim = [0 (n_sites + 1)];
+    ax.XLim = [0 (max_sites + 1)];
     ax.YLim = [-1 11];
     ax.TickLength = [0 0];
-    ax.XTick = [0:(n_sites/5):n_sites];
-    ax.XTickLabel = {0, 0.008*n_sites/5, 0.008*2*n_sites/5, ... 
-        0.008*3*n_sites/5, 0.008*4*n_sites/5, 0.008*n_sites};
+    ax.XTick = [0:(max_sites/5):max_sites];
+    ax.XTickLabel = {0, 0.008*max_sites/5, 0.008*2*max_sites/5, ... 
+        0.008*3*max_sites/5, 0.008*4*max_sites/5, 0.008*max_sites};
     ax.YTickLabel = {};
     ax.XLabel.String = 'Distance from plus-end (microns)';
     
@@ -101,27 +102,28 @@ for i_data=start_frame:frames_per_plot:end_frame
     
     % Draw MTs
     for i_mt=1:1:n_mts
+        n_sites = mt_lengths(i_mt);
+        
         mt_pos = mt_data(i_mt, i_data)*site_width;
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         if(n_mts > 1)
             second_pos = mt_data(2, i_data)*site_width;
-            
+            %{
             left = first_pos;
             right = second_pos + n_sites + 1;
             center = (left + right) / 2;
             ax.XLim = [center-65 center+65];
-            %{
-            if(first_pos < second_pos)
-                ax.XLim = [(first_pos) (second_pos + n_sites + 1)];
-            else
-                ax.XLim = [(second_pos) (first_pos + n_sites + 1)];
-            end
             %}
             
+            if(first_pos < second_pos)
+                ax.XLim = [(first_pos) (second_pos + max_sites + 1)];
+            else
+                ax.XLim = [(second_pos) (first_pos + max_sites + 1)];
+            end
+              
         else
-       
-            ax.XLim = [first_pos first_pos + n_sites];
+            ax.XLim = [first_pos first_pos + max_sites];
             %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
         
@@ -174,7 +176,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                                 'LineWidth', 1.5, 'Color', 'black');
                         end
                     end
-                elseif i_motor == n_sites
+                elseif i_motor == max_sites
                     if motor_IDs(i_motor) == motor_IDs(i_motor - 1)
                         rectangle('Position', [motor_pos motor_height site_width site_height], ...
                             'FaceColor', blue, 'Curvature', [1 1]);
@@ -228,11 +230,11 @@ for i_data=start_frame:frames_per_plot:end_frame
                 end
             end
         end
-        
+       
         % Array of xlink IDs for this MT
         xlink_IDs = xlink_data(:, i_mt, i_data);
         % Array of xlink IDs for neighbor MT
-        neighb_IDs = zeros(n_sites);
+        neighb_IDs = zeros(max_sites);
         neighb_IDs(:) = -1;
         neighb_mt_pos = 0;
         neighb_mt_height = 0;
@@ -303,7 +305,7 @@ for i_data=start_frame:frames_per_plot:end_frame
         end    
         % Array of tether coords for this MT
         teth_coords = teth_data(:, i_mt, i_data);
-        for i_teth=1:1:n_sites - 1
+        for i_teth=1:1:max_sites - 1
             if(teth_coords(i_teth) ~= -1)
                 end_height = (mt_height + neighb_mt_height + site_height) / 2;
                 if(n_mts < 2)

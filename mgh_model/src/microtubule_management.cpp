@@ -20,8 +20,10 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 void MicrotubuleManagement::SetParameters(){
 
 	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length;
-	n_sites_tot_ = n_mts*mt_length;
+	n_sites_tot_ = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		n_sites_tot_ += parameters_->microtubules.length[i_mt];
+	}
 	// int n_sites_bulk = n_sites_tot_ - 2*n_mts;	
 	unoccupied_list_.resize(n_sites_tot_); 
 }
@@ -89,8 +91,9 @@ void MicrotubuleManagement::UpdateUnoccupied(){
 
 	n_unoccupied_ = 0; 
 	for(int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++){
-		for(int i_st = 0; i_st < parameters_->microtubules.length; i_st++){
-			Tubulin *site = &mt_list_[i_mt].lattice_[i_st];
+		int n_sites = parameters_->microtubules.length[i_mt];
+		for(int i_site = 0; i_site < n_sites; i_site++){
+			Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
 			if(site->occupied_ == false){
 				unoccupied_list_[n_unoccupied_] = site; 
 				n_unoccupied_++;

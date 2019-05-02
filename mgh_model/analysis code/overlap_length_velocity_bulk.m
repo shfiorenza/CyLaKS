@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 n_sites = 1000;
-n_seeds = 24; 
+n_seeds = 1;%24; 
 initial_shift = [900,800,600,400,200,0];
 n_shifts = length(initial_shift);
 initial_overlap = (1000 - initial_shift)*0.008;
@@ -17,7 +17,7 @@ time_per_datapoint = delta_t * (n_steps / n_datapoints);
 length = n_sites * 0.008;
 end_time = n_steps * delta_t;
 start_time = starting_point * delta_t;
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/slide_newest_equil/%s';
 fileStructure = '%s_mt_coord.file';
 
 max_velocities = zeros([n_seeds n_shifts]);
@@ -34,10 +34,10 @@ err_final_lengths = zeros([1 n_shifts]);
 
 for i_seed=1:n_seeds
     for i_shift=1:n_shifts
-        simName = sprintf('scan_multi_slide/shift_%i_%i', ...
+        simName = sprintf('shift_%i_%i', ...
             i_seed-1, initial_shift(i_shift));
         
-        simName_b = sprintf('scan_multi_stall_b/mt_coords/shift_stall_%i_%i', ...
+        simName_b = sprintf('shift_%i_%i', ...
             i_seed-1, initial_shift(i_shift));
         
         fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
@@ -116,10 +116,12 @@ set(x, 'Units', 'Normalized', 'Position', [0.5, -0.065, 0]);
 y = ylabel('Maximum sliding velocity (nm/s)');
 set(y, 'Units', 'Normalized', 'Position', [-0.09, 0.5, 0]);
 legend('0.5 nM PRC1 + 6 nM KIF4A','location', 'northwest', 'FontSize', 14);
+%{
 xticks([0,2,4,6,8,10]);
 yticks([0,100,200,300]);
 xlim([0 9]);
 ylim([0 350]);
+%}
 axes = gca;
 axes.XAxis.FontSize = 14;
 axes.YAxis.FontSize = 14;

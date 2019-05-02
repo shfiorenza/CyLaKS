@@ -49,7 +49,12 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	// Parse parameter file into a YAML node
 	YAML::Node input = YAML::LoadFile(param_file);
 	// Transfer values from input param node to system_parameters structure
-	params->seed = input["seed"].as<long>();
+	try{
+		params->seed = input["seed"].as<long>();
+	}
+	catch(const YAML::BadConversion error){
+		params->seed = (long)(input["seed"].as<double>());
+	}   
 	params->n_steps = input["n_steps"].as<int>();
 	params->n_datapoints = input["n_datapoints"].as<int>();
 	params->data_threshold = input["data_threshold"].as<int>();
@@ -58,12 +63,12 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	params->eta = input["eta"].as<double>();
 	/* Motor parameters below */ 
 	YAML::Node motors = input["motors"];
+	params->motors.t_active = motors["t_active"].as<double>();
 	params->motors.k_on = motors["k_on"].as<double>();
 	params->motors.c_bulk = motors["c_bulk"].as<double>();
 	params->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
 	params->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
 	params->motors.c_ATP = motors["c_ATP"].as<double>();
-	params->motors.no_ATP_until = motors["no_ATP_until"].as<double>();
 	params->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
 	params->motors.k_off_i_NULL = motors["k_off_i_NULL"].as<double>();	
@@ -95,7 +100,7 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	/* Microtubule parameters below */ 
 	YAML::Node mts = input["microtubules"];
 	params->microtubules.count = mts["count"].as<int>();
-	params->microtubules.length = mts["length"].as<int>();
+	params->microtubules.length = mts["length"].as<std::vector<int>>();
 	params->microtubules.y_dist = mts["y_dist"].as<double>(); 
 	params->microtubules.site_size = mts["site_size"].as<double>();
 	params->microtubules.radius = mts["radius"].as<double>();
@@ -107,10 +112,12 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	params->microtubules.immobile_until = 
 			mts["immobile_until"].as<std::vector<double>>();
 	// Check to make sure there are enough vector entries for given MT count
+	int n_lengths = mts["length"].size(); 
 	int n_start_coords = mts["start_coord"].size();
 	int n_imp_vel = mts["imposed_velocity"].size();
 	int n_immo = mts["immobile_until"].size();
-	if(params->microtubules.count > n_start_coords
+	if(params->microtubules.count > n_lengths
+	|| params->microtubules.count > n_start_coords
 	|| params->microtubules.count > n_imp_vel
 	|| params->microtubules.count > n_immo){
 		Log("\nError! More MTs than given parameters; ");
@@ -133,12 +140,12 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	Log("    kbT = %g pN*nm\n", params->kbT);
 	Log("    eta = %g (pN*s)/um^2\n", params->eta);
 	Log("\n  Kinesin (motor) parameters:\n");
+	Log("    t_active = %g seconds\n", params->motors.t_active);
 	Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
 	Log("    c_bulk = %g nM\n", params->motors.c_bulk);
 	Log("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
 	Log("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
 	Log("    c_ATP = %g mM\n", params->motors.c_ATP);
-	Log("    no_ATP_until = %g seconds\n", params->motors.no_ATP_until);
 	Log("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
 	Log("    k_off_i = %g /s\n", params->motors.k_off_i);
 	Log("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
@@ -375,7 +382,6 @@ void Curator::UpdateTimestep(int i_step){
 void Curator::PrintMicrotubules(){
 
 	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length; 
 	// Figure out which MT is the farthest left 
 	int leftmost_coord = 0;
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
@@ -387,6 +393,7 @@ void Curator::PrintMicrotubules(){
 	}
 	// Print out MTs
 	for(int i_mt = n_mts - 1; i_mt >= 0; i_mt--){
+		int mt_length = parameters_->microtubules.length[i_mt]; 
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		int mt_coord = mt->coord_;
 		int delta = mt_coord - leftmost_coord;
@@ -544,7 +551,11 @@ void Curator::PauseSim(double duration){
 void Curator::OutputData(){
 
 	int n_mts = parameters_->microtubules.count; 
-	int mt_length = parameters_->microtubules.length;
+	int max_length = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		if(parameters_->microtubules.length[i_mt] > max_length)
+			max_length = parameters_->microtubules.length[i_mt];
+	}
 	// Get file pointers from system properties
 	FILE *occupancy_file = properties_->occupancy_file_;
 	FILE *motor_ID_file = properties_->motor_ID_file_;
@@ -576,17 +587,21 @@ void Curator::OutputData(){
 	double *total_force_ptr = total_force_array;	
 	// Run through all MTs and get data for each
 	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		int mt_length = parameters_->microtubules.length[i_mt]; 
 		Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
 		// Create arrays & ptrs for intraMT data 
-		int motor_ID_array[mt_length],
-		xlink_ID_array[mt_length], 
-		occupancy_array[mt_length];
+		int motor_ID_array[max_length],
+		xlink_ID_array[max_length], 
+		occupancy_array[max_length];
 		int	*motor_ID_ptr = motor_ID_array, 
 			*xlink_ID_ptr = xlink_ID_array, 
 			*occupancy_ptr = occupancy_array;
-		double tether_coord_array[mt_length];
+		double tether_coord_array[max_length];
 		double *teth_coord_ptr = tether_coord_array;
-		bool motor_head_status_array[mt_length] = { false };
+		bool motor_head_status_array[max_length];
+		for(int i_site = 0; i_site < max_length; i_site++){   
+			motor_head_status_array[i_site] = false;
+		};
 		bool *motor_head_status_ptr = motor_head_status_array;
 		// Run through all sites on this particular MT
 		for(int i_site = 0; i_site < mt_length; i_site++){
@@ -632,16 +647,24 @@ void Curator::OutputData(){
 				else tether_coord_array[i_site] = -1;
 			}
 		}
+		// Pad written data with zeros for shorter MTs
+		for(int i_site = mt_length; i_site < max_length; i_site++){
+				occupancy_array[i_site] = -1;
+				motor_ID_array[i_site] = -1;
+				xlink_ID_array[i_site] = -1;
+				tether_coord_array[i_site] = -1;
+		}
 		mt_coord_array[i_mt] = mt->coord_; 
 		motor_force_array[i_mt] = mt->GetNetForce_Motors();
 		xlink_force_array[i_mt] = mt->GetNetForce_Xlinks();
 		total_force_array[i_mt] = mt->GetNetForce();
 		// Write the data to respective files one microtubule at a time
-		fwrite(occupancy_ptr, sizeof(int), mt_length, occupancy_file);
-		fwrite(motor_ID_ptr, sizeof(int), mt_length, motor_ID_file);
-		fwrite(xlink_ID_ptr, sizeof(int), mt_length, xlink_ID_file);
-		fwrite(teth_coord_ptr, sizeof(double), mt_length, tether_coord_file);
-		fwrite(motor_head_status_ptr, sizeof(bool), mt_length, 
+		fwrite(occupancy_ptr, sizeof(int), max_length, occupancy_file);
+		fwrite(motor_ID_ptr, sizeof(int), max_length, motor_ID_file);
+		fwrite(xlink_ID_ptr, sizeof(int), max_length, xlink_ID_file);
+		fwrite(teth_coord_ptr, sizeof(double), max_length, 
+				tether_coord_file);
+		fwrite(motor_head_status_ptr, sizeof(bool), max_length, 
 				motor_head_status_file);
 	}	
 	// Scan through kinesin4/prc1 statistics to get extension occupancies 

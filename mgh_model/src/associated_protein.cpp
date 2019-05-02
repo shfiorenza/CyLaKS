@@ -248,11 +248,11 @@ void AssociatedProtein::UpdateNeighborSites(){
 	
 	n_neighbor_sites_ = 0;
 	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length;
 	if(n_mts > 1){
 		Tubulin *site = GetActiveHeadSite();
 		int i_site = site->index_;
 		Microtubule *mt = site->mt_;
+		int mt_length = mt->neighbor_->n_sites_; 
 		Microtubule *adj_mt = mt->neighbor_;
 		int site_coord = mt->coord_ + i_site; 
 		// Scan through all potential neighbors; only add unoccupied to list 
@@ -285,7 +285,6 @@ void AssociatedProtein::UpdateTethNeighborSites(){
 	if(tethered_ == true
 	&& heads_active_ == 0){
 		int n_mts = parameters_->microtubules.count;
-		int mt_length = parameters_->microtubules.length;
 		int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
 		int comp_cutoff = properties_->kinesin4.comp_cutoff_;
 		double stalk_coord = motor_->GetStalkCoordinate();
@@ -294,6 +293,7 @@ void AssociatedProtein::UpdateTethNeighborSites(){
 		int i_entry = 0;
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){ 	
 			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+			int mt_length = mt->n_sites_;
 			double mt_coord = mt->coord_;
 			int i_stalk = stalk_coord - mt_coord; 
 			for(int x_dist = -teth_cutoff; x_dist <= teth_cutoff; x_dist++){
@@ -333,11 +333,11 @@ void AssociatedProtein::UpdateTethNeighborSitesII(){
 
 	n_teth_neighbor_sites_ii_ = 0;
 	int n_mts = parameters_->microtubules.count;
-	int mt_length = parameters_->microtubules.length;
 	if(n_mts > 1){
 		Tubulin *site = GetActiveHeadSite();
 		int i_site = site->index_;
 		Microtubule *mt = site->mt_;
+		int mt_length = mt->n_sites_;
 		Microtubule *adj_mt = mt->neighbor_;
 		int site_coord = mt->coord_ + i_site; 
 		// Scan through all potential neighbors; only add unoccupied to list 
@@ -555,6 +555,7 @@ double AssociatedProtein::GetBindingWeight(Tubulin *neighbor){
 	Microtubule *mt = site->mt_;
 	Microtubule *adj_mt = neighbor->mt_;
 	if(adj_mt != mt->neighbor_){
+		printf("adj: %i, neighb: %i\n", adj_mt->index_, mt->neighbor_->index_);
 		printf("why the microtubules tho (in assiociated protein GBW)\n");
 		exit(1);
 	}

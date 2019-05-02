@@ -356,12 +356,12 @@ void Kinesin::UpdateNeighborSites(){
 	if(tethered_ == true
 	&& heads_active_ == 0){
 		int n_mts = parameters_->microtubules.count;
-		int mt_length = parameters_->microtubules.length;
 		double anchor_coord = xlink_->GetAnchorCoordinate();
 		// Scan through all potential neighbor sites; add unoccupied to list 
 		// FIXME this only works for two MTs as of now FIXME
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){ 	
 			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+			int mt_length = mt->n_sites_;
 			double mt_coord = mt->coord_;
 			int i_anchor = anchor_coord - mt_coord; 
 			for(int dx = -(dist_cutoff_+1); dx <= (dist_cutoff_+1); dx++){
@@ -401,12 +401,12 @@ void Kinesin::UpdateNeighborXlinks(){
 	if(tethered_ == false
 	&& heads_active_ > 0){
 		int n_mts = parameters_->microtubules.count;
-		int mt_length = parameters_->microtubules.length;
 		double stalk_coord = GetStalkCoordinate();
 		// Scan through all potential neighbor sites; add untethered xlinks
 		// FIXME this only works for two MTs as of now FIXME
 		for(int i_mt = 0; i_mt < n_mts; i_mt++){
 			Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+			int mt_length = mt->n_sites_;
 			int i_stalk = stalk_coord - mt_->coord_;
 			// Only scan over sites within +/- dist_cutoff_
 			for(int dx = -(dist_cutoff_+1); dx <= (dist_cutoff_+1); dx++){

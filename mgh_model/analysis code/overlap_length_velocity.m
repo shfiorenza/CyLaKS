@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 n_sites = 1000;
-simName = 'slide_new_new_equil/shift_0_600';
+simName = 'slide_newest_equil/shift_0_0';
 %simName = 'slide_vshort';
 % Pseudo-constant variables
 n_mts = 2;
@@ -60,7 +60,7 @@ xlabel('Time (s)');
 axis tight
 xlim([1 end_time-1]);
 %xlim([start_time + 1 end_time - 1]);
-%ylim([0 n_sites * 0.008]);
+ylim([0 n_sites * 0.008]);
 grid on
 grid minor
 

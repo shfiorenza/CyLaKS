@@ -22,10 +22,12 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
 void AssociatedProteinManagement::GenerateXLinks(){
 
 	int n_mts = parameters_->microtubules.count;
-	int n_sites = parameters_->microtubules.length;
+	n_xlinks_ = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+		n_xlinks_ += parameters_->microtubules.length[i_mt];
+	}
 	// Since only one head has to be bound, the sim will at most
 	// as many xlinks as sites in the bulk (all single-bound)
-	n_xlinks_ = n_mts*n_sites;
 	xlinks_.resize(n_xlinks_);
 	for(int ID = 0; ID < n_xlinks_; ID++){
 		xlinks_[ID].Initialize(parameters_, properties_, ID);
@@ -1977,7 +1979,7 @@ void AssociatedProteinManagement::RunDiffusionI_Forward(){
 		AssociatedProtein* xlink = site->xlink_;
 		int i_site = site->index_;
 		// cant step off them MTs
-		if(i_site != parameters_->microtubules.length - 1){
+		if(i_site != site->mt_->n_sites_ - 1){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + 1];
 			if(new_site->occupied_ == false){
@@ -2040,7 +2042,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToRest(
 		AssociatedProtein* xlink = site->xlink_;
 		int dx = xlink->GetDirectionTowardRest(site);
 		// cant step off them MTs
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2076,7 +2078,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromRest(
 		AssociatedProtein* xlink = site->xlink_;
 		int dx = -1 * xlink->GetDirectionTowardRest(site);
 		// cant step off them MTs
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2113,7 +2115,7 @@ void AssociatedProteinManagement::RunDiffusionI_ToTethRest(
 		// direction xlink needs to move to rest is opposite of motor's
 		int dx = -1 * xlink->motor_->GetDirectionTowardRest(); 
 		// cant step off them MTs
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2150,7 +2152,7 @@ void AssociatedProteinManagement::RunDiffusionI_FromTethRest(
 		// direction xlink needs to move to rest is opposite of motor's
 		int dx = xlink->motor_->GetDirectionTowardRest(); 
 		// cant step off them MTs
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2187,7 +2189,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToBothRest(
 		// xlink->GetDirToRest is ill-defined for x = 0, so use motor's 
 		// function instead (multiply by -1 since xlink is the one moving)
 		int dx = -1 * xlink->motor_->GetDirectionTowardRest();
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2225,7 +2227,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromBothRest(
 		// xlink->GetDirToRest is ill-defined for x = 0, so use motor's 
 		// function instead (multiply by -1 since xlink is the one moving)
 		int dx = xlink->motor_->GetDirectionTowardRest();
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2263,7 +2265,7 @@ void AssociatedProteinManagement::RunDiffusionII_ToSelf_FromTeth(
 		// xlink->GetDirToRest is ill-defined for x = 0, so use motor's 
 		// function instead (multiply by -1 since xlink is the one moving)
 		int dx = xlink->motor_->GetDirectionTowardRest();
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];
@@ -2302,7 +2304,7 @@ void AssociatedProteinManagement::RunDiffusionII_FromSelf_ToTeth(
 		// xlink->GetDirToRest is ill-defined for x = 0, so use motor's 
 		// function instead (multiply by -1 since xlink is the one moving)
 		int dx = -1 * xlink->motor_->GetDirectionTowardRest();
-		if(!(i_site == (parameters_->microtubules.length - 1) && dx == 1)
+		if(!(i_site == site->mt_->n_sites_ - 1 && dx == 1)
 		&& !(i_site == 0 && dx == -1)){
 			Tubulin *old_site = site;
 			Tubulin *new_site = &site->mt_->lattice_[i_site + dx];

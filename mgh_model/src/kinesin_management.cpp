@@ -18,10 +18,12 @@ void KinesinManagement::Initialize(system_parameters *parameters,
 void KinesinManagement::GenerateMotors(){
 
     int n_mts = parameters_->microtubules.count;
-    int n_sites = parameters_->microtubules.length;
+	n_motors_ = 0;
+	for(int i_mt = 0; i_mt < n_mts; i_mt++){
+    	n_motors_ += parameters_->microtubules.length[i_mt];
+	}
     // Since only one head has to be bound, the most that will ever
     // be needed (all single-bound) is the total number of sites 
-    n_motors_ = n_mts*n_sites;
     motors_.resize(n_motors_);
     for(int ID = 0; ID < n_motors_; ID++)
         motors_[ID].Initialize(parameters_, properties_, ID);
@@ -376,7 +378,7 @@ void KinesinManagement::UpdateDocked(){
 					double site_coord = motor->GetDockedCoordinate();
 					int i_site = site_coord - motor->mt_->coord_;
 					if(i_site >= 0 
-					&& i_site <= parameters_->microtubules.length - 1){
+					&& i_site <= motor->mt_->n_sites_ - 1){
 						// Ensure site isn't occupied
 						if(!motor->mt_->lattice_[i_site].occupied_){
 							docked_[n_docked_] = motor->GetDockedHead(); 
@@ -391,7 +393,7 @@ void KinesinManagement::UpdateDocked(){
 					double site_coord = motor->GetDockedCoordinate();
 					int i_site = site_coord - motor->mt_->coord_;
 					if(i_site >= 0 
-					&& i_site <= parameters_->microtubules.length - 1){
+					&& i_site <= motor->mt_->n_sites_ - 1){
 						// Ensure site isn't occupied
 						if(!motor->mt_->lattice_[i_site].occupied_){
 							docked_[n_docked_] = motor->GetDockedHead(); 
@@ -422,7 +424,7 @@ void KinesinManagement::UpdateDockedTethered(){
 						double site_coord = motor->GetDockedCoordinate();
 						int i_site = site_coord - motor->mt_->coord_;
 						if(i_site >= 0
-						&& i_site <= parameters_->microtubules.length - 1){
+						&& i_site <= motor->mt_->n_sites_ - 1){
 							if(!motor->mt_->lattice_[i_site].occupied_){
 								int x_dub = motor->x_dist_doubled_;
 								int i = n_docked_tethered_[x_dub];
@@ -911,13 +913,13 @@ void KinesinManagement::UpdateEvents(){
 void KinesinManagement::RunKMC(){
 
 	sys_time start1 = sys_clock::now();
-	if(parameters_->motors.c_bulk > 0) GenerateKMCList();
+	int i_active = (int)parameters_->motors.t_active/parameters_->delta_t;
+	if(properties_->current_step_ >= i_active
+	&& parameters_->motors.c_bulk > 0)
+		GenerateKMCList();
 	else return;
 	sys_time start2 = sys_clock::now();
 	if(!kmc_list_.empty()){
-		int cur_step = properties_->current_step_; 
-		double t_ATP = parameters_->motors.no_ATP_until; 
-		int ATP_step = t_ATP / parameters_->delta_t; 
 		int x_dub = 0;
 //		printf("\nStart of Kinesin KMC cycle\n");
 		for(int i_entry = 0; i_entry < kmc_list_.size(); i_entry++){
@@ -948,11 +950,11 @@ void KinesinManagement::RunKMC(){
 					break;
 				case 20:
 //					printf("Bind_ATP\n");
-					if(cur_step >= ATP_step) KMC_Bind_ATP();
+					KMC_Bind_ATP();
 					break;
 				case 21:
 //					printf("Bind_ATP_Tethered\n");
-					if(cur_step >= ATP_step) KMC_Bind_ATP_Tethered(x_dub);
+					KMC_Bind_ATP_Tethered(x_dub);
 					break;
 				case 30:
 //					printf("Hydrolyze\n");
@@ -1112,7 +1114,7 @@ void KinesinManagement::KMC_Bind_ATP(){
 			Microtubule *mt = head->site_->mt_;
 			int i_site = head->site_->index_;
 			int dx = mt->delta_x_;
-			int mt_length = parameters_->microtubules.length - 1;
+			int mt_length = mt->n_sites_ - 1;
 			// If endpausing is active, don't step off MT boundary sites
 			if(parameters_->motors.endpausing_active){
 				if(!(i_site == 0 && dx == -1) 
@@ -1158,7 +1160,7 @@ void KinesinManagement::KMC_Bind_ATP_Tethered(int x_dub){
 				Microtubule *mt = head->site_->mt_;
 				int i_site = head->site_->index_;
 				int dx = mt->delta_x_;
-				int mt_length = parameters_->microtubules.length - 1;
+				int mt_length = mt->n_sites_ - 1;
 				if(!(i_site == 0 && dx == -1) 
 				&& !(i_site == mt_length && dx == 1)){
 					head->motor_->ChangeConformation();
@@ -1300,7 +1302,7 @@ void KinesinManagement::KMC_Unbind_II(){
 					Tubulin *site = head->motor_->GetActiveHead()->site_;
 					int i_site = site->index_;
 					int dx = site->mt_->delta_x_;
-					int mt_length = parameters_->microtubules.length - 1;
+					int mt_length = site->mt_->n_sites_ - 1;
 					if(!(i_site == 0 && dx == -1) 
 					&& !(i_site == mt_length && dx == 1)){
 						head->motor_->ChangeConformation();

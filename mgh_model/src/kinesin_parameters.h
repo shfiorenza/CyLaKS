@@ -10,6 +10,7 @@ struct kinesin_parameters{
 	double k_on_ATP; 		// ATP binding rate to mots; 1/(micromolar*s) 
 	double c_ATP;			// Bulk concentration of ATP; micromolar
 	double k_hydrolyze; 	// Rate that ATP->ADPP occurs in motors; 1/s
+	double k_hydrolyze_stalled; // '' but for stalled motors
 	double k_off_i;			// Unbinding rate for ADPP-bound heads; 1/s
 	double k_off_i_NULL;    // Unbinding rate for NULL heads; 1/s
 	double k_off_ii;		// Unbinding rate for ADPP-bound heads; 1/s

@@ -27,6 +27,28 @@ void Curator::OpenLog(char *sim_name){
 
 	char log_file[160];
 	sprintf(log_file, "%s.log", sim_name);
+	// Check to see if sim files already exist
+	if(FileExists(log_file)){
+		printf("Simulation log file with this name already exists!\n");
+		printf("Do you wish to overwrite these data? y/n\n");
+		std::string response; 
+		bool response_unacceptable = true;
+		while(response_unacceptable){
+			std::getline(std::cin, response);
+			if(response == "n"){
+				printf("Simulation terminated.\n");
+				exit(1); 
+			}
+			else if(response == "y"){
+				printf("Very well.");
+			   	printf(" Overwriting data for sim '%s'\n\n", sim_name);
+				response_unacceptable = false; 
+			}
+			else{
+				printf("ayo I said y or n. try again plz\n");
+			}
+		}
+	}
 	properties_->log_file_ = OpenFile(log_file, "w");
 }
 
@@ -70,6 +92,8 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	params->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
 	params->motors.c_ATP = motors["c_ATP"].as<double>();
 	params->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
+	params->motors.k_hydrolyze_stalled = motors["k_hydrolyze_stalled"].
+		as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
 	params->motors.k_off_i_NULL = motors["k_off_i_NULL"].as<double>();	
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
@@ -112,7 +136,7 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	params->microtubules.immobile_until = 
 			mts["immobile_until"].as<std::vector<double>>();
 	// Check to make sure there are enough vector entries for given MT count
-	int n_lengths = mts["length"].size(); 
+	int n_lengths = mts["length"].size();
 	int n_start_coords = mts["start_coord"].size();
 	int n_imp_vel = mts["imposed_velocity"].size();
 	int n_immo = mts["immobile_until"].size();
@@ -147,6 +171,8 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	Log("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
 	Log("    c_ATP = %g mM\n", params->motors.c_ATP);
 	Log("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
+	Log("    k_hydrolyze_stalled = %g /s\n", 
+			params->motors.k_hydrolyze_stalled);
 	Log("    k_off_i = %g /s\n", params->motors.k_off_i);
 	Log("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
 	Log("    k_off_ii = %g /s\n", params->motors.k_off_ii);
@@ -176,7 +202,10 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	Log("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
 	Log("\n  Microtubule (mt) parameters:\n");
 	Log("    count = %i\n", params->microtubules.count);
-	Log("    length = %i sites\n", params->microtubules.length);
+	for(int i_mt = 0; i_mt < n_lengths; i_mt++){
+		Log("    length = %i sites for mt %i\n", 
+				params->microtubules.length[i_mt], i_mt);
+	}
 	Log("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
 	Log("    site_size = %g nm\n", params->microtubules.site_size);
 	Log("    radius = %g nm\n", params->microtubules.radius);
@@ -251,28 +280,6 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
 	sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name);
-	// Check to see if sim files already exist
-	if(FileExists(occupancy_file)){
-		Log("Simulation file with this name already exists!\n");
-		Log("Do you wish to overwrite? y/n\n");
-		std::string response; 
-		bool response_unacceptable = true;
-		while(response_unacceptable){
-			std::getline(std::cin, response);
-			if(response == "n"){
-				Log("Simulation terminated.\n");
-				exit(1); 
-			}
-			else if(response == "y"){
-				Log("Very well.");
-			   	Log(" Overwriting data for sim '%s'\n\n", sim_name);
-				response_unacceptable = false; 
-			}
-			else{
-				Log("bro I said y or n. try again plz\n");
-			}
-		}
-	}
 	// Open occupancy file, which stores the species ID of each occupant 
 	// (or -1 for none) for all MT sites during data collection (DC)
 	properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
@@ -332,7 +339,7 @@ void Curator::Log(const char *msg){
 		Log("Error in Curator::Log_base brobro\n");
 		exit(1);
 	}
-};
+}
 
 template <typename T> void Curator::Log(const char *msg, T arg){
 
@@ -342,7 +349,7 @@ template <typename T> void Curator::Log(const char *msg, T arg){
 		Log("Error in Curator::Log_arg brobro\n");
 		exit(1);
 	}
-};
+}
 
 template <typename T1, typename T2> void Curator::Log(const char *msg, 
 		T1 arg1, T2 arg2){

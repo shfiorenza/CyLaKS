@@ -337,7 +337,7 @@ void AssociatedProtein::UpdateTethNeighborSitesII(){
 		Tubulin *site = GetActiveHeadSite();
 		int i_site = site->index_;
 		Microtubule *mt = site->mt_;
-		int mt_length = mt->n_sites_;
+		int mt_length = mt->neighbor_->n_sites_;
 		Microtubule *adj_mt = mt->neighbor_;
 		int site_coord = mt->coord_ + i_site; 
 		// Scan through all potential neighbors; only add unoccupied to list 

@@ -7,7 +7,9 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 1
-  length: 50000
+  length: 
+  - 50000
+  - 200
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -26,12 +28,12 @@ microtubules:
 motors:
   t_active: 0
   k_on: 0.02
-  c_bulk: 0.00066
+  c_bulk: 0.0015
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
   k_hydrolyze: 60
-  k_off_i: 2
+  k_off_i: 7.2
   k_off_i_NULL: 0
   k_off_ii: 180
   k_tether: 0.00167

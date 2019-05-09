@@ -2,7 +2,7 @@
 clear all;
 % Often-changed variables
 n_sites = 50000;
-simName = 'Processivity_18.0_170';
+simName = 'proc_5.0';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0001;
@@ -128,10 +128,10 @@ sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
 
 % Display mean values on run length histogram itself
 dim1 = [0.55 0.65 0.2 0.2];
-str1 = sprintf('Mean run length: %#.3g +/- %#.1g microns', mean_run, sigma_run);
+str1 = sprintf('Mean run length: %#.1f +/- %#.1g microns', mean_run, sigma_run);
 annotation('textbox',dim1,'String',str1,'FitBoxToText','on');
 dim2 = [0.55 0.6 0.2 0.2];
-str2 = sprintf('Mean run time: %#.3g +/- %#.1g seconds', mean_time, sigma_time);
+str2 = sprintf('Mean run time: %#.1f +/- %#.1g seconds', mean_time, sigma_time);
 annotation('textbox',dim2,'String',str2,'FitBoxToText','on');
 dim3 = [0.55 0.55 0.2 0.2];
 vel = round(single(mean_run * 1000 / mean_time), -1);

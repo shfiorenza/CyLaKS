@@ -50,8 +50,8 @@ xlinks:
   k_on: 0.0022
   concentration: 0.5
   conc_eff_bind: 750
-  k_off_i: 0.132
-  k_off_ii: 0.132
+  k_off_i: 0.143
+  k_off_ii: 0.143
   diffusion_const_i: 0.036
   diffusion_const_ii: 0.018
   r_0: 32

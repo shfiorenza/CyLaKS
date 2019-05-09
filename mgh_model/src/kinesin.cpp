@@ -338,6 +338,36 @@ void Kinesin::ChangeConformation(){
 	}
 }
 
+bool Kinesin::IsStalled(){
+
+//	return false;
+
+	if(heads_active_ == 0) return false;
+	else if(heads_active_ == 1){
+		Kinesin::head *active_head = GetActiveHead();
+		int i_site = active_head->site_->index_; 
+		Microtubule* mt = active_head->site_->mt_;
+		int i_plus = mt->plus_end_;
+		int dx = mt->delta_x_; 
+		if(i_site == i_plus) return true;
+		else return mt->lattice_[i_site+dx].occupied_;
+	}
+	else{
+		Kinesin::head *front_head; 
+		if(head_one_.trailing_) front_head = &head_two_;
+		else front_head = &head_one_;
+		if(front_head->ligand_ != "ATP") return false; 
+		else{
+			int i_front = front_head->site_->index_; 
+			Microtubule* mt = front_head->site_->mt_;
+			int i_plus = mt->plus_end_;
+			int dx = mt->delta_x_; 
+			if(i_front == i_plus) return true;
+			else return mt->lattice_[i_front+dx].occupied_;
+		}
+	}
+}
+
 bool Kinesin::AtCutoff(){
 
 	int dx = mt_->delta_x_; 

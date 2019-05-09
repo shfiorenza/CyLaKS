@@ -1,5 +1,0 @@
-module purge
-module load intel
-module load gsl
-module list
-

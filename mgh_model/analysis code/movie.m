@@ -1,9 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000, 200];
+mt_lengths = 1250; %[1000, 100];
 max_sites = max(mt_lengths);
-n_mts = 2;
-simName = 'test';
+n_mts = 1;
+simName = 'testc_2b';
+%simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
 n_steps = 100000000;
 n_datapoints = 10000;
@@ -86,9 +87,9 @@ for i_data=start_frame:frames_per_plot:end_frame
     
     % Clear figure so that it only displays figures from current datapoint
     clf;        
-    
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
+    hold all;
     ax.XLim = [0 (max_sites + 1)];
     ax.YLim = [-1 11];
     ax.TickLength = [0 0];
@@ -98,8 +99,6 @@ for i_data=start_frame:frames_per_plot:end_frame
     ax.YTickLabel = {};
     ax.XLabel.String = 'Distance from plus-end (microns)';
     
-    hold all;
-    
     % Draw MTs
     for i_mt=1:1:n_mts
         n_sites = mt_lengths(i_mt);
@@ -108,7 +107,7 @@ for i_data=start_frame:frames_per_plot:end_frame
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         if(n_mts > 1)
-            second_pos = mt_data(2, i_data)*site_width;
+            second_pos = mt_data(2, i_data)*site_width + 1;
             %{
             left = first_pos;
             right = second_pos + n_sites + 1;
@@ -117,13 +116,13 @@ for i_data=start_frame:frames_per_plot:end_frame
             %}
             
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos) (second_pos + max_sites + 1)];
+                ax.XLim = [(first_pos-1) (second_pos + max_sites + 1)];
             else
-                ax.XLim = [(second_pos) (first_pos + max_sites + 1)];
+                ax.XLim = [(second_pos-1) (first_pos + max_sites + 1)];
             end
               
         else
-            ax.XLim = [first_pos first_pos + max_sites];
+            ax.XLim = [first_pos-1 first_pos + max_sites];
             %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
         
@@ -134,11 +133,11 @@ for i_data=start_frame:frames_per_plot:end_frame
         motor_IDs = motor_data(:, i_mt, i_data);
         motor_head_trailing = motor_head_data(:, i_mt, i_data);
         for i_motor=1:1:n_sites
-            motor_pos = i_motor*site_width + mt_pos;
+            motor_pos = i_motor*site_width + mt_pos - 1;
             motor_height = mt_height + site_height;
             pseudo_height = motor_height + 1/2*site_height;
             pseudo_dx = site_width;
-            mt_dx = -1;
+            mt_dx = 1;
             motor_center_y = motor_height + site_height/2;
             motor_center_x = motor_pos + site_width/2;
             pseudo_center_y = pseudo_height + site_height/2;
@@ -147,7 +146,7 @@ for i_data=start_frame:frames_per_plot:end_frame
             if(mod(i_mt, 2) == 0)
                 motor_height = mt_height - site_height;
                 pseudo_height = motor_height - 1/2*site_height;
-                mt_dx = 1;
+                mt_dx = -1;
                 motor_center_y = motor_height + site_height/2;
                 pseudo_center_y = pseudo_height + site_height/2;
                 anchor_y = mt_height - 3*site_height/2;
@@ -230,7 +229,6 @@ for i_data=start_frame:frames_per_plot:end_frame
                 end
             end
         end
-       
         % Array of xlink IDs for this MT
         xlink_IDs = xlink_data(:, i_mt, i_data);
         % Array of xlink IDs for neighbor MT
@@ -251,7 +249,7 @@ for i_data=start_frame:frames_per_plot:end_frame
         end
         % Scan thru MTs and plot all xlinks
         for i_xlink=1:1:n_sites
-            xlink_pos = mt_pos + i_xlink*site_width;
+            xlink_pos = mt_pos + i_xlink*site_width - 1;
             xlink_height = mt_height + site_height;
             xlink_center_x = xlink_pos + site_width/2;
             xlink_center_y = xlink_height + site_height/2;
@@ -316,16 +314,16 @@ for i_data=start_frame:frames_per_plot:end_frame
                     start_height = mt_height - 3*site_height / 2;
                 end
                 if(teth_coords(i_teth) ~= teth_coords(i_teth + 1))
-                    start_pos = i_teth*site_width + mt_pos;
+                    start_pos = i_teth*site_width + mt_pos - 1;
                     if(i_teth > 1)
                         if(motor_IDs(i_teth) ~= motor_IDs(i_teth - 1) ...
                         && motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
-                            start_pos = start_pos + site_width/2;
+                            start_pos = start_pos + site_width/2 - 1;
                         end
                     elseif(motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
-                        start_pos = start_pos + site_width/2;
+                        start_pos = start_pos + site_width/2 - 1;
                     end                    
-                    end_pos = teth_coords(i_teth)*site_width + (3/2)*site_width;
+                    end_pos = teth_coords(i_teth)*site_width + (3/2)*site_width - 1;
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
                     ne = 10; a = 10; ro = 0.5;
@@ -346,9 +344,9 @@ for i_data=start_frame:frames_per_plot:end_frame
     %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');
-
-    frame = getframe(fig1); %, frame_box);
-    writeVideo(v, frame);
+    drawnow();
+  %  frame = getframe(gcf); %(fig1); %, frame_box);
+    writeVideo(v, getframe(gcf));
 end
 
 close(v);

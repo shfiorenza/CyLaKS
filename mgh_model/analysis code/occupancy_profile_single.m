@@ -1,17 +1,18 @@
 clear all
 % Often-changed variables
 n_sites = 1750;
-processivity = 6.0;
+processivity = 5.3;
 xlink_conc = 2.0;
-motor_conc = 20;
+c_motor = 1.5;
+
 %simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-simName = sprintf('output_end/Endtag_%#.1f_%i', processivity, n_sites);
-%simName = 'Endtag_1.2_1000b';
+%simName = sprintf('output_new/Endtag_%i', n_sites);
+simName = 'output_new/Endtag_1750';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_datapoints = 10000;
-starting_point = 5000;
+starting_point = 9000;
 active_datapoints = n_datapoints - starting_point;
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
@@ -44,21 +45,17 @@ end
 motor_smoothed_avg = smoothdata(motor_avg_occupancy);
 xlink_smoothed_avg = smoothdata(xlink_avg_occupancy);
 net_smoothed_avg = motor_smoothed_avg + xlink_smoothed_avg;
+occupancy_slope = abs(gradient(net_smoothed_avg, 0.08));
+max_slope = max(occupancy_slope);
 
 endtag_site = 0;
-curve = gradient(abs(gradient(motor_smoothed_avg,0.008)),0.5);
-endtag_curve = max(curve);
-
-for i=1:n_sites
-    %{
-    if(curve(i) == endtag_curve)
-        endtag_site = i;
-        break;
+past_max = false;
+for i_site=1:n_sites
+    if(occupancy_slope(i_site) >= max_slope)
+        past_max = true;
     end
-    %}
-    site_occupancy = net_smoothed_avg(i);
-    if(site_occupancy < 0.3)
-        endtag_site = i;
+    if(occupancy_slope(i_site) < max_slope/2 && past_max)
+        endtag_site = i_site;
         break;
     end
 end
@@ -71,7 +68,7 @@ set(fig1,'Position', [50, 50, 2*480, 2*300])
 plot(linspace(0, n_sites*0.008, n_sites), motor_smoothed_avg);
 
 hold on
-%plot(linspace(0, n_sites*0.008, n_sites), curve);
+plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
 %plot(linspace(0, n_sites*0.008, n_sites), xlink_smoothed_avg);
 %plot(linspace(0, n_sites*0.008, n_sites), net_smoothed_avg);
 

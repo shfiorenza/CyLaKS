@@ -85,6 +85,7 @@ class Kinesin{
 		double GetStalkCoordinate(); 	  // tail originates from stalk
 		double GetDockedCoordinate();
 		void ChangeConformation();	// FIXME add applied force w/ teth
+		bool IsStalled();
 
 		bool AtCutoff();
 		void UpdateNeighborSites();

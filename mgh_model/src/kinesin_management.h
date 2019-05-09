@@ -3,11 +3,13 @@
 #include "kinesin.h"
 #include <string>
 #include <functional>
+class Curator; 
 struct system_parameters;
 struct system_properties;
 
 class KinesinManagement{
 	private:
+		Curator* wally_;
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
 			event(int i, int code, std::string l, std::string t_p,
@@ -43,6 +45,7 @@ class KinesinManagement{
 		int n_bound_NULL_ = 0;
 		int n_bound_NULL_i_ = 0; 
 		int n_bound_ATP_ = 0;
+		int n_bound_ATP_stalled_ = 0; 
 		int n_bound_ADPP_i_ = 0;
 		int n_bound_ADPP_ii_ = 0;
 		int n_bound_untethered_ = 0;
@@ -64,6 +67,7 @@ class KinesinManagement{
 		double p_bind_i_tethered_;
 		double p_bind_ATP_;
 		double p_hydrolyze_;
+		double p_hydrolyze_stalled_;
 		double p_bind_ii_;
 		double p_unbind_ii_;
 		double p_unbind_i_;
@@ -86,6 +90,7 @@ class KinesinManagement{
 		std::vector<Kinesin::head*> bound_NULL_;
 		std::vector<Kinesin::head*> bound_NULL_i_;
 		std::vector<Kinesin::head*> bound_ATP_;
+		std::vector<Kinesin::head*> bound_ATP_stalled_;
 		std::vector<Kinesin::head*> bound_ADPP_i_;
 		std::vector<Kinesin::head*> bound_ADPP_ii_;
 		// 2-D vectors, indices are simply [x_dub][motor_entry]
@@ -119,9 +124,10 @@ class KinesinManagement{
 		void UpdateDocked();
 		void UpdateDockedTethered();
 		void UpdateBoundNULL();
-		void UpdateBoundNULL_I();	//XXX
+//		void UpdateBoundNULL_I();
 		void UpdateBoundNULLTethered();
 		void UpdateBoundATP();
+		void UpdateBoundATP_Stalled();
 		void UpdateBoundADPP_I();
 		void UpdateBoundADPP_I_Tethered();
 		void UpdateBoundADPP_II();
@@ -137,11 +143,12 @@ class KinesinManagement{
 		void KMC_Bind_ATP();	// Bind ATP to NULL bound heads
 		void KMC_Bind_ATP_Tethered(int x_dub); 
 		void KMC_Hydrolyze(); 	// Convert ATP to ADPP on a bound head
-		void KMC_Bind_II();		// Bind docked head; other head must be ADPP
+		void KMC_Hydrolyze_Stalled();
+		void KMC_Bind_II();	  // Bind docked head; other head must be ADPP
 		void KMC_Bind_II_Tethered(int x_dub);
 		void KMC_Unbind_II(); 		// Unbind ADPP heads; converts to ADP
 		void KMC_Unbind_I();
-		void KMC_Unbind_I_NULL();	// Unbind singly-bound NULL heads XXX
+//		void KMC_Unbind_I_NULL();	// Unbind singly-bound NULL heads
 		void KMC_Unbind_I_Tethered(int x_dub);
 		void KMC_Tether_Free();
 		void KMC_Tether_Bound();

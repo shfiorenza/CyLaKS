@@ -1,5 +1,5 @@
 seed: 329954433
-n_steps: 10000000
+n_steps: 100000000
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 1e-05
@@ -7,9 +7,9 @@ kbT: 4.114
 eta: 0.001
 microtubules:
   count: 1
-  length: 
+  length:
   - 1750
-  - 1000
+  - 250
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -33,6 +33,7 @@ motors:
   k_on_ATP: 2500
   c_ATP: 2
   k_hydrolyze: 60
+  k_hydrolyze_stalled: 0.24
   k_off_i: 7.2
   k_off_i_NULL: 0
   k_off_ii: 180

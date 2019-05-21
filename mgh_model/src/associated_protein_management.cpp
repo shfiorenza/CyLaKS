@@ -463,14 +463,12 @@ void AssociatedProteinManagement::InitializeLists(){
 	active_.resize(n_xlinks_);
 	free_tethered_.resize(n_xlinks_);
 	bound_i_.resize(n_xlinks_);
+	bound_i_bindable_.resize(n_xlinks_);
 	bound_untethered_.resize(n_xlinks_);
 	sites_i_untethered_.resize(n_xlinks_);
-
-	bound_i_bindable_.resize(dist_cutoff_ + 1);
 	bound_ii_.resize(dist_cutoff_ + 1);
 	sites_ii_untethered_.resize(dist_cutoff_ + 1);
 	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		bound_i_bindable_[x_dist].resize(n_xlinks_);
 		bound_ii_[x_dist].resize(n_xlinks_);
 		sites_ii_untethered_[x_dist].resize(n_xlinks_);
 	}

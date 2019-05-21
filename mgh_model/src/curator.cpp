@@ -95,7 +95,7 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	params->motors.k_hydrolyze_stalled = motors["k_hydrolyze_stalled"].
 		as<double>();
 	params->motors.k_off_i = motors["k_off_i"].as<double>();
-	params->motors.k_off_i_NULL = motors["k_off_i_NULL"].as<double>();	
+	params->motors.k_off_i_stalled = motors["k_off_i_stalled"].as<double>();
 	params->motors.k_off_ii = motors["k_off_ii"].as<double>();
 	params->motors.endpausing_active 
 		= motors["endpausing_active"].as<bool>();
@@ -174,7 +174,7 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	Log("    k_hydrolyze_stalled = %g /s\n", 
 			params->motors.k_hydrolyze_stalled);
 	Log("    k_off_i = %g /s\n", params->motors.k_off_i);
-	Log("    k_off_i_NULL = %g /s\n", params->motors.k_off_i_NULL); 
+	Log("    k_off_i_stalled = %g /s\n", params->motors.k_off_i_stalled); 
 	Log("    k_off_ii = %g /s\n", params->motors.k_off_ii);
 	Log("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
 	Log("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);

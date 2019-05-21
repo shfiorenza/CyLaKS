@@ -1,16 +1,17 @@
 clear all;
 % Parameters from sim
-mt_lengths = 1250; %[1000, 100];
+mt_lengths = 1750; %[1000, 100];
 max_sites = max(mt_lengths);
 n_mts = 1;
-simName = 'testc_2b';
+simName = 'newProc_250x_long/Endtag_1750';
+dur_sec = 60;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
 n_steps = 100000000;
 n_datapoints = 10000;
 start_frame = 1;
 end_frame = 10000;
-frames_per_plot = 100;
+frames_per_plot = 10;
 delta_t = 0.00001; 
 xlink_cutoff = 5;
 cutoff = 19;
@@ -48,7 +49,7 @@ time_per_frame = delta_t * (n_steps / n_frames);
 
 % Videowriter details
 v = VideoWriter(movie_name);
-v.FrameRate = (active_frames / frames_per_plot) / 30;
+v.FrameRate = (active_frames / frames_per_plot) / dur_sec;
 open(v);
 frame_box = [0 0 1545 200];
 
@@ -122,7 +123,7 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
               
         else
-            ax.XLim = [first_pos-1 first_pos + max_sites];
+            ax.XLim = [first_pos-1 first_pos + 250];
             %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
         end
         

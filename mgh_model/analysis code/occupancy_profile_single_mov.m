@@ -1,27 +1,31 @@
-clear all;
+clear variables;
 % Often-changed variables
-n_sites = 1750;
-processivity = 5.3;
-xlink_conc = 2.0;
-c_motor = 1.5;
-
-%simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-simName = sprintf('endtags_new_proc/Endtag_%i', n_sites);
-%simName = 'output_new/Endtag_750';
+off_ratio = 10;
+k_hydrolyze = 90;
+jam_ratio = 700;
+n_sites = 1000;
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_steps = 100000000;
+n_steps = 1000000;
 n_datapoints = 10000;
 steps_per_plot = 1000;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
-delta_t = 0.00001;
+delta_t = 0.0001;
 time_per_frame = delta_t * (n_steps / n_datapoints);
 
-%fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
-%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+%simName = sprintf('Endtag_%i', n_sites);
+if(off_ratio == 1)
+    fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/scan_output/%s';
+    simName = sprintf('k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i', ...
+        k_hydrolyze, jam_ratio, k_hydrolyze, jam_ratio, n_sites);
+else
+   fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+   % simName = sprintf('off_ratio_%i/k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i_%i', ...
+    %    off_ratio, k_hydrolyze, jam_ratio, off_ratio, k_hydrolyze, jam_ratio, n_sites);
+    simName = sprintf('endtag_%i_%i_%i_%i', off_ratio, k_hydrolyze, jam_ratio, n_sites);
+end
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};
 
@@ -100,8 +104,7 @@ for i=starting_point:1:n_datapoints
         
         %title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
         %sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
-        title({sprintf('Processivity: %#.1f microns', processivity), ...
-            sprintf('Endtag length: %g microns', endtag_length)});
+        title(sprintf('Endtag length: %g microns', endtag_length));
         
         xlabel({'Distance along microtubule relative to plus-end (microns)'});
         ylabel('Fraction of the time occupied');

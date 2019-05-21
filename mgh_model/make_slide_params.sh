@@ -11,7 +11,7 @@ while [ $I_SEED -lt $N_SEEDS ]; do
 		FILE_NAME+="_"
 		FILE_NAME+=$INITIAL_OVERLAP
 		FILE_NAME+=".yaml"
-		cp params_base.yaml $FILE_NAME
+		cp params_base_overlap.yaml $FILE_NAME
 		yq w -i $FILE_NAME microtubules.length[1] $INITIAL_OVERLAP
 		yq w -i $FILE_NAME seed $SEED
 		echo "created $FILE_NAME w/ top MT = $INITIAL_OVERLAP sites"

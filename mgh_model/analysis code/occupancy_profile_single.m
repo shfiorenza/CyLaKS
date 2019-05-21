@@ -1,18 +1,18 @@
 clear all
 % Often-changed variables
-n_sites = 1750;
+n_sites = 1000;
 processivity = 5.3;
 xlink_conc = 2.0;
 c_motor = 1.5;
 
 %simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-%simName = sprintf('output_new/Endtag_%i', n_sites);
-simName = 'output_new/Endtag_1750';
+simName = sprintf('Endtag_%i', n_sites);
+%simName = 'newProc_250x_long/Endtag_1750';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_datapoints = 10000;
-starting_point = 9000;
+starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';

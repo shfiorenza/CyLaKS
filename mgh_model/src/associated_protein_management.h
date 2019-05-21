@@ -35,7 +35,6 @@ class AssociatedProteinManagement{
 		int n_xlinks_ = 0;
 		// xlinks actively bound to some MT or motor; dynamically updated
 		int n_active_ = 0;
-
 		int n_free_tethered_ = 0;
 		int n_bound_i_ = 0;
 		int n_bound_i_tethered_tot_ = 0;		// needed?
@@ -97,10 +96,11 @@ class AssociatedProteinManagement{
 		std::vector<AssociatedProtein*> active_;
 		std::vector<AssociatedProtein*> free_tethered_;
 		std::vector<AssociatedProtein*> bound_i_;
+		std::vector<AssociatedProtein*> bound_i_bindable_;
 		std::vector<AssociatedProtein*> bound_untethered_;
 		// 2-D vectors, 1st index is x_dist, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_ii_;
-		std::vector< std::vector<AssociatedProtein*> > bound_i_bindable_;
+//		std::vector< std::vector<AssociatedProtein*> > bound_i_bindable_;
 		// 1st index is x_dist_dub, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_i_tethered_;
 		// 3-D vectors, 1st index is x_dist_dub, 2nd is x_dist, 3rd is entry

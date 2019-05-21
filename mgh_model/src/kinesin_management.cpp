@@ -58,8 +58,8 @@ void KinesinManagement::SetParameters(){
 	p_unbind_ii_ = k_off_ii * delta_t; 
 	double k_off_i = parameters_->motors.k_off_i;
 	p_unbind_i_ = k_off_i * delta_t; 
-	double k_off_i_NULL = parameters_->motors.k_off_i_NULL;
-	p_unbind_i_NULL_ = k_off_i_NULL * delta_t;
+	double k_off_i_st = parameters_->motors.k_off_i_stalled;
+	p_unbind_i_stalled_ = k_off_i_st * delta_t;
 
 	/* artifical force perpetually applied to motors */
 	double app_force = parameters_->motors.applied_force;
@@ -67,8 +67,8 @@ void KinesinManagement::SetParameters(){
 		double sigma_off = 1.2;
 		double weight = exp(app_force*sigma_off/kbT);
 		p_unbind_i_ = k_off_i * weight * delta_t;
-		printf("p_unbind_i_ scaled from %g to %g \n", k_off_i*delta_t, 
-				k_off_i*weight*delta_t);
+		printf("p_unbind_i_ scaled from %g to %g \n", 
+				k_off_i*delta_t, k_off_i*weight*delta_t);
 	}
 	// Sound the alarm if our timestep is too large
 	if(p_bind_i_ > 1) 
@@ -83,9 +83,9 @@ void KinesinManagement::SetParameters(){
 		printf("WARNING: p_unbind_ii=%g for motors\n", p_unbind_ii_);
 	if(p_unbind_i_ > 1)
 		printf("WARNING: p_unbind_i=%g for motors\n", p_unbind_i_);
-	if(p_unbind_i_NULL_ > 1)
-		printf("WARNING: p_unbind_i_NULL=%g for motors\n", 
-				p_unbind_i_NULL_);
+	if(p_unbind_i_stalled_ > 1)
+		printf("WARNING: p_unbind_i_stalled=%g for motors\n", 
+				p_unbind_i_stalled_);
 
 	// Get tether information from motors
 	rest_dist_ = motors_[0].rest_dist_;
@@ -186,10 +186,10 @@ void KinesinManagement::InitializeLists(){
 	bound_untethered_.resize(n_motors_);
 	docked_.resize(n_motors_); 
 	bound_NULL_.resize(n_motors_);
-	bound_NULL_i_.resize(n_motors_);
 	bound_ATP_.resize(n_motors_);
 	bound_ATP_stalled_.resize(n_motors_);
 	bound_ADPP_i_.resize(n_motors_);
+	bound_ADPP_i_stalled_.resize(n_motors_);
 	bound_ADPP_ii_.resize(n_motors_);
 	// Two dimensional stuff
 	n_docked_tethered_.resize(2*dist_cutoff_ + 1);
@@ -236,8 +236,9 @@ void KinesinManagement::InitializeEvents(){
 			binomial, &n_bound_ADPP_ii_, p_unbind_ii_));
 	events_.emplace_back(event(index++, 60, "unbind_i", "bound_ADPP_i", 
 			binomial, &n_bound_ADPP_i_, p_unbind_i_));
-	events_.emplace_back(event(index++, 61, "unbind_i_NULL", "bound_NULL_i",
-			binomial, &n_bound_NULL_i_, p_unbind_i_NULL_));
+	events_.emplace_back(event(index++, 61, "unbind_i_stalled", 
+				"bound_ADPP_i_stalled", binomial, 
+				&n_bound_ADPP_i_stalled_, p_unbind_i_stalled_));
 	// If tethers ARE active, serialize all extension-based events
 	if(parameters_->motors.tethers_active){
 		// Modular poisson lambda expression for use in bind_i_teth
@@ -347,10 +348,10 @@ void KinesinManagement::UpdateAllLists(){
 	properties_->microtubules.UpdateUnoccupied();
 	UpdateDocked();
 	UpdateBoundNULL();
-//	UpdateBoundNULL_I();
 	UpdateBoundATP();
 	UpdateBoundATP_Stalled();
 	UpdateBoundADPP_I();
+	UpdateBoundADPP_I_Stalled();
 	UpdateBoundADPP_II();
 	if(parameters_->motors.tethers_active){
 		properties_->prc1.UpdateBoundUntethered();
@@ -502,39 +503,6 @@ void KinesinManagement::UpdateBoundNULL(){
 	}
 }
 
-/*
-void KinesinManagement::UpdateBoundNULL_I(){
-
-	n_bound_NULL_i_ = 0;
-	for(int i_motor = 0; i_motor < n_active_; i_motor++){
-//		printf("%i motor in active_\n", active_[i_motor]->ID_);
-		Kinesin *motor = active_[i_motor];
-//		active_IDs[motor->ID_]++;
-//		if(active_IDs[motor->ID_] > 1){
-//			printf("Motor %i duplicated in active list!!\n", motor->ID_);
-//		}
-		if(motor->heads_active_ == 1){
-			bool counted = false;
-			if(motor->head_one_.site_ != nullptr
-			&& motor->head_one_.ligand_ == "NULL"){
-				bound_NULL_i_[n_bound_NULL_i_] = &motor->head_one_;
-				n_bound_NULL_i_++;
-				counted = true;
-			}
-			if(motor->head_two_.site_ != nullptr
-			&& motor->head_two_.ligand_ == "NULL"){
-				bound_NULL_i_[n_bound_NULL_i_] = &motor->head_two_;
-				n_bound_NULL_i_++;
-				if(counted){
-					printf("why - UpdateBoundNULL\n");
-					exit(1);
-				}
-			}
-		}
-	}
-}
-*/
-
 void KinesinManagement::UpdateBoundNULLTethered(){
 
 	for(int x_dub(2*comp_cutoff_); x_dub <= 2*dist_cutoff_; x_dub++){
@@ -628,7 +596,8 @@ void KinesinManagement::UpdateBoundADPP_I(){
 	n_bound_ADPP_i_ = 0;
 	for(int i_motor = 0; i_motor < n_active_; i_motor++){
 		Kinesin *motor = active_[i_motor];
-		if(motor->heads_active_ == 1){
+		if(motor->heads_active_ == 1
+		&& !motor->IsStalled()){
 			// Only count untethered motors
 			if(!motor->tethered_){
 				if(motor->head_one_.site_ != nullptr
@@ -653,6 +622,47 @@ void KinesinManagement::UpdateBoundADPP_I(){
 				&& motor->head_two_.ligand_ == "ADPP"){
 					bound_ADPP_i_[n_bound_ADPP_i_] = &motor->head_two_;
 					n_bound_ADPP_i_++;
+				}
+			}
+		}
+	}
+}
+
+void KinesinManagement::UpdateBoundADPP_I_Stalled(){
+
+	n_bound_ADPP_i_stalled_ = 0;
+	for(int i_motor = 0; i_motor < n_active_; i_motor++){
+		Kinesin *motor = active_[i_motor];
+		if(motor->heads_active_ == 1
+		&& motor->IsStalled()){
+			// Only count untethered motors
+			if(!motor->tethered_){
+				if(motor->head_one_.site_ != nullptr
+				&& motor->head_one_.ligand_ == "ADPP"){
+					bound_ADPP_i_stalled_[n_bound_ADPP_i_stalled_] 
+						= &motor->head_one_;
+					n_bound_ADPP_i_stalled_++;
+				}
+				if(motor->head_two_.site_ != nullptr
+				&& motor->head_two_.ligand_ == "ADPP"){
+					bound_ADPP_i_stalled_[n_bound_ADPP_i_stalled_] 
+						= &motor->head_two_;
+					n_bound_ADPP_i_stalled_++;
+				}
+			}
+			// Motors with satellite xlinks behave as if untethered
+			else if(motor->xlink_->heads_active_ == 0){
+				if(motor->head_one_.site_ != nullptr
+				&& motor->head_one_.ligand_ == "ADPP"){
+					bound_ADPP_i_stalled_[n_bound_ADPP_i_stalled_] 
+						= &motor->head_one_;
+					n_bound_ADPP_i_stalled_++;
+				}
+				if(motor->head_two_.site_ != nullptr
+				&& motor->head_two_.ligand_ == "ADPP"){
+					bound_ADPP_i_stalled_[n_bound_ADPP_i_stalled_] 
+						= &motor->head_two_;
+					n_bound_ADPP_i_stalled_++;
 				}
 			}
 		}
@@ -1018,8 +1028,8 @@ void KinesinManagement::RunKMC(){
 					KMC_Unbind_I();
 					break;
 				case 61:
-//					printf("Unbind_I_NULL\n");
-//					KMC_Unbind_I_NULL();
+//					printf("Unbind_I_Stalled\n");
+					KMC_Unbind_I_Stalled();
 					break;
 				case 62:
 //					printf("Unbind_I_Teth\n");
@@ -1251,7 +1261,7 @@ void KinesinManagement::KMC_Hydrolyze_Stalled(){
 		head->ligand_ = "ADPP";
 	}
 	else{
-		printf("Failed to Hydrolyze_Stalled: no stalled bound_ATP motors.\n");
+		printf("Failed to Hydrolyze_St: no stalled bound_ATP motors.\n");
 	}
 }
 
@@ -1435,23 +1445,22 @@ void KinesinManagement::KMC_Unbind_I(){
 	}
 }
 
-/*
-void KinesinManagement::KMC_Unbind_I_NULL(){
+void KinesinManagement::KMC_Unbind_I_Stalled(){
 
-	UpdateBoundNULL_I();
-	if(n_bound_NULL_i_ > 0){
+	UpdateBoundADPP_I_Stalled();
+	if(n_bound_ADPP_i_stalled_ > 0){
 		// Get a random bound_ADPP motor head
-		int i_entry = properties_->gsl.GetRanInt(n_bound_NULL_i_);
-		Kinesin::head *head = bound_NULL_i_[i_entry];
+		int i_entry = properties_->gsl.GetRanInt(n_bound_ADPP_i_stalled_);
+		Kinesin::head *head = bound_ADPP_i_stalled_[i_entry];
 		if(head->site_ == nullptr
-		|| head->ligand_ != "NULL"){
-			printf("Error in KMC_Unbind_I_NULL (motors): ");
+		|| head->ligand_ != "ADPP"){
+			printf("Error in KMC_Unbind_I_Stalled (motors): ");
 			std::cout << head->ligand_;
 			printf(" bound to head\n");
 			exit(1);
 		}
 		if(head->motor_->heads_active_ == 2){
-			printf("Error TWO in KMC_Unbind (motors).\n");
+			printf("Error TWO in KMC_Unbind_I_Stalled (motors).\n");
 			exit(1);
 		}
 		// Update site
@@ -1484,7 +1493,6 @@ void KinesinManagement::KMC_Unbind_I_NULL(){
 //		exit(1);
 	}
 }
-*/
 
 void KinesinManagement::KMC_Unbind_I_Tethered(int x_dub){
 

@@ -1,8 +1,8 @@
 seed: 329954433
-n_steps: 100000000
+n_steps: 10000000
 n_datapoints: 10000
 data_threshold: 0
-delta_t: 1e-05
+delta_t: 1e-04
 kbT: 4.114
 eta: 0.001
 microtubules:
@@ -27,7 +27,7 @@ microtubules:
   diffusion_on: false
 motors:
   t_active: 0
-  k_on: 0.02
+  k_on: 0.025
   c_bulk: 1.5
   c_eff_bind: 250000
   k_on_ATP: 2500
@@ -35,7 +35,7 @@ motors:
   k_hydrolyze: 60
   k_hydrolyze_stalled: 0.24
   k_off_i: 7.2
-  k_off_i_NULL: 0
+  k_off_i_stalled: 7.2
   k_off_ii: 180
   k_tether: 0.00167
   c_eff_tether: 100

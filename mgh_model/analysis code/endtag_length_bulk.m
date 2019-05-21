@@ -1,30 +1,25 @@
-clear all
-%n_sites = 1000;
-k_on = 0.020;
+clear variables;
+off_ratio = 10;
+k_hydrolyze = 90;
+jam_ratio = 900;
 % Pseudo-constant variables
+mt_lengths = [2, 4, 6, 8, 10, 14]; % in microns
+experiment_endtags = [1.1, 1.2, 1.35, 2.55, 1.8, 2.2];
+exp_endtags = [1.15,1.25,1.45,1.6,1.8,2.15]; 
+exp_errors = [0.1,0.1,0.2,0.3,0.25,0.4];
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_datapoints = 10000;
-starting_point = 9000;
+starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/newProc_250x_mid/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 
-experiment = [1.1, 1.2, 1.35, 1.55, 1.8, 2.2];
 
-mt_lengths = [2, 4, 6, 8, 10, 14]; % in microns
 runlengths = [5.0];
 %runlengths = [1.2, 6.0, 12.0, 18.0, 36.0];
-%motor_concs = [20,100,200
-%xlink_concs = [0.5,1,2];        % in nanomolar
-
 n_lengths = length(mt_lengths);
 n_runlengths = length(runlengths);
-%n_mot_concs = length(motor_concs);
-%n_xl_concs = length(xlink_concs);
-
-%final_data = zeros([n_xl_concs n_lengths]);
-%final_data = zeros([n_xl_concs n_mot_concs]);
 final_data = zeros([n_runlengths n_lengths]);
 
 for i_runlength = 1:1:n_runlengths
@@ -36,11 +31,17 @@ for i_runlength = 1:1:n_runlengths
         %simName = sprintf('Endtag_%#.1fx_%i',xlink_conc, n_sites);
     for i_length=1:1:n_lengths
         n_sites = mt_lengths(i_length) * 125;  
-        simName = sprintf('Endtag_%i', n_sites);
-        %simName = sprintf('Endtag_%#.1f_%#.4f_%i', processivity, k_on, n_sites);
-        %simName = sprintf('Endtag_%#.1f_%i', processivity, n_sites);
+        %simName = sprintf('Endtag_%i', n_sites);     
+        if(off_ratio == 1)
+            simName = sprintf('scan_output/k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i', ...
+                k_hydrolyze, jam_ratio, k_hydrolyze, jam_ratio, n_sites);
+         %  simName = sprintf('endtag_%i_%i_%i_%i_low_kOn', off_ratio, k_hydrolyze, jam_ratio, n_sites); 
+        else
+            simName = sprintf('scan_output_b/off_ratio_%i/k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i_%i', ...
+               off_ratio, k_hydrolyze, jam_ratio, off_ratio, k_hydrolyze, jam_ratio, n_sites);
+            %simName = sprintf('endtag_%i_%i_%i_%i', off_ratio, k_hydrolyze, jam_ratio, n_sites);
+        end
         fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
-        
         data_file = fopen(fileName);
         motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');
         xlink_raw_data = motor_raw_data;
@@ -91,18 +92,18 @@ hold on
 for(i=1:1:n_runlengths)
     plot(mt_lengths, final_data(i, :),'LineWidth',2);
 end
-plot(mt_lengths, experiment, 'LineWidth', 2);
+%plot(mt_lengths, experiment_endtags, 'LineWidth', 2);
+errorbar(mt_lengths, exp_endtags, exp_errors, 'LineWidth', 2);
 
 %legendLabel = cellstr(num2str(xlink_concs', '%#.1f nM PRC1'));
 %legendLabel = cellstr(num2str(runlengths', '%#.1f um run length'));
 legendLabel = {'Simulation', 'Experiment'};
 %title('Endtag length scaling for 1.5 nM kinesin & 3 nM K_D for tethering');
-title({'Endtag length scaling for for 5.3 micron processivity & 420 nm/s velocity'});%, ...
-    %'Hydrolysis occurs 250 times slower in stalled motors'});
+title(sprintf('off ratio = %g, k hydrolyze = %g, jam ratio = %g', off_ratio, k_hydrolyze, jam_ratio));
 %title(sprintf('End-tag formation for adjusted processivity - k_{on} = %#.4f', k_on));
 xlabel('Length of microtubule (microns)');
 %xlabel('kinesin-1 concentration (nM)');
 ylabel('Endtag length (microns)');
-ylim([0 2.5]);
-xlim([mt_lengths(1) mt_lengths(n_lengths)]);
+%ylim([0 2.5]);
+%xlim([mt_lengths(1) mt_lengths(n_lengths)]);
 legend(legendLabel, 'location', 'northwest', 'FontSize', 14);

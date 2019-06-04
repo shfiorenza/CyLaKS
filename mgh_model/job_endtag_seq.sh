@@ -18,9 +18,9 @@ K_OFF_RATIO=40;
 				PARAM_FILE+=$JAM_RATIO
 				PARAM_FILE+="_"
 				PARAM_FILE+=$MT_LENGTH
-				PARAM_FILE+="b.yaml"
+				PARAM_FILE+=".yaml"
 				echo PARAM FILE is $PARAM_FILE
-				cp params_base_endtag_b.yaml $PARAM_FILE
+				cp params_base_endtag.yaml $PARAM_FILE
                 yq w -i $PARAM_FILE motors.k_off_i_stalled $K_OFF_I_ST
                 yq w -i $PARAM_FILE motors.k_hydrolyze $K_HYDRO
                 yq w -i $PARAM_FILE motors.k_hydrolyze_stalled $K_HYDRO_ST

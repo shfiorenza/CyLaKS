@@ -1,7 +1,8 @@
 clear variables;
-off_ratio = 10;
-k_hydrolyze = 90;
-jam_ratio = 900;
+k_off_i = 8.75;
+off_ratio = 82;
+k_hydrolyze = 117;
+jam_ratio = 1080;
 % Pseudo-constant variables
 mt_lengths = [2, 4, 6, 8, 10, 14]; % in microns
 experiment_endtags = [1.1, 1.2, 1.35, 2.55, 1.8, 2.2];
@@ -40,6 +41,7 @@ for i_runlength = 1:1:n_runlengths
             simName = sprintf('scan_output_b/off_ratio_%i/k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i_%i', ...
                off_ratio, k_hydrolyze, jam_ratio, off_ratio, k_hydrolyze, jam_ratio, n_sites);
             %simName = sprintf('endtag_%i_%i_%i_%i', off_ratio, k_hydrolyze, jam_ratio, n_sites);
+            simName = sprintf('least_squares_%i', n_sites);
         end
         fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
         data_file = fopen(fileName);
@@ -99,7 +101,8 @@ errorbar(mt_lengths, exp_endtags, exp_errors, 'LineWidth', 2);
 %legendLabel = cellstr(num2str(runlengths', '%#.1f um run length'));
 legendLabel = {'Simulation', 'Experiment'};
 %title('Endtag length scaling for 1.5 nM kinesin & 3 nM K_D for tethering');
-title(sprintf('off ratio = %g, k hydrolyze = %g, jam ratio = %g', off_ratio, k_hydrolyze, jam_ratio));
+title(sprintf('k off i = %g, off ratio = %g, k hydrolyze = %g, jam ratio = %g', ...
+    k_off_i, off_ratio, k_hydrolyze, jam_ratio));
 %title(sprintf('End-tag formation for adjusted processivity - k_{on} = %#.4f', k_on));
 xlabel('Length of microtubule (microns)');
 %xlabel('kinesin-1 concentration (nM)');

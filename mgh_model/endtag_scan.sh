@@ -39,11 +39,12 @@ mkdir output_new
 			# Update YAML files
 #			yq w -i params_endtags.yaml xlinks.concentration $XLINK_CONC
 #			yq w -i params_endtags.yaml motors.c_bulk $MOT_CONC
-			yq w -i params_endtags.yaml microtubules.length[0] $N_SITES
+			yq w -i params_base_endtag.yaml microtubules.length[0] $N_SITES
 			# Run sim for these parameter values
-			./sim params_endtags.yaml $FILE_NAME
-			mv $FILE_NAME* output_new/
+			./sim params_base_endtag.yaml $FILE_NAME &
 #		done
 #	done
 done
+wait
+mv $FILE_NAME* output_new/
 echo END SCAN

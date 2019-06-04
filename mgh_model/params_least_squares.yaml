@@ -2,7 +2,7 @@ seed: 329954433
 n_steps: 10000000
 n_datapoints: 10000
 data_threshold: 0
-delta_t: 2e-05
+delta_t: 0.0001
 kbT: 4.114
 eta: 0.001
 microtubules:
@@ -32,10 +32,10 @@ motors:
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 117
-  k_hydrolyze_stalled: 0.1084
-  k_off_i: 8.75
-  k_off_i_stalled: 718
+  k_hydrolyze: 116.99952777909402
+  k_hydrolyze_stalled: 0.10835749521001456
+  k_off_i: 8.750453049459813
+  k_off_i_stalled: 718.0001703319218
   k_off_ii: 180
   k_tether: 0.00167
   c_eff_tether: 100
@@ -45,11 +45,11 @@ motors:
   k_slack: 0.0265
   stall_force: 6
   applied_force: 0
-  tethers_active: true
+  tethers_active: false
   endpausing_active: true
 xlinks:
   k_on: 0.0022
-  concentration: 0.4
+  concentration: 0
   conc_eff_bind: 750
   k_off_i: 0.132
   k_off_ii: 0.132

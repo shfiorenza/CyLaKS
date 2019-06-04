@@ -9,7 +9,7 @@ motor_speciesID = 2;
 xlink_speciesID = 1;
 n_steps = 1000000;
 n_datapoints = 10000;
-steps_per_plot = 1000;
+steps_per_plot = 100;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
 delta_t = 0.0001;
@@ -24,7 +24,8 @@ else
    fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
    % simName = sprintf('off_ratio_%i/k_hydrolyze_%i/jam_ratio_%i/endtag_%i_%i_%i_%i', ...
     %    off_ratio, k_hydrolyze, jam_ratio, off_ratio, k_hydrolyze, jam_ratio, n_sites);
-    simName = sprintf('endtag_%i_%i_%i_%i', off_ratio, k_hydrolyze, jam_ratio, n_sites);
+    %simName = sprintf('endtag_%i_%i_%i_%i', off_ratio, k_hydrolyze, jam_ratio, n_sites);
+    simName = sprintf('grad_descent_temp_%i', n_sites)
 end
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};

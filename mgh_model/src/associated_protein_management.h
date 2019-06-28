@@ -12,31 +12,38 @@ struct system_properties;
 
 class AssociatedProteinManagement{
 	private:
-		system_parameters *parameters_ = nullptr;
-		system_properties *properties_ = nullptr;
-
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
+			event(int i, int code, std::string l, std::string tar, 
+					std::function<int(double, int)> p_dist, 
+					int *pop, double p): index_(i), kmc_code_(code), 
+					label_(l), target_pop_(tar), prob_dist_(p_dist), 
+					pop_ptr_(pop), p_occur_(p) {}
+			void SampleStatistics(){
+				if(*pop_ptr_ > 0) 
+					n_expected_ = prob_dist_(p_occur_, *pop_ptr_);
+				else n_expected_ = 0;
+			}
+		private:
+		public:
+			std::function<int(double, int)> prob_dist_;
+			int index_ = -1; 			// Serialized unique index of event
+			int kmc_code_ = -1; 
+			std::string label_ = "BRUH";
+			std::string target_pop_ = "not me"; 
+			double p_occur_ = 0;
 			int *pop_ptr_ = nullptr; 	// Pointer to population size variable
-			int x_dist_ = -1;			// x_dist of crosslinker extension
-			int x_dist_dub_ = -1;		// 2*x_dist of tether extension
-			std::string type_ = std::string("event_type");
-			int i_event_ = -1;			// Serialized index of this event type
-			int n_events_ = -1;			// Number of predicted events 
+			int n_expected_ = 0;
 		};
-
-		// pair: ["event_type"] and [std::function(x_dub, x, index)]
-		typedef std::pair<std::string,std::function<int(int,int,int)> >
-			funct_pair;
-		std::vector<funct_pair> dif_sampling_functs_; 
-		std::vector<funct_pair> kmc_sampling_functs_;
+		system_parameters *parameters_ = nullptr;
+		system_properties *properties_ = nullptr;
 
 	public:
 		int n_xlinks_ = 0;
 		// xlinks actively bound to some MT or motor; dynamically updated
 		int n_active_ = 0;
 		int n_free_tethered_ = 0;
-		int n_bound_i_ = 0;
+		std::vector<int> n_bound_i_;
 		int n_bound_i_tethered_tot_ = 0;		// needed?
 		int n_bound_untethered_ = 0;
 		std::vector<int> n_bound_i_bindable_;
@@ -77,17 +84,14 @@ class AssociatedProteinManagement{
 		std::vector< std::vector<double> > p_diffuse_ii_from_self_to_teth_;
 
 		// Kinematics probabilities
-		double p_bind_i_;			
-		double p_bind_i_tethered_; 	// FIXME make vector for diff. exts
-		double p_bind_ii_; 			// XXX	delete 
-		double p_unbind_i_;		
+		std::vector<double> p_bind_i_;			
+		double p_bind_i_tethered_;
+		double p_bind_ii_;
+		std::vector<double> p_unbind_i_;		
 		double p_tether_free_; 
 		double p_untether_free_;
 		std::vector<double> p_unbind_i_tethered_;	
-		std::vector<double> p_bind_ii_x; //XXX	implement
 		std::vector<double> p_unbind_ii_;
-		std::vector<double> p_bind_ii_to_teth_;		//XXX	implement
-		std::vector<double> p_bind_ii_from_teth_;	//XXX	implement
 		std::vector< std::vector<double> > p_unbind_ii_to_teth_;
 		std::vector< std::vector<double> > p_unbind_ii_from_teth_;
 
@@ -95,7 +99,7 @@ class AssociatedProteinManagement{
 		std::vector<AssociatedProtein> xlinks_;
 		std::vector<AssociatedProtein*> active_;
 		std::vector<AssociatedProtein*> free_tethered_;
-		std::vector<AssociatedProtein*> bound_i_;
+		std::vector<std::vector<AssociatedProtein*>> bound_i_;
 		std::vector<AssociatedProtein*> bound_i_bindable_;
 		std::vector<AssociatedProtein*> bound_untethered_;
 		// 2-D vectors, 1st index is x_dist, 2nd is xlink entry
@@ -128,17 +132,15 @@ class AssociatedProteinManagement{
 		// Serialized (in regards to self/teth extension) vectors that store
 		// number of entries, the population/event label, x, and x_dub
 		// (facilitates the parallelization of statistical sampling) 
-		std::vector<event> serial_dif_;
-		std::vector<event> serial_kmc_;
+		std::vector<event> diffu_events_;
+		std::vector<event> kmc_events_;
 
 	private:
 		void GenerateXLinks();
 		void SetParameters();
 		void InitializeLists();
-		void InitializeSerializedDif();
-		void InitializeSerializedKMC();
-		void InitializeDifSamplingFunctions();
-		void InitializeKMCSamplingFunctions();
+		void InitializeDiffusionEvents();
+		void InitializeKMCEvents();
 
 	public:
 		AssociatedProteinManagement();
@@ -163,7 +165,6 @@ class AssociatedProteinManagement{
 		AssociatedProtein* GetBoundUntetheredXlink();
 
 		void GenerateDiffusionList();		// XXX
-		void UpdateSerializedDifEvents();
 
 		void RunDiffusion();
 		void RunDiffusionI_Forward();
@@ -178,21 +179,18 @@ class AssociatedProteinManagement{
 		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
 
 		void GenerateKMCList();				// XXX
-		void UpdateSerializedKMCEvents();
 		double GetWeightBindII(); 
 		double GetWeightBindITethered();
 		double GetWeightBindIITethered();
 
 		void RunKMC();
-		void RunKMC_Bind_I();
+		void RunKMC_Bind_I(int n_neighbs);
 		void RunKMC_Bind_II();
-		void RunKMC_Unbind_I();
+		void RunKMC_Unbind_I(int n_neighbs);
 		void RunKMC_Unbind_II(int x_dist);
 		void RunKMC_Bind_I_Tethered();
-		void RunKMC_Bind_II_Tethered();	// XXX delete
+		void RunKMC_Bind_II_Tethered();
 		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
-		void RunKMC_Bind_II_To_Teth(int x_dist_dub, int x_dist); // XXX add
-		void RunKMC_Bind_II_From_Teth(int x_dist_dub, int x_dist);	// XXX add
 		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
 		void RunKMC_Tether_Free(); // FIXME

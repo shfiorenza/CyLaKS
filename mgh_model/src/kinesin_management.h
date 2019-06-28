@@ -53,7 +53,7 @@ class KinesinManagement{
 		std::vector<int> n_docked_tethered_;
 		std::vector<int> n_bound_NULL_tethered_;
 		std::vector<int> n_bound_ADPP_i_tethered_; 
-		std::vector<int> n_bound_ADPP_i_tethered_stalled_; //XXX
+		std::vector<int> n_bound_ADPP_i_teth_st_;
 		std::vector<int> n_bound_tethered_;
 		
 		// See kinesin header for meaningful description of below
@@ -70,7 +70,7 @@ class KinesinManagement{
 		double p_bind_ii_;
 		double p_unbind_ii_;
 		double p_unbind_i_;
-		double p_unbind_i_stalled_;	//XXX
+		double p_unbind_i_stalled_;
 		double p_tether_free_;
 		double p_tether_bound_;
 		double p_untether_free_;	
@@ -78,7 +78,7 @@ class KinesinManagement{
 		std::vector<double> p_bind_ATP_tethered_; 
 		std::vector<double> p_bind_ii_tethered_;
 		std::vector<double> p_unbind_i_tethered_;	
-		std::vector<double> p_unbind_i_tethered_stalled_;	//XXX
+		std::vector<double> p_unbind_i_teth_st_;
 		std::vector<double> p_untether_bound_;
 
 		// 1-D vectors, index is simply motor entry
@@ -91,14 +91,13 @@ class KinesinManagement{
 		std::vector<Kinesin::head*> bound_ATP_;
 		std::vector<Kinesin::head*> bound_ATP_stalled_;
 		std::vector<Kinesin::head*> bound_ADPP_i_;
-		std::vector<Kinesin::head*> bound_ADPP_i_stalled_;	//XXX
+		std::vector<Kinesin::head*> bound_ADPP_i_stalled_;
 		std::vector<Kinesin::head*> bound_ADPP_ii_;
 		// 2-D vectors, indices are simply [x_dub][motor_entry]
 		std::vector< std::vector<Kinesin::head*> > docked_tethered_;
 		std::vector< std::vector<Kinesin::head*> > bound_NULL_tethered_;
 		std::vector< std::vector<Kinesin::head*> > bound_ADPP_i_tethered_;
-		std::vector< std::vector<Kinesin::head*> > 
-			bound_ADPP_i_tethered_stalled_;	//XXX
+		std::vector< std::vector<Kinesin::head*> > bound_ADPP_i_teth_st_;
 		std::vector< std::vector<Kinesin*> > bound_tethered_;
 
 		std::vector<event> events_;		// Holds all possible KMC events
@@ -132,7 +131,7 @@ class KinesinManagement{
 		void UpdateBoundADPP_I();
 		void UpdateBoundADPP_I_Stalled();
 		void UpdateBoundADPP_I_Tethered();
-		void UpdateBoundADPP_I_Tethered_Stalled();//XXX
+		void UpdateBoundADPP_I_Tethered_Stalled();
 		void UpdateBoundADPP_II();
 		void UpdateBoundUntethered();
 		void UpdateBoundTethered();
@@ -151,7 +150,7 @@ class KinesinManagement{
 		void KMC_Bind_II_Tethered(int x_dub);
 		void KMC_Unbind_II(); 		// Unbind ADPP heads; converts to ADP
 		void KMC_Unbind_I();
-		void KMC_Unbind_I_Stalled();					//XXX
+		void KMC_Unbind_I_Stalled();
 		void KMC_Unbind_I_Tethered(int x_dub);
 		void KMC_Unbind_I_Tethered_Stalled(int x_dub);  //XXX
 		void KMC_Tether_Free();

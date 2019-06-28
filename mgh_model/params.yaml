@@ -35,7 +35,7 @@ motors:
   k_hydrolyze: 60
   k_hydrolyze_stalled: 0.6
   k_off_i: 7.2
-  k_off_i_NULL: 0
+  k_off_i_stalled: 0
   k_off_ii: 180
   k_tether: 0.00167
   c_eff_tether: 100

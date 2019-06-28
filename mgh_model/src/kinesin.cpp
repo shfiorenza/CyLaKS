@@ -270,9 +270,9 @@ double Kinesin::GetDockedCoordinate(){
 	if(heads_active_ == 1){
 		Kinesin::head *active_head = GetActiveHead(); 
 		// finish checking for ADPP on active head here FIXME
-		Tubulin *site = GetActiveHead()->site_;
+		Tubulin *site = active_head->site_;
 		double site_coord = site->index_ + mt_->coord_;
-		if(GetActiveHead()->trailing_){
+		if(active_head->trailing_){
 			return site_coord + mt_->delta_x_;
 		}
 		else{
@@ -340,8 +340,6 @@ void Kinesin::ChangeConformation(){
 
 bool Kinesin::IsStalled(){
 
-//	return false;
-
 	if(heads_active_ == 0) return false;
 	else if(heads_active_ == 1){
 		Kinesin::head *active_head = GetActiveHead();
@@ -356,15 +354,15 @@ bool Kinesin::IsStalled(){
 		Kinesin::head *front_head; 
 		if(head_one_.trailing_) front_head = &head_two_;
 		else front_head = &head_one_;
-		if(front_head->ligand_ != "ATP") return false; 
-		else{
+//		if(front_head->ligand_ != "ATP") return false; 
+//		else{
 			int i_front = front_head->site_->index_; 
 			Microtubule* mt = front_head->site_->mt_;
 			int i_plus = mt->plus_end_;
 			int dx = mt->delta_x_; 
 			if(i_front == i_plus) return true;
 			else return mt->lattice_[i_front+dx].occupied_;
-		}
+//		}
 	}
 }
 

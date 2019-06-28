@@ -25,7 +25,13 @@ void MicrotubuleManagement::SetParameters(){
 		n_sites_tot_ += parameters_->microtubules.length[i_mt];
 	}
 	// int n_sites_bulk = n_sites_tot_ - 2*n_mts;	
-	unoccupied_list_.resize(n_sites_tot_); 
+	unoccupied_list_.resize(n_sites_tot_);
+	n_unoccupied_xl_.resize(3);
+	unoccupied_list_xl_.resize(3);
+	for(int n_neighbs(0); n_neighbs < 3; n_neighbs++){
+		n_unoccupied_xl_[n_neighbs] = 0; 
+		unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_); 
+	}
 }
 
 void MicrotubuleManagement::GenerateMicrotubules(){
@@ -90,13 +96,37 @@ void MicrotubuleManagement::UpdateNeighbors(){
 void MicrotubuleManagement::UpdateUnoccupied(){
 
 	n_unoccupied_ = 0; 
+	for(int n_neighbs(0); n_neighbs < 3; n_neighbs++){
+		n_unoccupied_xl_[n_neighbs] = 0; 
+	}
 	for(int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++){
 		int n_sites = parameters_->microtubules.length[i_mt];
+		int i_plus = mt_list_[i_mt].plus_end_;
+		int i_minus = mt_list_[i_mt].minus_end_;
+		int dx = mt_list_[i_mt].delta_x_;
 		for(int i_site = 0; i_site < n_sites; i_site++){
 			Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
 			if(site->occupied_ == false){
 				unoccupied_list_[n_unoccupied_] = site; 
 				n_unoccupied_++;
+				int n_neighbs = 0;
+				if(i_site == i_plus){
+					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_ != nullptr)
+						n_neighbs++;
+				}
+				else if(i_site == i_minus){
+					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_ != nullptr)
+						n_neighbs++;
+				}
+				else{
+					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_ != nullptr)
+						n_neighbs++;
+					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_ != nullptr)
+						n_neighbs++;
+				}
+				unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]]
+					= site;
+				n_unoccupied_xl_[n_neighbs]++;
 			}
 		}
 	}
@@ -115,6 +145,22 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(){
 	}
 	else{
 		printf("Error: GetUnoccupiedSite called, but no unoccupied sites\n");
+		exit(1);
+	}
+}
+
+Tubulin* MicrotubuleManagement::GetUnoccupiedSite(int n_neighbs){
+
+	UpdateUnoccupied();
+	int n_unoccupied = n_unoccupied_xl_[n_neighbs];
+	if(n_unoccupied > 0){
+		int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
+		Tubulin *site = unoccupied_list_xl_[n_neighbs][i_entry];
+		UnoccupiedCheck(site);
+		return site;
+	}
+	else{
+		printf("Error: GetUnoccupiedSiteNEIGHB called, but no sites\n");
 		exit(1);
 	}
 }

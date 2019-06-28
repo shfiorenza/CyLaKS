@@ -1,9 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = 1750; %[1000, 100];
+mt_lengths = [1000];
 max_sites = max(mt_lengths);
-n_mts = 1;
-simName = 'newProc_250x_long/Endtag_1750';
+n_mts = length(mt_lengths);
+simName = 'coop1';
+%simName = 'scan_output/slide_4500_15625';
 dur_sec = 60;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
@@ -20,7 +21,7 @@ blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-movie_name = 'slide_400';
+movie_name = 'test';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
@@ -123,8 +124,8 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
               
         else
-            ax.XLim = [first_pos-1 first_pos + 250];
-            %ax.XLim = [first_pos (first_pos + n_sites + 1)/4];
+            %ax.XLim = [first_pos-1 first_pos + 250];
+            ax.XLim = [first_pos (first_pos + n_sites + 1)];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...
@@ -328,7 +329,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
                     ne = 10; a = 10; ro = 0.5;
-                    if abs(xa - xb) < cutoff
+                    if abs(xa - xb) <= cutoff
                         [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
                         plot(xs,ys,'LineWidth', 1, 'Color', 'black');
                     else

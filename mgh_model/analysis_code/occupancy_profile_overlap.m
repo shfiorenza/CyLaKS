@@ -1,6 +1,10 @@
 clear all
 n_datapoints = 100000;
 length_of_microtubule = 500;
+mt_lengths = [500, 250];
+max_sites = max(mt_lengths);
+n_mts = length(mt_lengths);
+
 raw_overlap_length = -250;
 overlap_length = abs(raw_overlap_length);
 delta = length_of_microtubule - overlap_length;

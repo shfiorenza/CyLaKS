@@ -1,9 +1,9 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000];
+mt_lengths = [100 100];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-simName = 'coop1';
+simName = 'testt';
 %simName = 'scan_output/slide_4500_15625';
 dur_sec = 60;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
@@ -12,7 +12,7 @@ n_steps = 100000000;
 n_datapoints = 10000;
 start_frame = 1;
 end_frame = 10000;
-frames_per_plot = 10;
+frames_per_plot = 100;
 delta_t = 0.00001; 
 xlink_cutoff = 5;
 cutoff = 19;
@@ -269,7 +269,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                         i_neighb = n_sites;
                     end
                     if(xlink_IDs(i_xlink) == neighb_IDs(i_neighb))
-                        neighb_center_x = neighb_mt_pos + (i_neighb + 1/2)*site_width;
+                        neighb_center_x = neighb_mt_pos + (i_neighb - 1/2)*site_width;
                         neighb_center_y = neighb_mt_height + 3*site_height/2;
                         neighb_height = neighb_mt_height + site_height;
                         if(mod(i_mt, 2) ~= 0)

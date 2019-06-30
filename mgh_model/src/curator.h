@@ -8,7 +8,7 @@ struct system_properties;
 using sys_clock = std::chrono::high_resolution_clock;
 using sys_time = sys_clock::time_point;
 using t_unit = std::chrono::nanoseconds;
-const int n_per_sec_ = 1e9; 
+const double n_per_sec_ = 1e9; 
 
 class Curator{
 	private:
@@ -20,11 +20,11 @@ class Curator{
 		int equil_milestone_;
 		int data_milestone_;
 
-		double sim_duration_; 			// For all, indices correspond to:
-		double t_motors_[4]; 			//  - 0: net time
-		double t_xlinks_kmc_[4]; 		//  - 1: time spent updating
-		double t_xlinks_dif_[4]; 		//  - 2: time spent correcting stats
-		double t_MTs_[4];				//  - 3: time spent executing events
+		long sim_duration_; 	// For all, indices correspond to:
+		long t_motors_[4]; 		//  - 0: net time
+		long t_xlinks_kmc_[4]; 	//  - 1: time spent updating
+		long t_xlinks_dif_[4]; 	//  - 2: time spent correcting stats
+		long t_MTs_[4];			//  - 3: time spent executing events
 
 		struct timespec pause_dur_;
 

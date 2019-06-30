@@ -7,13 +7,11 @@
 struct system_parameters;
 struct system_properties;
 
-//XXX	to-do:
-//XXX		-see kinesin_mgmt header
-
 class AssociatedProteinManagement{
 	private:
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
+			// Initialization routine
 			event(int i, int code, std::string l, std::string tar, 
 					std::function<int(double, int)> p_dist, 
 					int *pop, double p): index_(i), kmc_code_(code), 
@@ -43,10 +41,12 @@ class AssociatedProteinManagement{
 		// xlinks actively bound to some MT or motor; dynamically updated
 		int n_active_ = 0;
 		int n_free_tethered_ = 0;
-		std::vector<int> n_bound_i_;
+		int n_bound_i_tot_ = 0; 
 		int n_bound_i_tethered_tot_ = 0;		// needed?
 		int n_bound_untethered_ = 0;
-		std::vector<int> n_bound_i_bindable_;
+		// Indexed by number of PRC1 neighbors: [0], [1], or [2]
+		std::vector<int> n_bound_i_;
+		// Indexed by extension: [x_dub][x] or just [x]
 		std::vector<int> n_bound_ii_;
 		std::vector<int> n_bound_i_tethered_;
 		std::vector< std::vector<int> > n_bound_i_tethered_bindable_;
@@ -66,10 +66,6 @@ class AssociatedProteinManagement{
 		int dist_cutoff_;		// see assoc. protein header
 		int rest_dist_;			// see assoc. protein header
 
-		// characteristic time to diffuse one site (~8nm) for bound_i/ii
-		double tau_i_;	
-		double tau_ii_;		
-
 		// Stand-alone xlink diffusion probabilities
 		double p_diffuse_i_fwd_;
 		double p_diffuse_i_bck_;
@@ -84,12 +80,14 @@ class AssociatedProteinManagement{
 		std::vector< std::vector<double> > p_diffuse_ii_from_self_to_teth_;
 
 		// Kinematics probabilities
-		std::vector<double> p_bind_i_;			
 		double p_bind_i_tethered_;
 		double p_bind_ii_;
-		std::vector<double> p_unbind_i_;		
 		double p_tether_free_; 
 		double p_untether_free_;
+		// Indexed by number of PRC1 neighbors: [0], [1], or [2]
+		std::vector<double> p_bind_i_;			
+		std::vector<double> p_unbind_i_;		
+		// Indexed by extension: [x_dub][x] or just [x_dub] / [x]
 		std::vector<double> p_unbind_i_tethered_;	
 		std::vector<double> p_unbind_ii_;
 		std::vector< std::vector<double> > p_unbind_ii_to_teth_;
@@ -99,20 +97,17 @@ class AssociatedProteinManagement{
 		std::vector<AssociatedProtein> xlinks_;
 		std::vector<AssociatedProtein*> active_;
 		std::vector<AssociatedProtein*> free_tethered_;
-		std::vector<std::vector<AssociatedProtein*>> bound_i_;
-		std::vector<AssociatedProtein*> bound_i_bindable_;
+		std::vector<AssociatedProtein*> bound_i_all_; 
 		std::vector<AssociatedProtein*> bound_untethered_;
-		// 2-D vectors, 1st index is x_dist, 2nd is xlink entry
+		// 2-D vectors, 1st index is x or x_dub, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_ii_;
-//		std::vector< std::vector<AssociatedProtein*> > bound_i_bindable_;
-		// 1st index is x_dist_dub, 2nd is xlink entry
 		std::vector< std::vector<AssociatedProtein*> > bound_i_tethered_;
+		// 2-D vectors, but 1st index is number of PRC1 neighbors
+		std::vector< std::vector<AssociatedProtein*>> bound_i_;
 		// 3-D vectors, 1st index is x_dist_dub, 2nd is x_dist, 3rd is entry
 		// e.g. vec_[16][2][0] is the 1st xlink w/ x_dist_dub=16, x_dist=2
 		std::vector< std::vector< std::vector<AssociatedProtein*> > >
 			bound_ii_tethered_;
-		std::vector< std::vector< std::vector<AssociatedProtein*> > > 
-			bound_i_tethered_bindable_;
 
 		// Following vectors refer to sites that xlinks are bound
 		// to, but the same indexing convention as above applies
@@ -126,14 +121,12 @@ class AssociatedProteinManagement{
 		std::vector< std::vector< std::vector<Tubulin*> > >
 			sites_ii_tethered_same_;	
 
-		// Holds diffusion and KMC events encoded in integer values
-		std::vector<int> dif_list_;
-		std::vector<int> kmc_list_;
-		// Serialized (in regards to self/teth extension) vectors that store
-		// number of entries, the population/event label, x, and x_dub
-		// (facilitates the parallelization of statistical sampling) 
 		std::vector<event> diffu_events_;
+		std::vector<std::vector<int> > diffu_by_pop_; 
+		std::vector<int> dif_list_;
 		std::vector<event> kmc_events_;
+		std::vector<std::vector<int> > kmc_by_pop_;
+		std::vector<int> kmc_list_;
 
 	private:
 		void GenerateXLinks();
@@ -147,7 +140,7 @@ class AssociatedProteinManagement{
 		void Initialize(system_parameters *parameters, 
 						system_properties *properties);
 
-		void UpdateAllLists();				// FIXME
+		void UpdateAllLists();
 		void UpdateSingleBoundList();
 		void UpdateBoundITethered();
 		void UpdateDoubleBoundList();
@@ -164,36 +157,36 @@ class AssociatedProteinManagement{
 		AssociatedProtein* GetFreeXlink();
 		AssociatedProtein* GetBoundUntetheredXlink();
 
-		void GenerateDiffusionList();		// XXX
+		void GenerateDiffusionList();
 
 		void RunDiffusion();
-		void RunDiffusionI_Forward();
-		void RunDiffusionI_Backward();
-		void RunDiffusionII_ToRest(int x_dist);
-		void RunDiffusionII_FromRest(int x_dist);
-		void RunDiffusionI_ToTethRest(int x_dist_dub);
-		void RunDiffusionI_FromTethRest(int x_dist_dub);
-		void RunDiffusionII_ToBothRest(int x_dist_dub, int x_dist);
-		void RunDiffusionII_FromBothRest(int x_dist_dub, int x_dist);
-		void RunDiffusionII_ToSelf_FromTeth(int x_dist_dub, int x_dist);
-		void RunDiffusionII_FromSelf_ToTeth(int x_dist_dub, int x_dist);
+		void Diffuse_I_Forward(int n_neighbs);
+		void Diffuse_I_Backward(int n_neighbs);
+		void Diffuse_II_ToRest(int n_neighbs, int x);
+		void Diffuse_II_FromRest(int n_neighbs, int x);
+		void Diffuse_I_ToTethRest(int n_neighbs, int x_dub);
+		void Diffuse_I_FromTethRest(int n_neighbs, int x_dub);
+		void Diffuse_II_ToBothRest(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_FromBothRest(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_ToSelf_FromTeth(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_FromSelf_ToTeth(int n_neighbs, int x_dub, int x);
 
-		void GenerateKMCList();				// XXX
+		void GenerateKMCList();
 		double GetWeightBindII(); 
 		double GetWeightBindITethered();
 		double GetWeightBindIITethered();
 
 		void RunKMC();
-		void RunKMC_Bind_I(int n_neighbs);
-		void RunKMC_Bind_II();
-		void RunKMC_Unbind_I(int n_neighbs);
-		void RunKMC_Unbind_II(int x_dist);
-		void RunKMC_Bind_I_Tethered();
-		void RunKMC_Bind_II_Tethered();
-		void RunKMC_Unbind_I_Tethered(int x_dist_dub); 
-		void RunKMC_Unbind_II_To_Teth(int x_dist_dub, int x_dist);
-		void RunKMC_Unbind_II_From_Teth(int x_dist_dub, int x_dist);
-		void RunKMC_Tether_Free(); // FIXME
-		void RunKMC_Untether_Free();
+		void Bind_I(int n_neighbs);
+		void Bind_II();		//XXX add neighb coop in weights
+		void Unbind_I(int n_neighbs);
+		void Unbind_II(int n_neighbs, int x);
+		void Bind_I_Tethered(); //XXX add neighb coop in weights
+		void Bind_II_Tethered(); //XXX add neighb coop in weights
+		void Unbind_I_Tethered(int n_neighbs, int x_dub); 
+		void Unbind_II_To_Teth(int n_neighbs, int x_dub, int x);
+		void Unbind_II_From_Teth(int n_neighbs, int x_dub, int x);
+		void Tether_Free(); 
+		void Untether_Free();
 };
 #endif

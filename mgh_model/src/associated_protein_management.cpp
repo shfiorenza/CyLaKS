@@ -34,16 +34,26 @@ void AssociatedProteinManagement::GenerateXLinks(){
 
 void AssociatedProteinManagement::SetParameters(){
 
+	max_neighbs_ = 2; 
+	/* 		Assume lambda = 1/2 for binding/unbinding,    *
+	 *  	whereas lambda = 1 for diffusing away		  */
+	interaction_energy_ = -3;	// in kBT
+
 	double delta_t = parameters_->delta_t;
 	double site_size = parameters_->microtubules.site_size;
 	// DIFFUSION STATISTICS FOR SELF BELOW
-	double D_const_i = parameters_->xlinks.diffusion_const_i;
-	double D_const_ii = parameters_->xlinks.diffusion_const_ii;
+	double D_const = parameters_->xlinks.diffusion_const_i;
 	double x_squared = (site_size/1000)*(site_size/1000); // in um^2
-	double tau_i = x_squared / (2 * D_const_i);
-	double tau_ii = x_squared / (2 * D_const_ii);
-	p_diffuse_i_fwd_ = delta_t / tau_i;
-	p_diffuse_i_bck_ = delta_t / tau_i;
+	double tau = x_squared / (2 * D_const);
+	p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
+	p_diffuse_i_bck_.resize(max_neighbs_ + 1); 
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		double tot_E = n_neighbs * interaction_energy_;
+		double weight = exp(tot_E);
+		if(n_neighbs == 2) weight = 0;
+		p_diffuse_i_fwd_[n_neighbs] = (delta_t / tau) * weight;
+		p_diffuse_i_bck_[n_neighbs] = (delta_t / tau) * weight;
+	}
 	// Generate different stepping rates based on changes in
 	// potential energy (dU) associated with that step
 	teth_cutoff_ = properties_->kinesin4.dist_cutoff_; 
@@ -54,375 +64,385 @@ void AssociatedProteinManagement::SetParameters(){
 		properties_->wallace.Log("  rest_dist is %i\n", rest_dist_);
 		properties_->wallace.Log("  dist_cutoff is %i\n\n", dist_cutoff_);
 	}
-	p_diffuse_ii_to_rest_.resize(dist_cutoff_ + 1);
-	p_diffuse_ii_from_rest_.resize(dist_cutoff_ + 1);
 	double kbT = parameters_->kbT;
 	double r_0 = xlinks_[0].r_0_;
 	double k_spring = xlinks_[0].k_spring_;
 	double r_y = parameters_->microtubules.y_dist;
-	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		double r_x = x_dist * site_size;
-		double r_x_to = (x_dist - 1) * site_size;
-		double r_x_from = (x_dist + 1) * site_size;
-		double r = sqrt(r_x*r_x + r_y*r_y);
-		double r_to = sqrt(r_x_to*r_x_to + r_y*r_y);
-		double r_from = sqrt(r_x_from*r_x_from + r_y*r_y);
-		// Get extension for current dist and steps to/from spring rest
-		double dr = r - r_0;
-		double dr_to = r_to -  r_0;
-		double dr_from = r_from - r_0;
-		if(dr >= 0){
-			// Get corresponding changes in potential energy
-			double dU_to_rest = (k_spring/2)*(dr_to*dr_to - dr*dr);
-			double dU_from_rest = (k_spring/2)*(dr_from*dr_from - dr*dr);
-			// Weights according to Lanksy et al.
-			double weight_to = exp(-dU_to_rest/(2*kbT));
-			double weight_from = exp(-dU_from_rest/(2*kbT));
-			double p_to = weight_to * delta_t / tau_ii;
-			double p_from = weight_from * delta_t / tau_ii;
-			if(x_dist == rest_dist_){
-				p_diffuse_ii_to_rest_[x_dist] = 0;
-				p_diffuse_ii_from_rest_[x_dist] = 2*p_from;
-			}
-			else if(x_dist == dist_cutoff_){
-				p_diffuse_ii_to_rest_[x_dist] = p_to;
-				p_diffuse_ii_from_rest_[x_dist] = 0;
+	p_diffuse_ii_to_rest_.resize(max_neighbs_ + 1);
+	p_diffuse_ii_fr_rest_.resize(max_neighbs_ + 1);
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		p_diffuse_ii_to_rest_[n_neighbs].resize(dist_cutoff_ + 1);
+		p_diffuse_ii_fr_rest_[n_neighbs].resize(dist_cutoff_ + 1);
+		double tot_E = n_neighbs * interaction_energy_;
+		double weight_neighb = exp(tot_E);
+		if(n_neighbs == 2) weight_neighb = 0;
+		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
+			double r_x = x_dist * site_size;
+			double r_x_to = (x_dist - 1) * site_size;
+			double r_x_fr = (x_dist + 1) * site_size;
+			double r = sqrt(r_x*r_x + r_y*r_y);
+			double r_to = sqrt(r_x_to*r_x_to + r_y*r_y);
+			double r_fr = sqrt(r_x_fr*r_x_fr + r_y*r_y);
+			// Get extension for current dist and steps to/from spring rest
+			double dr = r - r_0;
+			double dr_to = r_to - r_0;
+			double dr_fr = r_fr - r_0;
+			if(dr >= 0){
+				// Get corresponding changes in potential energy
+				double dU_to_rest = (k_spring/2)*(dr_to*dr_to - dr*dr);
+				double dU_fr_rest = (k_spring/2)*(dr_fr*dr_fr - dr*dr);
+				// Weights according to Lanksy et al.
+				double weight_to = exp(-dU_to_rest/(2*kbT));
+				double weight_fr = exp(-dU_fr_rest/(2*kbT));
+				double p_to = weight_neighb * weight_to * delta_t / tau;
+				double p_fr = weight_neighb * weight_fr * delta_t / tau;
+				if(x_dist == rest_dist_){
+					p_diffuse_ii_to_rest_[n_neighbs][x_dist] = 0;
+					p_diffuse_ii_fr_rest_[n_neighbs][x_dist] = 2 * p_fr;
+				}
+				else if(x_dist == dist_cutoff_){
+					p_diffuse_ii_to_rest_[n_neighbs][x_dist] = p_to;
+					p_diffuse_ii_fr_rest_[n_neighbs][x_dist] = 0;
+				}
+				else{
+					p_diffuse_ii_to_rest_[n_neighbs][x_dist] = p_to;
+					p_diffuse_ii_fr_rest_[n_neighbs][x_dist] = p_fr;
+				}
+
+				if(p_to > 1)
+					printf("WARNING: p_diffuse_to_rest=%g for x=%i\n", 
+							p_to, x_dist);
+				if(2*p_fr > 1)
+					printf("WARNING: 2*p_diffuse_fr_rest=%g for x=%i\n", 
+							2*p_fr, x_dist);
 			}
 			else{
-				p_diffuse_ii_to_rest_[x_dist] = p_to;
-				p_diffuse_ii_from_rest_[x_dist] = p_from;
+				printf("woah mayne. xlink set parameters \n");
+				exit(1);
 			}
-
-			if(p_to > 1)
-				printf("WARNING: p_diffuse_to_rest=%g for x=%i\n", 
-						p_to, x_dist);
-			if(2*p_from > 1)
-				printf("WARNING: 2*p_diffuse_from_rest=%g for x=%i\n", 
-						2*p_from, x_dist);
-		}
-		else{
-			printf("woah mayne. xlink set parameters \n");
-			exit(1);
 		}
 	}
 	// DIFFUSION STATISTICS INVOLVING TETHER BELOW
-	int teth_dist_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
-	int teth_comp_cutoff = properties_->kinesin4.motors_[0].comp_cutoff_;
-	p_diffuse_i_to_teth_rest_.resize(2*teth_dist_cutoff + 1);
-	p_diffuse_i_from_teth_rest_.resize(2*teth_dist_cutoff + 1);
-	p_diffuse_ii_to_both_rest_.resize(2*teth_dist_cutoff + 1);
-	p_diffuse_ii_to_self_from_teth_.resize(2*teth_dist_cutoff + 1);
-	p_diffuse_ii_from_self_to_teth_.resize(2*teth_dist_cutoff + 1);
-	p_diffuse_ii_from_both_rest_.resize(2*teth_dist_cutoff + 1);
+	int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
+	int comp_cutoff = properties_->kinesin4.motors_[0].comp_cutoff_;
 	double k_teth_spring = properties_->kinesin4.motors_[0].k_spring_;
 	double k_teth_slack = properties_->kinesin4.motors_[0].k_slack_;
 	double r_0_teth = properties_->kinesin4.motors_[0].r_0_;
 	double r_y_teth = parameters_->microtubules.y_dist / 2;
-	double rest_dist_teth = properties_->kinesin4.motors_[0].rest_dist_;
+	double rest_teth = properties_->kinesin4.motors_[0].rest_dist_;
 	double r_rest_teth = 
-		sqrt(site_size*rest_dist_teth*site_size*rest_dist_teth
-		+ r_y_teth*r_y_teth);
-	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
-		p_diffuse_ii_to_both_rest_[x_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_to_self_from_teth_[x_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_from_self_to_teth_[x_dub].resize(dist_cutoff_ + 1);
-		p_diffuse_ii_from_both_rest_[x_dub].resize(dist_cutoff_ + 1);
-		// Calc x-distances (in nm) for tether
-		double r_x_teth = x_dub * site_size / 2;
-		double r_x_teth_bck = (x_dub - 1) * site_size / 2;
-		double r_x_teth_fwd = (x_dub + 1) * site_size / 2;
-		// Calc total r values 
-		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
-		double r_teth_bck = sqrt(r_x_teth_bck*r_x_teth_bck 
-								 + r_y_teth*r_y_teth);
-		double r_teth_fwd = sqrt(r_x_teth_fwd*r_x_teth_fwd 
-								 + r_y_teth*r_y_teth);
-		// Calc tether extensions for current dist and stepping to/from rest
-		double dr_teth = r_teth - r_0_teth;	
-		double dr_teth_to, 
-			   dr_teth_from;
-		if(dr_teth >= 0){
-			dr_teth_to = r_teth_bck - r_0_teth;
-			dr_teth_from = r_teth_fwd - r_0_teth;	
-		}
-		else{
-			dr_teth_to = r_teth_fwd - r_0_teth;
-			dr_teth_from = r_teth_bck - r_0_teth;
-		}
-		double dU_from_teth, 
-			   dU_to_teth;
-		if(x_dub == 2*rest_dist_teth){
-			if(r_0_teth > r_rest_teth){
-				dU_from_teth = (k_teth_slack/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (0.5)*(k_teth_spring*dr_teth_to*dr_teth_to 
-					- k_teth_slack*dr_teth*dr_teth);
+		sqrt(site_size*rest_teth*site_size*rest_teth + r_y_teth*r_y_teth);
+	p_diffuse_i_to_teth_rest_.resize(max_neighbs_ + 1);
+	p_diffuse_i_fr_teth_rest_.resize(max_neighbs_ + 1);
+	p_diffuse_ii_to_both_rest_.resize(max_neighbs_ + 1);
+	p_diffuse_ii_to_self_fr_teth_.resize(max_neighbs_ + 1);
+	p_diffuse_ii_fr_self_to_teth_.resize(max_neighbs_ + 1);
+	p_diffuse_ii_fr_both_rest_.resize(max_neighbs_ + 1);
+	for(int n_neighbs = 0; n_neighbs < max_neighbs_; n_neighbs++){
+		double tot_E = n_neighbs * interaction_energy_;
+		double weight_neighb = exp(tot_E);
+		if(n_neighbs == 2) weight_neighb = 0;
+		p_diffuse_i_to_teth_rest_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_diffuse_i_fr_teth_rest_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_diffuse_ii_to_both_rest_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_diffuse_ii_to_self_fr_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_diffuse_ii_fr_self_to_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_diffuse_ii_fr_both_rest_[n_neighbs].resize(2*teth_cutoff + 1);
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff; x_dub++){
+			// Calc x-distances (in nm) for tether
+			double r_x_teth = x_dub * site_size / 2;
+			double r_x_teth_bck = (x_dub - 1) * site_size / 2;
+			double r_x_teth_fwd = (x_dub + 1) * site_size / 2;
+			// Calc total r values 
+			double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
+			double r_teth_bck = sqrt(r_x_teth_bck*r_x_teth_bck 
+					+ r_y_teth*r_y_teth);
+			double r_teth_fwd = sqrt(r_x_teth_fwd*r_x_teth_fwd 
+					+ r_y_teth*r_y_teth);
+			// Calc tether exts for current dist and stepping to/from rest
+			double dr_teth = r_teth - r_0_teth,
+				   dr_teth_to, 
+				   dr_teth_fr;
+			if(dr_teth >= 0){
+				dr_teth_to = r_teth_bck - r_0_teth;
+				dr_teth_fr = r_teth_fwd - r_0_teth;	
 			}
 			else{
-				dU_from_teth = (k_teth_spring/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (0.5)*(k_teth_slack*dr_teth_to*dr_teth_to
-					- k_teth_spring*dr_teth*dr_teth);
+				dr_teth_to = r_teth_fwd - r_0_teth;
+				dr_teth_fr = r_teth_bck - r_0_teth;
 			}
-		}
-		else if(dr_teth > 0){
-			dU_from_teth = (k_teth_spring/2)
-						 * (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-			dU_to_teth = (k_teth_spring/2)
-					   * (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-		}
-		else{
-			dU_from_teth = (k_teth_slack/2)
-						 * (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-			dU_to_teth = (k_teth_slack/2)
-					   * (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-		}
-		double weight_to_teth;
-		if(x_dub < 2*teth_comp_cutoff)
-			weight_to_teth = 0;
-		else
-			weight_to_teth = exp(-dU_to_teth/(2*kbT));	
-		double weight_from_teth;
-		if(x_dub < 2*teth_dist_cutoff - 1
-		&& x_dub > 2*teth_comp_cutoff + 1)
-			weight_from_teth = exp(-dU_from_teth/(2*kbT));
-		else
-			weight_from_teth = 0; 
-		if(!parameters_->motors.tethers_active){
-			weight_to_teth = 0;
-			weight_from_teth = 0;
-		}
-		double p_to_teth_i = weight_to_teth * delta_t / tau_i;
-		double p_from_teth_i = weight_from_teth * delta_t / tau_i;
-		if(p_to_teth_i > 1)
-			printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
-					p_to_teth_i, x_dub);
-		if(p_from_teth_i > 1)
-			printf("WARNING: p_diffuse_from_teth_i=%g for 2x=%i\n", 
-					p_from_teth_i, x_dub);
-		// Input probabilities for stage_i / tethered xlinks
-		p_diffuse_i_to_teth_rest_[x_dub] = p_to_teth_i;
-		p_diffuse_i_from_teth_rest_[x_dub] = p_from_teth_i;
-		// Run through x_dists to get probs for stage_ii / tethered xlinks
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			double r_x = x_dist * site_size;
-			double r_x_to = (x_dist - 1) * site_size;
-			double r_x_from = (x_dist + 1) * site_size;
-			double r = sqrt(r_x*r_x + r_y*r_y);
-			double r_to = sqrt(r_x_to*r_x_to + r_y*r_y);
-			double r_from = sqrt(r_x_from*r_x_from + r_y*r_y);
-			// Get extension for current dist and steps to/from rest
-			double dr = r - r_0;
-			double dr_to = r_to -  r_0;
-			double dr_from = r_from - r_0;
-			if(dr >= 0){
-				// Get corresponding changes in potential energy
-				double dU_to_rest = (k_spring/2)*(dr_to*dr_to - dr*dr);
-				double dU_fr_rest = (k_spring/2)*(dr_from*dr_from - dr*dr);
-				// Weights according to Lanksy et al.
-				double weight_to;
-				double weight_from;
-			   	if(x_dist == rest_dist_){
-					weight_to = 0;
-					weight_from = 2*exp(-dU_fr_rest/(2*kbT));
-				}
-				else if(x_dist == dist_cutoff_){
-					weight_to = exp(-dU_to_rest/(2*kbT));
-					weight_from = 0;
+			double dU_fr_teth, 
+				   dU_to_teth;
+			if(x_dub == 2*rest_teth){
+				if(r_0_teth > r_rest_teth){
+					dU_fr_teth = (k_teth_slack/2)
+						* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+					dU_to_teth = (0.5)*(k_teth_spring*dr_teth_to*dr_teth_to 
+						- k_teth_slack*dr_teth*dr_teth);
 				}
 				else{
-					weight_to = exp(-dU_to_rest/(2*kbT));
-					weight_from = exp(-dU_fr_rest/(2*kbT));
-				}
-				if(!parameters_->motors.tethers_active){
-					weight_to = 0;
-					weight_from = 0;
-				}
-				// Convolve these bitches
-				double p_to_both = weight_to * weight_to_teth 
-					 * delta_t / tau_ii;
-				double p_to_self_from_teth = weight_to * weight_from_teth
-					 * delta_t / tau_ii;
-				double p_from_self_to_teth = weight_from * weight_to_teth 
-					 * delta_t / tau_ii;
-				double p_from_both = weight_from * weight_from_teth
-					* delta_t / tau_ii;
-				p_diffuse_ii_to_both_rest_[x_dub][x_dist]
-					= p_to_both;
-				p_diffuse_ii_to_self_from_teth_[x_dub][x_dist]
-					= p_to_self_from_teth;
-				p_diffuse_ii_from_self_to_teth_[x_dub][x_dist]
-					= p_from_self_to_teth; 
-				p_diffuse_ii_from_both_rest_[x_dub][x_dist]
-					= p_from_both; 
-
-				if(p_to_both > 1){
-					printf("WARNING: p_diff_to_both=%g", 
-							p_to_both);	
-					printf(" for 2x=%i, x=%i\n", 
-							x_dub, x_dist);
-				}
-				if(p_to_self_from_teth > 1){
-					printf("WARNING: p_diff_to_self_fr_teth=%g", 
-							p_to_self_from_teth);	
-					printf(" for 2x=%i, x=%i\n", 
-							x_dub, x_dist);
-				}
-				if(p_from_self_to_teth > 1){
-					printf("WARNING: p_diff_fr_self_to_teth=%g", 
-							p_from_self_to_teth);	
-					printf(" for 2x=%i, x=%i\n", 
-							x_dub, x_dist);
-				}
-				if(p_from_both > 1){
-					printf("WARNING: p_diff_fr_both=%g", 
-							p_from_both);	
-					printf(" for 2x=%i, x=%i\n", 
-							x_dub, x_dist);
+					dU_fr_teth = (k_teth_spring/2)
+						* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+					dU_to_teth = (0.5)*(k_teth_slack*dr_teth_to*dr_teth_to
+						- k_teth_spring*dr_teth*dr_teth);
 				}
 			}
+			else if(dr_teth > 0){
+				dU_fr_teth = (k_teth_spring/2)
+					* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+				dU_to_teth = (k_teth_spring/2)
+					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+			}
 			else{
-				printf("woah mayne. xlink set parameters TWOO \n");
-				exit(1);
+				dU_fr_teth = (k_teth_slack/2)
+					* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+				dU_to_teth = (k_teth_slack/2)
+					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+			}
+			double weight_to_teth = exp(-dU_to_teth/(2*kbT));
+			double weight_fr_teth = exp(-dU_fr_teth/(2*kbT));
+			if(x_dub < 2*comp_cutoff
+			|| !parameters_->motors.tethers_active){
+				weight_to_teth = 0;
+				weight_fr_teth = 0;
+			}
+			if(x_dub < 2*(comp_cutoff + 1)
+			|| x_dub > 2*(teth_cutoff - 1)){
+				weight_fr_teth = 0;
+			}
+			double p_to_teth_i = weight_neighb*weight_to_teth*delta_t/tau;
+			double p_fr_teth_i = weight_neighb*weight_fr_teth*delta_t/tau;
+			// Input probabilities for stage_i / tethered xlinks
+			p_diffuse_i_to_teth_rest_[n_neighbs][x_dub] = p_to_teth_i;
+			p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub] = p_fr_teth_i;
+			if(p_to_teth_i > 1)
+				printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", 
+						p_to_teth_i, x_dub);
+			if(p_fr_teth_i > 1)
+				printf("WARNING: p_diffuse_fr_teth_i=%g for 2x=%i\n", 
+						p_fr_teth_i, x_dub);
+			// Run through x to get probs for stage_ii tethered xlinks
+			p_diffuse_ii_to_both_rest_[n_neighbs][x_dub]
+				.resize(dist_cutoff_ + 1);
+			p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub]
+				.resize(dist_cutoff_ + 1);
+			p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub]
+				.resize(dist_cutoff_ + 1);
+			p_diffuse_ii_fr_both_rest_[n_neighbs][x_dub]
+				.resize(dist_cutoff_ + 1);
+			for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
+				double r_x = x_dist * site_size;
+				double r_x_to = (x_dist - 1) * site_size;
+				double r_x_fr = (x_dist + 1) * site_size;
+				double r = sqrt(r_x*r_x + r_y*r_y);
+				double r_to = sqrt(r_x_to*r_x_to + r_y*r_y);
+				double r_fr = sqrt(r_x_fr*r_x_fr + r_y*r_y);
+				// Get extension for current dist and steps to/from rest
+				double dr = r - r_0;
+				double dr_to = r_to -  r_0;
+				double dr_fr = r_fr - r_0;
+				if(dr >= 0){
+					// Get corresponding changes in potential energy
+					double dU_to_rest = (k_spring/2)*(dr_to*dr_to - dr*dr);
+					double dU_fr_rest = (k_spring/2)*(dr_fr*dr_fr - dr*dr);
+					// Weights according to Lanksy et al.
+					double weight_to;
+					double weight_fr;
+					if(x_dist == rest_dist_){
+						weight_to = 0;
+						weight_fr = 2*exp(-dU_fr_rest/(2*kbT));
+					}
+					else if(x_dist == dist_cutoff_){
+						weight_to = exp(-dU_to_rest/(2*kbT));
+						weight_fr = 0;
+					}
+					else{
+						weight_to = exp(-dU_to_rest/(2*kbT));
+						weight_fr = exp(-dU_fr_rest/(2*kbT));
+					}
+					// Convolve these bitches
+					double p_to_both = weight_neighb * weight_to 
+						* weight_to_teth * delta_t / tau;
+					double p_to_self_fr_teth = weight_neighb * weight_to 
+						* weight_fr_teth * delta_t / tau;
+					double p_fr_self_to_teth = weight_neighb * weight_fr 
+						* weight_to_teth * delta_t / tau;
+					double p_fr_both = weight_neighb * weight_fr 
+						* weight_fr_teth * delta_t / tau;
+					p_diffuse_ii_to_both_rest_[n_neighbs][x_dub][x_dist]
+						= p_to_both;
+					p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x_dist]
+						= p_to_self_fr_teth;
+					p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x_dist]
+						= p_fr_self_to_teth; 
+					p_diffuse_ii_fr_both_rest_[n_neighbs][x_dub][x_dist]
+						= p_fr_both; 
+
+					if(p_to_both > 1){
+						printf("WARNING: p_diff_to_both=%g", p_to_both);	
+						printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
+					}
+					if(p_to_self_fr_teth > 1){
+						printf("WARNING: p_diff_to_self_fr_teth=%g", 
+								p_to_self_fr_teth);	
+						printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
+					}
+					if(p_fr_self_to_teth > 1){
+						printf("WARNING: p_diff_fr_self_to_teth=%g", 
+								p_fr_self_to_teth);	
+						printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
+					}
+					if(p_fr_both > 1){
+						printf("WARNING: p_diff_fr_both=%g", p_fr_both);	
+						printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
+					}
+				}
+				else{
+					printf("woah mayne. xlink set parameters TWOO \n");
+					exit(1);
+				}
 			}
 		}
 	}
 	// KMC STATISTICS BELOW
 	double k_on = parameters_->xlinks.k_on; 
 	double c_xlink = parameters_->xlinks.concentration;
-	p_bind_i_.resize(3);
-	p_bind_i_[0] = k_on * c_xlink * delta_t;
 	double c_eff_teth = parameters_->motors.c_eff_tether;
 	if(!parameters_->motors.tethers_active){
 		c_eff_teth = 0;
 	}
-	p_bind_i_tethered_ = k_on * c_eff_teth * delta_t; 
+	p_bind_i_teth_base_ = k_on * c_eff_teth * delta_t; 
 	double c_eff_bind = parameters_->xlinks.conc_eff_bind;
-	p_bind_ii_ = k_on * c_eff_bind * delta_t;
-	double k_off_i = parameters_->xlinks.k_off_i;
-	p_unbind_i_.resize(3);
-	p_unbind_i_[0] = k_off_i * delta_t;
-	// XXX janky PRC1 coop
-	for(int n_neighbs = 1; n_neighbs < 3; n_neighbs++){
-		double interaction_energy = 3 * n_neighbs;		// in kBT
-		double weight = exp(interaction_energy / 2);
-		p_bind_i_[n_neighbs] = p_bind_i_[0] * weight;
-		p_unbind_i_[n_neighbs] = p_unbind_i_[0] / weight;
-	}
-	// Generate unbinding rates based on discretized spring extension
-	double k_off_ii = parameters_->xlinks.k_off_ii;
-	p_unbind_ii_.resize(dist_cutoff_ + 1);
-	for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-		double r_x = x_dist*site_size;
-		double r = sqrt(r_y*r_y + r_x*r_x);
-		double dr = r - r_0;
-		double U_xlink = (k_spring/2)*dr*dr;
-		double unbind_weight = exp(U_xlink/(2*kbT));
-//		printf("%i:  %g\n", distance, k_off_ii);
-		p_unbind_ii_[x_dist] = k_off_ii * unbind_weight * delta_t;
-	}
-	p_unbind_i_tethered_.resize(2*teth_dist_cutoff + 1);
-	p_unbind_ii_to_teth_.resize(2*teth_dist_cutoff + 1);
-	p_unbind_ii_from_teth_.resize(2*teth_dist_cutoff + 1);
-	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
-		p_unbind_ii_to_teth_[x_dub].resize(dist_cutoff_ + 1); 
-		p_unbind_ii_from_teth_[x_dub].resize(dist_cutoff_ + 1);
-		// Calc x-distances (in nm) for tether
-		double r_x_teth = x_dub * site_size / 2;
-		// Calc total r values 
-		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
-		// Calc tether extensions for current dist and stepping to/from rest
-		double dr_teth = r_teth - r_0_teth;	
-		double U_at_teth;
-		if(dr_teth > 0)
-			U_at_teth = (k_teth_spring/2)*dr_teth*dr_teth;
-		else
-			U_at_teth = (k_teth_slack/2)*dr_teth*dr_teth;
-		double weight_at_teth = exp(U_at_teth/(2*kbT));
-		if(x_dub < 2*teth_comp_cutoff){
-			weight_at_teth = 0;
+	p_bind_ii_base_ = k_on * c_eff_bind * delta_t;
+	double k_off = parameters_->xlinks.k_off_i;
+	p_bind_i_.resize(max_neighbs_ + 1);
+	p_unbind_i_.resize(max_neighbs_ + 1);
+	p_unbind_ii_.resize(max_neighbs_ + 1);
+	p_unbind_i_teth_.resize(max_neighbs_ + 1);
+	p_unbind_ii_to_teth_.resize(max_neighbs_ + 1);
+	p_unbind_ii_fr_teth_.resize(max_neighbs_ + 1);
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		double tot_E = n_neighbs * interaction_energy_;
+		double weight_neighb = exp(tot_E/2);
+		p_bind_i_[n_neighbs] = (k_on * c_xlink * delta_t) / weight_neighb;
+		p_unbind_i_[n_neighbs] = weight_neighb * k_off * delta_t;
+		// Rates involving xlink spring only
+		p_unbind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
+		for(int x = 0; x <= dist_cutoff_; x++){
+			double r_x = x*site_size;
+			double r = sqrt(r_y*r_y + r_x*r_x);
+			double dr = r - r_0;
+			double U_xlink = (k_spring/2)*dr*dr;
+			double unbind_weight = exp(U_xlink/(2*kbT));
+			p_unbind_ii_[n_neighbs][x] = weight_neighb * unbind_weight 
+				* k_off * delta_t;
 		}
-		if(!parameters_->motors.tethers_active){
-			weight_at_teth = 0;
-		}
-		double p_unbind_teth = weight_at_teth * p_unbind_i_[0];
-		if(p_unbind_teth > 1)
-			printf("WARNING: p_unbind_teth (XLINK)=%g for 2x=%i\n", 
-					p_unbind_teth, x_dub);
-		p_unbind_i_tethered_[x_dub] = p_unbind_teth; 
-		// XXX variable shift in delta-E based on x_dist XXX
-		// Run through x_dists to get probs for stage_ii / tethered xlinks
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			// change in teth extension if 2nd xlink head were to unbind
-			double dx_teth = (double)x_dist / 2; 
-			double dr_x_teth = dx_teth * site_size;
-			double r_x_teth_to, 
-				   r_x_teth_from; 
-			if(dr_teth > 0){
-				r_x_teth_to = r_x_teth - dr_x_teth;
-				r_x_teth_from = r_x_teth + dr_x_teth; 	
+		// Rates involving both xlink & tether spring
+		p_unbind_i_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_unbind_ii_to_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		p_unbind_ii_fr_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff; x_dub++){
+			// Calc x-distances (in nm) for tether
+			double r_x_teth = x_dub * site_size / 2;
+			// Calc total r values 
+			double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
+			// Calc tether exts for current dist and stepping to/from rest
+			double dr_teth = r_teth - r_0_teth;	
+			double U_at_teth;
+			if(dr_teth > 0)
+				U_at_teth = (k_teth_spring/2)*dr_teth*dr_teth;
+			else
+				U_at_teth = (k_teth_slack/2)*dr_teth*dr_teth;
+			double weight_at_teth = exp(U_at_teth/(2*kbT));
+			if(x_dub < 2*comp_cutoff
+			|| !parameters_->motors.tethers_active){
+				weight_at_teth = 0;
 			}
-			else{
-				r_x_teth_to = r_x_teth + dr_x_teth;
-				r_x_teth_from = r_x_teth - dr_x_teth; 
-			}
-			double r_teth_to = 
-				sqrt(r_x_teth_to*r_x_teth_to + r_y_teth*r_y_teth);
-			double r_teth_from = 
-				sqrt(r_x_teth_from*r_x_teth_from + r_y_teth*r_y_teth);
-			double dr_teth_to = r_teth_to - r_0_teth; 
-			double dr_teth_from = r_teth_from - r_0_teth; 
-			double dU_to_teth, 
-				   dU_from_teth;
-			int x_from_rest_dub = abs(2*rest_dist_teth - x_dub);
-			int dx_teth_dub = 2 * dx_teth;
-			// Check if we're crossing over equil. point of tether 
-			if(dx_teth_dub > x_from_rest_dub){
-				if(r_teth < r_0_teth){
-					dU_from_teth = (k_teth_slack/2)
-						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-					dU_to_teth = (0.5)*(k_teth_spring*dr_teth_to*dr_teth_to 
-							- k_teth_slack*dr_teth*dr_teth);
+			p_unbind_i_teth_[n_neighbs][x_dub] = weight_neighb 
+				* weight_at_teth * k_off * delta_t; 
+			if(p_unbind_i_teth_[n_neighbs][x_dub] > 1)
+				printf("WARNING: p_unbind_teth (XLINK)=%g for 2x=%i\n", 
+						p_unbind_i_teth_[n_neighbs][x_dub], x_dub);
+			// Run through x to get probs for stage_ii / tethered xlinks
+			p_unbind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_+1);
+			p_unbind_ii_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_+1);
+			for(int x = 0; x <= dist_cutoff_; x++){
+				// change in teth extension if 2nd xlink head were to unbind
+				double dx_teth = (double)x/2; 
+				double dr_x_teth = dx_teth * site_size;
+				double r_x_teth_to, 
+					   r_x_teth_fr; 
+				if(dr_teth >= 0){
+					r_x_teth_to = r_x_teth - dr_x_teth;
+					r_x_teth_fr = r_x_teth + dr_x_teth; 	
 				}
 				else{
-					dU_from_teth = (k_teth_spring/2)
-						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-					dU_to_teth = (0.5)*(k_teth_slack*dr_teth_to*dr_teth_to
-							- k_teth_spring*dr_teth*dr_teth);
+					r_x_teth_to = r_x_teth + dr_x_teth;
+					r_x_teth_fr = r_x_teth - dr_x_teth; 
 				}
+				double r_teth_to = 
+					sqrt(r_x_teth_to*r_x_teth_to + r_y_teth*r_y_teth);
+				double r_teth_fr = 
+					sqrt(r_x_teth_fr*r_x_teth_fr + r_y_teth*r_y_teth);
+				double dr_teth_to = r_teth_to - r_0_teth; 
+				double dr_teth_fr = r_teth_fr - r_0_teth; 
+				double dU_to_teth, 
+					   dU_fr_teth;
+				int x_fr_rest_dub = abs(2*rest_teth - x_dub);
+				int dx_teth_dub = 2 * dx_teth;
+				// Check if we're crossing over equil. point of tether 
+				if(dx_teth_dub > x_fr_rest_dub){
+					if(r_teth < r_0_teth){
+						dU_fr_teth = (k_teth_slack/2)
+							* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+						dU_to_teth = (0.5)
+							*(k_teth_spring*dr_teth_to*dr_teth_to 
+							- k_teth_slack*dr_teth*dr_teth);
+					}
+					else{
+						dU_fr_teth = (k_teth_spring/2)
+							* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+						dU_to_teth = (0.5)
+							*(k_teth_slack*dr_teth_to*dr_teth_to
+							- k_teth_spring*dr_teth*dr_teth);
+					}
+				}
+				else if(dr_teth > 0){
+					dU_fr_teth = (k_teth_spring/2)
+						* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+					dU_to_teth = (k_teth_spring/2)
+						* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+				}
+				else{
+					dU_fr_teth = (k_teth_slack/2)
+						* (dr_teth_fr*dr_teth_fr - dr_teth*dr_teth);
+					dU_to_teth = (k_teth_slack/2)
+						* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+				}
+				double weight_to_teth = exp(-dU_to_teth/(2*kbT));
+				double weight_fr_teth = exp(-dU_fr_teth/(2*kbT));
+				if(x_dub < 2*comp_cutoff
+				|| !parameters_->motors.tethers_active){
+					weight_to_teth = 0;
+					weight_fr_teth = 0;
+				}
+				if(x_dub < 2*(comp_cutoff + 1)
+				|| x_dub > 2*(teth_cutoff - 1)){
+					weight_fr_teth = 0;
+				}
+				p_unbind_ii_to_teth_[n_neighbs][x_dub][x] = weight_neighb
+					* weight_to_teth * k_off * delta_t;
+				p_unbind_ii_fr_teth_[n_neighbs][x_dub][x] = weight_neighb
+					* weight_fr_teth * k_off * delta_t;
+				if(p_unbind_ii_to_teth_[n_neighbs][x_dub][x] > 1)
+					printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
+							p_unbind_ii_to_teth_[n_neighbs][x_dub][x], 
+							x_dub, x);
+				if(p_unbind_ii_fr_teth_[n_neighbs][x_dub][x] > 1)
+					printf("WARNING: p_unbind_fr = %g for 2x=%ix, x=%i\n", 
+							p_unbind_ii_fr_teth_[n_neighbs][x_dub][x], 
+							x_dub, x);
 			}
-			else if(dr_teth > 0){
-				dU_from_teth = (k_teth_spring/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (k_teth_spring/2)
-					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-			}
-			else{
-				dU_from_teth = (k_teth_slack/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (k_teth_slack/2)
-					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-			}
-			double weight_to_teth = exp(-dU_to_teth/(2*kbT));
-			double weight_from_teth = exp(-dU_from_teth/(2*kbT));
-			if(x_dub < 2*teth_comp_cutoff){
-				weight_to_teth = 0;
-				weight_from_teth = 0;
-			}
-			if(!parameters_->motors.tethers_active){
-				weight_to_teth = 0;
-				weight_from_teth = 0;
-			}
-			double p_unbind_to = weight_to_teth * p_unbind_ii_[x_dist];
-			double p_unbind_from = weight_from_teth * p_unbind_ii_[x_dist];
-			if(p_unbind_to > 1)
-				printf("WARNING: p_unbind_to = %g for 2x=%ix, x=%i\n", 
-						p_unbind_to, x_dub, x_dist);
-			if(p_unbind_from > 1)
-				printf("WARNING: p_unbind_from = %g for 2x=%i, x=%i\n", 
-						p_unbind_from, x_dub, x_dist);
-			p_unbind_ii_to_teth_[x_dub][x_dist] = p_unbind_to;
-			p_unbind_ii_from_teth_[x_dub][x_dist] = p_unbind_from; 
 		}
 	}
 	double k_teth = parameters_->motors.k_tether;

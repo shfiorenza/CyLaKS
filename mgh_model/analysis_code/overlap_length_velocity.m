@@ -2,7 +2,7 @@ clear all;
 % Often-changed variables
 n_sites = [1000, 500];
 %simName = sprintf('slide_scans/quart_proc_half_speed/slide_0_%i', n_sites(2));
-simName = 'k_on_scan/slide_kOn_1000_10';
+simName = 'old_output/scan_output/slide_1500_3125';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 100000000;
@@ -14,8 +14,8 @@ length = n_sites(2) * 0.008;
 end_time = n_steps * delta_t;
 start_time = starting_point * delta_t;
 
-%fileDirectory = '/home/shane/Desktop/slide_scan/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Desktop/%s';
+%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStructure = '%s_mt_coord.file';
 fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
 
@@ -52,8 +52,8 @@ end
 % Calculate real time that passes per iteration to get an accurate velocity
 time_per_datapoint = delta_t * (n_steps / n_datapoints);
 % Use gradient function with above spacing to get slope of overlap length
-overlap_data = smoothdata(end_dist_data, 'movmean', 125);
-slope_data = smoothdata(gradient(overlap_data, time_per_datapoint));
+final_overlap_data = smoothdata(end_dist_data, 'movmean', 300);
+slope_data = smoothdata(gradient(final_overlap_data, time_per_datapoint), 'movmean', 300);
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
@@ -61,7 +61,8 @@ hold on
 
 % Plot overlap length on top
 subplot(2, 1, 1)
-plot(linspace(start_time, end_time, n_datapoints), overlap_data, ...
+hold all
+plot(linspace(start_time, end_time, n_datapoints), final_overlap_data + 0.5, ...
         'LineWidth', 2);
 %title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
  %length, n_sites(2)));

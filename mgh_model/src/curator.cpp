@@ -681,7 +681,8 @@ void Curator::OutputData(){
 	}
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 
-		xlink_extension_array[i_ext] = prc1->n_bound_ii_[i_ext]; 
+		int max = prc1->max_neighbs_;
+		xlink_extension_array[i_ext] = prc1->n_sites_ii_[max+1][i_ext]; 
 	}
 	// Write the data to respective files one timestep at a time 
 	fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);

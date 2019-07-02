@@ -6,7 +6,7 @@ delta_t: 1e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 2
+  count: 1
   length:
   - 100
   - 100

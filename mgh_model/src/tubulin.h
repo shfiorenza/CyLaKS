@@ -35,5 +35,7 @@ class Tubulin{
 		// and the kinesin 4 tether that attaches to it; this checks 
 		// if both are in the same direction w.r.t. this site 
 		bool EquilibriumInSameDirection();
+
+		int GetPRC1NeighborCount();
 };
 #endif

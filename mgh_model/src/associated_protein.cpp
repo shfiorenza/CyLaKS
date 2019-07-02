@@ -421,31 +421,29 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 	}
 	else if(motor_->heads_active_ > 0){
 		// Update motor ext (unbinding 2nd head changes anchor coord) 
+		Tubulin *site_to = GetSiteFartherFromTethRest(); 
+		int neighbs_to = site_to->GetPRC1NeighborCount();
+		Tubulin *site_fr = GetSiteCloserToTethRest();
+		int neighbs_fr = site_fr->GetPRC1NeighborCount();
+
 		int x_dub_pre = motor_->x_dist_doubled_;
-		double p_unbind_to = 
-			properties_->prc1.p_unbind_ii_to_teth_[x_dub_pre][x_dist_pre]; 
-		double p_unbind_from = 
-			properties_->prc1.p_unbind_ii_from_teth_[x_dub_pre][x_dist_pre]; 
+		double p_unbind_to = properties_->prc1.p_unbind_ii_to_teth_
+			[neighbs_to][x_dub_pre][x_dist_pre]; 
+		double p_unbind_from = properties_->prc1.p_unbind_ii_fr_teth_
+			[neighbs_fr][x_dub_pre][x_dist_pre]; 
 		double p_tot = p_unbind_to + p_unbind_from;
+
+
 		double ran = properties_->gsl.GetRanProb();
-		Tubulin *site(NULL); 
-		if(ran < p_unbind_to / p_tot)
-			site = GetSiteFartherFromTethRest();
-		else
-			site = GetSiteCloserToTethRest();
-		if(site == site_one_){
-			site_one_->xlink_ = nullptr;
-			site_one_->occupied_ = false;
-			site_one_ = nullptr;
-		}
-		else if(site == site_two_){
-			site_two_->xlink_ = nullptr;
-			site_two_->occupied_ = false;
-			site_two_ = nullptr;
+		if(ran < p_unbind_to / p_tot){
+			site_to->xlink_ = nullptr;
+			site_to->occupied_ = false;
+			site_to = nullptr;
 		}
 		else{
-			printf("error in xlink force unbind!!\n");
-			exit(1);
+			site_fr->xlink_ = nullptr;
+			site_fr->occupied_ = false;
+			site_fr = nullptr;
 		}
 		heads_active_--;
 		x_dist_ = 0;

@@ -1,22 +1,21 @@
-#ifndef _ASSOCIATED_PROTEIN_MANAGEMENT_H
-#define _ASSOCIATED_PROTEIN_MANAGEMENT_H
-#include "associated_protein.h"
-#include <functional>
+#pragma once 
 #include <string>
+#include <functional>
+#include "associated_protein.h"
+struct system_parameters;
+struct system_properties;
 
 template<class T>
 using vec = std::vector<T>;
 
-struct system_parameters;
-struct system_properties;
 class AssociatedProteinManagement{
 	private:
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
 			// Initialization routine
-			event(int i, int code, std::string lab, std::string tar, 
-					std::function<int(double, int)> p_dist, 
-					int *pop, double p): index_(i), kmc_code_(code), 
+			event(int i, int code, int n, std::string lab, std::string tar, 
+					std::function<int(double, int)> p_dist, int *pop, 
+					double p): index_(i), kmc_code_(code), n_neighbs_(n),
 					label_(lab), target_pop_(tar), prob_dist_(p_dist), 
 					pop_ptr_(pop), p_occur_(p) {}
 			void SampleStatistics(){
@@ -29,6 +28,7 @@ class AssociatedProteinManagement{
 			std::function<int(double, int)> prob_dist_;
 			int index_ = -1; 			// Serialized unique index of event
 			int kmc_code_ = -1; 
+			int n_neighbs_ = -1;
 			std::string label_ = "BRUH";
 			std::string target_pop_ = "not me"; 
 			double p_occur_ = 0;
@@ -46,14 +46,16 @@ class AssociatedProteinManagement{
 		int dist_cutoff_;		// see assoc. protein header
 		int rest_dist_;			// see assoc. protein header
 		int teth_cutoff_; 		// see kinesin header (dist_cutoff_ there)
+		int comp_cutoff_;		// see kinesin header (comp_cutoff_ there)
 		int max_neighbs_;
 		double interaction_energy_;		// in kBT
 
 		/* Population size trackers */ 
 		int n_xlinks_ = 0; 		  // Total number of xlink objects created
 		int n_active_ = 0; 		  // No. actively bound; dynamically updated
-		int n_free_tethered_ = 0;
-		int n_bound_unteth_ = 0;			// needed?
+		int n_free_teth_ = 0;
+		int n_bound_unteth_ = 0;
+		int n_bound_i_teth_tot_ = 0;
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
 		vec<int> n_bound_i_;
@@ -84,16 +86,16 @@ class AssociatedProteinManagement{
 		// Second index is [x_dub]; third & final index is [x]
 		vec<vec<vec<double>>> p_unbind_ii_to_teth_;
 		vec<vec<vec<double>>> p_unbind_ii_fr_teth_;
-		vec<vec<vec<double>>> p_diffuse_ii_to_both_rest_;
-		vec<vec<vec<double>>> p_diffuse_ii_fr_both_rest_;
+		vec<vec<vec<double>>> p_diffuse_ii_to_both_;
+		vec<vec<vec<double>>> p_diffuse_ii_fr_both_;
 		vec<vec<vec<double>>> p_diffuse_ii_to_self_fr_teth_;
 		vec<vec<vec<double>>> p_diffuse_ii_fr_self_to_teth_;
 
 		/* Lists that track different population types */
 		vec<AssociatedProtein> xlinks_;				// Actual xlink objects
 		vec<AssociatedProtein*> active_;
-		vec<AssociatedProtein*> free_tethered_;
-		vec<AssociatedProtein*> bound_untethered_;
+		vec<AssociatedProtein*> free_teth_;
+		vec<AssociatedProtein*> bound_unteth_;
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
 		// Second index is actual xlink entry
@@ -110,8 +112,7 @@ class AssociatedProteinManagement{
 		void GenerateXLinks();
 		void SetParameters();
 		void InitializeLists();
-		void InitializeDiffusionEvents();
-		void InitializeKMCEvents();
+		void InitializeEvents();
 
 	public:
 		AssociatedProteinManagement();
@@ -120,27 +121,32 @@ class AssociatedProteinManagement{
 
 		AssociatedProtein* GetFreeXlink();
 		AssociatedProtein* GetBoundUntetheredXlink();
-		double GetWeight_II(); 
-		double GetWeight_I_Teth();
-		double GetWeight_II_Teth();
+		double GetWeight_Bind_II(); 
+		double GetWeight_Bind_I_Teth();
+		double GetWeight_Bind_II_Teth();
 
 		void Update_All();
+		void Update_Free_Teth();
 		void Update_Bound_I();
 		void Update_Bound_I_Teth();
 		void Update_Bound_II_Sites();
-		void Update_Bound_II_Teth_Sites();
+		void Update_Bound_II_Sites_Teth();
 		void Update_Bound_Unteth(); 
-		void Update_Free_Teth();
 
-		void GenerateEventList();
-
-		void RunKMC();
+		void Run_KMC();
+		void Generate_KMC_List();
+		void KMC_Relay(int kmc_code, int n_neighbs); 
 		// Diffusion events
-		void Diffuse_I(int n_neighbs, int dir);
-		void Diffuse_II(int n_neighbs, int x, int dir);
-		void Diffuse_I_Teth(int n_neighbs, int x_dub, int dir);
-		void Diffuse_II_Teth_Same(int n_neighbs, int x_dub, int x, int dir);
-		void Diffuse_II_Teth_Oppo(int n_neighbs, int x_dub, int x, int dir);
+		void Diffuse_I_Fwd(int n_neighbs);
+		void Diffuse_I_Bck(int n_neighbs);
+		void Diffuse_II_To_Rest(int n_neighbs, int x);
+		void Diffuse_II_Fr_Rest(int n_neighbs, int x);
+		void Diffuse_I_To_Teth(int n_neighbs, int x_dub);
+		void Diffuse_I_Fr_Teth(int n_neighbs, int x_dub);
+		void Diffuse_II_To_Both(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_Fr_Both(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_To_Self_Fr_Teth(int n_neighbs, int x_dub, int x);
+		void Diffuse_II_Fr_Self_To_Teth(int n_neighbs, int x_dub, int x);
 		// Kinematic events
 		void Bind_I(int n_neighbs);
 		void Bind_II();		//XXX add neighb coop in weights
@@ -150,8 +156,7 @@ class AssociatedProteinManagement{
 		void Bind_II_Teth(); //XXX add neighb coop in weights
 		void Unbind_I_Teth(int n_neighbs, int x_dub); 
 		void Unbind_II_To_Teth(int n_neighbs, int x_dub, int x);
-		void Unbind_II_From_Teth(int n_neighbs, int x_dub, int x);
+		void Unbind_II_Fr_Teth(int n_neighbs, int x_dub, int x);
 		void Tether_Free(); 
 		void Untether_Free();
 };
-#endif

@@ -288,7 +288,7 @@ void KinesinManagement::InitializeEvents(){
 		}
 		events_.emplace_back(event(index++, 70, 
 				"tether_free", "untethered_xlinks", binomial, 
-				&properties_->prc1.n_bound_untethered_, p_tether_free_));
+				&properties_->prc1.n_bound_unteth_, p_tether_free_));
 		// Modular poisson lambda expression for use in tether_bound
 		auto poisson_teth = [&](double p, int n){
 			if(n > 0){
@@ -372,7 +372,7 @@ void KinesinManagement::UpdateAllLists(){
 	UpdateBoundADPP_I_Stalled();
 	UpdateBoundADPP_II();
 	if(parameters_->motors.tethers_active){
-		properties_->prc1.UpdateBoundUntethered();
+		properties_->prc1.Update_Bound_Unteth();
 		UpdateFreeTethered();
 		UpdateDockedTethered();
 		UpdateBoundNULLTethered();
@@ -963,7 +963,7 @@ void KinesinManagement::GenerateKMCList(){
 		int i_teth_bound = 10 + 4*list_size;
 		while(events_[i_teth_free].n_expected_ 
 		+ events_[i_teth_bound].n_expected_
-		> properties_->prc1.n_bound_untethered_){
+		> properties_->prc1.n_bound_unteth_){
 			double ran = properties_->gsl.GetRanProb();
 			double p_tot = events_[i_teth_free].p_occur_ 
 				         + events_[i_teth_bound].p_occur_;
@@ -1656,8 +1656,8 @@ void KinesinManagement::KMC_Unbind_I_Tethered_Stalled(int x_dub){
 
 void KinesinManagement::KMC_Tether_Free(){
 
-	properties_->prc1.UpdateBoundUntethered();
-	if(properties_->prc1.n_bound_untethered_ > 0){
+	properties_->prc1.Update_Bound_Unteth();
+	if(properties_->prc1.n_bound_unteth_ > 0){
 		Kinesin *motor = GetFreeMotor();
 		// Randomly pick an xlink
 		AssociatedProtein *xlink 

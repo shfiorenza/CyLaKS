@@ -33,7 +33,7 @@ bool Tubulin::EquilibriumInSameDirection(){
 				}
 				// ... equils are in oppo dir. if coords are on oppo side
 				else if((xlink_rest > site_coord && motor_rest < site_coord)
-					 || (xlink_rest < site_coord && motor_rest > site_coord)){
+				|| (xlink_rest < site_coord && motor_rest > site_coord)){
 					return false;
 				}
 				else{
@@ -50,7 +50,7 @@ bool Tubulin::EquilibriumInSameDirection(){
 				}
 				// ... equils are in oppo dir. if coords are on same side
 				else if((xlink_rest > site_coord && motor_rest > site_coord)
-					 || (xlink_rest < site_coord && motor_rest < site_coord)){
+		 		|| (xlink_rest < site_coord && motor_rest < site_coord)){
 					return false;
 				}
 				else{
@@ -68,4 +68,27 @@ bool Tubulin::EquilibriumInSameDirection(){
 		printf("error in tubulin:spring equil on same side\n");
 		exit(1);
 	}
+}
+
+int Tubulin::GetPRC1NeighborCount(){
+
+	int n_neighbs = 0;
+	int i_plus = mt_->plus_end_;                                    
+	int i_minus = mt_->minus_end_;                                  
+	int dx = mt_->delta_x_; 
+	if(index_ == i_plus){                                                 
+		if(mt_->lattice_[index_-dx].xlink_ != nullptr)              
+			n_neighbs++;
+	}
+	else if(index_ == i_minus){                                           
+		if(mt_->lattice_[index_+dx].xlink_ != nullptr)              
+			n_neighbs++;
+	}
+	else{                                                                 
+		if(mt_->lattice_[index_-dx].xlink_ != nullptr)              
+			n_neighbs++;                                                  
+		if(mt_->lattice_[index_+dx].xlink_ != nullptr)              
+			n_neighbs++;                                                  
+	}
+	return n_neighbs;
 }

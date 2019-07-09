@@ -244,6 +244,70 @@ void AssociatedProtein::PopulateExtensionLookups(){
 	}
 }
 
+AssociatedProtein::Monomer* AssociatedProtein::GetActiveHead(){
+
+	if(heads_active_ == 1){
+		if(head_one_.site_ != nullptr)
+			return &head_one_;
+		else if(head_two_.site_ != nullptr)
+			return &head_two_;
+		else{
+			printf("what in get active head site\n");
+			exit(1);
+		}
+	}
+	else{
+		printf("not cool bro...not single bound \n");
+		exit(1);
+	}
+}
+
+Tubulin* AssociatedProtein::GetActiveHeadSite(){
+
+	if(heads_active_ == 1){
+		if(head_one_.site_ != nullptr)
+			return head_one_.site_;
+		else if(head_two_.site_ != nullptr)
+			return head_two_.site_;
+		else{
+			printf("what in get active head site\n");
+			exit(1);
+		}
+	}
+	else{
+		printf("not cool bro...not single bound \n");
+		exit(1);
+	}
+}
+
+double AssociatedProtein::GetAnchorCoordinate(){
+
+	// If single bound, use that head; assume other's diffusion avgs out
+	if(heads_active_ == 1){
+		Tubulin *site = GetActiveHeadSite();
+		int index = site->index_;
+		int mt_coord = site->mt_->coord_;
+		double site_coord = (double)(mt_coord + index);
+		return site_coord;
+	}
+	// If double bound, use avg of head's indices 
+	else if(heads_active_ == 2){
+		int index_one = head_one_.site_->index_;
+		int mt_coord_one = head_one_.site_->mt_->coord_;
+		double coord_one = (double)(mt_coord_one + index_one);
+		int index_two = head_two_.site_->index_;
+		int mt_coord_two = head_two_.site_->mt_->coord_;
+		double coord_two = (double)(mt_coord_two + index_two);
+		double avg_coord = (coord_one + coord_two)/2;
+		return avg_coord;
+	}
+	else{
+		printf("not NOT cool bro ... cant get anchor index: %i\n", 
+				heads_active_);
+		exit(1);
+	}
+}
+
 void AssociatedProtein::UpdateNeighborSites(){
 	
 	n_neighbor_sites_ = 0;
@@ -369,12 +433,12 @@ void AssociatedProtein::UpdateExtension(){
 	if(heads_active_ == 2){
 		int x_dist_pre = x_dist_;
 		// Calculate first head's coordinate
-		int i_head_one = site_one_->index_;
-		int mt_coord_one = site_one_->mt_->coord_;
+		int i_head_one = head_one_.site_->index_;
+		int mt_coord_one = head_one_.site_->mt_->coord_;
 		int coord_one = mt_coord_one + i_head_one;
 		// Calculate second head's coordinate
-		int i_head_two = site_two_->index_;
-		int mt_coord_two = site_two_->mt_->coord_;
+		int i_head_two = head_two_.site_->index_;
+		int mt_coord_two = head_two_.site_->mt_->coord_;
 		int coord_two = mt_coord_two + i_head_two;
 		// Calculate x_distance in # of sites
 		int x_dist = abs(coord_one - coord_two);	
@@ -405,14 +469,14 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 	if(tethered_ == false){
 		double ran = properties_->gsl.GetRanProb(); 
 		if(ran < 0.5){
-			site_one_->xlink_ = nullptr;
-			site_one_->occupied_ = false;
-			site_one_ = nullptr;
+			head_one_.site_->xlink_head_ = nullptr;
+			head_one_.site_->occupied_ = false;
+			head_one_.site_ = nullptr;
 		}
 		else{
-			site_two_->xlink_ = nullptr;
-			site_two_->occupied_ = false;
-			site_two_ = nullptr;	
+			head_two_.site_->xlink_head_ = nullptr;
+			head_two_.site_->occupied_ = false;
+			head_two_.site_ = nullptr;	
 		}
 		heads_active_--;
 		x_dist_ = 0;
@@ -436,12 +500,12 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 
 		double ran = properties_->gsl.GetRanProb();
 		if(ran < p_unbind_to / p_tot){
-			site_to->xlink_ = nullptr;
+			site_to->xlink_head_ = nullptr;
 			site_to->occupied_ = false;
 			site_to = nullptr;
 		}
 		else{
-			site_fr->xlink_ = nullptr;
+			site_fr->xlink_head_ = nullptr;
 			site_fr->occupied_ = false;
 			site_fr = nullptr;
 		}
@@ -455,14 +519,14 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 	else{
 		double ran = properties_->gsl.GetRanProb(); 
 		if(ran < 0.5){
-			site_one_->xlink_ = nullptr;
-			site_one_->occupied_ = false;
-			site_one_ = nullptr;
+			head_one_.site_->xlink_head_ = nullptr;
+			head_one_.site_->occupied_ = false;
+			head_one_.site_ = nullptr;
 		}
 		else{
-			site_two_->xlink_ = nullptr;
-			site_two_->occupied_ = false;
-			site_two_ = nullptr;	
+			head_two_.site_->xlink_head_ = nullptr;
+			head_two_.site_->occupied_ = false;
+			head_two_.site_ = nullptr;	
 		}
 		heads_active_--;
 		x_dist_ = 0;
@@ -519,41 +583,14 @@ int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 	}
 }
 
-double AssociatedProtein::GetAnchorCoordinate(){
-
-	// If single bound, use that head; assume other's diffusion avgs out
-	if(heads_active_ == 1){
-		Tubulin *site = GetActiveHeadSite();
-		int index = site->index_;
-		int mt_coord = site->mt_->coord_;
-		double site_coord = (double)(mt_coord + index);
-		return site_coord;
-	}
-	// If double bound, use avg of head's indices 
-	else if(heads_active_ == 2){
-		int index_one = site_one_->index_;
-		int mt_coord_one = site_one_->mt_->coord_;
-		double coord_one = (double)(mt_coord_one + index_one);
-		int index_two = site_two_->index_;
-		int mt_coord_two = site_two_->mt_->coord_;
-		double coord_two = (double)(mt_coord_two + index_two);
-		double avg_coord = (coord_one + coord_two)/2;
-		return avg_coord;
-	}
-	else{
-		printf("not NOT cool bro ... cant get anchor index: %i\n", 
-				heads_active_);
-		exit(1);
-	}
-}
-
 double AssociatedProtein::GetBindingWeight(Tubulin *neighbor){
 
 	Tubulin *site = GetActiveHeadSite();
 	Microtubule *mt = site->mt_;
 	Microtubule *adj_mt = neighbor->mt_;
 	if(adj_mt != mt->neighbor_){
-		printf("adj: %i, neighb: %i\n", adj_mt->index_, mt->neighbor_->index_);
+		printf("adj: %i, neighb: %i\n", 
+				adj_mt->index_, mt->neighbor_->index_);
 		printf("why the microtubules tho (in assiociated protein GBW)\n");
 		exit(1);
 	}
@@ -636,32 +673,16 @@ double AssociatedProtein::GetExtensionForce(Tubulin *site){
 	}
 }
 
-Tubulin* AssociatedProtein::GetActiveHeadSite(){
-
-	if(heads_active_ == 1){
-		if(site_one_ != nullptr)
-			return site_one_;
-		else if(site_two_ != nullptr)
-			return site_two_;
-		else{
-			printf("what in get active head site\n");
-			exit(1);
-		}
-	}
-	else{
-		printf("not cool bro...not single bound \n");
-		exit(1);
-	}
-}
-
 Tubulin* AssociatedProtein::GetSiteCloserToTethRest(){
 
 	if(heads_active_ == 2
 	&& tethered_ == true){
 		double stalk_coord = motor_->GetStalkCoordinate();
-		double site_one_coord = site_one_->index_ + site_one_->mt_->coord_;
+		double site_one_coord 
+			= head_one_.site_->index_ + head_one_.site_->mt_->coord_;
 		int dx_dub_one = 2 * fabs(stalk_coord - site_one_coord);
-		double site_two_coord = site_two_->index_ + site_two_->mt_->coord_;
+		double site_two_coord 
+			= head_two_.site_->index_ + head_two_.site_->mt_->coord_;
 		int dx_dub_two = 2 * fabs(stalk_coord - site_two_coord);
 		double anchor_coord = GetAnchorCoordinate();
 		int x_dub = 2 * fabs(anchor_coord - stalk_coord);
@@ -674,21 +695,21 @@ Tubulin* AssociatedProtein::GetSiteCloserToTethRest(){
 		// vise versa, always choose the site that makes it go slack
 		if(dx_teth_dub > dist_from_rest_dub){
 			if(dx_dub_one < dx_dub_two)
-				return site_one_; 
+				return head_one_.site_; 
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 		else if(x_dub >= rest_dist_dub){
 			if(dx_dub_one < dx_dub_two)
-				return site_one_; 
+				return head_one_.site_; 
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 		else{
 			if(dx_dub_one > dx_dub_two)
-				return site_one_;
+				return head_one_.site_;
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 	}
 	else{
@@ -702,9 +723,11 @@ Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
 	if(heads_active_ == 2
 	&& tethered_ == true){
 		double stalk_coord = motor_->GetStalkCoordinate();
-		double site_one_coord = site_one_->index_ + site_one_->mt_->coord_;
+		double site_one_coord 
+			= head_one_.site_->index_ + head_one_.site_->mt_->coord_;
 		int dx_dub_one = 2 * fabs(stalk_coord - site_one_coord);
-		double site_two_coord = site_two_->index_ + site_two_->mt_->coord_;
+		double site_two_coord 
+			= head_two_.site_->index_ + head_two_.site_->mt_->coord_;
 		int dx_dub_two = 2 * fabs(stalk_coord - site_two_coord);
 		double anchor_coord = GetAnchorCoordinate();
 		int x_dub = 2 * fabs(anchor_coord - stalk_coord);
@@ -717,21 +740,21 @@ Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
 		// vise versa, always choose the site that makes it taut
 		if(dx_teth_dub > dist_from_rest_dub){
 			if(dx_dub_one > dx_dub_two)
-				return site_one_; 
+				return head_one_.site_; 
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 		else if(x_dub >= rest_dist_dub){
 			if(dx_dub_one > dx_dub_two)
-				return site_one_; 
+				return head_one_.site_; 
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 		else{
 			if(dx_dub_one < dx_dub_two)
-				return site_one_;
+				return head_one_.site_;
 			else
-				return site_two_;
+				return head_two_.site_;
 		}
 	}
 	else{

@@ -1,10 +1,9 @@
-#ifndef _TUBULIN_H
-#define _TUBULIN_H
+#pragma once
 #include "kinesin.h"
+#include "associated_protein.h"
 
 class Microtubule;
 class Kinesin;
-class AssociatedProtein;
 struct system_parameters;
 struct system_properties;
 
@@ -20,7 +19,7 @@ class Tubulin{
 
 		Microtubule *mt_ = nullptr;
 		Kinesin::head *motor_head_ = nullptr; 
-		AssociatedProtein *xlink_ = nullptr;
+		AssociatedProtein::Monomer *xlink_head_ = nullptr;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -38,4 +37,3 @@ class Tubulin{
 
 		int GetPRC1NeighborCount();
 };
-#endif

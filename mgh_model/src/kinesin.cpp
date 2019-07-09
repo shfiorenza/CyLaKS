@@ -449,8 +449,8 @@ void Kinesin::UpdateNeighborXlinks(){
 				}
 				else{
 					Tubulin *site = &mt->lattice_[i_site];
-					if(site->xlink_ != nullptr){
-						AssociatedProtein *xlink = site->xlink_;
+					if(site->xlink_head_ != nullptr){
+						AssociatedProtein *xlink = site->xlink_head_->xlink_;
 						double anchor_coord = xlink->GetAnchorCoordinate();
 						double x = fabs(anchor_coord - stalk_coord);
 						int x_dub = 2*x;

@@ -17,12 +17,12 @@ void Tubulin::Initialize(system_parameters *parameters,
 bool Tubulin::EquilibriumInSameDirection(){
 
 	if(occupied_ == true
-	&& xlink_ != nullptr){
-		if(xlink_->heads_active_ == 2
-		&& xlink_->tethered_ == true){
-			Kinesin* motor = xlink_->motor_;
+	&& xlink_head_ != nullptr){
+		if(xlink_head_->xlink_->heads_active_ == 2
+		&& xlink_head_->xlink_->tethered_ == true){
+			Kinesin* motor = xlink_head_->xlink_->motor_;
 			double site_coord = index_ + mt_->coord_;
-			double xlink_rest = xlink_->GetAnchorCoordinate();
+			double xlink_rest = xlink_head_->xlink_->GetAnchorCoordinate();
 			double motor_rest = motor->GetRestLengthCoordinate();
 			// When tether is extended past rest length, ...
 			if(motor->x_dist_doubled_ > 2*motor->rest_dist_){
@@ -77,17 +77,17 @@ int Tubulin::GetPRC1NeighborCount(){
 	int i_minus = mt_->minus_end_;                                  
 	int dx = mt_->delta_x_; 
 	if(index_ == i_plus){                                                 
-		if(mt_->lattice_[index_-dx].xlink_ != nullptr)              
+		if(mt_->lattice_[index_-dx].xlink_head_ != nullptr)              
 			n_neighbs++;
 	}
 	else if(index_ == i_minus){                                           
-		if(mt_->lattice_[index_+dx].xlink_ != nullptr)              
+		if(mt_->lattice_[index_+dx].xlink_head_ != nullptr)              
 			n_neighbs++;
 	}
 	else{                                                                 
-		if(mt_->lattice_[index_-dx].xlink_ != nullptr)              
+		if(mt_->lattice_[index_-dx].xlink_head_ != nullptr)              
 			n_neighbs++;                                                  
-		if(mt_->lattice_[index_+dx].xlink_ != nullptr)              
+		if(mt_->lattice_[index_+dx].xlink_head_ != nullptr)              
 			n_neighbs++;                                                  
 	}
 	return n_neighbs;

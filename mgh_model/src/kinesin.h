@@ -1,9 +1,8 @@
-#ifndef _KINESIN_H
-#define _KINESIN_H
+#pragma once
 #include <vector>
 #include <string>
-class Microtubule;
 class Tubulin;
+class Microtubule;
 class AssociatedProtein;
 struct system_properties;
 struct system_parameters;
@@ -61,11 +60,11 @@ class Kinesin{
 		bool frustrated_ = false;
 		bool tethered_ = false;
 
-		head head_one_ = {this, nullptr, false, "ADP"},
-			 head_two_ = {this, nullptr, true, "ADP"};
+		head head_one_ = {this, nullptr, false, std::string("ADP")},
+			 head_two_ = {this, nullptr, true, std::string("ADP")};
 
-		Microtubule *mt_ = nullptr; 		
 		AssociatedProtein *xlink_ = nullptr; 
+		Microtubule *mt_ = nullptr; 		
 
 	private:
 		void SetParameters();
@@ -104,4 +103,3 @@ class Kinesin{
 		Tubulin* GetWeightedNeighborSite();
 		AssociatedProtein* GetWeightedNeighborXlink();
 };
-#endif

@@ -61,8 +61,8 @@ void Microtubule::UpdateExtensions(){
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
 		// Only update extensions from xlinks (both tether and xlink itself)
-		if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
+		if(site->xlink_head_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_head_->xlink_;
 			// If xlink is doubly-bound, update its own extension
 			if(xlink->heads_active_ == 2){
 				xlink->UpdateExtension();
@@ -85,8 +85,8 @@ double Microtubule::GetNetForce(){
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
 		// Check if site is occupied by xlink head
-		if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
+		if(site->xlink_head_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_head_->xlink_;
 			// If doubly-bound, get force from self and potentially teth
 			if(xlink->heads_active_ == 2){
 				forces_summed += xlink->GetExtensionForce(site);
@@ -156,8 +156,8 @@ double Microtubule::GetNetForce_Motors(){
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
 		// Check if site is occupied by xlink head
-		if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
+		if(site->xlink_head_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_head_->xlink_;
 			// If doubly-bound, get force from self and potentially teth
 			if(xlink->heads_active_ == 2){
 				forces_summed += xlink->GetExtensionForce(site);
@@ -227,8 +227,8 @@ double Microtubule::GetNetForce_Xlinks(){
 	for(int i_site = 0; i_site < n_sites_; i_site++){
 		Tubulin *site = &lattice_[i_site];
 		// Check if site is occupied by an xlink
-		if(site->xlink_ != nullptr){
-			AssociatedProtein *xlink = site->xlink_;
+		if(site->xlink_head_ != nullptr){
+			AssociatedProtein *xlink = site->xlink_head_->xlink_;
 			// Xlinks can only exert forces if they're double bound
 			if(xlink->heads_active_ == 2){
 				forces_summed += xlink->GetExtensionForce(site);

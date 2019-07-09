@@ -111,16 +111,14 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 	/* Xlink parameters below */
 	YAML::Node xlinks = input["xlinks"];
 	params->xlinks.k_on = xlinks["k_on"].as<double>();
-	params->xlinks.concentration = xlinks["concentration"].as<double>();
-	params->xlinks.conc_eff_bind = xlinks["conc_eff_bind"].as<double>();
-	params->xlinks.k_off_i = xlinks["k_off_i"].as<double>();
-	params->xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
-	params->xlinks.diffusion_const_i = 
-			xlinks["diffusion_const_i"].as<double>();
-	params->xlinks.diffusion_const_ii = 
-			xlinks["diffusion_const_ii"].as<double>();
+	params->xlinks.c_bulk = xlinks["c_bulk"].as<double>();
+	params->xlinks.c_eff_bind = xlinks["c_eff_bind"].as<double>();
+	params->xlinks.k_off = xlinks["k_off"].as<double>();
 	params->xlinks.r_0 = xlinks["r_0"].as<double>();
 	params->xlinks.k_spring = xlinks["k_spring"].as<double>();
+	params->xlinks.diffusion_coeff = xlinks["diffusion_coeff"].as<double>();
+	params->xlinks.interaction_energy 
+		= xlinks["interaction_energy"].as<double>();
 	/* Microtubule parameters below */ 
 	YAML::Node mts = input["microtubules"];
 	params->microtubules.count = mts["count"].as<int>();
@@ -190,16 +188,15 @@ void Curator::ParseParameters(system_parameters *params, char *param_file){
 			"true" : "false");	
 	Log("\n  Crosslinker (xlink) parameters:\n");
 	Log("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
-	Log("    concentration = %g nM\n", params->xlinks.concentration);
-	Log("    conc_eff_bind = %g nM\n", params->xlinks.conc_eff_bind);
-	Log("    k_off_i = %g /s\n", params->xlinks.k_off_i);
-	Log("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
-	Log("    diffusion_constant_i = %g um^2/s\n", 
-			params->xlinks.diffusion_const_i);
-	Log("    diffusion_constant_ii = %g um^2/s\n", 
-			params->xlinks.diffusion_const_ii);
+	Log("    c_bulk = %g nM\n", params->xlinks.c_bulk);
+	Log("    c_eff_bind = %g nM\n", params->xlinks.c_eff_bind);
+	Log("    k_off = %g /s\n", params->xlinks.k_off);
 	Log("    r_0 = %g nm\n", params->xlinks.r_0);
 	Log("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
+	Log("    diffusion_coefficient = %g um^2/s\n", 
+			params->xlinks.diffusion_coeff);
+	Log("    interaction_energy = %g kbT\n", 
+			params->xlinks.interaction_energy);
 	Log("\n  Microtubule (mt) parameters:\n");
 	Log("    count = %i\n", params->microtubules.count);
 	for(int i_mt = 0; i_mt < n_lengths; i_mt++){
@@ -415,8 +412,8 @@ void Curator::PrintMicrotubules(){
 			Tubulin *site = &mt->lattice_[i_site];
 			if(site->occupied_ == false)
 				printf("=");
-			else if(site->xlink_ != nullptr){
-				AssociatedProtein *xlink = site->xlink_;
+			else if(site->xlink_head_ != nullptr){
+				AssociatedProtein *xlink = site->xlink_head_->xlink_;
 				if(xlink->heads_active_ == 1){
 					if(xlink->tethered_ == false)
 						printf("i");
@@ -623,10 +620,11 @@ void Curator::OutputData(){
 			}
 			// If occupied by xlink, store its species ID to occupancy_file,
 			// its unique ID to the xlink ID file, and -1 to motor ID file
-			else if(site->xlink_ != nullptr){
-				occupancy_array[i_site] = site->xlink_->speciesID_;
+			else if(site->xlink_head_ != nullptr){
+				occupancy_array[i_site] 
+					= site->xlink_head_->xlink_->speciesID_;
 				motor_ID_array[i_site] = -1;
-				xlink_ID_array[i_site] = site->xlink_->ID_;
+				xlink_ID_array[i_site] = site->xlink_head_->xlink_->ID_;
 				tether_coord_array[i_site] = -1;
 			}
 			// If occupied by motor, store its species ID to occupancy_file, 
@@ -682,7 +680,7 @@ void Curator::OutputData(){
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 
 		int max = prc1->max_neighbs_;
-		xlink_extension_array[i_ext] = prc1->n_sites_ii_[max+1][i_ext]; 
+		xlink_extension_array[i_ext] = prc1->n_heads_ii_[max+1][i_ext]; 
 	}
 	// Write the data to respective files one timestep at a time 
 	fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);

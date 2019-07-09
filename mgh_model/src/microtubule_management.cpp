@@ -45,7 +45,7 @@ void MicrotubuleManagement::GenerateMicrotubules(){
 
 void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site){
 
-	if(site->motor_head_ != nullptr || site->xlink_ != nullptr){
+	if(site->motor_head_ != nullptr || site->xlink_head_ != nullptr){
 		printf("Error @ site %i_%i: should be unoccupied\n", 
 				site->mt_->index_, site->index_);
 		exit(1);
@@ -55,7 +55,7 @@ void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site){
 void MicrotubuleManagement::UnoccupiedCheck(int i_mt, int i_site){
 
 	if(mt_list_[i_mt].lattice_[i_site].motor_head_ != nullptr
-	|| mt_list_[i_mt].lattice_[i_site].xlink_ != nullptr){
+	|| mt_list_[i_mt].lattice_[i_site].xlink_head_ != nullptr){
 		printf("Error @ site %i_%i: should be unoccupied\n", i_mt, i_site);
 		exit(1);
 	}
@@ -63,7 +63,7 @@ void MicrotubuleManagement::UnoccupiedCheck(int i_mt, int i_site){
 
 void MicrotubuleManagement::OccupiedCheck(Tubulin *site){
 	
-	if(site->motor_head_ == nullptr && site->xlink_ == nullptr){
+	if(site->motor_head_ == nullptr && site->xlink_head_ == nullptr){
 		printf("Error @ site %i_%i: should be occupied\n", site->mt_->index_, 
 														   site->index_);
 		exit(1);
@@ -73,7 +73,7 @@ void MicrotubuleManagement::OccupiedCheck(Tubulin *site){
 void MicrotubuleManagement::OccupiedCheck(int i_mt, int i_site){
 
 	if(mt_list_[i_mt].lattice_[i_site].motor_head_->motor_ == nullptr
-	&& mt_list_[i_mt].lattice_[i_site].xlink_ == nullptr){
+	&& mt_list_[i_mt].lattice_[i_site].xlink_head_ == nullptr){
 		printf("Error @ site %i_%i: should be occupied\n", i_mt, i_site);
 		exit(1);
 	}
@@ -111,18 +111,18 @@ void MicrotubuleManagement::UpdateUnoccupied(){
 				n_unoccupied_++;
 				int n_neighbs = 0;
 				if(i_site == i_plus){
-					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_ != nullptr)
-						n_neighbs++;
+					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_head_ 
+							!= nullptr) n_neighbs++;
 				}
 				else if(i_site == i_minus){
-					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_ != nullptr)
-						n_neighbs++;
+					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_head_ 
+							!= nullptr) n_neighbs++;
 				}
 				else{
-					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_ != nullptr)
-						n_neighbs++;
-					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_ != nullptr)
-						n_neighbs++;
+					if(mt_list_[i_mt].lattice_[i_site-dx].xlink_head_ 
+							!= nullptr) n_neighbs++;
+					if(mt_list_[i_mt].lattice_[i_site+dx].xlink_head_ 
+							!= nullptr) n_neighbs++;
 				}
 				unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]]
 					= site;

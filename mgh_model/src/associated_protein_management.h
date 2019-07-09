@@ -1,52 +1,40 @@
 #pragma once 
 #include <string>
 #include <functional>
+#include "event.h"
 #include "associated_protein.h"
 struct system_parameters;
 struct system_properties;
-
-template<class T>
-using vec = std::vector<T>;
+class Curator; 
 
 class AssociatedProteinManagement{
 	private:
-		// Structure that holds all pertinent info for a given MC event:
-		struct event{
-			// Initialization routine
-			event(int i, int code, int n, std::string lab, std::string tar, 
-					std::function<int(double, int)> p_dist, int *pop, 
-					double p): index_(i), kmc_code_(code), n_neighbs_(n),
-					label_(lab), target_pop_(tar), prob_dist_(p_dist), 
-					pop_ptr_(pop), p_occur_(p) {}
-			void SampleStatistics(){
-				if(*pop_ptr_ > 0) 
-					n_expected_ = prob_dist_(p_occur_, *pop_ptr_);
-				else n_expected_ = 0;
-			}
-		private:
-		public:
-			std::function<int(double, int)> prob_dist_;
-			int index_ = -1; 			// Serialized unique index of event
-			int kmc_code_ = -1; 
-			int n_neighbs_ = -1;
-			std::string label_ = "BRUH";
-			std::string target_pop_ = "not me"; 
-			double p_occur_ = 0;
-			int *pop_ptr_ = nullptr; 	// Pointer to population size variable
-			int n_expected_ = 0;
-		};
+		// Aliases to make our work a little more neat
+		template<class T>
+		using vec = std::vector<T>;
+		using monomer = AssociatedProtein::Monomer*;
+		using event = Event<monomer, AssociatedProteinManagement*>;
+		// All possible KMC event objects; arbitrary sequential order
 		vec<event> events_;
-		vec<vec<int> > events_by_pop_;
-		vec<int> kmc_list_;
-
+		// IDs of events; segregated by target population
+		vec<vec<int>> IDs_by_pop_;
+		// List of event IDs to execute any given timestep; dynamic
+		vec<int> IDs_to_exe_;
+		// Scratch jawn
+		vec<vec<monomer>> scratch_;
+		vec<int> n_scratch_;
+		// Pointers to global system params & props; same for all classes
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
+		// WALLACE, MISTA
+		Curator* wally = nullptr;
 
 	public:
 		int dist_cutoff_;		// see assoc. protein header
 		int rest_dist_;			// see assoc. protein header
 		int teth_cutoff_; 		// see kinesin header (dist_cutoff_ there)
 		int comp_cutoff_;		// see kinesin header (comp_cutoff_ there)
+		// Neighbor coop stuff; still kinda preliminary
 		int max_neighbs_;
 		double interaction_energy_;		// in kBT
 
@@ -55,18 +43,18 @@ class AssociatedProteinManagement{
 		int n_active_ = 0; 		  // No. actively bound; dynamically updated
 		int n_free_teth_ = 0;
 		int n_bound_unteth_ = 0;
-		int n_bound_i_teth_tot_ = 0;
+		int n_heads_i_teth_tot_ = 0;
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
-		vec<int> n_bound_i_;
+		vec<int> n_heads_i_;
 		// Second index is [x] or [x_dub] for base or teth pops.
-		vec<vec<int>> n_bound_i_teth_;
-		vec<vec<int>> n_sites_ii_;
+		vec<vec<int>> n_heads_i_teth_;
+		vec<vec<int>> n_heads_ii_;
 		// Second index is [x_dub], third & final index is [x]
-		vec<vec<vec<int>>> n_sites_ii_teth_same_; 
-		vec<vec<vec<int>>> n_sites_ii_teth_oppo_; 
+		vec<vec<vec<int>>> n_heads_ii_teth_same_; 
+		vec<vec<vec<int>>> n_heads_ii_teth_oppo_; 
 
-		/* Probabilities of encoded events */
+		/* Probabilities of possible KMC events */
 		double p_bind_i_teth_base_;
 		double p_bind_ii_base_;
 		double p_tether_free_; 
@@ -99,14 +87,14 @@ class AssociatedProteinManagement{
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
 		// Second index is actual xlink entry
-		vec<vec<AssociatedProtein*>> bound_i_;
+		vec<vec<AssociatedProtein::Monomer*>> heads_i_;
 		// Second index is [x] or [x_dub]; third index is xlink entry
-		vec<vec<vec<Tubulin*>>> sites_ii_;
-		vec<vec<vec<AssociatedProtein*>>> bound_i_teth_;
+		vec<vec<vec<AssociatedProtein::Monomer*>>> heads_ii_;
+		vec<vec<vec<AssociatedProtein::Monomer*>>> heads_i_teth_;
 		// Second index is [x_dub]; third index is [x]; fourth is entry
 		// e.g., [0][16][2][1] -> 2nd xlink w/ x_dub=16, x=2, & 0 neighbs
-		vec<vec<vec<vec<Tubulin*>>>> sites_ii_teth_oppo_;
-		vec<vec<vec<vec<Tubulin*>>>> sites_ii_teth_same_;	
+		vec<vec<vec<vec<AssociatedProtein::Monomer*>>>> heads_ii_teth_oppo_;
+		vec<vec<vec<vec<AssociatedProtein::Monomer*>>>> heads_ii_teth_same_;
 
 	private:
 		void GenerateXLinks();
@@ -127,15 +115,16 @@ class AssociatedProteinManagement{
 
 		void Update_All();
 		void Update_Free_Teth();
-		void Update_Bound_I();
-		void Update_Bound_I_Teth();
-		void Update_Bound_II_Sites();
-		void Update_Bound_II_Sites_Teth();
 		void Update_Bound_Unteth(); 
+		void Update_Heads_I();
+		void Update_Heads_I_Teth();
+		void Update_Heads_II();
+		void Update_Heads_II_Teth();
 
 		void Run_KMC();
 		void Generate_KMC_List();
-		void KMC_Relay(int kmc_code, int n_neighbs); 
+		void KMC_Relay(monomer target, int code); 
+		void CheckScratchFor(std::string state, int n_neighbs);
 		// Diffusion events
 		void Diffuse_I_Fwd(int n_neighbs);
 		void Diffuse_I_Bck(int n_neighbs);

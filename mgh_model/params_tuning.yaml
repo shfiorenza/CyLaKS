@@ -6,9 +6,9 @@ delta_t: 1e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 2
+  count: 1
   length:
-  - 100
+  - 5000
   - 100
   y_dist: 32
   site_size: 8
@@ -49,11 +49,10 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.00022
-  concentration: 0.6
-  conc_eff_bind: 500
-  k_off_i: 0.132
-  k_off_ii: 0.132
-  diffusion_const_i: 0.1
-  diffusion_const_ii: 0.1
+  c_bulk: 1.1
+  c_eff_bind: 500
+  k_off: 0.132
   r_0: 32
   k_spring: 0.207
+  diffusion_coeff: 0.1
+  interaction_energy: -2.5

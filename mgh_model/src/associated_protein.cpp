@@ -308,6 +308,30 @@ double AssociatedProtein::GetAnchorCoordinate(){
 	}
 }
 
+int AssociatedProtein::GetPRC1NeighbCount(Monomer* head){
+
+	int n_neighbs = 0;
+	Tubulin *site = head->site_;
+	int i_plus = site->mt_->plus_end_;    
+	int i_minus = site->mt_->minus_end_;    
+	int dx = site->mt_->delta_x_; 
+	if(site->index_ == i_plus){    
+		if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)    
+			n_neighbs++;
+	}   
+	else if(site->index_ == i_minus){    
+		if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)    
+			n_neighbs++;
+	}   
+	else{    
+		if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)    
+			n_neighbs++;    
+		if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)    
+			n_neighbs++;    
+	}   
+	return n_neighbs;
+}
+
 void AssociatedProtein::UpdateNeighborSites(){
 	
 	n_neighbor_sites_ = 0;
@@ -538,6 +562,10 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 void AssociatedProtein::UntetherSatellite(){
 
 	if(tethered_ == true){
+		if(heads_active_ == 0){
+			printf("Error in Untether_Satellite() in ASSOC. PROT.\n");
+			exit(1);
+		}
 		// Remove satellite motor from active_ list, replace with last entry
 		int i_last = properties_->kinesin4.n_active_ - 1;
 		Kinesin *last_entry = properties_->kinesin4.active_[i_last];

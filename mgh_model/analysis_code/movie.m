@@ -1,9 +1,9 @@
 clear all;
 % Parameters from sim
-mt_lengths = [5000];
+mt_lengths = [500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-simName = 'coopC_40_431';
+simName = 'test';
 %simName = 'scan_output/slide_4500_15625';
 dur_sec = 60;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));

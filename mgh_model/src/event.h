@@ -1,17 +1,20 @@
 #pragma once
 #include <string>
+#include <variant>
+#include <iostream>
 #include <functional>
 struct system_parameters;
 struct system_properties;
 
-template <typename POP_T, typename MGMT>
+template <typename POP_T, typename SITE_T, typename MGMT_T>
 class Event{
+	public:
+		using Entry = std::variant<POP_T, SITE_T>; 
 	private:
-		MGMT* manager_;
-		std::vector<POP_T> target_pool_;
+		MGMT_T manager_;
+		std::vector<Entry>* target_pool_;
 		std::function<int(int)> ran_int_;
 		std::function<int(double, int)> prob_dist_;
-		std::function<void(POP_T target)> execute_; 
 
 	public:
 		int ID_ = -1;
@@ -23,14 +26,26 @@ class Event{
 		int n_expected_ = 0;
 
 	private:
-		POP_T GetActiveEntry();
+		Entry GetActiveEntry();
 
 	public:
-		Event(MGMT* manager, int ID, int code, std::string name, 
-				std::string target_pop, double p_occur, int* pop_ptr, 
-				std::vector<POP_T> pop_pool, std::function<int(int)> ran_int, 
-				std::function<int(double, int)> prob_dist);
-//		, std::function<void(POP_T tar)> exe);
-		void SampleStatistics();
-		void Execute();
+		Event(){};
+		Event(MGMT_T manager, int ID, int code, std::string name, 
+				std::string target, double p_occur, int* avail, 
+				std::vector<Entry>* pool, std::function<int(int)> ran_int, 
+				std::function<int(double, int)> prob_dist){
+
+			manager_ = manager; ID_ = ID; code_ = code; name_ = name;
+			target_pop_ = target; p_occur_ = p_occur; n_avail_ = avail;
+			target_pool_ = pool; ran_int_ = ran_int; prob_dist_ = prob_dist;
+		};
+		void SampleStatistics(){
+			if(*n_avail_ > 0) n_expected_ = prob_dist_(p_occur_, *n_avail_);
+			else n_expected_ = 0;
+		};
+		void Execute(){
+			manager_->Update_Relay(target_pop_);
+			Entry target = GetActiveEntry();
+			manager_->KMC_Relay(target, code_);
+		};
 };

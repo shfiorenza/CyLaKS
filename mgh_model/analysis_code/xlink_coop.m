@@ -1,6 +1,6 @@
 clear variables;
 %simName = 'coop1';
-mt_length = [1000];
+mt_length = [5000];
 n_mts = length(mt_length);
 n_sites_max = max(mt_length);
 n_steps = 100000000;
@@ -13,9 +13,9 @@ xlink_speciesID = 1;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStructure = '%s_occupancy.file';
 
-exp_concs = [2.1, 10.6, 21.8, 32.45, 43.07];
-exp_scaling = [1, 5.44 ,19.26, 41.24, 89.25];
-xlink_concs = [2.1, 10.6, 21.8, 32.5, 43.1];
+exp_concs = [2.1, 10.6, 21.8];%, 32.45, 43.07];
+exp_scaling = [1, 5.44 ,19.26];%, 41.24, 89.25];
+xlink_concs = [2.1, 10.6, 21.8];%, 32.5, 43.1];
 n_concs = length(xlink_concs);
 norm_intensity = zeros([n_datapoints n_concs]);
 norm_intensity_naught = zeros([n_datapoints n_concs]);
@@ -25,7 +25,7 @@ for i_conc=1:1:n_concs
     if i_run == 1
         simName = sprintf('coopC_0_%i', int32(xlink_concs(i_conc)*10));    
     else 
-        simName = sprintf('coopC_40_%i', int32(xlink_concs(i_conc)*10));
+        simName = sprintf('coopE_120_%i', int32(xlink_concs(i_conc)*10));
     end
     
     fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));

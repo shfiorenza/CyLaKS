@@ -3,7 +3,6 @@
 #include "associated_protein.h"
 
 class Microtubule;
-class Kinesin;
 struct system_parameters;
 struct system_properties;
 

@@ -55,4 +55,4 @@ xlinks:
   r_0: 32
   k_spring: 0.207
   diffusion_coeff: 0.1
-  interaction_energy: -2.5
+  interaction_energy: 2.5

@@ -31,6 +31,9 @@ class AssociatedProtein{
 			AssociatedProtein *xlink_;
 			Tubulin *site_;
 			std::string state_; 
+			int GetPRC1NeighbCount(){
+				return xlink_->GetPRC1NeighbCount(this);
+			};
 		};
 
 		// see kinesin header for description of variables
@@ -55,9 +58,10 @@ class AssociatedProtein{
 		double cosine_;			// of angle of xlink w/ respect to MT
 
 		bool tethered_ = false;
+		bool is_outdated_ = false;
 
 		Monomer head_one_ = {this, nullptr, std::string("unbound")}, 
-			 	head_two_ = {this, nullptr, std::string("unbund")};
+			 	head_two_ = {this, nullptr, std::string("unbound")};
 
 		Kinesin *motor_ = nullptr;
 
@@ -78,6 +82,7 @@ class AssociatedProtein{
 		Monomer* GetActiveHead();
 		Tubulin* GetActiveHeadSite();
 		double GetAnchorCoordinate();
+		int GetPRC1NeighbCount(Monomer* head);
 
 		void UpdateNeighborSites();
 		void UpdateTethNeighborSites();

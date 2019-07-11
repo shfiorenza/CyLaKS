@@ -460,12 +460,7 @@ void AssociatedProteinManagement::SetParameters(){
 
 void AssociatedProteinManagement::InitializeLists(){
 
-	n_scratch_.resize(max_neighbs_ + 1);
-	scratch_.resize(max_neighbs_ + 1);
-	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
-		n_scratch_[n_neighbs] = 0;
-		scratch_[n_neighbs].resize(n_xlinks_);
-	}
+	scratch_.resize(n_xlinks_);
 	// Stats (not a list ok bite me)
 	n_heads_i_.resize(max_neighbs_ + 2);
 	n_heads_ii_.resize(max_neighbs_ + 2);
@@ -565,29 +560,31 @@ void AssociatedProteinManagement::InitializeEvents(){
 		else return 0;
 	};
 	/* ***    Actual instantiation of event objects; format is:    *** */
-	//		  (*management, ID, kmc_code, 'event_name', 'target_pop', 
-	//		    p_occur, *n_avail, *pop_pool, ran_int, p_dist)
+	//		(*management, ID, kmc_code, 'event_name', 'target_pop', 
+	//		  p_occur, *n_avail, *pop_pool, ran_int, p_dist)
 	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		// Number of neighbors, N, always appends target pop. type
 		std::string N = std::to_string(n_neighbs);
 		events_.emplace_back(this, ID++, -10, "diff_i_fwd", "bound_i_" + N, 
 				p_diffuse_i_fwd_[n_neighbs], &n_heads_i_[n_neighbs], 
-				heads_i_[n_neighbs], ran_int, binomial);
+				&heads_i_[n_neighbs], ran_int, binomial);
 		events_.emplace_back(this, ID++, -11, "diff_i_bck", "bound_i_" + N, 
 				p_diffuse_i_bck_[n_neighbs], &n_heads_i_[n_neighbs], 
-				heads_i_[n_neighbs], ran_int, binomial);
+				&heads_i_[n_neighbs], ran_int, binomial);
 		events_.emplace_back(this, ID++, 10, "bind_i", "unocc_" + N, 
 				p_bind_i_[n_neighbs], 
 				&properties_->microtubules.n_unoccupied_xl_[n_neighbs], 
 				&properties_->microtubules.unoccupied_list_xl_[n_neighbs], 
 				ran_int, binomial);
+		// Bind_ii does not use n_neighbors; append w/ "_ALL" instead
 		if(n_neighbs == 0 && parameters_->microtubules.count > 1){
 			events_.emplace_back(this, ID++, 20, "bind_ii", "bound_i_ALL", 
 					p_bind_ii_base_, &n_heads_i_[max_neighbs_+1], 
-					heads_i_[max_neighbs_+1], ran_int, poisson_ii);
+					&heads_i_[max_neighbs_+1], ran_int, poisson_ii);
 		}
 		events_.emplace_back(this, ID++, 30, "unbind_i", "bound_i_" + N, 
 				p_unbind_i_[n_neighbs], &n_heads_i_[n_neighbs], 
-				heads_i_[n_neighbs], ran_int, binomial);
+				&heads_i_[n_neighbs], ran_int, binomial);
 		/*
 		// Only create doubly-bound events if n_MTs > 1
 		if(parameters_->microtubules.count > 1){
@@ -707,62 +704,63 @@ void AssociatedProteinManagement::InitializeEvents(){
 				binomial, &n_free_teth_, p_untether_free_);
 		*/
 	}
-	/* ** Segregate events_ into IDs_by_pop_ ** */
-	int n_pops = 0;					// Total no. of distinct populations
-	int n_entries[events_.size()];	// No. of entries for each pop.
+	/* ** Segregate events_ into IDs_by_pop_ based on target population ** */
+	int n_pops = 0;							// Total no. of distinct pops.
+	int n_entries[events_.size()];			// No. of entries for each pop.
 	// Index of each entry for each population:
 	int entries[events_.size()][2*(2*teth_cutoff_+1)*(dist_cutoff_+1)];
 	// Certain events have their stats corrected SECONDARY to others,
 	// e.g., events that affect all extensions will be corrected after
-	// events that affect a specific extension; 'sec' tracks these 
-	// 'root' refers to the root pop., e.g., teth_i w/o extension info
-	int n_sec_roots = 0;
-	int i_sec_roots[events_.size()];
-	std::string root_pops[events_.size()];
+	// events that affect a specific extension; 'root' refers to the 
+	// root pop., e.g., bound_i_x w/o neighb info (format can vary)
+	int n_roots = 0;
+	int i_roots[events_.size()];
+	std::string roots[events_.size()];
 	for(int i_entry(0); i_entry < events_.size(); i_entry++){
-		std::string tar = events_[i_entry].target_pop_;
+		std::string target_pop = events_[i_entry].target_pop_;
 		// '*' flag at beginning -> both primary and secondary scan
 		// (first over x & n_neighbs, then over x for all n_neighbs)
-		if(tar.substr(0, 1) == "*"){
-			std::cout << tar;
-			printf(" is secondary!\n");
-			std::string base = tar.substr(0, 10);
-			std::string x = tar.substr(tar.length() - 1);
+		if(target_pop.substr(0, 1) == "*"){
+			std::cout << target_pop;
+			printf(" is secondary and primary!\n");
+			// FIXME UPDATE HOW TO GET BASE & X
+			std::string base = target_pop.substr(0, 10);
+			std::string x = target_pop.substr(target_pop.length() - 1);
 			std::string root = base + x;
 			std::cout << root;
-			printf(" is its root!\n");
-			bool counted = false;
-			for(int i_root(0); i_root < n_sec_roots; i_root++){
-				std::string pop = events_[i_sec_roots[i_root]].target_pop_;
-				if(pop.substr(0, 1) == "*" 
-				&& pop.substr(pop.length() - 1) == x)
-					counted = true; 
+			printf(" is its root!");
+			// Check to see if we have come across this root pop. before
+			bool new_root(true);
+			for(int i_record(0); i_record < n_roots; i_record++){
+				std::string recorded = roots[i_roots[i_record]];
+				if(root == recorded) new_root = false;
 			}    
-			if(!counted){
-				root_pops[n_sec_roots] = root; 
-				i_sec_roots[n_sec_roots] = events_[i_entry].ID_;
-				n_sec_roots++;
-			}
+			if(new_root){
+				printf(" - NEW!\n");
+				roots[n_roots] = root; 
+				i_roots[n_roots] = events_[i_entry].ID_;
+				n_roots++;
+			}else printf("\n");
 		}
 		// 'ALL' flag at end -> secondary scan only
-		if(tar.substr(tar.length() - 3) == "ALL"){
-			std::cout << tar;
-			printf(" is secondary!\n");
-			std::string root = tar.substr(0, tar.length() - 4);
+		if(target_pop.substr(target_pop.length() - 3) == "ALL"){
+			std::cout << target_pop;
+			printf(" is secondary! \n");
+			std::string root = target_pop.substr(0, target_pop.length() - 4);
 			std::cout << root;
 			printf(" is its root!\n");
-			root_pops[n_sec_roots] = root; 
-			i_sec_roots[n_sec_roots] = events_[i_entry].ID_;
-			n_sec_roots++;
+			roots[n_roots] = root; 
+			i_roots[n_roots] = events_[i_entry].ID_;
+			n_roots++;
 		}
-		// No 'ALL' flag -> primary scan; compare to recorded pops.
+		// No 'ALL' flag -> primary scan only; compare entry to record
 		else{
 			bool new_pop(true); 	// Assume population type is new
-			int pop_index(0); 		// Index of population in n_entries
+			int pop_index(0); 		// 1st index of this pop. in entries arry
 			for(int i_pop(0); i_pop < n_pops; i_pop++){
-				std::string rec = events_[entries[i_pop][0]].target_pop_;
+				std::string recorded = events_[entries[i_pop][0]].target_pop_;
 				// If type matches a recorded type; pop. isn't new
-				if(tar == rec){
+				if(target_pop == recorded){
 					new_pop = false;
 					pop_index = i_pop;
 				}
@@ -773,7 +771,7 @@ void AssociatedProteinManagement::InitializeEvents(){
 				n_entries[n_pops] = 1; 
 				n_pops++;
 			}
-			// Otherwise, add entry to row of already-seen pop.
+			// Otherwise, add entry to row of already-recorded pop.
 			else{
 				int entry_no = n_entries[pop_index];
 				entries[pop_index][entry_no] = events_[i_entry].ID_;
@@ -782,36 +780,39 @@ void AssociatedProteinManagement::InitializeEvents(){
 		}
 	}
 	// Scan through primary pops. & place them into IDs_by_pop_
-	IDs_by_pop_.resize(n_pops + n_sec_roots);
-	// As we transfer primary pops; tally up all secondary events
-	int n_sec_entries[n_sec_roots];
-	for(int i_root(0); i_root < n_sec_roots; i_root++)
+	IDs_by_pop_.resize(n_pops + n_roots);
+	// As we transfer primary pops, tally up all secondary events
+	int n_sec_entries[n_roots];
+	for(int i_root(0); i_root < n_roots; i_root++)
 		n_sec_entries[i_root] = 0;
-	int sec_entries[n_sec_roots][2*(2*teth_cutoff_+1)*(dist_cutoff_+1)];
+	int sec_entries[n_roots][2*(2*teth_cutoff_+1)*(dist_cutoff_+1)];
 	// 1st index of IDs_by_pop_ corresponds to population type
 	for(int i_pop(0); i_pop < n_pops; i_pop++){
-		std::string target = events_[entries[i_pop][0]].target_pop_;
+		std::string target_pop = events_[entries[i_pop][0]].target_pop_;
 		printf("KMC Pop #%i - ", i_pop);
-		std::cout << target;
+		std::cout << target_pop;
 		printf(":");
-		// 2nd index corresponds to event entries which target that pop.
+		// 2nd index corresponds to entry no. of event which target that pop.
 		IDs_by_pop_[i_pop].resize(n_entries[i_pop]);
 		for(int i_entry(0); i_entry < n_entries[i_pop]; i_entry++){
 			IDs_by_pop_[i_pop][i_entry] = entries[i_pop][i_entry];
 			printf(" %i,", entries[i_pop][i_entry]);
 		}
 		printf("\n");
-		// Check to see if pop. root matches any secondary-scan pops. 
-		for(int i_root(0); i_root < n_sec_roots; i_root++){
-			std::string pop_root = root_pops[i_root];
-			std::string tar_root = target.substr(0, pop_root.length());
+		// Check to see if this population matches any secondary-scan roots
+		for(int i_root(0); i_root < n_roots; i_root++){
+			std::string recorded_root = roots[i_root];
+			//FIXME make it so root_x is format in init_Events();
+			std::string root = target_pop.substr(0, recorded_root.length());
+			/*
 			if(target.substr(0, 1) == "*"){
 				std::string base = target.substr(0, 10);
 				std::string x = target.substr(target.length() - 1);
 				tar_root = base + x;
 			}
-			// If it does, add all entries of this pop. to sec_entries
-			if(tar_root == pop_root){
+			*/
+			// If it does match, add all entries of this pop. to sec_entries
+			if(root == recorded_root){
 				for(int i_entry(0); i_entry < n_entries[i_pop]; i_entry++){
 //					printf("%i\n", n_sec_entries[i_root]);
 					sec_entries[i_root][n_sec_entries[i_root]] 
@@ -821,20 +822,17 @@ void AssociatedProteinManagement::InitializeEvents(){
 			}
 		}
 	}
-	// Scan through secondary pops. & place them into IDs_by_pop_
-	for(int i_root(0); i_root < n_sec_roots; i_root++){
-		std::string label = events_[i_sec_roots[i_root]].target_pop_;
+	// Finally, scan through secondary pops. & place them into IDs_by_pop_
+	for(int i_root(0); i_root < n_roots; i_root++){
+		std::string label = events_[i_roots[i_root]].target_pop_;
 		printf("KMC SEC ROOT #%i - ", i_root);
 		std::cout << label;
 		printf(":");
-		bool coupled = false;
-		if(label.substr(0, 1) == "*") coupled = true;
+		// Index is offset in IDs_by_pop_ since these come after 1st pops
 		int i_pop = n_pops + i_root;
 		IDs_by_pop_[i_pop].resize(n_sec_entries[i_root]);
 		for(int i_entry(0); i_entry < n_sec_entries[i_root]; i_entry++){
 			IDs_by_pop_[i_pop][i_entry] = sec_entries[i_root][i_entry];
-			// Make coupled pops. (e.g., sites_ii) neg. to distinguish
-			if(coupled) IDs_by_pop_[i_pop][i_entry] *= -1;
 			printf(" %i,", IDs_by_pop_[i_pop][i_entry]);
 		}
 		printf("\n");
@@ -881,7 +879,7 @@ double AssociatedProteinManagement::GetWeight_Bind_II(){
 	// Sum over all single-bound xlinks
 	for(int i_xlink = 0; i_xlink < n_heads_i_[max_neighbs_+1]; i_xlink++){
 		AssociatedProtein *xlink 
-			= heads_i_[max_neighbs_+1][i_xlink]->xlink_;
+			= std::get<POP_T*>(heads_i_[max_neighbs_+1][i_xlink])->xlink_;
 		xlink->UpdateNeighborSites();
 		// Get weight of every possible orientation w/ neighbors
 		int n_neighbors = xlink->n_neighbor_sites_;
@@ -934,6 +932,37 @@ double AssociatedProteinManagement::GetWeight_Bind_II_Teth(){
 		}
 	}
 	return weights_summed;
+}
+
+AssociatedProtein::Monomer* AssociatedProteinManagement::CheckScratchFor(
+		std::string pop){
+
+//	printf("BOOYA\n");
+//	std::cout << pop << std::endl;
+	POP_T* head(nullptr);
+	for(int i_entry(0); i_entry < n_scratched_; i_entry++){
+//		std::cout << scratch_[i_entry]->state_ << std::endl;
+		if(scratch_[i_entry]->state_ == pop){
+			head = scratch_[i_entry];
+			break;
+		}
+	}
+	return head;
+}
+
+void AssociatedProteinManagement::Update_Relay(std::string pop){
+
+	// Root is pop name sans n_neighbs or _ALL suffix
+	std::string root;
+	if(pop.substr(pop.length() - 4) == "_ALL")
+		root = pop.substr(0, pop.length() - 4);
+	else
+   		root = pop.substr(0, pop.length() - 2);
+//	printf("ROOT IS ");
+//	std::cout << root << std::endl;
+	if(root == "bound_i") Update_Heads_I();
+	else if(root == "bound_ii") Update_Heads_II(); 
+	else if(root == "unnoc") properties_->microtubules.UpdateUnoccupied();
 }
 
 void AssociatedProteinManagement::Update_All(){
@@ -1185,11 +1214,13 @@ void AssociatedProteinManagement::Update_Bound_Unteth(){
 void AssociatedProteinManagement::Run_KMC(){
 	
 	
+	if(parameters_->xlinks.c_bulk == 0) return;
 	sys_time start1 = sys_clock::now();
-	if(parameters_->xlinks.c_bulk > 0) Generate_KMC_List();
-	else return;
+	Refresh_Population_Labels();
+	Generate_Execution_Sequence();
 	sys_time start2 = sys_clock::now();
 //	printf("Start of xlink KMC cycle\n");
+//	if(IDs_to_exe_.size() > 0) printf("%lu EVENTS\n", IDs_to_exe_.size());
 	for(int i_event = 0; i_event < IDs_to_exe_.size(); i_event++)
 		events_[IDs_to_exe_[i_event]].Execute();
 	sys_time finish = sys_clock::now();
@@ -1199,12 +1230,68 @@ void AssociatedProteinManagement::Run_KMC(){
 	properties_->wallace.t_xlinks_kmc_[3] += elapsed.count();
 }
 
-void AssociatedProteinManagement::Generate_KMC_List(){
+void AssociatedProteinManagement::Refresh_Population_Labels(){
 
-	// Scan through all events & calculate number expected to occur
+	n_scratched_ = 0;
+	for(int i_entry(0); i_entry < n_active_; i_entry++){
+		AssociatedProtein *entry = active_[i_entry];
+		if(entry->is_outdated_){
+			entry->is_outdated_ = false; 
+			std::string state;
+			std::string root, teth, neighbs;
+			int n_neighbs;
+			if(entry->heads_active_ == 0){
+				// If tethered, automatically classified as "free_teth"
+				if(entry->tethered_) state = std::string("free_teth");
+				// Otherwise, homeboy was iced and needs to be removed
+				else state = std::string("unbound");
+				entry->head_one_.state_ = state;
+				entry->head_two_.state_ = state;
+			}
+			else if(entry->heads_active_ == 1){
+				root = std::string("bound_i");
+				if(entry->tethered_) teth = std::string("_teth");
+				else teth = std::string("");
+				POP_T* active_head = entry->GetActiveHead();
+				n_neighbs = active_head->GetPRC1NeighbCount();
+				neighbs = std::string("_") + std::to_string(n_neighbs);
+				state = root + teth + neighbs; 
+				if(active_head == &entry->head_one_){
+					entry->head_one_.state_ = state;
+					entry->head_two_.state_ = std::string("docked");
+				}
+				else{
+					entry->head_one_.state_ = std::string("docked");
+					entry->head_two_.state_ = state;
+				}
+			}
+			else if(entry->heads_active_ == 2){
+				root = std::string("bound_ii");
+				if(entry->tethered_) teth = std::string("_teth");
+				else teth = std::string("");
+				// Head one
+				n_neighbs = entry->head_one_.GetPRC1NeighbCount();
+				neighbs = std::string("_") + std::to_string(n_neighbs);
+				state = root + teth + neighbs;
+				entry->head_one_.state_ = state;
+				// Head two
+				n_neighbs = entry->head_two_.GetPRC1NeighbCount();
+				neighbs = std::string("_") + std::to_string(n_neighbs);
+				entry->head_two_.state_ = state;
+			}
+//			printf("STATE IS ");
+//			std::cout << state << std::endl;
+		}
+	}
+}
+
+void AssociatedProteinManagement::Generate_Execution_Sequence(){
+
 	sys_time start = sys_clock::now();
+	// Update all population lists
 	Update_All();
 	int n_events_tot = 0;
+	// Scan through all events & get expected number of occurrences 
 	for(int i_event(0); i_event < events_.size(); i_event++){
 		events_[i_event].SampleStatistics();
 		n_events_tot += events_[i_event].n_expected_;
@@ -1212,42 +1299,37 @@ void AssociatedProteinManagement::Generate_KMC_List(){
 	sys_time finish = sys_clock::now();
 	auto elapsed = std::chrono::duration_cast<t_unit>(finish - start);
 	properties_->wallace.t_xlinks_kmc_[1] += elapsed.count();
-	// Scan through all target populations & ensure none become negative 
+	// Scan through all target populations & ensure none will become negative 
 	start = sys_clock::now();
 	for(int i_pop(0); i_pop < IDs_by_pop_.size(); i_pop++){
 		int n_competitors = IDs_by_pop_[i_pop].size();
 		if(n_competitors > 1){
-			bool coupled(false);
 			int n_events_loc = 0;
 			double p_tot = 0;
 			for(int i_entry(0); i_entry < n_competitors; i_entry++){
-				int i_event = IDs_by_pop_[i_pop][i_entry];
-				if(i_event < 0){
-					coupled = true;
-					i_event = abs(i_event);
-				}
-				n_events_loc += events_[i_event].n_expected_;
-				p_tot += (events_[i_event].n_expected_ 
-						* events_[i_event].p_occur_); 
+				int i_competitor = IDs_by_pop_[i_pop][i_entry];
+				n_events_loc += events_[i_competitor].n_expected_;
+				p_tot += (events_[i_competitor].n_expected_ 
+						* events_[i_competitor].p_occur_); 
+				printf("p_tot is %g\n", p_tot);
 			}
-			int n_avail_loc 
-				= *events_[abs(IDs_by_pop_[i_pop][0])].n_avail_;
-//			if(coupled)
-//			if(events_[abs(IDs_by_pop_[i_pop][0])].n_neighbs_ == 1) 
-//				n_avail_loc /= 2; 
+			// By convention, always use first entry for total avail pop
+			// (Ensure emplace_back pattern in Init_Events() matches this)
+			int n_avail_loc = *events_[IDs_by_pop_[i_pop][0]].n_avail_;
 			while(n_events_loc > n_avail_loc){
+				printf("CORRECTION: %i > %i !!\n", n_events_loc, n_avail_loc);
 				double p_cum = 0;
 				double ran = properties_->gsl.GetRanProb();
 				for(int i_entry(0); i_entry < n_competitors; i_entry++){
-					int i_event = abs(IDs_by_pop_[i_pop][i_entry]);
-					p_cum += (events_[i_event].n_expected_
-							* events_[i_event].p_occur_) / p_tot;
+					int i_competitor = abs(IDs_by_pop_[i_pop][i_entry]);
+					p_cum += (events_[i_competitor].n_expected_
+							* events_[i_competitor].p_occur_) / p_tot;
 					if(p_cum >= ran
-					&& events_[i_event].n_expected_ > 0){
-						events_[i_event].n_expected_--;
+					&& events_[i_competitor].n_expected_ > 0){
+						events_[i_competitor].n_expected_--;
 						n_events_tot--;
 						n_events_loc--;
-						p_tot -= events_[i_event].p_occur_;
+						p_tot -= events_[i_competitor].p_occur_;
 						break;
 					}
 				}
@@ -1274,8 +1356,10 @@ void AssociatedProteinManagement::Generate_KMC_List(){
 			printf("NOT SURE in xlink GEN KMC \n");
 			exit(1);
 		}
+		// Shuffle for some guuuud random exe order
 		if(n_events_tot > 1) gsl_ran_shuffle(properties_->gsl.rng_, 
-				pre_array, n_events_tot, sizeof(int));
+							 pre_array, n_events_tot, sizeof(int));
+		// Transfer info to permanent vector owned by MGMT
 		IDs_to_exe_.resize(n_events_tot);
 		for(int i_entry(0); i_entry < n_events_tot; i_entry++){
 			IDs_to_exe_[i_entry] = pre_array[i_entry];
@@ -1287,30 +1371,37 @@ void AssociatedProteinManagement::Generate_KMC_List(){
 	properties_->wallace.t_xlinks_kmc_[2] += elapsed.count();
 }
 
-void AssociatedProteinManagement::KMC_Relay(monomer target, int code){
+void AssociatedProteinManagement::KMC_Relay(Entry target, int code){
 
-	int x, x_dub; 
+	POP_T *head(nullptr);
+	SITE_T *site(nullptr);
+	try{
+		head = std::get<POP_T*>(target);
+	}
+	catch(...){
+		site = std::get<SITE_T*>(target);
+	}
+	if(head == nullptr && site == nullptr){
+		printf("What the FUCK!! RUN TO THE CENTER!!! (...kmc_relay)\n");
+		exit(1);
+	}
 	bool diffusion_event(false);
 	// Diffusion events are encoded as negative values
-	if(kmc_code < 0){
+	if(code < 0){
 		diffusion_event = true;
-		kmc_code = abs(kmc_code);
-	}
-	if(kmc_code > 100){
-		x = kmc_code % 10; 
-		x_dub = (kmc_code % 1000 - x) / 10;
-		kmc_code = (int)(kmc_code / 1000);
+		code = abs(code);
 	}
 	if(diffusion_event){
-		switch(kmc_code){
+		switch(code){
 			case 10:
 //				printf("unteth_i step fwd\n");
-				Diffuse_I_Fwd(n_neighbs);
+				Diffuse_I(head, 1);
 				break;
 			case 11:
 //				printf("unteth_i step bck\n");
-				Diffuse_I_Bck(n_neighbs);
+				Diffuse_I(head, -1);
 				break;
+			/*
 			case 20:
 //				printf("unteth_ii step to rest (%i)[%i avail]\n", 
 //					x_dist, n_heads_ii_[x_dist]);
@@ -1347,14 +1438,16 @@ void AssociatedProteinManagement::KMC_Relay(monomer target, int code){
 //					x_dub, x);
 				Diffuse_II_Fr_Self_To_Teth(n_neighbs, x_dub, x);
 				break;
+			*/
 		}
 	}
 	else{
-		switch(kmc_code){
+		switch(code){
 			case 10: 
 //				printf("xlink bound stage 1\n");
-				Bind_I(n_neighbs);
+				Bind_I(site);
 				break;
+			/*
 			case 11:
 //				printf("xlink TETH bound stage 1\n");
 				Bind_I_Teth();
@@ -1367,10 +1460,12 @@ void AssociatedProteinManagement::KMC_Relay(monomer target, int code){
 //				printf("bind ii teth xlink\n");
 				Bind_II_Teth();
 				break;
+			*/
 			case 30: 
 //				printf("xlink fully unbound\n");
-				Unbind_I(n_neighbs);
+				Unbind_I(head);
 				break;
+			/*
 			case 31:
 //				printf("unbind i teth xlink\n");
 				Unbind_I_Teth(n_neighbs, x_dub);
@@ -1395,128 +1490,79 @@ void AssociatedProteinManagement::KMC_Relay(monomer target, int code){
 //				printf("xlink untethered free\n");
 				Untether_Free();
 				break;
+			*/
 		}
 	}
 }
 
-void AssociatedProteinManagement::Diffuse_I_Fwd(int n_neighbs){
+// Remnant of when I attempted to template the above
+/*
+template void AssociatedProteinManagement::
+	KMC_Relay<Tubulin*>(Tubulin*, int);
+template void AssociatedProteinManagement::
+	KMC_Relay<AssociatedProtein::Monomer*>(Monomer*, int);
+*/
 
-	Update_Heads_I();
-	int n_bound = n_heads_i_[n_neighbs];
-	if(n_bound > 0){
-		int i_entry = properties_->gsl.GetRanInt(n_bound);
-		AssociatedProtein::Monomer *head = heads_i_[n_neighbs][i_entry];
-		Tubulin *site = head->site_;
-		// cant step off them MTs
-		if(site->index_ != site->mt_->n_sites_ - 1){
-			Tubulin *old_site = site;
-			Tubulin *new_site = &site->mt_->lattice_[site->index_ + 1];
-			if(!new_site->occupied_){
-				old_site->xlink_head_ = nullptr;
-				old_site->occupied_ = false;
-				head->site_ = new_site;
-				new_site->xlink_head_ = head;
-				new_site->occupied_ = true;
-				scratch_[n_neighbs][n_scratch_[n_neighbs]] = head;
-				n_scratch_[n_neighbs]++;
-				if(n_neighbs == 1){
-					scratch_[n_neighbs][n_scratch_[n_neighbs]] 
-						= site->mt_->lattice_[site->index_-1].xlink_head_;
-					n_scratch_[n_neighbs]++;
-				}
-			}
+void AssociatedProteinManagement::SaveToScratch(POP_T* head){
+
+	head->xlink_->is_outdated_ = true;
+	scratch_[n_scratched_] = head;
+	n_scratched_++; 
+	int n_neighbs = head->GetPRC1NeighbCount();
+	if(n_neighbs == 1){
+		POP_T *neighb;
+		int i_site = head->site_->index_;
+		int n_sites = head->site_->mt_->n_sites_;
+		if(i_site == 0){
+			neighb = head->site_->mt_->lattice_[i_site + 1].xlink_head_;
 		}
+		else if(i_site == n_sites - 1){
+			neighb = head->site_->mt_->lattice_[i_site - 1].xlink_head_;
+		}
+		else if(head->site_->mt_->lattice_[i_site+1].xlink_head_ != nullptr){
+			neighb = head->site_->mt_->lattice_[i_site + 1].xlink_head_;
+		}
+		else if(head->site_->mt_->lattice_[i_site-1].xlink_head_ != nullptr){
+			neighb = head->site_->mt_->lattice_[i_site - 1].xlink_head_;
+		}
+		neighb->xlink_->is_outdated_ = true;
+		scratch_[n_scratched_] = neighb;
+		n_scratched_++;
 	}
-	else if(n_scratch_[n_neighbs] > 0){
-		AssociatedProtein::Monomer *head(nullptr);
-		for(int i_scratch(0); i_scratch<n_scratch_[n_neighbs]; i_scratch++){
-			head = scratch_[n_neighbs][i_scratch];
-			if(head->state_ == "bound_i") break;
-			else head = nullptr;
-		}
-		if(head != nullptr){
-			Tubulin *site = head->site_;
-			// cant step off them MTs
-			if(site->index_ != site->mt_->n_sites_ - 1){
-				Tubulin *old_site = site;
-				Tubulin *new_site = &site->mt_->lattice_[site->index_ + 1];
-				if(!new_site->occupied_){
-					old_site->xlink_head_ = nullptr;
-					old_site->occupied_ = false;
-					head->site_ = new_site;
-					new_site->xlink_head_ = head;
-					new_site->occupied_ = true;
-				}
-			}
-		}
-		else{
-			printf("come on kid we cant step_i_fwd TWOO\n");
-		}
-	}
-	else{
-		printf("come on kid we cant step_i_fwd\n");
-//		exit(1);
+	else if(n_neighbs == 2){
+		POP_T *neighb_one, *neighb_two;
+		int i_site = head->site_->index_;
+		neighb_one->xlink_->is_outdated_ = true;
+		neighb_one = head->site_->mt_->lattice_[i_site + 1].xlink_head_;
+		scratch_[n_scratched_] = neighb_one;
+		n_scratched_++;
+		neighb_two->xlink_->is_outdated_ = true;
+		neighb_two = head->site_->mt_->lattice_[i_site - 1].xlink_head_;
+		scratch_[n_scratched_] = neighb_two;
+		n_scratched_++;
 	}
 }
 
-void AssociatedProteinManagement::Diffuse_I_Bck(int n_neighbs){
+void AssociatedProteinManagement::Diffuse_I(POP_T* head, int dir){
 
-	xlink_monomer head = GetActiveHead("bound_i", n_neighbs);
-	Update_Heads_I();
-	int n_bound = n_heads_i_[n_neighbs];
-	if(n_bound > 0){
-		int i_entry = properties_->gsl.GetRanInt(n_bound);
-		AssociatedProtein::Monomer* head = heads_i_[n_neighbs][i_entry];
-		Tubulin* site = head->site_;
-		// can't step off them MTs
-		if(site->index_ != 0){
-			Tubulin *old_site = site;
-			Tubulin *new_site = &site->mt_->lattice_[site->index_ - 1];
-			if(new_site->occupied_ == false){
-				old_site->xlink_head_ = nullptr;
-				old_site->occupied_ = false;
-				head->site_ = new_site;
-				new_site->xlink_head_ = head;
-				new_site->occupied_ = true;
-				scratch_[n_neighbs][n_scratch_[n_neighbs]] = head;
-				n_scratch_[n_neighbs]++;
-				if(n_neighbs == 1){
-					scratch_[n_neighbs][n_scratch_[n_neighbs]] 
-						= site->mt_->lattice_[site->index_+1].xlink_head_;
-					n_scratch_[n_neighbs]++;
-				}
-			}
+	SaveToScratch(head);
+	// Get occupied site
+	Tubulin *site = head->site_;
+	// Cannot step off them MTs
+	if(!(site->index_ == 0 && dir == -1)
+	&& !(site->index_ == site->mt_->n_sites_ - 1 && dir == 1)){
+		Tubulin *old_site = site;
+		Tubulin *new_site = &site->mt_->lattice_[site->index_ + dir];
+		if(!new_site->occupied_){
+			old_site->xlink_head_ = nullptr;
+			old_site->occupied_ = false;
+			head->site_ = new_site;
+			new_site->xlink_head_ = head;
+			new_site->occupied_ = true;
+			// Add this xlink to scratch_
+			scratch_[n_scratched_] = head; 
+			n_scratched_++;
 		}
-	}
-	else if(n_scratch_[n_neighbs] > 0){
-		AssociatedProtein::Monomer *head(nullptr);
-		for(int i_scratch(0); i_scratch<n_scratch_[n_neighbs]; i_scratch++){
-			head = scratch_[n_neighbs][i_scratch];
-			if(head->state_ == "bound_i") break;
-			else head = nullptr;
-		}
-		if(head != nullptr){
-			Tubulin* site = head->site_;
-			// can't step off them MTs
-			if(site->index_ != 0){
-				Tubulin *old_site = site;
-				Tubulin *new_site = &site->mt_->lattice_[site->index_ - 1];
-				if(new_site->occupied_ == false){
-					old_site->xlink_head_ = nullptr;
-					old_site->occupied_ = false;
-					head->site_ = new_site;
-					new_site->xlink_head_ = head;
-					new_site->occupied_ = true;
-				}
-			}
-		}
-		else{
-			printf("come on kid we cant step_i_bck TWOO\n");
-		}
-	}
-	else{
-		printf("come on kid we cant step_i_bck\n");
-//		exit(1);
 	}
 }
 
@@ -1839,36 +1885,22 @@ void AssociatedProteinManagement::Diffuse_II_Fr_Self_To_Teth(
 	*/
 }
 
-void AssociatedProteinManagement::Bind_I(int n_neighbs){
+void AssociatedProteinManagement::Bind_I(SITE_T* site){
 
-	// Make sure unoccupied sites are available
-	properties_->microtubules.UpdateUnoccupied();
-	if(properties_->microtubules.n_unoccupied_xl_[n_neighbs]> 0){
-		// Randomly choose an unbound xlink
-		AssociatedProtein *xlink = GetFreeXlink();
-		if(xlink->tethered_ == true){
-			printf("error in xlink bind_i\n");
-			exit(1);
-		}
-		// Get random unoccupied site
-		Tubulin *site
-			= properties_->microtubules.GetUnoccupiedSite(n_neighbs);
-		// Place xlink onto site
-		site->xlink_head_ = &xlink->head_one_;
-		site->occupied_ = true;
-		// Update xlink details
-		xlink->heads_active_++;
-		xlink->head_one_.site_ = site; 
-		xlink->head_one_.state_ = std::string("bound_i");
-		// Update active_ list
-		active_[n_active_] = xlink;
-		xlink->active_index_ = n_active_;
-		n_active_++;
-	}
-	else{
-		printf("Error in xlink Bind_I: no unoccupied sites\n");
-//		exit(1);
-	}
+	// Randomly choose a free xlink
+	AssociatedProtein *xlink = GetFreeXlink();
+	// Place xlink onto site
+	site->xlink_head_ = &xlink->head_one_;
+	site->occupied_ = true;
+	// Update xlink details
+	xlink->heads_active_++;
+	xlink->head_one_.site_ = site; 
+	// Add this xlink to active_ list
+	active_[n_active_] = xlink;
+	xlink->active_index_ = n_active_;
+	n_active_++;
+	// For binding (and only binding), save to scratch AFTER event
+	SaveToScratch(&xlink->head_one_);
 }
 
 void AssociatedProteinManagement::Bind_II(){
@@ -1924,85 +1956,27 @@ void AssociatedProteinManagement::Bind_II(){
 	*/
 }
 
-void AssociatedProteinManagement::Unbind_I(int n_neighbs){
+void AssociatedProteinManagement::Unbind_I(POP_T* head){
 
-	Update_Heads_I();
-	int n_bound = n_heads_i_[n_neighbs];
-	if(n_bound > 0){
-		// Randomly pick a singly-bound xlink
-		int i_entry = properties_->gsl.GetRanInt(n_bound);
-		AssociatedProtein::Monomer *head = heads_i_[n_neighbs][i_entry];
-		Tubulin *site = head->site_;
-		// Remove xlink from site
-		site->xlink_head_ = nullptr;
-		site->occupied_ = false;
-		// Update xlink details
-		head->xlink_->heads_active_--;
-		head->state_ = std::string("unbound");
-		head->site_ = nullptr;
-		// If this xlink has a satellite motor, untether it
-		if(head->xlink_->tethered_ == true){ 
-			if(head->xlink_->motor_->heads_active_ == 0){
-				head->xlink_->UntetherSatellite();
-			}
-			else{
-				printf("error in xlink unbind_i\n");
-				exit(1);
-			}
-		}
-		// Remove this xlink from active_, replace with last entry
-		AssociatedProtein *last_entry = active_[n_active_ - 1];
-		int this_index = head->xlink_->active_index_; 
-		if(this_index != n_active_ - 1){
-			active_[this_index] = last_entry; 
-			last_entry->active_index_ = this_index; 
-		}
-		n_active_--;
+	SaveToScratch(head);
+	// Get site
+	Tubulin *site = head->site_; 
+	// Remove xlink from site
+	site->xlink_head_ = nullptr;
+	site->occupied_ = false;
+	// Update xlink details
+	head->xlink_->heads_active_--;
+	head->site_ = nullptr;
+	// If this xlink has a satellite motor, untether it
+	if(head->xlink_->tethered_ == true) head->xlink_->UntetherSatellite();
+	// Remove this xlink from active_, replace with last entry
+	AssociatedProtein *last_entry = active_[n_active_ - 1];
+	int this_index = head->xlink_->active_index_; 
+	if(this_index != n_active_ - 1){
+		active_[this_index] = last_entry; 
+		last_entry->active_index_ = this_index; 
 	}
-	else if(n_scratch_[n_neighbs] > 0){
-		AssociatedProtein::Monomer *head(nullptr);
-		for(int i_scratch(0); i_scratch<n_scratch_[n_neighbs]; i_scratch++){
-			head = scratch_[n_neighbs][i_scratch];
-			if(head->state_ == "bound_i") break;
-			else head = nullptr;
-		}
-		if(head != nullptr){
-			Tubulin *site = head->site_;
-			// Remove xlink from site
-			site->xlink_head_ = nullptr;
-			site->occupied_ = false;
-			// Update xlink details
-			head->xlink_->heads_active_--;
-			head->state_ = std::string("unbound");
-			head->site_ = nullptr;
-			// If this xlink has a satellite motor, untether it
-			if(head->xlink_->tethered_ == true){ 
-				if(head->xlink_->motor_->heads_active_ == 0){
-					head->xlink_->UntetherSatellite();
-				}
-				else{
-					printf("error in xlink unbind_i\n");
-					exit(1);
-				}
-			}
-			// Remove this xlink from active_, replace with last entry
-			AssociatedProtein *last_entry = active_[n_active_ - 1];
-			int this_index = head->xlink_->active_index_; 
-			if(this_index != n_active_ - 1){
-				active_[this_index] = last_entry; 
-				last_entry->active_index_ = this_index; 
-			}
-			n_active_--;
-		}
-		else{
-			printf("Error in Unbind: no bound xlinks TWO\n");
-			//		exit(1);
-		}
-	}
-	else{
-		printf("Error in Unbind: no bound xlinks\n");
-//		exit(1);
-	}
+	n_active_--;
 }
 
 void AssociatedProteinManagement::Unbind_II(int n_neighbs, int x){
@@ -2307,9 +2281,11 @@ void AssociatedProteinManagement::Unbind_II_Fr_Teth(
 
 void AssociatedProteinManagement::Tether_Free(){
 
+	/*
 	int n_motors_unteth = properties_->kinesin4.GetNumBoundUntethered();
 	if(n_motors_unteth > 0){
-		AssociatedProtein *xlink = GetFreeXlink();
+		POP_T* head = GetFreeEntry();
+		AssociatedProtein *xlink = head->xlink_;
 		Kinesin *motor = properties_->kinesin4.GetBoundUntetheredMotor();
 		// Update xlink and motor details
 		xlink->motor_ = motor;
@@ -2324,10 +2300,12 @@ void AssociatedProteinManagement::Tether_Free(){
 	else{
 		printf("Error in XLINK Tether_free: no untethered bound motors\n");
 	}
+	*/
 }
 
 void AssociatedProteinManagement::Untether_Free(){
 
+	/*
 	Update_Free_Teth();
 	if(n_free_teth_ > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_free_teth_);
@@ -2350,4 +2328,5 @@ void AssociatedProteinManagement::Untether_Free(){
 	else{
 		printf("Error in XLINK Untether_free: no free tethered xlinks\n");
 	}
+	*/
 }

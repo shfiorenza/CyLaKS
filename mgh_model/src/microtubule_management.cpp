@@ -155,7 +155,8 @@ Tubulin* MicrotubuleManagement::GetUnoccupiedSite(int n_neighbs){
 	int n_unoccupied = n_unoccupied_xl_[n_neighbs];
 	if(n_unoccupied > 0){
 		int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
-		Tubulin *site = unoccupied_list_xl_[n_neighbs][i_entry];
+		Tubulin *site 
+			= std::get<Tubulin*>(unoccupied_list_xl_[n_neighbs][i_entry]);
 		UnoccupiedCheck(site);
 		return site;
 	}

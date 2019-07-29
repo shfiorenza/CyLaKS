@@ -6,13 +6,13 @@
 struct system_parameters;
 struct system_properties;
 
-template <typename POP_T, typename SITE_T, typename MGMT_T>
+class AssociatedProteinManagement;
+
+template <typename MGMT_T, typename ENTRY_T>
 class Event{
-	public:
-		using Entry = std::variant<POP_T, SITE_T>; 
 	private:
 		MGMT_T manager_;
-		std::vector<Entry>* target_pool_;
+		std::vector<ENTRY_T>* target_pool_;
 		std::function<int(int)> ran_int_;
 		std::function<int(double, int)> prob_dist_;
 
@@ -26,13 +26,18 @@ class Event{
 		int n_expected_ = 0;
 
 	private:
-		Entry GetActiveEntry();
+		ENTRY_T GetActiveEntry(){
+			ENTRY_T target;
+			if(*n_avail_ > 0) target = target_pool_->at(ran_int_(*n_avail_));
+			else target = manager_->CheckScratchFor(target_pop_);
+			return target;
+		};
 
 	public:
 		Event(){};
 		Event(MGMT_T manager, int ID, int code, std::string name, 
 				std::string target, double p_occur, int* avail, 
-				std::vector<Entry>* pool, std::function<int(int)> ran_int, 
+				std::vector<ENTRY_T>* pool, std::function<int(int)> ran_int, 
 				std::function<int(double, int)> prob_dist){
 
 			manager_ = manager; ID_ = ID; code_ = code; name_ = name;
@@ -44,8 +49,8 @@ class Event{
 			else n_expected_ = 0;
 		};
 		void Execute(){
-			manager_->Update_Relay(target_pop_);
-			Entry target = GetActiveEntry();
-			manager_->KMC_Relay(target, code_);
+			manager_->Update_List_Relay(name_, target_pop_);
+			ENTRY_T target = GetActiveEntry();
+			manager_->Execute_Function_Relay(target, code_);
 		};
 };

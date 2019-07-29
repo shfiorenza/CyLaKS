@@ -1,15 +1,15 @@
 #!/bin/bash
-echo STARTING ENDTAG SCAN
-PARAM_FILE="params_tuning.yaml"
+echo STARTING ENDTAG COOP SCAN
+PARAM_FILE="params_endtag.yaml"
 echo BASE PARAM FILE is $PARAM_FILE
 #for E_SCALE in {1,5,10,15,20}; do
-E_SCALE=5;
+E_SCALE=0;
 	E_INT=$(echo "scale=3; $E_SCALE * 0.1" | bc)
 	for CONC_SCALE in {11,21,106,218,325,431}; do
 		XLINK_CONC=$(echo "scale=3; $CONC_SCALE * 0.1" | bc)
-		FILE_NAME="coopE"
-		FILE_NAME+="_"
-		FILE_NAME+=$E_SCALE
+		FILE_NAME="coop_HiKD_HiC_0"
+#		FILE_NAME+="_"
+#		FILE_NAME+=$E_SCALE
 		FILE_NAME+="_"
 		FILE_NAME+=$CONC_SCALE
 		echo RUNNING NEW SIM: filename is $FILE_NAME

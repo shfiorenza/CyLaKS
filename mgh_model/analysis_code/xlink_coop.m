@@ -13,9 +13,12 @@ xlink_speciesID = 1;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStructure = '%s_occupancy.file';
 
-exp_concs = [2.1, 10.6, 21.8];%, 32.45, 43.07];
-exp_scaling = [1, 5.44 ,19.26];%, 41.24, 89.25];
-xlink_concs = [2.1, 10.6, 21.8];%, 32.5, 43.1];
+%exp_scaling = [1, 1.22, 6.65, 23.6, 50.5, 109.2];
+exp_scaling = [0.0916, 0.112, 0.609, 2.15, 4.62, 10.00];
+exp_scaling = exp_scaling/min(exp_scaling);
+%exp_scaling = [1, 5.44, 19.26, 41.24, 89.25];
+xlink_concs = [1.1, 2.1, 10.6, 21.8, 32.5, 43.1];
+%xlink_concs = [2.1, 10.6, 21.8, 32.5, 43.1];
 n_concs = length(xlink_concs);
 norm_intensity = zeros([n_datapoints n_concs]);
 norm_intensity_naught = zeros([n_datapoints n_concs]);
@@ -23,9 +26,9 @@ norm_intensity_naught = zeros([n_datapoints n_concs]);
 for i_run=1:1:2
 for i_conc=1:1:n_concs
     if i_run == 1
-        simName = sprintf('coopC_0_%i', int32(xlink_concs(i_conc)*10));    
+        simName = sprintf('coop_HiKD_HiC_0_%i', int32(xlink_concs(i_conc)*10));    
     else 
-        simName = sprintf('coopE_120_%i', int32(xlink_concs(i_conc)*10));
+        simName = sprintf('coop_HiKD_HiC_%i', int32(xlink_concs(i_conc)*10));
     end
     
     fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
@@ -62,7 +65,7 @@ for i_conc=1:1:n_concs
 end
 
 exp_prediction = intensity_avgs(1) * exp_scaling;
-plot(exp_concs, exp_prediction, '^', 'LineWidth', 2, 'MarkerSize', 14);
+plot(xlink_concs, exp_prediction, '^', 'LineWidth', 2, 'MarkerSize', 14);
 hold on
 plot(xlink_concs, intensity_avgs, '*', 'LineWidth', 2, 'MarkerSize', 14);
 plot(xlink_concs, intensity_avgs_naught, '*', 'LineWidth', 2, 'MarkerSize', 14);
@@ -70,4 +73,4 @@ plot(xlink_concs, intensity_avgs_naught, '*', 'LineWidth', 2, 'MarkerSize', 14);
 %title('Interaction energy of -2.5 kBT for PRC1-PRC1 neighbors');
 xlabel('PRC1 Concentration (nM)', 'FontSize', 14);
 ylabel('Intensity (A.U.)', 'FontSize', 14);
-legend({'Experiment', 'Simulation (-2.5 kbT)', 'Simulation (0 kbT)'}, 'location', 'northwest', 'FontSize', 14);
+legend({'Experiment', 'Simulation (-2.75 kbT)', 'Simulation (0 kbT)'}, 'location', 'northwest', 'FontSize', 14);

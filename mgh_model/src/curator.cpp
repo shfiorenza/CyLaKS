@@ -240,10 +240,11 @@ void Curator::SetParameters(){
 	sim_duration_ = 0;
 	for(int i = 0; i < 4; i++){
 		t_motors_[i] = 0;
-		t_xlinks_kmc_[i] = 0;
-		t_xlinks_dif_[i] = 0;
+		t_xlinks_[i] = 0;
 		t_MTs_[i] = 0; 
 	}
+	// XXX lmfao fix me
+	t_xlinks_[4] = 0;
 }
 
 void Curator::SetExperimentalStage(){
@@ -680,7 +681,7 @@ void Curator::OutputData(){
 	for(int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++){
 		AssociatedProteinManagement *prc1 = &properties_->prc1; 
 		int max = prc1->max_neighbs_;
-		xlink_extension_array[i_ext] = prc1->n_heads_ii_[max+1][i_ext]; 
+		xlink_extension_array[i_ext] = prc1->n_bound_ii_[max+1][i_ext]; 
 	}
 	// Write the data to respective files one timestep at a time 
 	fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);
@@ -706,14 +707,11 @@ void Curator::OutputSimDuration(){
 	Log("      -Calculating stats: %.2f\n", t_motors_[1]/n_per_sec_);
 	Log("      -Constructing list: %.2f\n", t_motors_[2]/n_per_sec_);
 	Log("      -Execution: %.2f\n", t_motors_[3]/n_per_sec_);
-	Log("   -Xlinks (KMC): %.2f\n", t_xlinks_kmc_[0]/n_per_sec_);
-	Log("      -Calculating stats: %.2f\n", t_xlinks_kmc_[1]/n_per_sec_);
-	Log("      -Constructing list: %.2f\n", t_xlinks_kmc_[2]/n_per_sec_);
-	Log("      -Execution: %.2f\n", t_xlinks_kmc_[3]/n_per_sec_);
-	Log("   -Xlinks (Diffusion): %.2f\n", t_xlinks_dif_[0]/n_per_sec_);
-	Log("      -Calculating stats: %.2f\n", t_xlinks_dif_[1]/n_per_sec_);
-	Log("      -Constructing list: %.2f\n", t_xlinks_dif_[2]/n_per_sec_);
-	Log("      -Execution: %.2f\n", t_xlinks_dif_[3]/n_per_sec_);
+	Log("   -Xlinks: %.2f\n", t_xlinks_[0]/n_per_sec_);
+	Log("      -Updating lists: %.2f\n", t_xlinks_[1]/n_per_sec_);
+	Log("      -Refreshing populations: %.2f\n", t_xlinks_[2]/n_per_sec_);
+	Log("      -Generating sequence: %.2f\n", t_xlinks_[3]/n_per_sec_);
+	Log("      -Executing events: %.2f\n", t_xlinks_[4]/n_per_sec_);
 	Log("   -MTs: %.2f\n", t_MTs_[0]/n_per_sec_);
 	Log("      -Summing forces: %.2f\n", t_MTs_[1]/n_per_sec_);
 	Log("      -Calculating displacement: %.2f\n", t_MTs_[2]/n_per_sec_);

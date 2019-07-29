@@ -1,6 +1,6 @@
 #ifndef _MICROTUBULE_MANAGEMENT_H
 #define _MICROTUBULE_MANAGEMENT_H
-#include <variant>
+#include "entry.h"
 #include "microtubule.h" 	// Includes <vector> lib as well
 class Tubulin;
 struct system_parameters;
@@ -8,10 +8,6 @@ struct system_properties;
 
 class MicrotubuleManagement{
 	private:
-		// Some aliases to make our work neater
-		using Monomer = AssociatedProtein::Monomer; 
-		template<class POP_T, class SITE_T> 
-		using Entry = std::variant<POP_T, SITE_T>;
 		template<class DATA_T>
 		using Vec = std::vector<DATA_T>;
 	public:
@@ -24,7 +20,7 @@ class MicrotubuleManagement{
 
 		std::vector<Microtubule> mt_list_;
 		std::vector<Tubulin*> unoccupied_list_; 
-		Vec<Vec<Entry<Monomer*, Tubulin*>> > unoccupied_list_xl_; 
+		Vec<Vec<ENTRY_T>> unoccupied_list_xl_; 
 	private:
 	
 	public:

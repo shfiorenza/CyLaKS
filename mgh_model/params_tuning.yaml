@@ -37,9 +37,9 @@ motors:
   k_off_i: 8.75
   k_off_i_stalled: 718
   k_off_ii: 180
-  k_tether: 1.67
+  k_tether: 0.1 #1.67
   c_eff_tether: 500
-  k_untether: 50
+  k_untether: 0.5 #50
   r_0: 120
   k_spring: 0.1325
   k_slack: 0.0265

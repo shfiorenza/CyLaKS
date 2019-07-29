@@ -12,15 +12,13 @@ void AssociatedProtein::Initialize(system_parameters *parameters,
 	properties_ = properties;
 	SetParameters();
 	CalculateCutoffs();
-	InitiateNeighborLists();
-	PopulateBindingLookupTable();
-	PopulateTethBindingLookupTable();
-	PopulateTethBindingIILookupTable();
-	PopulateExtensionLookups();
+	InitializeNeighborLists();
+	InitializeLookupTables();
 }
 
 void AssociatedProtein::SetParameters(){
 
+	max_neighbs_ = 2;
 	r_0_ = parameters_->xlinks.r_0;
 	k_spring_ = parameters_->xlinks.k_spring;
 }
@@ -62,7 +60,7 @@ void AssociatedProtein::CalculateCutoffs(){
 	}
 }
 
-void AssociatedProtein::InitiateNeighborLists(){
+void AssociatedProtein::InitializeNeighborLists(){
 
 	int n_mts = parameters_->microtubules.count; 
 	int teth_cutoff = properties_->kinesin4.dist_cutoff_; 
@@ -71,167 +69,9 @@ void AssociatedProtein::InitiateNeighborLists(){
 	teth_neighbor_sites_ii_.resize((n_mts - 1)*(2*dist_cutoff_ + 1));
 }
 
-void AssociatedProtein::PopulateBindingLookupTable(){
+void AssociatedProtein::InitializeLookupTables(){
 
-	double r_y = parameters_->microtubules.y_dist;
-	double kbT = parameters_->kbT;
-	double site_size = parameters_->microtubules.site_size;
-	binding_weight_lookup_.resize(dist_cutoff_ + 1);
-	for(int i_dist = 0; i_dist <= dist_cutoff_; i_dist++){
-		double r_x = (double)i_dist*site_size;
-		double r = sqrt(r_y*r_y + r_x*r_x);
-		double dr = r - r_0_;
-		double U = (k_spring_/2)*dr*dr;
-		double weight = exp(-U/(2*kbT));
-		binding_weight_lookup_[i_dist] = weight;
-//		printf("r: %g, dr: %g,  weight: %g\n", r, dr, weight);
-	}
-}
-
-void AssociatedProtein::PopulateTethBindingLookupTable(){
-
-	double r_y = parameters_->microtubules.y_dist / 2;
-	double kbT = parameters_->kbT;
-	double site_size = parameters_->microtubules.site_size;	
-	int teth_cutoff = properties_->kinesin4.dist_cutoff_;
-	int comp_cutoff = properties_->kinesin4.comp_cutoff_;
-	teth_binding_weight_lookup_.resize(2*teth_cutoff + 1);
-	double k_teth = parameters_->motors.k_spring;
-	double k_slack = parameters_->motors.k_slack; 
-	double r_0_teth = parameters_->motors.r_0; 
-	for(int x_dist_dub = 0; x_dist_dub <= 2*teth_cutoff; x_dist_dub++){
-		double r_x = (double) x_dist_dub * site_size / 2; 
-		double r = sqrt(r_y*r_y + r_x*r_x);
-		double dr = r - r_0_teth; 
-		double weight = 0; 
-		if(x_dist_dub < 2*comp_cutoff){
-			weight = 0;
-		}
-		else if(dr < 0){
-			weight = exp(-dr*dr*k_slack/(4*kbT));
-		}
-		else{
-			weight = exp(-dr*dr*k_teth/(4*kbT));
-		}
-		teth_binding_weight_lookup_[x_dist_dub] = weight;
-//		printf("weight for 2x = %i is %g\n", x_dist_dub, weight);
-	}
-}
-
-// input: CURRENT x_dist_dub of tether and PROPOSED x_dist xlink
-void AssociatedProtein::PopulateTethBindingIILookupTable(){
-
-	int teth_dist_cutoff = properties_->kinesin4.dist_cutoff_;
-	int comp_cutoff = properties_->kinesin4.comp_cutoff_;
-	teth_binding_weight_ii_to_.resize(2*teth_dist_cutoff + 1);
-	teth_binding_weight_ii_from_.resize(2*teth_dist_cutoff + 1);
-	double kbT = parameters_->kbT; 
-	double r_y = parameters_->microtubules.y_dist;
-	double k_teth_spring = properties_->kinesin4.motors_[0].k_spring_;
-	double k_teth_slack = properties_->kinesin4.motors_[0].k_slack_;
-	double r_0_teth = properties_->kinesin4.motors_[0].r_0_;
-	double r_y_teth = parameters_->microtubules.y_dist / 2;
-	double rest_dist_teth = properties_->kinesin4.motors_[0].rest_dist_;
-	double site_size = parameters_->microtubules.site_size;
-	for(int x_dub = 0; x_dub <= 2*teth_dist_cutoff; x_dub++){
-		teth_binding_weight_ii_to_[x_dub].resize(2*dist_cutoff_ + 1);
-		teth_binding_weight_ii_from_[x_dub].resize(2*dist_cutoff_ + 1);
-		// Calc x-distances (in nm) for tether
-		double r_x_teth = x_dub * site_size / 2;
-		// Calc total r values 
-		double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
-		// Calc tether exts for current dist and stepping to/from rest
-		double dr_teth = r_teth - r_0_teth;	
-		for(int x_dist = 0; x_dist <= dist_cutoff_; x_dist++){
-			double r_x = (double)x_dist*site_size;
-			double r = sqrt(r_y*r_y + r_x*r_x);
-			double dr = r - r_0_;
-			double U = (k_spring_/2)*dr*dr;
-			double weight = exp(-U/(2*kbT));
-			// change in teth extension if 2nd xlink head were to bind
-			double dx_teth = (double)x_dist / 2; 
-			double dr_x_teth = dx_teth * site_size;
-			double r_x_teth_to, 
-				   r_x_teth_from; 
-			if(dr_teth > 0){
-				r_x_teth_to = r_x_teth - dr_x_teth;
-				r_x_teth_from = r_x_teth + dr_x_teth; 	
-			}
-			else{
-				r_x_teth_to = r_x_teth + dr_x_teth;
-				r_x_teth_from = r_x_teth - dr_x_teth; 
-			}
-			double r_teth_to = 
-				sqrt(r_x_teth_to*r_x_teth_to + r_y_teth*r_y_teth);
-			double r_teth_from = 
-				sqrt(r_x_teth_from*r_x_teth_from + r_y_teth*r_y_teth);
-			double dr_teth_to = r_teth_to - r_0_teth; 
-			double dr_teth_from = r_teth_from - r_0_teth; 
-			double dU_to_teth, 
-				   dU_from_teth;
-			int x_from_rest_dub = abs((int)(2*rest_dist_teth) - x_dub);
-			int dx_teth_dub = 2 * dx_teth;
-			// Check if we're crossing over equil. point of tether 
-			if(dx_teth_dub > x_from_rest_dub){
-				if(r_teth < r_0_teth){
-					dU_from_teth = (k_teth_slack/2)
-						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-					dU_to_teth = (0.5)*(k_teth_spring*dr_teth_to*dr_teth_to 
-							- k_teth_slack*dr_teth*dr_teth);
-				}
-				else{
-					dU_from_teth = (k_teth_spring/2)
-						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-					dU_to_teth = (0.5)*(k_teth_slack*dr_teth_to*dr_teth_to
-							- k_teth_spring*dr_teth*dr_teth);
-				}
-			}
-			else if(dr_teth > 0){
-				dU_from_teth = (k_teth_spring/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (k_teth_spring/2)
-					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-			}
-			else{
-				dU_from_teth = (k_teth_slack/2)
-					* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
-				dU_to_teth = (k_teth_slack/2)
-					* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
-			}
-			double tot_weight_to = 0;
-			int x_dub_to = 2 * r_x_teth_to / site_size;
-			if(x_dub_to < 2*comp_cutoff
-			|| x_dub_to > 2*teth_dist_cutoff){
-				tot_weight_to = 0;
-			}
-			else{
-				double weight_to_teth = exp(-dU_to_teth/(2*kbT));
-				tot_weight_to = weight_to_teth*weight;	
-			}
-			double tot_weight_from = 0; 
-			int x_dub_from = 2 * r_x_teth_from / site_size;
-			if(x_dub_from < 2*comp_cutoff
-			|| x_dub_from > 2*teth_dist_cutoff){
-				tot_weight_from = 0;
-			}
-			else{
-		   		double weight_from_teth = exp(-dU_from_teth/(2*kbT));
-				tot_weight_from = weight_from_teth*weight;
-			}
-			teth_binding_weight_ii_to_[x_dub][x_dist] = tot_weight_to;
-			teth_binding_weight_ii_from_[x_dub][x_dist] = tot_weight_from;
-/*
-			printf("for 2x=%i, x=%i, w_to = %g\n", x_dub, x_dist, 
-				teth_binding_weight_ii_to_[x_dub][x_dist]);
-			printf("for 2x=%i, x=%i, w_from = %g\n", x_dub, x_dist, 
-				teth_binding_weight_ii_from_[x_dub][x_dist]);
-*/
-		}
-	}
-}
-
-void AssociatedProtein::PopulateExtensionLookups(){
-
+	/* Construct rly basic lookup tables first */
 	double r_y = parameters_->microtubules.y_dist;
 	double site_size = parameters_->microtubules.site_size;
 	extension_lookup_.resize(dist_cutoff_ + 1);
@@ -241,6 +81,184 @@ void AssociatedProtein::PopulateExtensionLookups(){
 		double r = sqrt(r_x*r_x + r_y*r_y);
 		extension_lookup_[x_dist] = r - r_0_;
 		cosine_lookup_[x_dist] = r_x / r;
+	}
+	/* Next, construct lookup table for bind_ii weights */
+	double kbT = parameters_->kbT;
+	double E_int = -1 * parameters_->xlinks.interaction_energy;
+	weights_bind_ii_.resize(max_neighbs_ + 1);
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		double E_neighbs = n_neighbs * E_int; 	// in units of kBT already
+		double weight_neighb = exp(-E_neighbs / 2);
+		weights_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
+		for(int x(0); x <= dist_cutoff_; x++){
+			double r_x = (double)x * site_size;
+			double r = sqrt(r_y*r_y + r_x*r_x);
+			double dr = r - r_0_;
+			double U = (k_spring_/2)*dr*dr;
+			double weight_spring = exp(-U/(2*kbT));
+			double weight_tot = weight_neighb * weight_spring;
+			weights_bind_ii_[n_neighbs][x] = weight_tot;
+//			printf("weight is %g for n = %i, x = %i\n", weight_tot, 
+//					n_neighbs, x);
+		}
+	}
+	/* Next, construct lookup table for bind_i_teth weights */
+	int teth_cutoff = properties_->kinesin4.dist_cutoff_;
+	int comp_cutoff = properties_->kinesin4.comp_cutoff_;
+	double k_teth = parameters_->motors.k_spring;
+	double k_slack = parameters_->motors.k_slack; 
+	double r_0_teth = parameters_->motors.r_0; 
+	double r_y_teth = parameters_->microtubules.y_dist / 2;
+	weights_bind_i_teth_.resize(max_neighbs_ + 1);
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		double U_neighbs = n_neighbs * E_int;
+		double weight_neighbs = exp(-U_neighbs / 2);
+		weights_bind_i_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		for(int x_dub = 0; x_dub <= 2*teth_cutoff; x_dub++){
+			double r_x = ((double)x_dub) * site_size / 2; 
+			double r = sqrt(r_y_teth*r_y_teth + r_x*r_x);
+			double dr = r - r_0_teth; 
+			double U_teth(0);
+			if(dr < 0)
+				U_teth = (k_slack/2)*dr*dr;
+			else
+				U_teth = (k_teth/2)*dr*dr;
+			double weight_teth = exp(-U_teth/(2*kbT));
+			if(x_dub < 2*comp_cutoff)
+				weight_teth = 0;
+			double weight_tot = weight_neighbs * weight_teth;
+			weights_bind_i_teth_[n_neighbs][x_dub] = weight_tot;
+//			printf("weight for 2x = %i is %g\n", x_dub, weight_tot);
+		}
+	}
+	/* Next, construct lookup table for bind_ii_teth weights */
+	// XXX input: CURRENT x_dub and PROPOSED x_dist XXX
+	double rest_dist_teth = properties_->kinesin4.motors_[0].rest_dist_;
+	weights_bind_ii_to_teth_.resize(max_neighbs_ + 1);
+	weights_bind_ii_fr_teth_.resize(max_neighbs_ + 1);
+	for(int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++){
+		double U_neighbs = n_neighbs * E_int;
+		double weight_neighbs = exp(-U_neighbs / 2);
+		weights_bind_ii_to_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		weights_bind_ii_fr_teth_[n_neighbs].resize(2*teth_cutoff + 1);
+		for(int x_dub(0); x_dub <= 2*teth_cutoff; x_dub++){
+			// Calc x-distances (in nm) for tether
+			double r_x_teth = ((double)x_dub) * site_size / 2;
+			// Calc total r values 
+			double r_teth = sqrt(r_x_teth*r_x_teth + r_y_teth*r_y_teth);
+			// Calc tether exts for current dist and stepping to/from rest
+			double dr_teth = r_teth - r_0_teth;	
+			double U_teth;
+			if(dr_teth < 0){
+				U_teth = (k_slack/2)*dr_teth*dr_teth;
+			}
+			else{
+				U_teth = (k_teth/2)*dr_teth*dr_teth;
+			}
+			weights_bind_ii_to_teth_[n_neighbs][x_dub]
+				.resize(dist_cutoff_+1);
+			weights_bind_ii_fr_teth_[n_neighbs][x_dub]
+				.resize(dist_cutoff_+1);
+			for(int x(0); x <= dist_cutoff_; x++){
+				double r_x = ((double)x)*site_size;
+				double r = sqrt(r_y*r_y + r_x*r_x);
+				double dr = r - r_0_;
+				double U = (k_spring_/2)*dr*dr;
+				double weight = exp(-U/(2*kbT));
+				// change in teth extension if 2nd xlink head were to bind
+				double dx_teth = ((double)x) / 2; 
+				double dr_x_teth = dx_teth * site_size;
+				double r_x_teth_to, 
+					   r_x_teth_fr; 
+				if(dr_teth < 0){
+					r_x_teth_to = r_x_teth + dr_x_teth;
+					r_x_teth_fr = r_x_teth - dr_x_teth; 
+				}
+				else{
+					r_x_teth_to = r_x_teth - dr_x_teth;
+					r_x_teth_fr = r_x_teth + dr_x_teth; 	
+				}
+				double r_teth_to = 
+					sqrt(r_x_teth_to*r_x_teth_to + r_y_teth*r_y_teth);
+				double r_teth_fr = 
+					sqrt(r_x_teth_fr*r_x_teth_fr + r_y_teth*r_y_teth);
+				double dr_teth_to = r_teth_to - r_0_teth; 
+				double dr_teth_fr = r_teth_fr - r_0_teth; 
+				double U_teth_to;
+				if(dr_teth_to < 0){
+					U_teth_to = (k_slack/2)*dr_teth_to*dr_teth_to;
+				}
+				else{
+					U_teth_to = (k_teth/2)*dr_teth_to*dr_teth_to;
+				}
+				double U_teth_fr;
+				if(dr_teth_fr < 0){
+					U_teth_fr = (k_slack/2)*dr_teth_fr*dr_teth_fr;
+				}
+				else{
+					U_teth_fr = (k_teth/2)*dr_teth_fr*dr_teth_fr;
+				}
+				double dU_to_teth = U_teth_to - U_teth;
+				double dU_fr_teth = U_teth_fr - U_teth;
+				double weight_to_teth = exp(-dU_to_teth/(2*kbT));
+				double weight_fr_teth = exp(-dU_fr_teth/(2*kbT));
+				/*
+				int x_from_rest_dub = abs((int)(2*rest_dist_teth) - x_dub);
+				int dx_teth_dub = 2 * dx_teth;
+				// Check if we're crossing over equil. point of tether 
+				if(dx_teth_dub > x_from_rest_dub){
+					if(r_teth < r_0_teth){
+						dU_from_teth = (k_slack/2)
+							* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+						dU_to_teth = (0.5)*(k_teth*dr_teth_to*dr_teth_to 
+								- k_slack*dr_teth*dr_teth);
+					}
+					else{
+						dU_from_teth = (k_teth/2)
+							* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+						dU_to_teth = (0.5)*(k_slack*dr_teth_to*dr_teth_to
+								- k_teth*dr_teth*dr_teth);
+					}
+				}
+				else if(dr_teth > 0){
+					dU_from_teth = (k_teth/2)
+						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+					dU_to_teth = (k_teth/2)
+						* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+				}
+				else{
+					dU_from_teth = (k_slack/2)
+						* (dr_teth_from*dr_teth_from - dr_teth*dr_teth);
+					dU_to_teth = (k_slack/2)
+						* (dr_teth_to*dr_teth_to - dr_teth*dr_teth);
+				}
+				*/
+				double tot_weight_to(0);
+				int x_dub_to = 2 * r_x_teth_to / site_size;
+				if(x_dub_to >= 2*comp_cutoff
+				&& x_dub_to <= 2*teth_cutoff){
+					tot_weight_to = weight_neighbs*weight_to_teth*weight;
+				}
+				double tot_weight_fr(0);
+				int x_dub_fr = 2 * r_x_teth_fr / site_size;
+				if(x_dub_fr >= 2*comp_cutoff
+				&& x_dub_fr <= 2*teth_cutoff){
+					tot_weight_fr = weight_neighbs*weight_fr_teth*weight;
+				}
+				weights_bind_ii_to_teth_[n_neighbs][x_dub][x] 
+					= tot_weight_to;
+				weights_bind_ii_fr_teth_[n_neighbs][x_dub][x] 
+					= tot_weight_fr;
+				/*
+				printf("for n=%i, 2x=%i, x=%i, w_to = %g\n", 
+						n_neighbs, x_dub, x, weights_bind_ii_to_teth_
+						[n_neighbs][x_dub][x]);
+				printf("for n=%i, 2x=%i, x=%i, w_from = %g\n", 
+						n_neighbs, x_dub, x, weights_bind_ii_fr_teth_
+						[n_neighbs][x_dub][x]);
+				*/
+			}
+		}
 	}
 }
 
@@ -312,27 +330,29 @@ int AssociatedProtein::GetPRC1NeighbCount(Monomer* head){
 
 	int n_neighbs = 0;
 	Tubulin *site = head->site_;
-	int i_plus = site->mt_->plus_end_;    
-	int i_minus = site->mt_->minus_end_;    
-	int dx = site->mt_->delta_x_; 
-	if(site->index_ == i_plus){    
-		if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)    
-			n_neighbs++;
-	}   
-	else if(site->index_ == i_minus){    
-		if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)    
-			n_neighbs++;
-	}   
-	else{    
-		if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)    
-			n_neighbs++;    
-		if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)    
-			n_neighbs++;    
-	}   
+	if(site != nullptr){
+		int i_plus = site->mt_->plus_end_;    
+		int i_minus = site->mt_->minus_end_;    
+		int dx = site->mt_->delta_x_; 
+		if(site->index_ == i_plus){    
+			if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)  
+				n_neighbs++;
+		}   
+		else if(site->index_ == i_minus){    
+			if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)  
+				n_neighbs++;
+		}   
+		else{    
+			if(site->mt_->lattice_[site->index_-dx].xlink_head_ != nullptr)  
+				n_neighbs++;    
+			if(site->mt_->lattice_[site->index_+dx].xlink_head_ != nullptr)  
+				n_neighbs++;    
+		}   
+	}
 	return n_neighbs;
 }
 
-void AssociatedProtein::UpdateNeighborSites(){
+void AssociatedProtein::UpdateNeighborSites_II(){
 	
 	n_neighbor_sites_ = 0;
 	int n_mts = parameters_->microtubules.count;
@@ -357,7 +377,7 @@ void AssociatedProtein::UpdateNeighborSites(){
 			} 
 			else{
 				Tubulin *neighbor = &adj_mt->lattice_[i_neighbor];
-				if(neighbor->occupied_ == false){
+				if(!neighbor->occupied_){
 					n_neighbor_sites_++;
 					neighbor_sites_[i_entry] = neighbor;
 					i_entry++;
@@ -367,7 +387,7 @@ void AssociatedProtein::UpdateNeighborSites(){
 	}
 }
 
-void AssociatedProtein::UpdateTethNeighborSites(){
+void AssociatedProtein::UpdateNeighborSites_I_Teth(){
 
 	n_teth_neighbor_sites_ = 0;
 	if(tethered_ == true
@@ -417,7 +437,7 @@ void AssociatedProtein::UpdateTethNeighborSites(){
 	}
 }
 
-void AssociatedProtein::UpdateTethNeighborSitesII(){
+void AssociatedProtein::UpdateNeighborSites_II_Teth(){
 
 	n_teth_neighbor_sites_ii_ = 0;
 	int n_mts = parameters_->microtubules.count;
@@ -562,10 +582,6 @@ void AssociatedProtein::ForceUnbind(int x_dist_pre){
 void AssociatedProtein::UntetherSatellite(){
 
 	if(tethered_ == true){
-		if(heads_active_ == 0){
-			printf("Error in Untether_Satellite() in ASSOC. PROT.\n");
-			exit(1);
-		}
 		// Remove satellite motor from active_ list, replace with last entry
 		int i_last = properties_->kinesin4.n_active_ - 1;
 		Kinesin *last_entry = properties_->kinesin4.active_[i_last];
@@ -588,9 +604,10 @@ void AssociatedProtein::UntetherSatellite(){
 	}
 }
 
-int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
+int AssociatedProtein::GetDirectionToRest(Tubulin *site){
 
-	if(heads_active_ == 2){
+	if(heads_active_ == 1) return 1; 
+	else if(heads_active_ == 2){
 		double anchor_coord = GetAnchorCoordinate();
 		int site_coord = site->index_ + site->mt_->coord_;
 		if(site_coord == anchor_coord){
@@ -605,75 +622,13 @@ int AssociatedProtein::GetDirectionTowardRest(Tubulin *site){
 		else
 			return 1;
 	}
+	else return 0;
+	/*
 	else{
 		printf("error in get dir. toward rest (xlink)\n");
 		exit(1);
 	}
-}
-
-double AssociatedProtein::GetBindingWeight(Tubulin *neighbor){
-
-	Tubulin *site = GetActiveHeadSite();
-	Microtubule *mt = site->mt_;
-	Microtubule *adj_mt = neighbor->mt_;
-	if(adj_mt != mt->neighbor_){
-		printf("adj: %i, neighb: %i\n", 
-				adj_mt->index_, mt->neighbor_->index_);
-		printf("why the microtubules tho (in assiociated protein GBW)\n");
-		exit(1);
-	}
-	int offset = adj_mt->coord_ - mt->coord_;
-	// Calculate distance (in x-dir.) between site and neighbor in # of sites 
-	int i_site = site->index_;
-	int i_neighbor = neighbor->index_;
-	int x_dist = abs(i_neighbor - i_site + offset);
-	// Get binding weight that corresponds to this x-distance
-	double weight = binding_weight_lookup_[x_dist];
-	return weight;	
-}
-
-double AssociatedProtein::GetTethBindingWeight(Tubulin *neighbor){
-
-	double stalk_coord = motor_->GetStalkCoordinate(); 
-	double site_coord = neighbor->index_ + neighbor->mt_->coord_; 
-	double x_dist = fabs(stalk_coord - site_coord);
-	int x_dist_dub = 2*x_dist;
-	double weight = teth_binding_weight_lookup_[x_dist_dub];
-	return weight; 
-}
-
-double AssociatedProtein::GetTethBindingWeightII(Tubulin *neighbor){
-
-	// Get x_dist of xlink extension if 2nd head were to bind to this neighb
-	Tubulin *site = GetActiveHeadSite();
-	double site_coord = site->index_ + site->mt_->coord_;
-	double neighb_coord = neighbor->index_ + neighbor->mt_->coord_;
-	int x_dist = fabs(site_coord - neighb_coord);
-	// Get current x_dist_dub of tether
-	double stalk_coord = motor_->GetStalkCoordinate();
-	int x_dub = 2*fabs(stalk_coord - site_coord);
-	// Get NEW x_dist_dub if 2nd head were to bind to this neighb
-	double anchor_coord_post = (neighb_coord + site_coord) / 2;
-	int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
-	int x_dub_rest = 2*properties_->kinesin4.rest_dist_;
-	double weight;
-	// If extended, ...
-	if(x_dub >= x_dub_rest){
-		// ... further extension is going away FROM rest
-		if(x_dub_post > x_dub)
-			weight = teth_binding_weight_ii_from_[x_dub][x_dist];
-		else
-			weight = teth_binding_weight_ii_to_[x_dub][x_dist];
-	}
-	// Else, if compressed ...
-	else{
-		// ... further extension is going TO rest
-		if(x_dub_post > x_dub)
-			weight = teth_binding_weight_ii_to_[x_dub][x_dist];
-		else
-			weight = teth_binding_weight_ii_from_[x_dub][x_dist];
-	}
-	return weight;
+	*/
 }
 
 double AssociatedProtein::GetExtensionForce(Tubulin *site){
@@ -699,6 +654,81 @@ double AssociatedProtein::GetExtensionForce(Tubulin *site){
 		printf("error in get ext force (xlink)\n");
 		exit(1);
 	}
+}
+
+double AssociatedProtein::GetBindingWeight_II(Tubulin *neighbor){
+
+	Tubulin *site = GetActiveHeadSite();
+	Microtubule *mt = site->mt_;
+	Microtubule *adj_mt = neighbor->mt_;
+	if(adj_mt != mt->neighbor_){
+		printf("adj: %i, neighb: %i\n", 
+				adj_mt->index_, mt->neighbor_->index_);
+		printf("why the microtubules tho (in assiociated protein GBW)\n");
+		exit(1);
+	}
+	int offset = adj_mt->coord_ - mt->coord_;
+	// Calculate distance (in x-dir.) between site and neighb in # of sites 
+	int i_site = site->index_;
+	int i_neighbor = neighbor->index_;
+	int x_dist = abs(i_neighbor - i_site + offset);
+	// Get number of PRC1 neighbors the neighbor site has
+	int n_neighbs = neighbor->GetPRC1NeighborCount();
+//	printf("x: %i, n_neighbs: %i\n", x_dist, n_neighbs);
+	// Look up binding weight that corresponds to this x-distance
+	double weight = weights_bind_ii_[n_neighbs][x_dist];
+	return weight;	
+}
+
+double AssociatedProtein::GetBindingWeight_I_Teth(Tubulin *neighbor){
+
+	double stalk_coord = motor_->GetStalkCoordinate(); 
+	double site_coord = neighbor->index_ + neighbor->mt_->coord_; 
+	double x_dist = fabs(stalk_coord - site_coord);
+	int x_dub = 2*x_dist;
+	int n_neighbs = neighbor->GetPRC1NeighborCount();
+	double weight = weights_bind_i_teth_[n_neighbs][x_dub];
+	return weight; 
+}
+
+double AssociatedProtein::GetBindingWeight_II_Teth(Tubulin *neighbor){
+
+	// Get number of PRC1 neighbors this site has
+	int n_neighbs = neighbor->GetPRC1NeighborCount();
+	// Get x_dist of xlink extension if 2nd head were to bind to this neighb
+	Tubulin *site = GetActiveHeadSite();
+	double site_coord = site->index_ + site->mt_->coord_;
+	double neighb_coord = neighbor->index_ + neighbor->mt_->coord_;
+	int x = fabs(site_coord - neighb_coord);
+	// Get current x_dist_dub of tether
+	double stalk_coord = motor_->GetStalkCoordinate();
+	int x_dub = 2*fabs(stalk_coord - site_coord);
+	// Get NEW x_dist_dub if 2nd head were to bind to this neighb
+	double anchor_coord_post = (neighb_coord + site_coord) / 2;
+	int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
+	int x_dub_rest = 2*properties_->kinesin4.rest_dist_;
+	double weight;
+	// If extended, ...
+	if(x_dub >= x_dub_rest){
+		// ... further extension is going away FROM rest
+		if(x_dub_post > x_dub){
+			weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+		}
+		else{
+			weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+		}
+	}
+	// Else, if compressed ...
+	else{
+		// ... further extension is going TO rest
+		if(x_dub_post > x_dub){
+			weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+		}
+		else{
+			weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+		}
+	}
+	return weight;
 }
 
 Tubulin* AssociatedProtein::GetSiteCloserToTethRest(){
@@ -791,17 +821,18 @@ Tubulin* AssociatedProtein::GetSiteFartherFromTethRest(){
 	}
 }
 
-Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
+Tubulin* AssociatedProtein::GetWeightedSite_Bind_II(){
 	
-	UpdateNeighborSites();
+	UpdateNeighborSites_II();
 	double anch_coord = GetAnchorCoordinate(); 
 	double p_tot = 0;
 	for(int i_site = 0; i_site < n_neighbor_sites_; i_site++){
 		Tubulin *site = neighbor_sites_[i_site]; 
 		double site_coord = site->index_ + site->mt_->coord_; 
 		int x_dist = (int)fabs(anch_coord - site_coord);
+		int n_neighbs = site->GetPRC1NeighborCount();
 //		printf("x_dist is %i\n", x_dist);
-		p_tot += binding_weight_lookup_[x_dist]; 
+		p_tot += weights_bind_ii_[n_neighbs][x_dist]; 
 	}
 	double ran = properties_->gsl.GetRanProb();
 	double p_cum = 0;
@@ -809,7 +840,8 @@ Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
 		Tubulin *site = neighbor_sites_[i_site];
 		double site_coord = site->index_ + site->mt_->coord_;
 		int x_dist = (int)fabs(anch_coord - site_coord); 
-		p_cum += binding_weight_lookup_[x_dist] / p_tot;
+		int n_neighbs = site->GetPRC1NeighborCount();
+		p_cum += weights_bind_ii_[n_neighbs][x_dist] / p_tot;
 		if(ran < p_cum){
 			return site;
 		}
@@ -817,9 +849,9 @@ Tubulin* AssociatedProtein::GetWeightedNeighborSite(){
 	return nullptr;
 }
 
-Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
+Tubulin* AssociatedProtein::GetWeightedSite_Bind_I_Teth(){
 	
-	UpdateTethNeighborSites();
+	UpdateNeighborSites_I_Teth();
 	double stalk_coord = motor_->GetStalkCoordinate();
 	double p_tot = 0; 
 	for(int i_site = 0; i_site < n_teth_neighbor_sites_; i_site++){
@@ -827,7 +859,8 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
 		double site_coord = site->index_ + site->mt_->coord_; 
 		double x_dist = fabs(stalk_coord - site_coord);
 		int x_dist_dub = 2*x_dist;
-		p_tot += teth_binding_weight_lookup_[x_dist_dub];
+		int n_neighbs = site->GetPRC1NeighborCount();
+		p_tot += weights_bind_i_teth_[n_neighbs][x_dist_dub];
 	}
 	double ran = properties_->gsl.GetRanProb();
 	double p_cum = 0;
@@ -836,7 +869,8 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
 		double site_coord = site->index_ + site->mt_->coord_;
 		double x_dist = fabs(stalk_coord - site_coord);
 		int x_dist_dub = 2*x_dist;
-		p_cum += teth_binding_weight_lookup_[x_dist_dub] / p_tot; 
+		int n_neighbs = site->GetPRC1NeighborCount();
+		p_cum += weights_bind_i_teth_[n_neighbs][x_dist_dub] / p_tot; 
 		if(ran < p_cum){
 			return site;
 		}
@@ -844,9 +878,9 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSite(){
 	return nullptr;
 }
 
-Tubulin* AssociatedProtein::GetWeightedTethNeighborSiteII(){
+Tubulin* AssociatedProtein::GetWeightedSite_Bind_II_Teth(){
 
-	UpdateTethNeighborSitesII();
+	UpdateNeighborSites_II_Teth();
 	double stalk_coord = motor_->GetStalkCoordinate();
 	double anchor_coord = GetAnchorCoordinate();
 	// All neighbor sites have the same initial x_dub
@@ -856,25 +890,30 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSiteII(){
 	for(int i_site = 0; i_site < n_teth_neighbor_sites_ii_; i_site++){
 		Tubulin *site = teth_neighbor_sites_ii_[i_site];
 		double site_coord = site->index_ + site->mt_->coord_; 
-		int x_dist = (int)fabs(site_coord - anchor_coord);
+		int x = (int)fabs(site_coord - anchor_coord);
 		double anchor_coord_post = (site_coord + anchor_coord) / 2;
 		int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
-		double weight;
+		int n_neighbs = site->GetPRC1NeighborCount();
+		double weight(0);
 		// If extended, ...
 		if(x_dub >= x_dub_rest){
 			// ... further extension is going away FROM rest
-			if(x_dub_post > x_dub)
-				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
-			else
-				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+			if(x_dub_post > x_dub){
+				weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+			}
+			else{
+				weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+			}
 		}
 		// Else, if compressed ...
 		else{
 			// ... further extension is going TO rest
-			if(x_dub_post > x_dub)
-				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
-			else
-				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+			if(x_dub_post > x_dub){
+				weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+			}
+			else{
+				weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+			}
 		}
 		weight_tot += weight;
 	}
@@ -883,29 +922,35 @@ Tubulin* AssociatedProtein::GetWeightedTethNeighborSiteII(){
 	for(int i_site = 0; i_site < n_teth_neighbor_sites_ii_; i_site++){
 		Tubulin *site = teth_neighbor_sites_ii_[i_site];
 		double site_coord = site->index_ + site->mt_->coord_; 
-		int x_dist = (int)fabs(site_coord - anchor_coord);
+		int x = (int)fabs(site_coord - anchor_coord);
 		double anchor_coord_post = (site_coord + anchor_coord) / 2;
 		int x_dub_post = 2*fabs(stalk_coord - anchor_coord_post);
-		double weight;
+		int n_neighbs = site->GetPRC1NeighborCount();
+		double weight(0);
 		// If extended, ...
 		if(x_dub >= x_dub_rest){
 			// ... further extension is going away FROM rest
-			if(x_dub_post > x_dub)
-				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
-			else
-				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
+			if(x_dub_post > x_dub){
+				weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+			}
+			else{
+				weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+			}
 		}
 		// Else, if compressed ...
 		else{
 			// ... further extension is going TO rest
-			if(x_dub_post > x_dub)
-				weight = teth_binding_weight_ii_to_[x_dub][x_dist];
-			else
-				weight = teth_binding_weight_ii_from_[x_dub][x_dist];
+			if(x_dub_post > x_dub){
+				weight = weights_bind_ii_to_teth_[n_neighbs][x_dub][x];
+			}
+			else{
+				weight = weights_bind_ii_fr_teth_[n_neighbs][x_dub][x];
+			}
 		}
 		p_cum += weight / weight_tot;
-		if(ran < p_cum)
+		if(ran < p_cum){
 			return site;
+		}
 	}
 	return nullptr;
 }

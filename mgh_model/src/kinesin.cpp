@@ -563,10 +563,7 @@ int Kinesin::GetDirectionTowardRest(){
 					return 1;
 			}
 		}
-		else{
-			printf("this is a diff type of error in getdirtorest\n");
-			exit(1);
-		}
+		else return 0;
 	}
 	else{
 		printf("error in get dir. toward xlink\n");

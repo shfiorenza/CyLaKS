@@ -1,19 +1,21 @@
 
 clear variables;
-xlink_concs = [0, 2, 4]; 
-name_structs = ["Endtag_0_%i", "Endtag_%i_02", "Endtag_%i"];
+xlink_concs = [0, 1, 4]; 
+%name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
+name_structs = ["Endtag_MAYBE_0_%i", "Endtag_MAYBE_1_%i", "Endtag_MAYBE_4_%i"];
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
+%mt_lengths = [4, 8, 14];
 % experimental parameters
 exp_mt_lengths = [2.4, 4.0, 5.6, 7.2, 8.8, 10.3, 13.5];
 exp_endtags_0 = [1.2, 1.3, 1.4, 1.6, 1.65, 1.75, 2.25]; 
 exp_errs_0_y = [0.1, 0.1, 0.1, 0.2, 0.2, 0.2, 0.2];
-exp_endtags_2 = [1.4, 1.6, 1.7, 2.0, 2.1, 2.4, -1];
-exp_errs_2_y = [0.1, 0.6, 0.2, 0.3, 0.2, 0.3, 0];
+exp_endtags_1 = [1.4, 1.6, 1.7, 2.0, 2.1, 2.4, -1];
+exp_errs_1_y = [0.1, 0.6, 0.2, 0.3, 0.2, 0.3, 0];
 exp_endtags_4 = [1.6, 2.1, 2.4, 3.1, 3.6, 4.0, 5.3];
 exp_errs_4_y = [0.2, 0.6, 0.25, 0.4, 0.25, 1.0, 0.25 ];
-exp_endtags = [exp_endtags_0.', exp_endtags_2.', exp_endtags_4.'].';
+exp_endtags = [exp_endtags_0.', exp_endtags_1.', exp_endtags_4.'].';
 exp_errs_x = [0.8, 0.8, 0.8, 0.8, 0.8, 0.8, 0.8];
-exp_errs_y = [exp_errs_0_y.', exp_errs_2_y.', exp_errs_4_y.'].';
+exp_errs_y = [exp_errs_0_y.', exp_errs_1_y.', exp_errs_4_y.'].';
 exp_line_x = [2 14.5];
 exp_line_y = [[1.15 2.23]; [1.37 2.88]; [1.67 5.05]];
 motor_speciesID = 2;
@@ -21,7 +23,7 @@ xlink_speciesID = 1;
 n_datapoints = 10000;
 starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/old_output/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
 fileStruct = '%s_occupancy.file';
 
 n_concs = length(xlink_concs);
@@ -111,5 +113,5 @@ end
 xlabel('Length of microtubule (microns)', 'FontSize', 14);
 ylabel('Endtag length (microns)', 'FontSize', 14);
 %XTick('FontSize', 14);
-ylim([0 7]);
+ylim([0 16]);
 xlim([0 16]);

@@ -1,6 +1,6 @@
 #pragma once
-#include <vector>
 #include <string>
+#include <vector>
 class Tubulin;
 class Kinesin;
 class Microtubule;
@@ -9,30 +9,40 @@ struct system_parameters;
 
 class AssociatedProtein{
 	private:
+		template<typename DATA_T>
+		using Vec = std::vector<DATA_T>;
 		// Indices for lookup tables correspond to x_dist
-		std::vector<double> cosine_lookup_; 
-		std::vector<double> extension_lookup_;
-		std::vector<double> binding_weight_lookup_;
-		// Indices correspond to x_dist_dub, i.e., 2x teth extension
-		std::vector<double> teth_binding_weight_lookup_; 
-		// 1st index is current x_dist; 2nd index is proposed x_dist_dub
-		std::vector< std::vector<double> > teth_binding_weight_ii_to_; 
-		std::vector< std::vector<double> > teth_binding_weight_ii_from_;
+		Vec<double> cosine_lookup_; 
+		Vec<double> extension_lookup_;
+		// 1st index is n_neighbs (as in PRC1 neighbs); 2nd is x_dist
+		Vec<Vec<double>> weights_bind_ii_;
+		Vec<Vec<double>> weights_bind_i_teth_;
+		Vec<Vec<Vec<double>>> weights_bind_ii_to_teth_;
+		Vec<Vec<Vec<double>>> weights_bind_ii_fr_teth_;
 
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
 
 	public:
 		// Neighbor lists; not to be confused with no. of PRC1 neighbs
-		std::vector<Tubulin*> neighbor_sites_;
-		std::vector<Tubulin*> teth_neighbor_sites_; 
-		std::vector<Tubulin*> teth_neighbor_sites_ii_; 
+		Vec<Tubulin*> neighbor_sites_;
+		Vec<Tubulin*> teth_neighbor_sites_; 
+		Vec<Tubulin*> teth_neighbor_sites_ii_; 
 		struct Monomer{
 			AssociatedProtein *xlink_;
 			Tubulin *site_;
 			std::string state_; 
 			int GetPRC1NeighbCount(){
 				return xlink_->GetPRC1NeighbCount(this);
+			};
+			int GetDirectionToRest(){
+				return xlink_->GetDirectionToRest(this->site_);
+			};
+			Monomer* GetOtherHead(){
+				if(this == &xlink_->head_one_)
+					return &xlink_->head_two_;
+				else
+					return &xlink_->head_one_;
 			};
 		};
 
@@ -45,6 +55,8 @@ class AssociatedProtein{
 		int n_neighbor_sites_ = 0;
 		int n_teth_neighbor_sites_ = 0;
 		int n_teth_neighbor_sites_ii_ = 0;
+
+		int max_neighbs_ = 0;
 
 		// x_dist_ is used to index the xlink extensions for lookup
 		// e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
@@ -68,11 +80,8 @@ class AssociatedProtein{
 	private:
 		void SetParameters();
 		void CalculateCutoffs();
-		void InitiateNeighborLists();
-		void PopulateBindingLookupTable();
-		void PopulateTethBindingLookupTable();
-		void PopulateTethBindingIILookupTable();
-		void PopulateExtensionLookups();
+		void InitializeNeighborLists();
+		void InitializeLookupTables(); 
 
 	public:
 		AssociatedProtein();
@@ -84,21 +93,21 @@ class AssociatedProtein{
 		double GetAnchorCoordinate();
 		int GetPRC1NeighbCount(Monomer* head);
 
-		void UpdateNeighborSites();
-		void UpdateTethNeighborSites();
-		void UpdateTethNeighborSitesII();
+		void UpdateNeighborSites_II();
+		void UpdateNeighborSites_I_Teth();
+		void UpdateNeighborSites_II_Teth();
 		void UpdateExtension();
 		void ForceUnbind(int x_dist_pre); 
 		void UntetherSatellite(); 
 
-		int GetDirectionTowardRest(Tubulin *site);
-		double GetBindingWeight(Tubulin *neighbor);
+		int GetDirectionToRest(Tubulin *site);
 		double GetExtensionForce(Tubulin *site);
-		double GetTethBindingWeight(Tubulin *neighbor); 
-		double GetTethBindingWeightII(Tubulin *neighbor);
+		double GetBindingWeight_II(Tubulin *neighbor);
+		double GetBindingWeight_I_Teth(Tubulin *neighbor);
+		double GetBindingWeight_II_Teth(Tubulin *neighbor);
 		Tubulin* GetSiteCloserToTethRest();
 		Tubulin* GetSiteFartherFromTethRest();
-		Tubulin* GetWeightedNeighborSite();
-		Tubulin* GetWeightedTethNeighborSite();
-		Tubulin* GetWeightedTethNeighborSiteII();
+		Tubulin* GetWeightedSite_Bind_II();
+		Tubulin* GetWeightedSite_Bind_I_Teth();
+		Tubulin* GetWeightedSite_Bind_II_Teth();
 };

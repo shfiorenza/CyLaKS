@@ -60,8 +60,6 @@ void KinesinManagement::SetParameters(){
 	p_unbind_i_ = k_off_i * delta_t; 
 	double k_off_i_st = parameters_->motors.k_off_i_stalled;
 	p_unbind_i_stalled_ = k_off_i_st * delta_t;
-		printf("WARNING: p_unbind_i_stalled=%g for motors\n", 
-				p_unbind_i_stalled_);
 
 	/* artifical force perpetually applied to motors */
 	double app_force = parameters_->motors.applied_force;
@@ -113,14 +111,14 @@ void KinesinManagement::SetParameters(){
 	p_tether_bound_ = k_tether * c_eff_teth * delta_t;
 	p_untether_free_ = k_untether * delta_t;
 	// Sound the alarm if our timestep is too large
-	if(p_bind_i_tethered_ > 1) printf(
-			"WARNING: p_bind_i_teth=%g for motors\n", p_bind_i_tethered_);
+	if(p_bind_i_tethered_ > 1) 
+		printf("WARNING: p_bind_i_teth=%g for mots\n",p_bind_i_tethered_);
 	if(p_tether_free_ > 1) 
-		printf("WARNING: p_teth_free=%g for motors\n", p_tether_free_);
+		printf("WARNING: p_teth_free=%g for mots\n", p_tether_free_);
 	if(p_tether_bound_ > 1)
-		printf("WARNING: p_teth_bound=%g for motors\n", p_tether_bound_);
+		printf("WARNING: p_teth_bound=%g for mots\n", p_tether_bound_);
 	if(p_untether_free_ > 1)
-		printf("WARNING: p_unteth_free=%g for motors\n", p_untether_free_);	
+		printf("WARNING: p_unteth_free=%g for mots\n", p_untether_free_);	
 	// For events that depend on tether stretch, each different extension 
 	// has its own rate; "base" refers to when the tether is unstretched 
 	double p_bind_base = k_on * c_eff_teth * delta_t; 
@@ -329,7 +327,9 @@ double KinesinManagement::GetWeight_TetherBound(){
 
 	double weight = 0;
 	for(int i_entry = 0; i_entry < n_bound_untethered_; i_entry++){
-		weight += bound_untethered_[i_entry]->GetTotalTetheringWeight();
+
+		POP_T *head = std::get<POP_T*>(bound_untethered_[i_entry]);
+		weight += head->motor_->GetTotalTetheringWeight();
 	}
 	return weight;
 }
@@ -358,7 +358,7 @@ Kinesin* KinesinManagement::GetBoundUntetheredMotor(){
 
 	UpdateBoundUntethered();
 	int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_); 
-	return bound_untethered_[i_motor];
+	return std::get<POP_T*>(bound_untethered_[i_motor])->motor_;
 }
 
 void KinesinManagement::UpdateAllLists(){
@@ -824,10 +824,16 @@ void KinesinManagement::UpdateBoundUntethered(){
 	n_bound_untethered_ = 0;
 	for(int i_motor = 0; i_motor < n_active_; i_motor++){
 		Kinesin *motor = active_[i_motor];
-		if(motor->tethered_ == false
-		&& motor->heads_active_ > 0){
-			bound_untethered_[n_bound_untethered_] = motor;
-			n_bound_untethered_++; 
+		if(!motor->tethered_){
+			if(motor->heads_active_ == 1){
+				bound_untethered_[n_bound_untethered_] 
+					= motor->GetActiveHead();
+				n_bound_untethered_++; 
+			}
+			else if(motor->heads_active_ == 2){
+				bound_untethered_[n_bound_untethered_] = &motor->head_one_;
+				n_bound_untethered_++;
+			}
 		}
 	}
 }
@@ -1056,16 +1062,21 @@ void KinesinManagement::UpdateEvents(){
 
 void KinesinManagement::RunKMC(){
 
+	bool verbose(false);
 	sys_time start1 = sys_clock::now();
 	int i_active = (int)(parameters_->motors.t_active/parameters_->delta_t);
 	if(properties_->current_step_ >= i_active
-	&& parameters_->motors.c_bulk > 0)
+	&& parameters_->motors.c_bulk > 0){
 		GenerateKMCList();
-	else return;
+	}
+	else{
+		return;
+	}
 	sys_time start2 = sys_clock::now();
 	if(!kmc_list_.empty()){
 		int x_dub = 0;
 //		printf("\nStart of Kinesin KMC cycle\n");
+		if(verbose) printf("%lu MOTOR EVENTS\n", kmc_list_.size());
 		for(int i_entry = 0; i_entry < kmc_list_.size(); i_entry++){
 			if(kmc_list_[i_entry] >= 200 && kmc_list_[i_entry] < 300){
 				x_dub = kmc_list_[i_entry] % 100;
@@ -1089,71 +1100,71 @@ void KinesinManagement::RunKMC(){
 			}
 			switch(kmc_list_[i_entry]){
 				case 10:
-//					printf("Bind_I\n");
+					if(verbose) printf("Bind_I\n");
 					KMC_Bind_I();
 					break;
 				case 11:
-//					printf("Bind_I_Tethered\n");
+					if(verbose) printf("Bind_I_Tethered\n");
 					KMC_Bind_I_Tethered();
 					break;
 				case 20:
-//					printf("Bind_ATP\n");
+					if(verbose) printf("Bind_ATP\n");
 					KMC_Bind_ATP();
 					break;
 				case 21:
-//					printf("Bind_ATP_Tethered\n");
+					if(verbose) printf("Bind_ATP_Tethered\n");
 					KMC_Bind_ATP_Tethered(x_dub);
 					break;
 				case 30:
-//					printf("Hydrolyze\n");
+					if(verbose) printf("Hydrolyze\n");
 					KMC_Hydrolyze();
 					break;
 				case 31:
-//					printf("Hydrolyze stalled\n");
+					if(verbose) printf("Hydrolyze stalled\n");
 					KMC_Hydrolyze_Stalled();
 					break;
 				case 40:
-//					printf("Bind_II\n");
+					if(verbose) printf("Bind_II\n");
 					KMC_Bind_II();
 					break;
 				case 41:
-//					printf("Bind_II_Tethered\n");
+					if(verbose) printf("Bind_II_Tethered\n");
 					KMC_Bind_II_Tethered(x_dub);
 					break;
 				case 50:
-//					printf("Unbind_II\n");
+					if(verbose) printf("Unbind_II\n");
 					KMC_Unbind_II();
 					break;
 				case 60:
-//					printf("Unbind_I\n");
+					if(verbose) printf("Unbind_I\n");
 					KMC_Unbind_I();
 					break;
 				case 61:
-//					printf("Unbind_I_Stalled\n");
+					if(verbose) printf("Unbind_I_Stalled\n");
 					KMC_Unbind_I_Stalled();
 					break;
 				case 62:
-//					printf("Unbind_I_Teth\n");
+					if(verbose) printf("Unbind_I_Teth\n");
 					KMC_Unbind_I_Tethered(x_dub);
 					break;
 				case 63:
-//					printf("Unbind_I_Teth_St\n");
+					if(verbose) printf("Unbind_I_Teth_St\n");
 					KMC_Unbind_I_Tethered_Stalled(x_dub);
 					break;
 				case 70:
-//					printf("Tether_Free\n");
+					if(verbose) printf("Tether_Free\n");
 					KMC_Tether_Free();
 					break;
 				case 71:
-//					printf("Tether_Bound\n");
+					if(verbose) printf("Tether_Bound\n");
 					KMC_Tether_Bound();
 					break;
 				case 80:	
-//					printf("Untether_Free\n");
+					if(verbose) printf("Untether_Free\n");
 					KMC_Untether_Free();
 					break;
 				case 81:
-//					printf("Untether_Bound\n");
+					if(verbose) printf("Untether_Bound\n");
 					KMC_Untether_Bound(x_dub);
 					break;
 			}
@@ -1684,7 +1695,8 @@ void KinesinManagement::KMC_Tether_Bound(){
 	if(n_bound_untethered_ > 0){
 		// Randomly pick a motor
 		int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
-		Kinesin *motor = bound_untethered_[i_motor];
+		Kinesin *motor 
+			= std::get<POP_T*>(bound_untethered_[i_motor])->motor_;
 		// Update motor's neighbor xlinks (i.e., those it can teth to)
 		motor->UpdateNeighborXlinks(); 
 		int attempts = 0; 
@@ -1696,7 +1708,7 @@ void KinesinManagement::KMC_Tether_Bound(){
 				break;
 			}
 			i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
-			motor = bound_untethered_[i_motor];
+			motor = std::get<POP_T*>(bound_untethered_[i_motor])->motor_;
 			motor->UpdateNeighborXlinks();
 			attempts++; 
 		}

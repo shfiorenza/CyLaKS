@@ -1,6 +1,6 @@
 #ifndef _KINESIN_MANAGEMENT_H
 #define _KINESIN_MANAGEMENT_H
-#include "kinesin.h"
+#include "entry.h"
 #include <string>
 #include <functional>
 class Curator; 
@@ -9,6 +9,7 @@ struct system_properties;
 
 class KinesinManagement{
 	private:
+		using POP_T = Kinesin::head;
 		Curator* wally_;
 		// Structure that holds all pertinent info for a given MC event:
 		struct event{
@@ -85,7 +86,7 @@ class KinesinManagement{
 		std::vector<Kinesin> motors_; 
 		std::vector<Kinesin*> active_;
 		std::vector<Kinesin*> free_tethered_;
-		std::vector<Kinesin*> bound_untethered_;
+		std::vector<ENTRY_T> bound_untethered_;
 		std::vector<Kinesin::head*> docked_; 
 		std::vector<Kinesin::head*> bound_NULL_;
 		std::vector<Kinesin::head*> bound_ATP_;

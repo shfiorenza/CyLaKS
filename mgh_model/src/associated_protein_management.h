@@ -1,32 +1,34 @@
 #pragma once 
-#include <string>
-#include <variant>
-#include <functional>
 #include "event.h"
-#include "associated_protein.h"
+#include "entry.h"
 struct system_parameters;
 struct system_properties;
 class Curator; 
 
 class AssociatedProteinManagement{
 	private:
-		// Aliases to make our work a little more neat
+		// Data types
 		using POP_T = AssociatedProtein::Monomer;
+		using ALT_T = Kinesin::head;
 		using SITE_T = Tubulin;
 		using MGMT_T = AssociatedProteinManagement;
-		using EVENT_T = Event<POP_T*, SITE_T*, MGMT_T*>;
-		using Entry = EVENT_T::Entry;
+		// ENTRY_T is defined in entry.h header
+		using EVENT_T = Event<MGMT_T*, ENTRY_T>;
+		// Use a template for 'Vec' rather than std::vector (aesthetic)
 		template<class DATA_T> using Vec = std::vector<DATA_T>;
 		// All possible KMC event objects; arbitrary sequential order
 		Vec<EVENT_T> events_;
-		// IDs of events; segregated by target population
+		// IDs of events; segregated by target pop. (for stat correction)
 		Vec<Vec<int>> IDs_by_pop_;
+		// Same as above but for secondary stat correction
+		Vec<Vec<int>> IDs_by_root_;
+		Vec<int*> n_avail_by_root_;
 		// List of event IDs to execute any given timestep; dynamic
 		Vec<int> IDs_to_exe_;
 		// Temporarily holds entries after KMC events
 		int n_scratched_ = 0;
 		Vec<POP_T*> scratch_;
-
+		
 		// Pointers to global system params & props; same for all classes
 		system_parameters *parameters_ = nullptr;
 		system_properties *properties_ = nullptr;
@@ -47,16 +49,16 @@ class AssociatedProteinManagement{
 		int n_active_ = 0; 		  // No. actively bound; dynamic
 		int n_free_teth_ = 0;
 		int n_bound_unteth_ = 0;
-		int n_heads_i_teth_tot_ = 0;
+		int n_bound_i_teth_tot_ = 0;
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
-		Vec<int> n_heads_i_;
+		Vec<int> n_bound_i_;
 		// Second index is [x] or [x_dub] for base or teth pops.
-		Vec<Vec<int>> n_heads_i_teth_;
-		Vec<Vec<int>> n_heads_ii_;
+		Vec<Vec<int>> n_bound_i_teth_;
+		Vec<Vec<int>> n_bound_ii_;
 		// Second index is [x_dub], third & final index is [x]
-		Vec<Vec<Vec<int>>> n_heads_ii_teth_same_; 
-		Vec<Vec<Vec<int>>> n_heads_ii_teth_oppo_; 
+		Vec<Vec<Vec<int>>> n_bound_ii_teth_same_; 
+		Vec<Vec<Vec<int>>> n_bound_ii_teth_oppo_; 
 
 		/* Probabilities of possible KMC events */
 		double p_bind_i_teth_base_;
@@ -86,19 +88,19 @@ class AssociatedProteinManagement{
 		/* Lists that track different population types */
 		Vec<AssociatedProtein> xlinks_;				// Actual xlink objects
 		Vec<AssociatedProtein*> active_;
-		Vec<AssociatedProtein*> free_teth_;
 		Vec<AssociatedProtein*> bound_unteth_;
+		Vec<ENTRY_T> free_teth_;
 		// First index is number of PRC1 neighbors: [0], [1], or [2]
 		// The last entry, [3], includes ALL regardless of n_neighbs
 		// Second index is actual xlink entry
-		Vec<Vec<Entry>> heads_i_;
+		Vec<Vec<ENTRY_T>> bound_i_;
 		// Second index is [x] or [x_dub]; third index is xlink entry
-		Vec<Vec<Vec<POP_T*>>> heads_ii_;
-		Vec<Vec<Vec<POP_T*>>> heads_i_teth_;
+		Vec<Vec<Vec<ENTRY_T>>> bound_ii_;
+		Vec<Vec<Vec<ENTRY_T>>> bound_i_teth_;
 		// Second index is [x_dub]; third index is [x]; fourth is entry
 		// e.g., [0][16][2][1] -> 2nd xlink w/ x_dub=16, x=2, & 0 neighbs
-		Vec<Vec<Vec<Vec<POP_T*>>>> heads_ii_teth_oppo_;
-		Vec<Vec<Vec<Vec<POP_T*>>>> heads_ii_teth_same_;
+		Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ii_teth_oppo_;
+		Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ii_teth_same_;
 
 	private:
 		void GenerateXLinks();
@@ -118,41 +120,32 @@ class AssociatedProteinManagement{
 		double GetWeight_Bind_II_Teth();
 
 		POP_T* CheckScratchFor(std::string pop);
+		void SaveToScratch(POP_T* head);
 
-		void Update_Relay(std::string pop);
-		void Update_All();
+		void Update_All_Lists();
+		void Update_List_Relay(std::string event, std::string target_pop);
 		void Update_Free_Teth();
 		void Update_Bound_Unteth(); 
-		void Update_Heads_I();
-		void Update_Heads_I_Teth();
-		void Update_Heads_II();
-		void Update_Heads_II_Teth();
+		void Update_Bound_I();
+		void Update_Bound_I_Teth();
+		void Update_Bound_II();
+		void Update_Bound_II_Teth();
+		void Update_Bind_II_Candidate();
+		void Update_Bind_I_Teth_Candidate();
+		void Update_Bind_II_Teth_Candidate();	//XXX add
 
 		void Run_KMC();
-		void Refresh_Population_Labels(); 
+		void Refresh_Populations(); 
 		void Generate_Execution_Sequence();
-		void KMC_Relay(Entry target, int code); 
-		void SaveToScratch(POP_T* head);
-		// Diffusion events
-		void Diffuse_I(POP_T* head, int dir);
-		void Diffuse_II_To_Rest(int n_neighbs, int x);
-		void Diffuse_II_Fr_Rest(int n_neighbs, int x);
-		void Diffuse_I_To_Teth(int n_neighbs, int x_dub);
-		void Diffuse_I_Fr_Teth(int n_neighbs, int x_dub);
-		void Diffuse_II_To_Both(int n_neighbs, int x_dub, int x);
-		void Diffuse_II_Fr_Both(int n_neighbs, int x_dub, int x);
-		void Diffuse_II_To_Self_Fr_Teth(int n_neighbs, int x_dub, int x);
-		void Diffuse_II_Fr_Self_To_Teth(int n_neighbs, int x_dub, int x);
-		// Kinematic events
-		void Bind_I(SITE_T* site);
-		void Bind_II();		//XXX add neighb coop in weights
-		void Unbind_I(POP_T* head);
-		void Unbind_II(int n_neighbs, int x);
-		void Bind_I_Teth(); //XXX add neighb coop in weights
-		void Bind_II_Teth(); //XXX add neighb coop in weights
-		void Unbind_I_Teth(int n_neighbs, int x_dub); 
-		void Unbind_II_To_Teth(int n_neighbs, int x_dub, int x);
-		void Unbind_II_Fr_Teth(int n_neighbs, int x_dub, int x);
-		void Tether_Free(); 
-		void Untether_Free();
+		int Sample_Event_Statistics(); 
+
+		void Execute_Function_Relay(ENTRY_T target, int code); 
+		void Diffuse(POP_T* head, int dir);
+		void Bind_I(SITE_T* target_site);
+		void Bind_II(POP_T* bound_head);
+		void Unbind_I(POP_T* bound_head);
+		void Unbind_II(POP_T* bound_head);
+		void Bind_I_Teth(POP_T* satellite_head);
+		void Tether_Free(ALT_T* untethered_head); 
+		void Untether_Free(POP_T* satellite_head);
 };

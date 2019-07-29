@@ -3,18 +3,18 @@ clear variables;
 off_ratio = 10;
 k_hydrolyze = 90;
 jam_ratio = 700;
-n_sites = 1750;
-simName = sprintf('EndtagREB_4_%i', n_sites);
-simName = 'test_ETc';
+n_sites = 500;
+simName = sprintf('Endtag_HiKD_HiC_1_%i', n_sites);
+%simName = 'test_ETc';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_steps = 10000000;
 n_datapoints = 10000;
-steps_per_plot = 5000;
+steps_per_plot = 100;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
-delta_t = 0.0001;
+delta_t = 0.00005;
 time_per_frame = delta_t * (n_steps / n_datapoints);
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
@@ -99,7 +99,7 @@ for i=starting_point:1:n_datapoints
         
         % Put vertical red line where endtag starting position is
         plot([endtag_length endtag_length], [0 1], ':', 'LineWidth', 0.1, 'Color', ET_col);
-        plot(xlim, [0 0], ':r', 'LineWidth', 0.1); 
+        %plot(xlim, [0 0], ':r', 'LineWidth', 0.1); 
         
         %%style stuff%%
         
@@ -110,8 +110,8 @@ for i=starting_point:1:n_datapoints
         
         xlabel({'Distance along microtubule relative to plus-end (microns)'});
         ylabel('Fraction of the time occupied');
-        %xlim([0 0.5]);
-        ylim([-.1 1]);
+        %xlim([0 1]);
+        ylim([0 1]);
         
         %grid on
         %grid minor

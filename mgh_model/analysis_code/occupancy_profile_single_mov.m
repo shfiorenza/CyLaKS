@@ -3,20 +3,20 @@ clear variables;
 off_ratio = 10;
 k_hydrolyze = 90;
 jam_ratio = 700;
-n_sites = 500;
-simName = sprintf('Endtag_HiKD_HiC_1_%i', n_sites);
+n_sites = 1750;
+simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
 %simName = 'test_ETc';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_steps = 10000000;
 n_datapoints = 10000;
-steps_per_plot = 100;
+steps_per_plot = 5000;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
 delta_t = 0.00005;
 time_per_frame = delta_t * (n_steps / n_datapoints);
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};
 
@@ -74,14 +74,14 @@ for i=starting_point:1:n_datapoints
             end
             if(past_threshold && occupancy_slope(i_site) > (min_slope / 2))
                 endtag_site = i_site;
-                ET_col = 'b';
+                ET_col = 'r';
                 break;
             end
         end
         if endtag_site == 0
             [max_accel, i_peak] = max(occupancy_accel(i_threshold:n_sites));
             endtag_site = i_threshold + i_peak;
-            ET_col = 'r';
+            ET_col = 'm';
         end
         endtag_length = endtag_site * 0.008;
         
@@ -92,6 +92,7 @@ for i=starting_point:1:n_datapoints
         hold all
 
         plot(linspace(0, n_sites*0.008, n_sites), motor_occupancy);
+       
         plot(linspace(0, n_sites*0.008, n_sites), xlink_occupancy);
         plot(linspace(0, n_sites*0.008, n_sites), net_occupancy);
        % plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
@@ -106,7 +107,7 @@ for i=starting_point:1:n_datapoints
         
         %title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
         %sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
-        title(sprintf('Endtag length: %g microns', endtag_length));
+        title(sprintf('Endtag length: %g microns for 1 nM PRC1', endtag_length));
         
         xlabel({'Distance along microtubule relative to plus-end (microns)'});
         ylabel('Fraction of the time occupied');
@@ -122,13 +123,13 @@ for i=starting_point:1:n_datapoints
         set(findall(axis, 'Type', 'Line'), 'LineWidth', 2);
         legend(legendLabel, 'Location', 'northeast');
        
-    
+    %{
     dim = [0.7 0.47 .3 .3];
     time = i * time_per_frame;
     %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');
-
+%}
     drawnow();
     frame = getframe(gcf);
     writeVideo(v, getframe(gcf)); 

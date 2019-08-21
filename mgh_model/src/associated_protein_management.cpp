@@ -1340,6 +1340,57 @@ void AssociatedProteinManagement::Update_Bind_I_Teth_Candidate(){
 
 void AssociatedProteinManagement::Update_Bind_II_Teth_Candidate(){
 
+  int all_neighbs = max_neighbs_ + 1;
+  int n_bound = n_bound_i_teth_tot_;
+  int i_entry = 0;
+  double weight_total = 0.0;
+  double weight_local[n_bound];
+  for (int x_dub(2 * comp_cutoff_); x_dub <= 2 * teth_cutoff_; x_dub++) {
+    for (int i(0); i < n_bound_i_teth_[all_neighbs][x_dub]; i++) {
+      weight_local[i_entry] = 0.0;
+      POP_T *head = std::get<POP_T *>(bound_i_teth_[all_neighbs][x_dub][i]);
+      head->xlink_->UpdateNeighborSites_II_Teth();
+      int n_sites = head->xlink_->n_teth_neighbor_sites_ii_;
+      for (int i_site(0); i_site < n_sites; i_site++) {
+        Tubulin *site = head->xlink_->teth_neighbor_sites_ii_[i_site];
+        double weight = head->xlink_->GetBindingWeight_II_Teth(site);
+        weight_local[i_entry] += weight;
+      }
+      weight_total += weight_local[i_entry];
+      i_entry++;
+    }
+  }
+  if (weight_total > 0.0) {
+    // Normalize local weights to get relative probabilities
+    // Using these relative probs, randomly pick an entry
+    i_entry = 0;
+    bool failed(true);
+    double p_cum(0);
+    double ran = properties_->gsl.GetRanProb();
+    int chosen_x_dub = -1;
+    for (int x_dub(2 * comp_cutoff_); x_dub <= 2 * teth_cutoff_; x_dub++) {
+      n_bound_i_teth_[all_neighbs][x_dub] = 0;
+      for (int i(0); i < n_bound_i_teth_[all_neighbs][x_dub]; i++) {
+        p_cum += weight_local[i_entry] / weight_total;
+        if (p_cum > ran) {
+          failed = false;
+          bound_i_teth_[all_neighbs][x_dub][0] =
+              bound_i_teth_[all_neighbs][x_dub][i];
+          n_bound_i_teth_[all_neighbs][x_dub] = 1;
+          chosen_x_dub = x_dub;
+          break;
+        }
+      }
+    }
+    if (failed) {
+      printf("nope in update_bind_ii_teth_candidate; EXIT \n");
+      exit(1);
+    }
+  } else {
+    for (int x_dub(2 * comp_cutoff_); x_dub <= 2 * teth_cutoff_; x_dub++) {
+      n_bound_i_teth_[all_neighbs][x_dub] = 0;
+    }
+  }
 }
 
 void AssociatedProteinManagement::Run_KMC(){
@@ -1492,111 +1543,108 @@ void AssociatedProteinManagement::Generate_Execution_Sequence(){
 	else IDs_to_exe_.clear();
 }
 
-int AssociatedProteinManagement::Sample_Event_Statistics(){
+int AssociatedProteinManagement::Sample_Event_Statistics() {
 
-	// Scan through all events & get expected number of occurrences 
-	int n_events_tot = 0;
-	for(int i_event(0); i_event < events_.size(); i_event++){
-		events_[i_event].SampleStatistics();
-		n_events_tot += events_[i_event].n_expected_;
-	}
-	/* Scan through all target pops. & ensure none will become negative */
-	// Primary scan: compare pops. segregated by ext. & n_neighbs
-	for(int i_pop(0); i_pop < IDs_by_pop_.size(); i_pop++){
-		int n_competitors = IDs_by_pop_[i_pop].size();
-		if(n_competitors > 1){
-			double p_tot(0);
-			int n_events_loc(0);
-			for(int i_entry(0); i_entry < n_competitors; i_entry++){
-				int i_competitor = IDs_by_pop_[i_pop][i_entry];
-				n_events_loc += events_[i_competitor].n_expected_;
-				p_tot += (events_[i_competitor].n_expected_ 
-						* events_[i_competitor].p_occur_); 
-			}
-			// By convention, always use first entry for total avail pop
-			// (Ensure emplace_back pattern in Init_Events() matches this)
-			int n_avail_loc = *events_[IDs_by_pop_[i_pop][0]].n_avail_;
-			if(n_avail_loc == 0 && n_events_loc > 0) {
-				printf("uhhhh ?? - %i\n", n_events_loc);
-				std::cout << events_[IDs_by_pop_[i_pop][0]].name_
-						  << std::endl;
-				std::cout << events_[IDs_by_pop_[i_pop][0]].target_pop_
-						  << std::endl;
-			}
-			while(n_events_loc > n_avail_loc){
-				double p_cum = 0;
-				double ran = properties_->gsl.GetRanProb();
-				for(int i_entry(0); i_entry < n_competitors; i_entry++){
-					int i_competitor = IDs_by_pop_[i_pop][i_entry];
-					p_cum += (events_[i_competitor].n_expected_
-							* events_[i_competitor].p_occur_) / p_tot;
-					if(p_cum >= ran
-					&& events_[i_competitor].n_expected_ > 0){
-						events_[i_competitor].n_expected_--;
-						n_events_tot--;
-						n_events_loc--;
-						p_tot -= events_[i_competitor].p_occur_;
-						break;
-					}
-				}
-			}
-		}
-	}
-	// Secondary scan: compares exts. over ALL neighbors
-	for(int i_root(0); i_root < IDs_by_root_.size(); i_root++){
-		int n_competitors = IDs_by_root_[i_root].size();
-		if(n_competitors > 1){
-			double p_tot(0);
-			bool coupled(false);
-			int n_events_loc(0);
-			for(int i_entry(0); i_entry < n_competitors; i_entry++){
-				int i_competitor = IDs_by_root_[i_root][i_entry];
-				if(i_competitor < 0){
-					coupled = true;
-					i_competitor = abs(i_competitor);
-				}
-				n_events_loc += events_[i_competitor].n_expected_;
-				p_tot += (events_[i_competitor].n_expected_ 
-						* events_[i_competitor].p_occur_); 
-			}
-			int n_avail_loc = *n_avail_by_root_[i_root];
-			if(coupled){
-				if(n_avail_loc > 0) {
-				printf("pre: %i\n", n_avail_loc);
-				std::cout << events_[abs(IDs_by_root_[i_root][0])].name_
-						  << std::endl;
-				std::cout << events_[abs(IDs_by_root_[i_root][0])].
-					target_pop_ << std::endl;
-				}
-				n_avail_loc /= 2;
-			}
-			if(n_avail_loc == 0 && n_events_loc > 0) {
-				printf("uhhhh TWO ?? - %i\n", n_events_loc);
-				std::cout << events_[abs(IDs_by_root_[i_root][0])].name_
-						  << std::endl;
-				std::cout << events_[abs(IDs_by_root_[i_root][0])].
-					target_pop_ << std::endl;
-			}
-			while(n_events_loc > n_avail_loc){
-				double p_cum = 0;
-				double ran = properties_->gsl.GetRanProb();
-				for(int i_entry(0); i_entry < n_competitors; i_entry++){
-					int i_competitor = abs(IDs_by_root_[i_root][i_entry]);
-					p_cum += (events_[i_competitor].n_expected_
-							* events_[i_competitor].p_occur_) / p_tot;
-					if(p_cum >= ran
-					&& events_[i_competitor].n_expected_ > 0){
-						events_[i_competitor].n_expected_--;
-						n_events_tot--;
-						n_events_loc--;
-						p_tot -= events_[i_competitor].p_occur_;
-						break;
-					}
-				}
-			}
-		}
-	}
-	return n_events_tot;
+  // Scan through all events & get expected number of occurrences
+  int n_events_tot = 0;
+  for (int i_event(0); i_event < events_.size(); i_event++) {
+    events_[i_event].SampleStatistics();
+    n_events_tot += events_[i_event].n_expected_;
+  }
+  /* Scan through all target pops. & ensure none will become negative */
+  // Primary scan: compare pops. segregated by ext. & n_neighbs
+  for (int i_pop(0); i_pop < IDs_by_pop_.size(); i_pop++) {
+    int n_competitors = IDs_by_pop_[i_pop].size();
+    if (n_competitors > 1) {
+      double p_tot(0);
+      int n_events_loc(0);
+      for (int i_entry(0); i_entry < n_competitors; i_entry++) {
+        int i_competitor = IDs_by_pop_[i_pop][i_entry];
+        n_events_loc += events_[i_competitor].n_expected_;
+        p_tot += (events_[i_competitor].n_expected_ *
+                  events_[i_competitor].p_occur_);
+      }
+      // By convention, always use first entry for total avail pop
+      // (Ensure emplace_back pattern in Init_Events() matches this)
+      int n_avail_loc = *events_[IDs_by_pop_[i_pop][0]].n_avail_;
+      if (n_avail_loc == 0 && n_events_loc > 0) {
+        // printf("uhhhh ?? - %i\n",
+        // n_events_loc);
+        std::cout << events_[IDs_by_pop_[i_pop][0]].name_ << std::endl;
+        std::cout << events_[IDs_by_pop_[i_pop][0]].target_pop_ << std::endl;
+      }
+      while (n_events_loc > n_avail_loc) {
+        double p_cum = 0;
+        double ran = properties_->gsl.GetRanProb();
+        for (int i_entry(0); i_entry < n_competitors; i_entry++) {
+          int i_competitor = IDs_by_pop_[i_pop][i_entry];
+          p_cum += (events_[i_competitor].n_expected_ *
+                    events_[i_competitor].p_occur_) /
+                   p_tot;
+          if (p_cum >= ran && events_[i_competitor].n_expected_ > 0) {
+            events_[i_competitor].n_expected_--;
+            n_events_tot--;
+            n_events_loc--;
+            p_tot -= events_[i_competitor].p_occur_;
+            break;
+          }
+        }
+      }
+    }
+  }
+  // Secondary scan: compares exts. over ALL neighbors
+  for (int i_root(0); i_root < IDs_by_root_.size(); i_root++) {
+    int n_competitors = IDs_by_root_[i_root].size();
+    if (n_competitors > 1) {
+      double p_tot(0);
+      bool coupled(false);
+      int n_events_loc(0);
+      for (int i_entry(0); i_entry < n_competitors; i_entry++) {
+        int i_competitor = IDs_by_root_[i_root][i_entry];
+        if (i_competitor < 0) {
+          coupled = true;
+          i_competitor = abs(i_competitor);
+        }
+        n_events_loc += events_[i_competitor].n_expected_;
+        p_tot += (events_[i_competitor].n_expected_ *
+                  events_[i_competitor].p_occur_);
+      }
+      int n_avail_loc = *n_avail_by_root_[i_root];
+      if (coupled) {
+        if (n_avail_loc > 0) {
+          std::cout << events_[abs(IDs_by_root_[i_root][0])].name_ << std::endl;
+
+          std::cout << events_[abs(IDs_by_root_[i_root][0])].target_pop_
+                    << std::endl;
+        }
+        n_avail_loc /= 2;
+      }
+      if (n_avail_loc == 0 && n_events_loc > 0) {
+        printf("uhhhh TWO ?? - %i\n", n_events_loc);
+        std::cout << events_[abs(IDs_by_root_[i_root][0])].name_ << std::endl;
+        std::cout << events_[abs(IDs_by_root_[i_root][0])].target_pop_
+                  << std::endl;
+      }
+      while (n_events_loc > n_avail_loc) {
+        double p_cum = 0;
+        double ran = properties_->gsl.GetRanProb();
+        for (int i_entry(0); i_entry < n_competitors; i_entry++) {
+          int i_competitor = abs(IDs_by_root_[i_root][i_entry]);
+          p_cum += (events_[i_competitor].n_expected_ *
+                    events_[i_competitor].p_occur_) /
+                   p_tot;
+          if (p_cum >= ran && events_[i_competitor].n_expected_ > 0) {
+            events_[i_competitor].n_expected_--;
+            n_events_tot--;
+            n_events_loc--;
+            p_tot -= events_[i_competitor].p_occur_;
+            break;
+          }
+        }
+      }
+    }
+  }
+  return n_events_tot;
 }
 
 void AssociatedProteinManagement::Execute_Function_Relay(

@@ -1,8 +1,8 @@
 
 clear variables;
-xlink_concs = [0, 1, 4]; 
+xlink_concs = [0];%, 1];%, 4]; 
 %name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
-name_structs = ["Endtag_MAYBE_0_%i", "Endtag_MAYBE_1_%i", "Endtag_MAYBE_4_%i"];
+name_structs = ["Endtag_newParams_d_0_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
 %mt_lengths = [4, 8, 14];
 % experimental parameters
@@ -23,7 +23,7 @@ xlink_speciesID = 1;
 n_datapoints = 10000;
 starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 
 n_concs = length(xlink_concs);
@@ -113,5 +113,5 @@ end
 xlabel('Length of microtubule (microns)', 'FontSize', 14);
 ylabel('Endtag length (microns)', 'FontSize', 14);
 %XTick('FontSize', 14);
-ylim([0 16]);
+ylim([0 6]);
 xlim([0 16]);

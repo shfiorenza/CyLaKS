@@ -2,11 +2,11 @@
 clear all;
 % Often-changed variables
 n_sites = 50000;
-simName = 'proc_5.0';
+simName = 'proc_test_f';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0001;
-n_steps = 10000000;
+n_steps = 1000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;

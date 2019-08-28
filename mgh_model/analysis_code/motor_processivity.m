@@ -1,8 +1,8 @@
 
 clear all;
 % Often-changed variables
-n_sites = 50000;
-simName = 'proc_test_f';
+n_sites = 5000;
+simName = 'processivity_420pM';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0001;
@@ -80,7 +80,7 @@ for i_data = starting_point:1:n_datapoints - 1
                 delta_t = abs(i_data - start_datapoint);
                 run_time = delta_t * time_per_datapoint;
                 % If time bound is above time cutoff, add to data
-                if run_time >= time_cutoff
+                if run_time >= time_cutoff && run_length < 15
                     n_runs = n_runs + 1;
                     run_lengths(n_runs) = run_length;
                     run_times(n_runs) = run_time;

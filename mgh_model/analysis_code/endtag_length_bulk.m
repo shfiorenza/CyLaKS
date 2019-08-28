@@ -1,8 +1,8 @@
 
 clear variables;
-xlink_concs = [0];%, 1];%, 4]; 
+xlink_concs = 0;%, 1];%, 4]; 
 %name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
-name_structs = ["Endtag_newParams_d_0_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
+name_structs = ["Endtag_20x_0_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
 %mt_lengths = [4, 8, 14];
 % experimental parameters
@@ -65,7 +65,7 @@ for i_conc=1:1:n_concs
         min_slope = min(occupancy_slope);
   
         past_threshold = false;
-        i_threshold = 0;   
+        i_threshold = 1;   
         endtag_site = 0;
         for i_site=1:n_sites
             if(~past_threshold && net_occupancy(i_site) < 0.5*max_occupancy)

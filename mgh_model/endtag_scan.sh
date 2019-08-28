@@ -6,7 +6,7 @@ echo BASE PARAM FILE is $PARAM_FILE
 CONC_SCALE=0
 	XLINK_CONC=$(echo "scale=2; $CONC_SCALE * 0.1" | bc)
 	for N_SITES in {250,500,750,1000,1250,1750}; do
-		FILE_NAME="Endtag_newParams_e"
+		FILE_NAME="Endtag_20x"
 		FILE_NAME+="_"
 		FILE_NAME+=$CONC_SCALE
 		FILE_NAME+="_"

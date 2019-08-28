@@ -4,19 +4,19 @@ off_ratio = 10;
 k_hydrolyze = 90;
 jam_ratio = 700;
 n_sites = 1750;
-simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
+simName = sprintf('Endtag_20x_0_%i', n_sites);
 %simName = 'test_ETc';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_steps = 10000000;
 n_datapoints = 10000;
-steps_per_plot = 5000;
+steps_per_plot = 500;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
 delta_t = 0.00005;
 time_per_frame = delta_t * (n_steps / n_datapoints);
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};
 
@@ -65,7 +65,7 @@ for i=starting_point:1:n_datapoints
         min_slope = min(occupancy_slope);
     
         endtag_site = 0;
-        i_threshold = 0;        
+        i_threshold = 1;        
         past_threshold = false;
         for i_site=1:n_sites
             if(~past_threshold && net_occupancy(i_site) < 0.5*max_occupancy)

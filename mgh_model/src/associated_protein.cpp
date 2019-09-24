@@ -5,9 +5,9 @@ AssociatedProtein::AssociatedProtein(){
 }
 
 void AssociatedProtein::Initialize(system_parameters *parameters, 
-	system_properties *properties, int ID) {
+	system_properties *properties, int id) {
 
-	ID_ = ID;
+	id_ = id;
 	parameters_ = parameters;
 	properties_ = properties;
 	SetParameters();

@@ -278,14 +278,14 @@ void Curator::GenerateDataFiles(char* sim_name){
 	sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
 	sprintf(total_force_file, "%s_total_force.file", sim_name);
 	sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name);
-	// Open occupancy file, which stores the species ID of each occupant 
+	// Open occupancy file, which stores the species id of each occupant 
 	// (or -1 for none) for all MT sites during data collection (DC)
 	properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
-	// Open motor ID file, which stores the unique ID of all bound motors 
+	// Open motor id file, which stores the unique id of all bound motors 
 	// (unbound not tracked) and their respective site indices during DC
 	properties_->motor_ID_file_ = OpenFile(motor_ID_file, "w");
-	// Open xlink ID file, which does the same 
-	// as the motor ID file but for xlinks
+	// Open xlink id file, which does the same 
+	// as the motor id file but for xlinks
 	properties_->xlink_ID_file_ = OpenFile(xlink_ID_file, "w");
 	// Open tether coord file, which stores the coordinates 
 	// of the anchor points of tethered motors
@@ -612,28 +612,28 @@ void Curator::OutputData(){
 		for(int i_site = 0; i_site < mt_length; i_site++){
 			Tubulin *site = &mt->lattice_[i_site];
 			// If unoccupied, store the speciesID of tubulin to occupancy
-			// and an ID of -1 (null) to motor/xlink ID files 
+			// and an id of -1 (null) to motor/xlink id files 
 			if(site->occupied_ == false){
 				occupancy_array[i_site] = site->speciesID_;
 				motor_ID_array[i_site] = -1;
 				xlink_ID_array[i_site] = -1;
 				tether_coord_array[i_site] = -1;
 			}
-			// If occupied by xlink, store its species ID to occupancy_file,
-			// its unique ID to the xlink ID file, and -1 to motor ID file
+			// If occupied by xlink, store its species id to occupancy_file,
+			// its unique id to the xlink id file, and -1 to motor id file
 			else if(site->xlink_head_ != nullptr){
 				occupancy_array[i_site] 
 					= site->xlink_head_->xlink_->speciesID_;
 				motor_ID_array[i_site] = -1;
-				xlink_ID_array[i_site] = site->xlink_head_->xlink_->ID_;
+				xlink_ID_array[i_site] = site->xlink_head_->xlink_->id_;
 				tether_coord_array[i_site] = -1;
 			}
-			// If occupied by motor, store its species ID to occupancy_file, 
-			// its unique ID to the motor ID file, and -1 to xlink ID file
+			// If occupied by motor, store its species id to occupancy_file, 
+			// its unique id to the motor id file, and -1 to xlink id file
 			else if(site->motor_head_ != nullptr){
 				Kinesin *motor = site->motor_head_->motor_;
 				occupancy_array[i_site] = motor->speciesID_;
-				motor_ID_array[i_site] = motor->ID_;
+				motor_ID_array[i_site] = motor->id_;
 				xlink_ID_array[i_site] = -1;
 				motor_head_status_array[i_site] 
 					= site->motor_head_->trailing_;

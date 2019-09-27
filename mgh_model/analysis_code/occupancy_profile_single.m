@@ -1,27 +1,24 @@
+% LOTS O' SHIT COMMENTED OUT BELOW - FIX B4 ACTUAL USE
+
 clear all
 % Often-changed variables
-n_sites = 1750;
+n_sites = 250;
 processivity = 5.3;
 xlink_conc = 2.0;
 c_motor = 1.5;
 
 %simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
-%simName = 'newProc_250x_long/Endtag_1750';
+%simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
+simName = 'test';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
 n_datapoints = 10000;
 starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
-
-%fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
-%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};
-
-
 
 fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
 data_file = fopen(fileName);
@@ -42,7 +39,7 @@ for i=starting_point:1:n_datapoints
     motor_avg_occupancy(:,1) = motor_avg_occupancy(:,1) + double(motor_raw_data(:,i))./active_datapoints;
     xlink_avg_occupancy(:,1) = xlink_avg_occupancy(:,1) + double(xlink_raw_data(:,i))./active_datapoints;
 end
-
+%{
 smooth_window = n_sites / 10;
 motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
 xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
@@ -70,28 +67,27 @@ if endtag_site == 0
     endtag_site = i_threshold + i_peak;
 end
 endtag_length = endtag_site*0.008;
-
+%}
 %%plot fig%%
 
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])
-plot(linspace(0, n_sites*0.008, n_sites), motor_occupancy);
+plot(linspace(0, n_sites*0.008, n_sites), motor_avg_occupancy);
 
 hold on
-plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
+%plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
 %plot(linspace(0, n_sites*0.008, n_sites), xlink_smoothed_avg);
 %plot(linspace(0, n_sites*0.008, n_sites), net_smoothed_avg);
 
 % Put vertical red line where endtag starting position is
-plot([endtag_length endtag_length], [0 1], ':r', 'LineWidth', 0.1);
+%plot([endtag_length endtag_length], [0 1], ':r', 'LineWidth', 0.1);
 
 %%style stuff%%
 
-
 %title({sprintf('%g micron-long microtubule', n_sites*0.008), ...
 %sprintf('%#.1f nM PRC1 and %#.1f nM kinesin-1', xlink_conc, motor_conc), ...
-title({sprintf('Processivity: %#.1f microns', processivity), ...
-    sprintf('Endtag length: %g microns', endtag_length)});
+%title({sprintf('Processivity: %#.1f microns', processivity), ...
+%    sprintf('Endtag length: %g microns', endtag_length)});
 
 xlabel({'Distance along microtubule relative to plus-end (microns)'});
 ylabel('Fraction of the time occupied');

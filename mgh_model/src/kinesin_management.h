@@ -21,10 +21,8 @@ private:
   Vec<EVENT_T> events_;
   // Evets segregated by target pop. (for stat correction)
   Vec<Vec<EVENT_T *>> events_by_pop_;
-  // Total number of available targets for events segregated by pop.
-  Vec<int *> n_avail_by_pop_;
-  // List of event IDs to execute any given timestep; dynamic
-  Vec<int> IDs_to_exe_;
+  // List of event to execute any given timestep; dynamic
+  Vec<EVENT_T *> events_to_exe_;
   // Temporarily holds entries after KMC events
   int n_scratched_ = 0;
   Vec<POP_T *> scratch_;
@@ -38,6 +36,8 @@ private:
 public:
   bool verbose_{false};
 
+  int n_affinities_;
+
   // See kinesin header for meaningful description of below
   int dist_cutoff_;
   int comp_cutoff_;
@@ -48,14 +48,15 @@ public:
   int n_motors_ = 0; // Total number of motors in system
   int n_active_ = 0; // Motors actively bound to some MT/xlink
   int n_free_tethered_ = 0;
-  int n_docked_ = 0;
   int n_bound_NULL_ = 0;
   int n_bound_ATP_ = 0;
   int n_bound_ATP_stalled_ = 0;
-  int n_bound_ADPP_i_ = 0;
-  int n_bound_ADPP_i_stalled_ = 0;
-  int n_bound_ADPP_ii_ = 0;
   int n_bound_untethered_ = 0;
+  // Below population sizes are indexed by tubulin_affinity
+  Vec<int> n_docked_;
+  Vec<int> n_bound_ADPP_i_;
+  Vec<int> n_bound_ADPP_i_stalled_;
+  Vec<int> n_bound_ADPP_ii_;
   // Below population sizes are indexed by x_dub
   Vec<int> n_docked_tethered_;
   Vec<int> n_bound_NULL_tethered_;
@@ -64,18 +65,19 @@ public:
   Vec<int> n_bound_tethered_;
 
   // Event probabilities
-  double p_bind_i_;
   double p_bind_i_tethered_;
   double p_bind_ATP_;
   double p_hydrolyze_;
   double p_hydrolyze_stalled_;
-  double p_bind_ii_;
-  double p_unbind_ii_;
-  double p_unbind_i_;
-  double p_unbind_i_stalled_;
   double p_tether_free_;
   double p_tether_bound_;
   double p_untether_free_;
+  // Below event probabilities are indexed by tubulin_affinity
+  Vec<double> p_bind_i_;
+  Vec<double> p_bind_ii_;
+  Vec<double> p_unbind_ii_;
+  Vec<double> p_unbind_i_;
+  Vec<double> p_unbind_i_stalled_;
   // Below event probabilities are indexed by x_dub
   Vec<double> p_bind_ATP_tethered_;
   Vec<double> p_bind_ii_tethered_;
@@ -88,13 +90,14 @@ public:
   Vec<Kinesin *> active_;
   Vec<ENTRY_T> free_tethered_;
   Vec<ENTRY_T> bound_untethered_;
-  Vec<ENTRY_T> docked_;
   Vec<ENTRY_T> bound_NULL_;
   Vec<ENTRY_T> bound_ATP_;
   Vec<ENTRY_T> bound_ATP_stalled_;
-  Vec<ENTRY_T> bound_ADPP_i_;
-  Vec<ENTRY_T> bound_ADPP_i_stalled_;
-  Vec<ENTRY_T> bound_ADPP_ii_;
+  // 2-D vectors, inidices are simply [tubulin_affinity][motor_entry]
+  Vec<Vec<ENTRY_T>> docked_;
+  Vec<Vec<ENTRY_T>> bound_ADPP_i_;
+  Vec<Vec<ENTRY_T>> bound_ADPP_i_stalled_;
+  Vec<Vec<ENTRY_T>> bound_ADPP_ii_;
   // 2-D vectors, indices are simply [x_dub][motor_entry]
   Vec<Vec<ENTRY_T>> docked_tethered_;
   Vec<Vec<ENTRY_T>> bound_NULL_tethered_;

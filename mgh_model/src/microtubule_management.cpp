@@ -24,11 +24,20 @@ void MicrotubuleManagement::SetParameters() {
   }
   // int n_sites_bulk = n_sites_tot_ - 2*n_mts;
   unoccupied_list_.resize(n_sites_tot_);
+  // xl neighbor stuff
   n_unoccupied_xl_.resize(3);
   unoccupied_list_xl_.resize(3);
   for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
     n_unoccupied_xl_[n_neighbs] = 0;
     unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_);
+  }
+  // motor cooperativity stuff
+  n_affs_ = 1;
+  n_unoccupied_mot_.resize(n_affs_);
+  unoccupied_list_mot_.resize(n_affs_);
+  for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
+    n_unoccupied_mot_[i_aff] = 0;
+    unoccupied_list_mot_[i_aff].resize(n_sites_tot_);
   }
 }
 
@@ -38,6 +47,24 @@ void MicrotubuleManagement::GenerateMicrotubules() {
   mt_list_.resize(n_mts);
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
+    /*
+    int n_sites = mt_list_[i_mt].n_sites_;
+    int range_fwd = 200;
+    int bin_fwd = 20;
+    int range_bck = 50;
+    int bin_bck = 5;
+    for (int i_site{0}; i_site < n_sites; i_site++) {
+      if (i_site < range_fwd) {
+        mt_list_[i_mt].lattice_[i_site].affinity_ = i_site / bin_fwd;
+        printf("site %i has affinity %i\n", i_site, i_site / bin_fwd);
+      } else {
+        mt_list_[i_mt].lattice_[i_site].affinity_ =
+            ((n_sites - 1) - i_site) / bin_bck;
+        printf("site %i has affinity %i\n", i_site,
+               ((n_sites - 1) - i_site) / bin_bck);
+      }
+    }
+    */
   }
 }
 
@@ -97,6 +124,9 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
     n_unoccupied_xl_[n_neighbs] = 0;
   }
+  for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
+    n_unoccupied_mot_[i_aff] = 0;
+  }
   for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
     int n_sites = parameters_->microtubules.length[i_mt];
     int i_plus = mt_list_[i_mt].plus_end_;
@@ -107,21 +137,12 @@ void MicrotubuleManagement::UpdateUnoccupied() {
       if (site->occupied_ == false) {
         unoccupied_list_[n_unoccupied_] = site;
         n_unoccupied_++;
-        int n_neighbs = 0;
-        if (i_site == i_plus) {
-          if (mt_list_[i_mt].lattice_[i_site - dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        } else if (i_site == i_minus) {
-          if (mt_list_[i_mt].lattice_[i_site + dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        } else {
-          if (mt_list_[i_mt].lattice_[i_site - dx].xlink_head_ != nullptr)
-            n_neighbs++;
-          if (mt_list_[i_mt].lattice_[i_site + dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        }
+        int n_neighbs = site->GetPRC1NeighborCount();
         unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]] = site;
         n_unoccupied_xl_[n_neighbs]++;
+        int aff = site->affinity_;
+        unoccupied_list_mot_[aff][n_unoccupied_mot_[aff]] = site;
+        n_unoccupied_mot_[aff]++;
       }
     }
   }

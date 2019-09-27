@@ -9,18 +9,21 @@ struct system_properties;
 class MicrotubuleManagement {
 private:
   template <class DATA_T> using Vec = std::vector<DATA_T>;
+  system_parameters *parameters_ = nullptr;
+  system_properties *properties_ = nullptr;
 
 public:
   int n_sites_tot_ = 0;
   int n_unoccupied_ = 0;
   std::vector<int> n_unoccupied_xl_;
+  std::vector<int> n_unoccupied_mot_;
 
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
+  int n_affs_{0};
 
   std::vector<Microtubule> mt_list_;
   Vec<ENTRY_T> unoccupied_list_;
   Vec<Vec<ENTRY_T>> unoccupied_list_xl_;
+  Vec<Vec<ENTRY_T>> unoccupied_list_mot_;
 
 private:
 public:

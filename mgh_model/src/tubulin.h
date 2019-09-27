@@ -1,38 +1,42 @@
-#pragma once
-#include "kinesin.h"
+#ifndef _TUBULIN
+#define _TUBULIN
 #include "associated_protein.h"
+#include "kinesin.h"
 
 class Microtubule;
 struct system_parameters;
 struct system_properties;
 
-class Tubulin{
-	private:
+class Tubulin {
+private:
+public:
+  int index_; // Index of tubulin site in MT lattice
+  int coord_; // Absolute coord of tubulin site
+  int speciesID_ = 0;
 
-	public:
-		int index_;		// Index of tubulin site in MT lattice
-		int coord_;		// Absolute coord of tubulin site
-		int speciesID_ = 0;
+  int affinity_{0};
 
-		bool occupied_ = false;
+  bool occupied_ = false;
 
-		Microtubule *mt_ = nullptr;
-		Kinesin::head *motor_head_ = nullptr; 
-		AssociatedProtein::Monomer *xlink_head_ = nullptr;
+  Microtubule *mt_ = nullptr;
+  Kinesin::head *motor_head_ = nullptr;
+  AssociatedProtein::Monomer *xlink_head_ = nullptr;
 
-		system_parameters *parameters_ = nullptr;
-		system_properties *properties_ = nullptr;
-	private:
+  system_parameters *parameters_ = nullptr;
+  system_properties *properties_ = nullptr;
 
-	public:
-		Tubulin();
-		void Initialize(system_parameters *parameters, 
-			system_properties *properties, Microtubule *mt, int i_site);
+private:
+public:
+  Tubulin();
+  void Initialize(system_parameters *parameters, system_properties *properties,
+                  Microtubule *mt, int i_site);
 
-		// 'equilibrium' refers to that of the crosslinker itself 
-		// and the kinesin 4 tether that attaches to it; this checks 
-		// if both are in the same direction w.r.t. this site 
-		bool EquilibriumInSameDirection();
+  // 'equilibrium' refers to that of the crosslinker itself
+  // and the kinesin 4 tether that attaches to it; this checks
+  // if both are in the same direction w.r.t. this site
+  bool EquilibriumInSameDirection();
 
-		int GetPRC1NeighborCount();
+  int GetPRC1NeighborCount();
+  int GetKIF4ANeighborCount();
 };
+#endif

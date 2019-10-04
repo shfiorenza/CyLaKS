@@ -2,7 +2,7 @@
 
 clear all
 % Often-changed variables
-n_sites = 250;
+n_sites = 5000;
 processivity = 5.3;
 xlink_conc = 2.0;
 c_motor = 1.5;
@@ -72,6 +72,7 @@ endtag_length = endtag_site*0.008;
 
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])
+smooth(motor_avg_occupancy);
 plot(linspace(0, n_sites*0.008, n_sites), motor_avg_occupancy);
 
 hold on
@@ -92,7 +93,7 @@ hold on
 xlabel({'Distance along microtubule relative to plus-end (microns)'});
 ylabel('Fraction of the time occupied');
 %xlim([0 0.5]);
-ylim([0 1]);
+ylim([0 0.6]);
 grid on
 grid minor
 axis = gca;

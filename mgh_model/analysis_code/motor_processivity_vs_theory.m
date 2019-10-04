@@ -1,4 +1,4 @@
-%{
+
 clear all;
 % Often-changed variables
 n_sites = 50000;
@@ -151,7 +151,6 @@ for i_suffix=1:1:n_suffixes
         velocity_errors(i_runlength, i_suffix) = sigma_vel;
     end
 end
-%}
 %plot(theoretical_runlengths, actual_runlengths, 'LineWidth', 2);
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 1.5*600, 1.5*500])

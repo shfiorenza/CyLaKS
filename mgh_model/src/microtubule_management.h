@@ -16,14 +16,14 @@ public:
   int n_sites_tot_ = 0;
   int n_unoccupied_ = 0;
   std::vector<int> n_unoccupied_xl_;
-  std::vector<int> n_unoccupied_mot_;
+  std::vector<std::vector<int>> n_unoccupied_mot_;
 
   int n_affs_{0};
 
   std::vector<Microtubule> mt_list_;
   Vec<ENTRY_T> unoccupied_list_;
   Vec<Vec<ENTRY_T>> unoccupied_list_xl_;
-  Vec<Vec<ENTRY_T>> unoccupied_list_mot_;
+  Vec<Vec<Vec<ENTRY_T>>> unoccupied_list_mot_;
 
 private:
 public:

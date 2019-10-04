@@ -36,13 +36,15 @@ private:
 public:
   bool verbose_{false};
 
+  // coop stuff
   int n_affinities_;
+  int max_neighbs_;
+  double interaction_energy_; // in kBT
 
   // See kinesin header for meaningful description of below
   int dist_cutoff_;
   int comp_cutoff_;
   double rest_dist_;
-  double interaction_energy_; // in kBT
 
   // Populations are untethered/mixed unless otherwise specified
   int n_motors_ = 0; // Total number of motors in system
@@ -52,11 +54,11 @@ public:
   int n_bound_ATP_ = 0;
   int n_bound_ATP_stalled_ = 0;
   int n_bound_untethered_ = 0;
-  // Below population sizes are indexed by tubulin_affinity
-  Vec<int> n_docked_;
-  Vec<int> n_bound_ADPP_i_;
-  Vec<int> n_bound_ADPP_i_stalled_;
-  Vec<int> n_bound_ADPP_ii_;
+  // Below population sizes are indexed by [tubulin_affinity][n_neighbs]
+  Vec<Vec<int>> n_docked_;
+  Vec<Vec<int>> n_bound_ADPP_i_;
+  Vec<Vec<int>> n_bound_ADPP_i_stalled_;
+  Vec<Vec<int>> n_bound_ADPP_ii_;
   // Below population sizes are indexed by x_dub
   Vec<int> n_docked_tethered_;
   Vec<int> n_bound_NULL_tethered_;
@@ -72,12 +74,12 @@ public:
   double p_tether_free_;
   double p_tether_bound_;
   double p_untether_free_;
-  // Below event probabilities are indexed by tubulin_affinity
-  Vec<double> p_bind_i_;
-  Vec<double> p_bind_ii_;
-  Vec<double> p_unbind_ii_;
-  Vec<double> p_unbind_i_;
-  Vec<double> p_unbind_i_stalled_;
+  // Below event probabilities are indexed by [tubulin_affinity][n_neighbs]
+  Vec<Vec<double>> p_bind_i_;
+  Vec<Vec<double>> p_bind_ii_;
+  Vec<Vec<double>> p_unbind_ii_;
+  Vec<Vec<double>> p_unbind_i_;
+  Vec<Vec<double>> p_unbind_i_stalled_;
   // Below event probabilities are indexed by x_dub
   Vec<double> p_bind_ATP_tethered_;
   Vec<double> p_bind_ii_tethered_;
@@ -93,11 +95,11 @@ public:
   Vec<ENTRY_T> bound_NULL_;
   Vec<ENTRY_T> bound_ATP_;
   Vec<ENTRY_T> bound_ATP_stalled_;
-  // 2-D vectors, inidices are simply [tubulin_affinity][motor_entry]
-  Vec<Vec<ENTRY_T>> docked_;
-  Vec<Vec<ENTRY_T>> bound_ADPP_i_;
-  Vec<Vec<ENTRY_T>> bound_ADPP_i_stalled_;
-  Vec<Vec<ENTRY_T>> bound_ADPP_ii_;
+  // 3-D vectors, inidices are [tubulin_affinity][n_neighbs][motor_entry]
+  Vec<Vec<Vec<ENTRY_T>>> docked_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_stalled_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_ii_;
   // 2-D vectors, indices are simply [x_dub][motor_entry]
   Vec<Vec<ENTRY_T>> docked_tethered_;
   Vec<Vec<ENTRY_T>> bound_NULL_tethered_;

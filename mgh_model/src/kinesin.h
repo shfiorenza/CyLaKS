@@ -2,9 +2,9 @@
 #define _KINESIN
 #include <string>
 #include <vector>
-class Tubulin;
-class Microtubule;
 class AssociatedProtein;
+class Microtubule;
+class Tubulin;
 struct system_properties;
 struct system_parameters;
 
@@ -19,6 +19,7 @@ private:
   std::vector<double> weight_alt_lookup_;
   std::vector<double> p_step_to_rest_;
   std::vector<double> p_step_fr_rest_;
+  double p_step_fr_neighb_;
 
   // Neighbor sites are for when the motor is tethered but unbound
   std::vector<Tubulin *> neighbor_sites_;
@@ -48,7 +49,19 @@ public:
       else
         return &motor_->head_one_;
     }
+    int GetKIF4ANeighbCount() {
+      if (site_ == nullptr)
+        return 0;
+      else {
+        int n_neighbs = site_->GetKIF4ANeighborCount();
+        if (motor_->heads_active_ == 2)
+          n_neighbs--;
+        return n_neighbs;
+      }
+    }
   };
+
+  int max_neighbs_{2};
 
   int id_;            // Unique id of this kinesin in resevoir
   int speciesID_ = 2; // Unique id of this species (kinesin)
@@ -57,8 +70,8 @@ public:
   int n_neighbor_sites_ = 0;
   int n_neighbor_xlinks_ = 0;
 
-  bool frustrated_ = false;
-  bool tethered_ = false;
+  bool tethered_{false};
+  bool frustrated_{false};
 
   // x_dist_dub is used to index the tether extension of motors, e.g.
   // an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
@@ -101,6 +114,7 @@ public:
   double GetStalkCoordinate(); // tail originates from stalk
   double GetDockedCoordinate();
   void ChangeConformation(); // FIXME add applied force w/ teth
+  void UnbindTrailingHead();
   bool IsStalled();
 
   bool AtCutoff();

@@ -42,6 +42,10 @@ void AssociatedProteinManagement::SetParameters() {
   double tau = x_squared / (2 * D_coeff);
   p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
   p_diffuse_i_bck_.resize(max_neighbs_ + 1);
+  if (parameters_->xlinks.c_bulk > 0.0) {
+    printf("add kbt to bolzmann factor in xlinks YA DOOFUS\n");
+    exit(1);
+  }
   for (int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++) {
     double tot_E = n_neighbs * interaction_energy_;
     // Lambda = 1 & 0 for diffusion

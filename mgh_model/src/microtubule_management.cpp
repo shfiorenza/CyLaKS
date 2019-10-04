@@ -32,12 +32,16 @@ void MicrotubuleManagement::SetParameters() {
     unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_);
   }
   // motor cooperativity stuff
-  n_affs_ = 1;
+  n_affs_ = 24;
   n_unoccupied_mot_.resize(n_affs_);
   unoccupied_list_mot_.resize(n_affs_);
   for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
-    n_unoccupied_mot_[i_aff] = 0;
-    unoccupied_list_mot_[i_aff].resize(n_sites_tot_);
+    n_unoccupied_mot_[i_aff].resize(3);
+    unoccupied_list_mot_[i_aff].resize(3);
+    for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
+      n_unoccupied_mot_[i_aff][n_neighbs] = 0;
+      unoccupied_list_mot_[i_aff][n_neighbs].resize(n_sites_tot_);
+    }
   }
 }
 
@@ -49,19 +53,20 @@ void MicrotubuleManagement::GenerateMicrotubules() {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
     /*
     int n_sites = mt_list_[i_mt].n_sites_;
-    int range_fwd = 200;
-    int bin_fwd = 20;
-    int range_bck = 50;
-    int bin_bck = 5;
+    int midpoint = n_sites / 2;
+    int bins_per_side = 12;
+    int sites_per_bin = 63;
     for (int i_site{0}; i_site < n_sites; i_site++) {
-      if (i_site < range_fwd) {
-        mt_list_[i_mt].lattice_[i_site].affinity_ = i_site / bin_fwd;
-        printf("site %i has affinity %i\n", i_site, i_site / bin_fwd);
+      if (i_site < midpoint) {
+        int delta = midpoint - i_site;
+        int affinity = bins_per_side - (delta / sites_per_bin) - 1;
+        mt_list_[i_mt].lattice_[i_site].affinity_ = affinity;
+        printf("site %i has affinity %i\n", i_site, affinity);
       } else {
-        mt_list_[i_mt].lattice_[i_site].affinity_ =
-            ((n_sites - 1) - i_site) / bin_bck;
-        printf("site %i has affinity %i\n", i_site,
-               ((n_sites - 1) - i_site) / bin_bck);
+        int delta = i_site - midpoint;
+        int affinity = 2 * bins_per_side - (delta / sites_per_bin) - 1;
+        mt_list_[i_mt].lattice_[i_site].affinity_ = affinity;
+        printf("site %i has affinity %i\n", i_site, affinity);
       }
     }
     */
@@ -125,7 +130,9 @@ void MicrotubuleManagement::UpdateUnoccupied() {
     n_unoccupied_xl_[n_neighbs] = 0;
   }
   for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
-    n_unoccupied_mot_[i_aff] = 0;
+    for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
+      n_unoccupied_mot_[i_aff][n_neighbs] = 0;
+    }
   }
   for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
     int n_sites = parameters_->microtubules.length[i_mt];
@@ -141,8 +148,9 @@ void MicrotubuleManagement::UpdateUnoccupied() {
         unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]] = site;
         n_unoccupied_xl_[n_neighbs]++;
         int aff = site->affinity_;
-        unoccupied_list_mot_[aff][n_unoccupied_mot_[aff]] = site;
-        n_unoccupied_mot_[aff]++;
+        n_neighbs = site->GetKIF4ANeighborCount();
+        int index = n_unoccupied_mot_[aff][n_neighbs]++;
+        unoccupied_list_mot_[aff][n_neighbs][index] = site;
       }
     }
   }

@@ -94,6 +94,7 @@ for i_data=start_frame:frames_per_plot:end_frame
     ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
     hold all;
     ax.XLim = [0 (max_sites + 1)];
+   % ax.Xlim = [0 250];
     ax.YLim = [-1 11];
     ax.TickLength = [0 0];
     ax.XTick = [0:(max_sites/5):max_sites];
@@ -125,8 +126,8 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
               
         else
-            %ax.XLim = [first_pos-1 first_pos + 250];
-            ax.XLim = [first_pos (first_pos + n_sites + 1)];
+            ax.XLim = [first_pos-1 first_pos + 250];
+            %ax.XLim = [first_pos (first_pos + n_sites + 1)];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...

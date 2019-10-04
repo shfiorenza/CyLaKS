@@ -1,35 +1,5 @@
 #include "kinesin.h"
 #include "master_header.h"
-//#include "tubulin.h"
-
-/*
-// fuckin come at me bro
-bool Kinesin::head::IsStalled() {
-return false;
-if (ligand_ == std::string{"ADPP"} or ligand_ == std::string{"ATP"}) {
-  if (site_->index_ == site_->mt_->plus_end_)
-    return true;
-  else if (motor_->heads_active_ == 1) {
-    if (site_->mt_->lattice_[site_->index_ + site_->mt_->delta_x_].occupied_)
-      return true;
-    else
-      return false;
-  } else {
-    if (trailing_) {
-      return false;
-    } else {
-      if (site_->mt_->lattice_[site_->index_ + site_->mt_->delta_x_]
-              .occupied_)
-        return true;
-      else
-        return false;
-    }
-  }
-} else {
-  return false;
-}
-}
-*/
 
 Kinesin::Kinesin() {}
 
@@ -174,11 +144,18 @@ void Kinesin::InitializeExtensionLookup() {
 
 void Kinesin::InitializeSteppingProbabilities() {
 
-  double r_y = parameters_->microtubules.y_dist / 2;
   double kbT = parameters_->kbT;
+  // Short-range cooperativity
+  // ! Assume lambda = 1 & 0 for stepping from & away from neighbors
+  double E_int = -1 * parameters_->motors.interaction_energy;
+  // If we step AWAY from a single neighbor, overall E increases
+  // Due to our assumption about lambda, same weight applies to
+  // stepping from a neighbor TO a neighbor
+  p_step_fr_neighb_ = exp(E_int / kbT);
+  // Next, handle applied force
+  double r_y = parameters_->microtubules.y_dist / 2;
   double site_size = parameters_->microtubules.site_size;
   double f_stall = parameters_->motors.stall_force;
-  // First, handle applied force
   if (parameters_->motors.applied_force > 0) {
     double f_app = parameters_->motors.applied_force;
     /*
@@ -195,6 +172,8 @@ void Kinesin::InitializeSteppingProbabilities() {
     applied_p_step_ = p;
     if (id_ == 0)
       printf("p_step scaled from 1 to %g\n", applied_p_step_);
+  } else {
+    applied_p_step_ = 1.0;
   }
   // Next, handle tethering forces
   p_step_to_rest_.resize(2 * dist_cutoff_ + 1);
@@ -331,54 +310,66 @@ double Kinesin::GetDockedCoordinate() {
 
 void Kinesin::ChangeConformation() {
 
-  if (!tethered_) {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      if (parameters_->motors.applied_force > 0) {
-        double ran = properties_->gsl.GetRanProb();
-        if (ran < applied_p_step_) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      } else {
-        head_one_.trailing_ = !head_one_.trailing_;
-        head_two_.trailing_ = !head_two_.trailing_;
-      }
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
-  } else if (xlink_->heads_active_ == 0) {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      head_one_.trailing_ = !head_one_.trailing_;
-      head_two_.trailing_ = !head_two_.trailing_;
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
-  } else {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      // Roll for conformational change
-      int dx_rest = GetDirectionTowardRest();
-      double ran = properties_->gsl.GetRanProb();
-      if (mt_->delta_x_ == dx_rest) {
-        if (ran < p_step_to_rest_[x_dist_doubled_]) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      } else {
-        if (ran < p_step_fr_rest_[x_dist_doubled_]) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      }
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
+  if (heads_active_ == 0) {
+    printf("'bruh' moment in kinesin:changeConformation\n");
+    exit(1);
+  } else if (heads_active_ == 2) {
+    // ? Which of these is more physical?
+    // Frustrated makes detailed balance easier, but ...
+    //// UnbindTrailingHead();
+    frustrated_ = true;
+    return;
   }
+  frustrated_ = false;
+  int i_site = GetActiveHead()->site_->index_;
+  if (parameters_->motors.endpausing_active and i_site == mt_->plus_end_) {
+    return;
+  }
+  double p_step{1.0};
+  p_step *= applied_p_step_;
+  if (tethered_) {
+    // Motors tethered to satellite xlinks behave as if untethered
+    if (xlink_->heads_active_ > 0) {
+      int dx_rest = GetDirectionTowardRest();
+      if (mt_->delta_x_ == dx_rest) {
+        p_step *= p_step_to_rest_[x_dist_doubled_];
+      } else {
+        p_step *= p_step_fr_rest_[x_dist_doubled_];
+      }
+    }
+  }
+  if (i_site != mt_->minus_end_) {
+    if (mt_->lattice_[i_site - mt_->delta_x_].motor_head_ != nullptr) {
+      p_step *= p_step_fr_neighb_;
+    }
+  }
+  double ran{0.0};
+  if (p_step < 1.0) {
+    ran = properties_->gsl.GetRanProb();
+  }
+  if (ran < p_step) {
+    head_one_.trailing_ = !head_one_.trailing_;
+    head_two_.trailing_ = !head_two_.trailing_;
+  }
+}
+
+void Kinesin::UnbindTrailingHead() {
+
+  head *trailing_head{nullptr};
+  if (head_one_.trailing_) {
+    trailing_head = &head_one_;
+  } else {
+    trailing_head = &head_two_;
+  }
+  // Update site
+  trailing_head->site_->occupied_ = false;
+  trailing_head->site_->motor_head_ = nullptr;
+  // Update motor
+  trailing_head->site_ = nullptr;
+  trailing_head->ligand_ = "ADP";
+  trailing_head->state_ = "ripped off";
+  trailing_head->GetOtherHead()->state_ = "solo stepper";
+  heads_active_--;
 }
 
 bool Kinesin::IsStalled() {

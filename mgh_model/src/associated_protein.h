@@ -53,8 +53,6 @@ public:
   int n_teth_neighbor_sites_ = 0;
   int n_teth_neighbor_sites_ii_ = 0;
 
-  int max_neighbs_ = 0;
-
   // x_dist_ is used to index the xlink extensions for lookup
   // e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
   int x_dist_;      // in no. of sites; can only be 0 or pos.
@@ -67,7 +65,7 @@ public:
   double cosine_;    // of angle of xlink w/ respect to MT
 
   bool tethered_ = false;
-  bool is_outdated_ = false;
+  bool is_outdated_ = false; // FIXME depricate this jawnnnnn
 
   Monomer head_one_ = {this, nullptr, std::string("unbound")},
           head_two_ = {this, nullptr, std::string("unbound")};

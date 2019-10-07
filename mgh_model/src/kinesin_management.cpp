@@ -1238,25 +1238,38 @@ void KinesinManagement::Refresh_Populations() {
       }
       entry->head_one_.state_ = state;
       entry->head_two_.state_ = state;
+      // Singly-bound motors
     } else if (entry->heads_active_ == 1) {
       std::string inactive_state;
       POP_T *active_head = entry->GetActiveHead();
       if (active_head->ligand_ != std::string{"ADPP"}) {
         state = std::string{"bound_"} + active_head->ligand_;
+        if (active_head->ligand_ == "ATP" and entry->IsStalled()) {
+          state += std::string{"_st"};
+        }
         inactive_state = std::string{"unbound"};
       } else {
         state = std::string{"bound_ADPP_i"};
+        if (entry->IsStalled()) {
+          state += std::string{"_st"};
+        }
+        state += "_";
+        state += std::to_string(active_head->site_->affinity_);
+        state += "_";
+        state += std::to_string(active_head->GetKIF4ANeighbCount());
         int i_dock = entry->GetDockedCoordinate() - entry->mt_->coord_;
         if (i_dock >= 0 and i_dock < entry->mt_->n_sites_) {
-          if (!entry->mt_->lattice_[i_dock].occupied_) {
-            inactive_state = std::string{"docked"};
+          Tubulin *dock_site = &entry->mt_->lattice_[i_dock];
+          if (!dock_site->occupied_) {
+            inactive_state = std::string{"docked_"};
+            inactive_state += std::to_string(dock_site->affinity_);
+            inactive_state += "_";
+            int neighbs_eff = dock_site->GetKIF4ANeighborCount() - 1;
+            inactive_state += std::to_string(neighbs_eff);
           }
         } else {
           inactive_state = std::string{"unbound"};
         }
-      }
-      if (entry->IsStalled()) {
-        state += std::string{"_st"};
       }
       if (active_head == &entry->head_one_) {
         entry->head_one_.state_ = state;
@@ -1271,21 +1284,30 @@ void KinesinManagement::Refresh_Populations() {
       // Do head one first
       if (entry->head_one_.ligand_ != std::string{"ADPP"}) {
         state = std::string{"bound_"} + entry->head_one_.ligand_;
-        if (entry->IsStalled()) {
+        if (entry->head_one_.ligand_ == "ATP" and entry->IsStalled()) {
           state += std::string{"_st"};
         }
       } else {
         state = std::string{"bound_ADPP_ii"};
+        state += "_";
+        state += std::to_string(entry->head_one_.site_->affinity_);
+        state += "_";
+        state += std::to_string(entry->head_one_.GetKIF4ANeighbCount());
       }
       entry->head_one_.state_ = state;
       // Head two next
       if (entry->head_two_.ligand_ != std::string{"ADPP"}) {
         state = std::string{"bound_"} + entry->head_two_.ligand_;
-        if (entry->IsStalled()) {
+        if (entry->head_two_.ligand_ == "ATP" and entry->IsStalled()) {
           state += std::string{"_st"};
         }
       } else {
         state = std::string{"bound_ADPP_ii"};
+        state = std::string{"bound_ADPP_ii"};
+        state += "_";
+        state += std::to_string(entry->head_two_.site_->affinity_);
+        state += "_";
+        state += std::to_string(entry->head_two_.GetKIF4ANeighbCount());
       }
       entry->head_two_.state_ = state;
     }
@@ -1475,8 +1497,33 @@ void KinesinManagement::SaveToScratch(POP_T *head) {
   }
   int n_neighbs = head->GetKIF4ANeighbCount();
   if (n_neighbs == 1) {
+    POP_T *neighb;
+    int i_site = head->site_->index_;
+    int n_sites = head->site_->mt_->n_sites_;
+    if (i_site == 0)
+      neighb = head->site_->mt_->lattice_[i_site + 1].motor_head_;
+    else if (i_site == n_sites - 1)
+      neighb = head->site_->mt_->lattice_[i_site - 1].motor_head_;
+    else {
+      POP_T *fwd_neighb = head->site_->mt_->lattice_[i_site + 1].motor_head_;
+      POP_T *bck_neighb = head->site_->mt_->lattice_[i_site - 1].motor_head_;
+      if (fwd_neighb != nullptr and fwd_neighb->motor_ != head->motor_)
+        neighb = fwd_neighb;
+      else if (bck_neighb != nullptr and bck_neighb->motor_ != head->motor_)
+        neighb = bck_neighb;
+    }
+    scratch_[n_scratched_] = neighb;
+    n_scratched_++;
 
   } else if (n_neighbs == 2) {
+    POP_T *neighb_one, *neighb_two;
+    int i_site = head->site_->index_;
+    neighb_one = head->site_->mt_->lattice_[i_site + 1].motor_head_;
+    scratch_[n_scratched_] = neighb_one;
+    n_scratched_++;
+    neighb_two = head->site_->mt_->lattice_[i_site - 1].motor_head_;
+    scratch_[n_scratched_] = neighb_two;
+    n_scratched_++;
   }
 }
 

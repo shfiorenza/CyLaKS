@@ -1,6 +1,17 @@
 #include "kinesin.h"
 #include "master_header.h"
 
+int Kinesin::head::GetKIF4ANeighbCount() {
+  if (site_ == nullptr)
+    return 0;
+  else {
+    int n_neighbs = site_->GetKIF4ANeighborCount();
+    if (motor_->heads_active_ == 2)
+      n_neighbs--;
+    return n_neighbs;
+  }
+}
+
 Kinesin::Kinesin() {}
 
 void Kinesin::Initialize(system_parameters *parameters,

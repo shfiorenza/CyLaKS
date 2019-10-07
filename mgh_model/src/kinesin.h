@@ -49,16 +49,7 @@ public:
       else
         return &motor_->head_one_;
     }
-    int GetKIF4ANeighbCount() {
-      if (site_ == nullptr)
-        return 0;
-      else {
-        int n_neighbs = site_->GetKIF4ANeighborCount();
-        if (motor_->heads_active_ == 2)
-          n_neighbs--;
-        return n_neighbs;
-      }
-    }
+    int GetKIF4ANeighbCount();
   };
 
   int max_neighbs_{2};

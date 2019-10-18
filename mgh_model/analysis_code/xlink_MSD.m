@@ -1,13 +1,13 @@
 clear all;
 % Often-changed variables
-simName = 'diffu_test';
-n_sites = 1000;
+simName = 'diffu_2_test';
+n_sites = 5000;
 n_mts = 2;
 starting_tau = 0.2;
 max_tau = 1.5;  % in seconds
 % Pseudo-constant variables
-delta_t = 0.00001;
-n_steps = 20000000;
+delta_t = 0.000005;
+n_steps = 100000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -163,7 +163,7 @@ y2 = X*m;
 plot(x, y2, 'LineWidth', 2)
 hold on
 plot(x, y, '*', 'LineWidth', 2)
-title('c = 0.05 nM;  eff\_bind\_conc = 750 nM;  D\_i = 0.036 um^2/;  D\_ii = 0.018 um^2/s');
+title('c_{bulk} = 0.005 nM;  L_{overlap} = 40 \mum');
 ylabel('MSD (um^2)');
 xlabel('Tau (s)');
 legend('Fit', 'Data', 'location', 'northeastoutside');

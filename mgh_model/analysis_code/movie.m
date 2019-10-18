@@ -1,20 +1,21 @@
 clear all;
 % Parameters from sim
-mt_lengths = [250];
+mt_lengths = [500,400];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'Endtag_20x_0_250';
+%simName = 'coop_slide_1500_225';
+simName = 'test_slide';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 10000000;
+n_steps = 40000000; %0;
 n_datapoints = 10000;
 start_frame = 1;
-end_frame = 10000;
+end_frame = n_datapoints;
 frames_per_plot = 100;
-delta_t = 0.00005; 
+delta_t = 0.0000025; 
 xlink_cutoff = 5;
 cutoff = 19;
 % Colors

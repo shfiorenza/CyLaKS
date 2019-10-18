@@ -1,12 +1,11 @@
 clear all;
 % Often-changed variables
-n_sites = [1000, 500];
-%simName = sprintf('slide_scans/quart_proc_half_speed/slide_0_%i', n_sites(2));
-simName = 'old_output/scan_output/slide_1500_3125';
+n_sites = [500, 400];
+simName = 'test_slide';
 % Pseudo-constant variables
 n_mts = 2;
-n_steps = 100000000;
-delta_t = 0.00001;
+n_steps = 40000000; %0;
+delta_t = 0.0000025;
 n_datapoints = 10000;
 starting_point = 0;
 % Calculate parameters for plotting / etc;
@@ -14,11 +13,10 @@ length = n_sites(2) * 0.008;
 end_time = n_steps * delta_t;
 start_time = starting_point * delta_t;
 
-fileDirectory = '/home/shane/Desktop/%s';
-%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStructure = '%s_mt_coord.file';
-fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
 
+fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
 data_file = fopen(fileName);
 raw_data = fread(data_file, [n_mts, n_datapoints], 'double');
 fclose(data_file);

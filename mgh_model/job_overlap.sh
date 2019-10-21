@@ -1,20 +1,18 @@
 #!/bin/bash
 
 # === List of SBATCH arguments ===
-#SBATCH --account=ucb-summit-smr	# allocations account
+#SBATCH --account=ucb-summit-smr		# allocations account
 #SBATCH --partition=smem			# Type of node to run on
-#SBATCH --nodes=1					# number of cluster nodes, abbreviated by -N
+#SBATCH --nodes=1				# number of cluster nodes, abbreviated by -N
 #SBATCH --ntasks=12 				# number of parallel process
-#SBATCH --time=96:00:00				# walltime, abbreviated by -t
-#SBATCH --qos=long		       		# quality of service/queue
-#SBATCH --job-name=slideScan		# name of job
-#SBATCH --output=slideScan_%j.out   # name of the stdout redirection file
-#SBATCH --error=slideScan_%j.err	# name of the stderr redirection file
+#SBATCH --time=168:00:00			# walltime, abbreviated by -t
+#SBATCH --job-name=slideScan		 	# name of job
+#SBATCH --output=slideScan_%j.out   		# name of the stdout redirection file
+#SBATCH --error=slideScan_%j.err		# name of the stderr redirection file
 
 # === Purge all modules and load needed ones ===
 module purge
-module load intel
-module load gsl
+module load gcc/8.2.0
 module list
 echo "Current variables CC=${CC} and CXX=${CXX}"
 
@@ -46,4 +44,5 @@ for C_EFF_TETH in {50,500,2500}; do
 	done
 done
 wait
+rm params_temp_*
 echo "Scan finished"

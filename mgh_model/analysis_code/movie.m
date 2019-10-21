@@ -5,14 +5,14 @@ max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
 %simName = 'coop_slide_1500_225';
-simName = 'test_slide';
+simName = '2019_10_19_scan/coop_slide_scan_500_100';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
 n_steps = 40000000; %0;
 n_datapoints = 10000;
-start_frame = 1;
+start_frame = 8501;
 end_frame = n_datapoints;
 frames_per_plot = 100;
 delta_t = 0.0000025; 

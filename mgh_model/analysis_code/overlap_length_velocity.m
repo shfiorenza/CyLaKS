@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 n_sites = [500, 400];
-simName = 'test_slide';
+simName = '2019_10_19_scan/coop_slide_scan_50_0';
 % Pseudo-constant variables
 n_mts = 2;
 n_steps = 40000000; %0;

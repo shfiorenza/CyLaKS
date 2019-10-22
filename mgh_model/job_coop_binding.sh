@@ -27,22 +27,34 @@ MOT_CONC=0.0;
 XLINK_CONC=1;
 MAX_CONC=41;
 
-while [ $XLINK_CONC -le $MAX_CONC ]
+#while [ $XLINK_CONC -le $MAX_CONC ]
+for E_SCALE in 15 30 45 60 75 90 105 120
 do
-    FILE_NAME="coop_225_"
-    FILE_NAME+=$XLINK_CONC
-	echo "RUNNING NEW SIM: filename is $FILE_NAME"
-	TEMP_PARAMS="params_tempB_"
-    TEMP_PARAMS+=$XLINK_CONC
-	TEMP_PARAMS+=".yaml"
-	cp $PARAM_FILE $TEMP_PARAMS
-	yq w -i $TEMP_PARAMS microtubules.length[0] $MT_LENGTH
-	yq w -i $TEMP_PARAMS motors.c_bulk $MOT_CONC
-	yq w -i $TEMP_PARAMS xlinks.c_bulk $XLINK_CONC
-	srun -N 1 -n 1 ./sim $TEMP_PARAMS $FILE_NAME &
-#    ./sim $TEMP_PARAMS $FILE_NAME &
-    XLINK_CONC=$(($XLINK_CONC + 1))
+	E_INT=$(echo "scale=3; $E_SCALE * 0.01" | bc)
+	for XLINK_CONC in 1 2 9 19 28 38
+	do
+		FILE_NAME="coop_scan"
+		FILE_NAME+="_"
+		FILE_NAME+=$E_SCALE
+		FILE_NAME+="_"
+		FILE_NAME+=$XLINK_CONC
+		echo "RUNNING NEW SIM: filename is $FILE_NAME"
+		TEMP_PARAMS="params_temp_coop"
+		TEMP_PARAMS+="_"
+		TEMP_PARAMS+=$E_SCALE
+		TEMP_PARAMS+="_"
+		TEMP_PARAMS+=$XLINK_CONC
+		TEMP_PARAMS+=".yaml"
+		echo "                 paramfile is $TEMP_PARAMS"
+		cp $PARAM_FILE $TEMP_PARAMS
+		yq w -i $TEMP_PARAMS microtubules.length[0] $MT_LENGTH
+		yq w -i $TEMP_PARAMS motors.c_bulk $MOT_CONC
+		yq w -i $TEMP_PARAMS xlinks.c_bulk $XLINK_CONC
+		yq w -i $TEMP_PARAMS xlinks.interaction_energy $E_INT
+#		srun -N 1 -n 1 ./sim $TEMP_PARAMS $FILE_NAME &
+#    	./sim $TEMP_PARAMS $FILE_NAME &
+	done
 done
 wait
-rm params_tempB_*
+rm params_temp_coop_*
 echo "Scan finished"

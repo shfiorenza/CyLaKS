@@ -86,11 +86,6 @@ void Kinesin::CalculateCutoffs() {
       break;
     }
   }
-  if (!parameters_->motors.tethers_active) {
-    rest_dist_ = 0;
-    comp_cutoff_ = 0;
-    dist_cutoff_ = 0;
-  }
 }
 
 void Kinesin::InitializeNeighborLists() {
@@ -247,9 +242,9 @@ double Kinesin::GetStalkCoordinate() {
     Tubulin *site = GetActiveHead()->site_;
     double site_coord = site->index_ + mt_->coord_;
     if (GetActiveHead()->trailing_) {
-      return site_coord + ((double)mt_->delta_x_) / 2;
+      return site_coord + ((double)mt_->delta_x_ / 2);
     } else {
-      return site_coord - ((double)mt_->delta_x_) / 2;
+      return site_coord - ((double)mt_->delta_x_ / 2);
     }
   } else if (heads_active_ == 2) {
     int i_one = head_one_.site_->index_;
@@ -473,7 +468,7 @@ void Kinesin::UpdateNeighborXlinks() {
 
 void Kinesin::UpdateExtension() {
 
-  if (heads_active_ == 0 || tethered_ == false) {
+  if (heads_active_ == 0 or !tethered_) {
     x_dist_doubled_ = 0;
     extension_ = 0;
   } else if (xlink_->heads_active_ == 0) {
@@ -484,7 +479,7 @@ void Kinesin::UpdateExtension() {
     double anchor_coord = xlink_->GetAnchorCoordinate();
     double x_dist = fabs(anchor_coord - stalk_coord);
     x_dist_doubled_ = 2 * x_dist;
-    if (x_dist_doubled_ > 2 * dist_cutoff_ ||
+    if (x_dist_doubled_ > 2 * dist_cutoff_ or
         x_dist_doubled_ < 2 * comp_cutoff_) {
       ForceUntether();
     } else {
@@ -533,7 +528,7 @@ void Kinesin::UntetherSatellite() {
 
 int Kinesin::GetDirectionTowardRest() {
 
-  if (tethered_ == true) {
+  if (tethered_) {
     if (xlink_->heads_active_ > 0) {
       double stalk_coord = GetStalkCoordinate();
       double rest_coord = GetRestLengthCoordinate();
@@ -587,12 +582,12 @@ double Kinesin::GetRestLengthCoordinate() {
 
 double Kinesin::GetTetherForce(Tubulin *site) {
 
-  if (tethered_ == true && heads_active_ > 0) {
+  if (tethered_ and heads_active_ > 0) {
     // Ensure we're not tethered to a satellite xlink
     if (xlink_->heads_active_ > 0) {
       UpdateExtension();
       // Make sure we didn't force an untether event
-      if (tethered_ == true) {
+      if (tethered_) {
         double force_mag;
         if (extension_ < 0)
           force_mag = extension_ * k_slack_;
@@ -608,6 +603,8 @@ double Kinesin::GetTetherForce(Tubulin *site) {
           force = force_mag * cosine_;
         else
           force = -1 * force_mag * cosine_;
+        // printf("teth force is %g for motor %i on MT %i\n", force, ID_,
+        //        mt_->index_);
         return force;
       } else
         return 0;

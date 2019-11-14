@@ -1,11 +1,12 @@
 
 clear variables;
-baseName = 'coop_1000';
+baseName = 'coop_bind_longB';
 mt_length = [1000];
-E_int = [0, 2.1, 2.25, 2.4]; %, 2.50, 2.75, 3.00, 3.25];
+E_int = [2.25]; %, 2.50, 2.75, 3.00, 3.25];
 exp_scaling = [0.09, 0.14, 0.68, 2.3, 5.0, 11.00];
 exp_scaling = exp_scaling/min(exp_scaling);
 xlink_concs = [0.9, 1.8, 9.2, 19, 28, 38];
+%xlink_concs = [1,2,10,20,28,38];
 
 n_datapoints = 10000;
 starting_point = 0;
@@ -66,9 +67,9 @@ end
 %title('Interaction energy of -2.5 kBT for PRC1-PRC1 neighbors');
 xlabel('PRC1 Concentration (nM)', 'FontSize', 14);
 ylabel('Intensity (A.U.)', 'FontSize', 14);
-legend_label = {'Experiment', 'No cooperativity'};
+legend_label = {'Experiment'}; %, 'No cooperativity'};
 energy_labels = strcat('E_{int} = -',strtrim(cellstr(num2str(E_int','%.2f'))), ' k_BT');
-for i=2:length(E_int)
+for i=length(legend_label):length(E_int)
     legend_label(i + 1) = energy_labels(i);
 end
 legend(legend_label, 'location', 'northwest', 'FontSize', 14);

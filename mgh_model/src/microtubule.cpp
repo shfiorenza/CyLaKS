@@ -33,15 +33,13 @@ void Microtubule::SetParameters() {
     mt_index_adj_ = index_ - 1; // FIXME
     neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
   }
-  int mt_length = n_sites_;
-  double site_size = parameters_->microtubules.site_size;
-  double big_l = mt_length * site_size;
-  double radius = parameters_->microtubules.radius;
-  double height = parameters_->microtubules.elevation;
-  double eta = parameters_->eta;
+  double big_l = n_sites_ * parameters_->microtubules.site_size; // in nm
+  double radius = parameters_->microtubules.radius;              // in nm
+  double height = parameters_->microtubules.elevation;           // in nm
+  double eta = parameters_->eta;                                 // in um^-2!!
   // see radhika sliding paper for any of this to make sense
-  double numerator = 2 * 3.14159 * big_l * (eta / 1000000);
-  ;
+  // divide by 10^6 to convert eta to nm^-2
+  double numerator = (2 * 3.14159 * big_l * eta) / 1000000;
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
 }
@@ -152,7 +150,6 @@ double Microtubule::GetNetForce_Motors() {
       AssociatedProtein *xlink = site->xlink_head_->xlink_;
       // If doubly-bound, get force from self and potentially teth
       if (xlink->heads_active_ == 2) {
-        forces_summed += xlink->GetExtensionForce(site);
         if (xlink->tethered_) {
           Kinesin *motor = xlink->motor_;
           // Only bound motors have valid tether extensions

@@ -93,6 +93,8 @@ void KinesinManagement::SetParameters() {
     properties_->wallace.Log("  rest_dist is %g\n", rest_dist_);
     properties_->wallace.Log("  comp_cutoff is %i\n", comp_cutoff_);
     properties_->wallace.Log("  dist_cutoff is %i\n", dist_cutoff_);
+  } else {
+    properties_->wallace.Log("\nMotor tethering is inactive.\n");
   }
   // Tethered statistics
   double k_tether = parameters_->motors.k_tether;
@@ -833,11 +835,11 @@ void KinesinManagement::UpdateBoundTethered() {
 
 void KinesinManagement::GenerateKMCList() {
 
-  sys_time start = sys_clock::now();
+  sys_timepoint start = sys_clock::now();
   // Update population lists and predicted events
   UpdateEvents();
   // Track the time it takes to update lists and sample statistics
-  sys_time finish = sys_clock::now();
+  sys_timepoint finish = sys_clock::now();
   auto elapsed = std::chrono::duration_cast<t_unit>(finish - start);
   properties_->wallace.t_motors_[1] += elapsed.count();
   start = sys_clock::now();
@@ -1034,7 +1036,7 @@ void KinesinManagement::UpdateEvents() {
 void KinesinManagement::RunKMC() {
 
   bool verbose(false);
-  sys_time start1 = sys_clock::now();
+  sys_timepoint start1 = sys_clock::now();
   int i_active = (int)(parameters_->motors.t_active / parameters_->delta_t);
   if (properties_->current_step_ >= i_active and
       parameters_->motors.c_bulk > 0.0) {
@@ -1042,7 +1044,7 @@ void KinesinManagement::RunKMC() {
   } else {
     return;
   }
-  sys_time start2 = sys_clock::now();
+  sys_timepoint start2 = sys_clock::now();
   if (!kmc_list_.empty()) {
     int x_dub = 0;
     //		printf("\nStart of Kinesin KMC cycle\n");
@@ -1155,7 +1157,7 @@ void KinesinManagement::RunKMC() {
     }
   }
   // Track the total time elapsed during kinesin4.RunKMC
-  sys_time finish = sys_clock::now();
+  sys_timepoint finish = sys_clock::now();
   auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
   properties_->wallace.t_motors_[0] += elapsed.count();
   // Track the time spent executing events
@@ -1185,7 +1187,7 @@ void KinesinManagement::KMC_Bind_I() {
     active_[n_active_] = motor;
     motor->active_index_ = n_active_;
     n_active_++;
-
+    properties_->microtubules.FlagForUpdate();
   } else {
     printf("Failed to Bind_I (motors): no unoccupied sites.\n");
   }
@@ -1226,6 +1228,7 @@ void KinesinManagement::KMC_Bind_I_Tethered() {
       motor->head_two_.trailing_ = true;
       motor->heads_active_++;
       motor->UpdateExtension();
+      properties_->microtubules.FlagForUpdate();
     } else {
       printf("Failed to bind_i_teth\n");
       //			exit(1);
@@ -1377,6 +1380,7 @@ void KinesinManagement::KMC_Bind_II() {
     docked_head->site_ = dock_site;
     docked_head->ligand_ = "NULL";
     motor->heads_active_++;
+    properties_->microtubules.FlagForUpdate();
   } else {
     printf("Failed to Bind_II: no docked motors.\n");
     //		exit(1);
@@ -1411,6 +1415,7 @@ void KinesinManagement::KMC_Bind_II_Tethered(int x_dub) {
     docked_head->site_ = dock_site;
     docked_head->ligand_ = "NULL";
     motor->heads_active_++;
+    properties_->microtubules.FlagForUpdate();
   } else {
     printf("Failed to Bind_II_Tethered(%i): no docked motors.\n", x_dub);
     //		exit(1);
@@ -1441,6 +1446,7 @@ void KinesinManagement::KMC_Unbind_II() {
     head->site_ = nullptr;
     head->ligand_ = "ADP";
     head->motor_->heads_active_--;
+    properties_->microtubules.FlagForUpdate();
     if (head->motor_->frustrated_) {
       // Only step if rear head was just unbound
       if (head->trailing_) {
@@ -1494,6 +1500,7 @@ void KinesinManagement::KMC_Unbind_I() {
     head->ligand_ = "ADP";
     head->motor_->heads_active_--;
     head->motor_->mt_ = nullptr;
+    properties_->microtubules.FlagForUpdate();
     // If this motor has a satellite xlink, untether it
     if (head->motor_->xlink_ != nullptr) {
       if (head->motor_->xlink_->heads_active_ == 0) {
@@ -1542,6 +1549,7 @@ void KinesinManagement::KMC_Unbind_I_Stalled() {
     head->ligand_ = "ADP";
     head->motor_->heads_active_--;
     head->motor_->mt_ = nullptr;
+    properties_->microtubules.FlagForUpdate();
     // If this motor has a satellite xlink, untether it
     if (head->motor_->tethered_) {
       if (head->motor_->xlink_->heads_active_ == 0) {
@@ -1584,6 +1592,7 @@ void KinesinManagement::KMC_Unbind_I_Tethered(int x_dub) {
     head->ligand_ = "ADP";
     head->motor_->heads_active_--;
     head->motor_->mt_ = nullptr;
+    properties_->microtubules.FlagForUpdate();
   } else {
     printf("Error in Unbind_I_Tethered: no pseudo bound motors!\n");
     //		exit(1);
@@ -1610,6 +1619,7 @@ void KinesinManagement::KMC_Unbind_I_Tethered_Stalled(int x_dub) {
     head->ligand_ = "ADP";
     head->motor_->heads_active_--;
     head->motor_->mt_ = nullptr;
+    properties_->microtubules.FlagForUpdate();
   } else {
     printf("Error in Unbind_I_Teth_ST: no stage-1 STALLED mots\n");
   }

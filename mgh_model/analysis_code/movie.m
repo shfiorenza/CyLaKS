@@ -1,21 +1,19 @@
 clear all;
 % Parameters from sim
-mt_lengths = [500,400];
+mt_lengths = [1000,500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-%simName = sprintf('_%i', mt_lengths(1));
-%simName = 'coop_slide_1500_225';
-simName = '2019_10_19_scan/coop_slide_scan_500_100';
-%simName = 'Endtag_hiTeth_lowkOn_1_500';
+%simName = '2019_11_11_slideScan/slide_scan_50_5000';
+simName = '2019_11_14_slideScan/slide_scan_4250_4500_50';
+%simName = 'test_biasC';
 dur_sec = 30;
-%simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 40000000; %0;
+n_steps = 40000000;
 n_datapoints = 10000;
-start_frame = 8501;
+start_frame = 01;
 end_frame = n_datapoints;
 frames_per_plot = 100;
-delta_t = 0.0000025; 
+delta_t = 0.000025; 
 xlink_cutoff = 5;
 cutoff = 19;
 % Colors

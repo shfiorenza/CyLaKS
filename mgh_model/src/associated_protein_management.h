@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ASSOCIATED_PROTEIN_MANAGEMENT_
+#define _ASSOCIATED_PROTEIN_MANAGEMENT_
 #include "entry.h"
 #include "event.h"
 struct system_parameters;
@@ -30,21 +31,22 @@ private:
   Vec<POP_T *> scratch_;
 
   // Pointers to global system params & props; same for all classes
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
   // WALLACE, MISTA
-  Curator *wally = nullptr;
+  Curator *wally_{nullptr};
 
 public:
   bool verbose_{false};
 
-  int dist_cutoff_{0}; // see assoc. protein header
-  int rest_dist_{0};   // see assoc. protein header
-  int teth_cutoff_{0}; // see kinesin header (dist_cutoff_ there)
-  int comp_cutoff_{1}; // see kinesin header (comp_cutoff_ there)
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_{0};
   double interaction_energy_{0.0}; // in kBT
+
+  int dist_cutoff_{0}; // see assoc. protein header
+  int rest_dist_{0};   // see assoc. protein header
+  int teth_cutoff_{0}; // see kinesin header (dist_cutoff_ there)
+  int comp_cutoff_{0}; // see kinesin header (comp_cutoff_ there)
 
   /* Population size trackers */
   int n_xlinks_{0}; // Total no. of xlink objects; static
@@ -72,20 +74,26 @@ public:
   Vec<double> p_unbind_i_;
   Vec<double> p_diffuse_i_fwd_;
   Vec<double> p_diffuse_i_bck_;
-  // Second index is [x] or [x_dub] for base or teth pops.
+  // Indices are [n_neighbs][x] or [n_neighbs][x_dub]
   Vec<Vec<double>> p_unbind_i_teth_;
   Vec<Vec<double>> p_unbind_ii_;
   Vec<Vec<double>> p_diffuse_i_to_teth_rest_;
   Vec<Vec<double>> p_diffuse_i_fr_teth_rest_;
   Vec<Vec<double>> p_diffuse_ii_to_rest_;
   Vec<Vec<double>> p_diffuse_ii_fr_rest_;
-  // Second index is [x_dub]; third & final index is [x]
+  // Indices are [n_neighbs][x_dub][x]
   Vec<Vec<Vec<double>>> p_unbind_ii_to_teth_;
   Vec<Vec<Vec<double>>> p_unbind_ii_fr_teth_;
   Vec<Vec<Vec<double>>> p_diffuse_ii_to_both_;
   Vec<Vec<Vec<double>>> p_diffuse_ii_fr_both_;
   Vec<Vec<Vec<double>>> p_diffuse_ii_to_self_fr_teth_;
   Vec<Vec<Vec<double>>> p_diffuse_ii_fr_self_to_teth_;
+
+  Vec<Vec<double>> weight_bind_ii_;     // [n_neighbs][x]
+  Vec<Vec<double>> weight_bind_i_teth_; // [n_neighbs][x_dub]
+  // x is PROPOSED x_dist after bind_ii; x_dub is current value before bind_ii
+  Vec<Vec<Vec<double>>> weight_bind_ii_to_teth_; // [n_neighbs][x_dub][x]
+  Vec<Vec<Vec<double>>> weight_bind_ii_fr_teth_; // [n_neighbs][x_dub][x]
 
   /* Lists that track different population types */
   Vec<AssociatedProtein> xlinks_; // Actual xlink objects
@@ -105,8 +113,9 @@ public:
   Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ii_teth_same_;
 
 private:
-  void GenerateXLinks();
+  void CalculateCutoffs();
   void SetParameters();
+  void GenerateXLinks();
   void InitializeLists();
   void InitializeEvents();
 
@@ -120,9 +129,6 @@ public:
   double GetWeight_Bind_I_Teth();
   double GetWeight_Bind_II_Teth();
 
-  POP_T *CheckScratchFor(std::string pop);
-  void SaveToScratch(POP_T *head);
-
   void Update_All_Lists();
   void Update_List_Relay(std::string event, std::string target_pop);
   void Update_Free_Teth();
@@ -134,6 +140,10 @@ public:
   void Update_Bind_II_Candidate();
   void Update_Bind_I_Teth_Candidate();
   void Update_Bind_II_Teth_Candidate(); // XXX add
+
+  POP_T *CheckScratchFor(std::string pop);
+  void SaveToScratch(POP_T *head);
+  void SaveNeighbsToScratch(SITE_T *site);
 
   void Run_KMC();
   void Refresh_Populations();
@@ -150,3 +160,4 @@ public:
   void Tether_Free(ALT_T *untethered_head);
   void Untether_Free(POP_T *satellite_head);
 };
+#endif

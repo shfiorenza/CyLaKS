@@ -4,12 +4,13 @@ PARAM_FILE="params_endtag.yaml"
 echo BASE PARAM FILE is $PARAM_FILE
 MT_LENGTH=1000;
 MOT_CONC=0.0;
-#E_SCALE=275;
-for E_SCALE in {210,240}; do #,250,275,300,325}; do
+for E_SCALE in 225
+do
 	E_INT=$(echo "scale=3; $E_SCALE * 0.01" | bc)
-	for CONC_SCALE in {9,18,92,190,280,380}; do
+	for CONC_SCALE in 9 18 92 190 280 380
+	do
 		XLINK_CONC=$(echo "scale=3; $CONC_SCALE * 0.1" | bc)
-		FILE_NAME="coop_1000"
+		FILE_NAME="coop_bind_longB"
 		FILE_NAME+="_"
 		FILE_NAME+=$E_SCALE
 		FILE_NAME+="_"
@@ -28,7 +29,7 @@ for E_SCALE in {210,240}; do #,250,275,300,325}; do
 		# Run sim for these parameter values
 		./sim $TEMP_PARAMS $FILE_NAME &
 	done
+	wait
 done
-wait
 rm params_temp_*
 echo END SCAN

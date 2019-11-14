@@ -3,6 +3,7 @@
 # === List of SBATCH arguments ===
 #SBATCH --account=ucb-summit-smr		# allocations account
 #SBATCH --partition=shas		    	# Type of node to run on
+#SBATCH --qos=normal        	# quality of service/queue
 #SBATCH --nodes=2				        # number of cluster nodes, abbreviated by -N
 #SBATCH --ntasks=48 				    # number of parallel process
 #SBATCH --time=24:00:00		    	    # walltime, abbreviated by -t

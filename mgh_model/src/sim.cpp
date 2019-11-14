@@ -8,7 +8,7 @@ int main(int argc, char *argv[]) {
   properties.wallace.InitializeSimulation(argv[0], argv[1], argv[2], argc,
                                           &properties, &parameters);
   // Main KMC loop
-  for (int i_step = 0; i_step < parameters.n_steps; i_step++) {
+  for (int i_step{0}; i_step < parameters.n_steps; i_step++) {
     properties.wallace.UpdateTimestep(i_step);
     properties.kinesin4.RunKMC();
     properties.prc1.Run_KMC();

@@ -1,12 +1,12 @@
 seed: 329954433
-n_steps: 20000000
+n_steps: 40000000
 n_datapoints: 10000
 data_threshold: 0
-delta_t: 5e-6
+delta_t: 2.5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 1
+  count: 2
   length: 
   - 5000
   - 5000
@@ -28,7 +28,7 @@ microtubules:
 motors:
   t_active: 0
   k_on: 0.05
-  c_bulk: 0.0 #  0.020
+  c_bulk: 0.0 # 0.020
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
@@ -48,11 +48,13 @@ motors:
   tethers_active: false
   endpausing_active: true
 xlinks:
-  k_on: 0.005
-  c_bulk: 0.005
-  c_eff_bind: 10
-  k_off: 0.132
+  k_on: 0.000238
+  c_bulk: 0.05
+  c_eff_bind: 2500
+  k_off_i: 0.143
+  k_off_ii: 0.0143
   r_0: 32
-  k_spring: 0.3
-  diffusion_coeff: 0.085
+  k_spring: 0.453
+  diffu_coeff_i: 0.131
+  diffu_coeff_ii: 0.0655
   interaction_energy: 2.25

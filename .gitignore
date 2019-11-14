@@ -2,4 +2,7 @@
 *.swp
 *.dat
 *.log
+*.err
+*.out
+*.m~
 .vscode/

@@ -1,57 +1,53 @@
 clear all;
 % Often-changed variables
-n_sites = [500, 400];
-simName = '2019_10_19_scan/coop_slide_scan_50_0';
+mt_lengths = [1000, 500];
+simName = '2019_11_14_slideScan/slide_scan_4250_4500_50';
+%simName = 'test_bias'
 % Pseudo-constant variables
-n_mts = 2;
-n_steps = 40000000; %0;
-delta_t = 0.0000025;
+n_steps = 60000000;
+delta_t = 0.000025;
 n_datapoints = 10000;
-starting_point = 0;
+start_point = 0;
+site_size = 0.008; % in microns
 % Calculate parameters for plotting / etc;
-length = n_sites(2) * 0.008;
-end_time = n_steps * delta_t;
-start_time = starting_point * delta_t;
+n_mts = length(mt_lengths);
+time_per_datapoint = delta_t * n_steps / n_datapoints;
+end_time = n_datapoints * time_per_datapoint;
+start_time = start_point * time_per_datapoint;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileStructure = '%s_mt_coord.file';
+mtCoordFileName = '%s_mt_coord.file';
 
-fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
-data_file = fopen(fileName);
-raw_data = fread(data_file, [n_mts, n_datapoints], 'double');
-fclose(data_file);
+mt_coords_file = fopen(sprintf(fileDirectory, sprintf(mtCoordFileName, simName)));
+mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'double');
+%mt_coord_data = reshape(mt_coord_data, n_datapoints, n_mts);
+fclose(mt_coords_file);
 
 % Run through raw coord data to get overlap length at every datapoint
 final_overlap_data = zeros(n_datapoints, 1);
 end_dist_data = zeros(n_datapoints, 1);
-for i_data = starting_point + 1 : 1 : n_datapoints
-    mt_coord_one = raw_data(1, i_data);
-    mt_coord_two = raw_data(2, i_data);
+for i_data = start_point + 1: n_datapoints
+    mt_coords = mt_coord_data(:, i_data)';
+    mt_endpoints = mt_coords + mt_lengths;
     
-    if(mt_coord_two + n_sites(2) <= mt_coord_one + n_sites(1) ...
-    && mt_coord_two >= mt_coord_one)
-        overlap_length = n_sites(2) * 0.008;
-    else
-        if(mt_coord_two > mt_coord_one)
-           delta = (mt_coord_two + n_sites(2)) - (mt_coord_one + n_sites(1)); 
-        else
-           delta = mt_coord_one - mt_coord_two;
-        end
-        overlap_length = (n_sites(2) - delta) * 0.008;
-    end
+    overlap_start = max(mt_coords);
+    overlap_end = min(mt_endpoints);
+    
+    overlap_length = (overlap_end - overlap_start) * site_size;
+  
     final_overlap_data(i_data) = overlap_length; 
     
+    %{
     plus_end_one = mt_coord_one;
     plus_end_two = mt_coord_two + n_sites(2);
     end_dist = (plus_end_two - plus_end_one) * 0.008;
     end_dist_data(i_data) = end_dist;
+    %}
 end
 
-% Calculate real time that passes per iteration to get an accurate velocity
-time_per_datapoint = delta_t * (n_steps / n_datapoints);
 % Use gradient function with above spacing to get slope of overlap length
-final_overlap_data = smoothdata(end_dist_data, 'movmean', 300);
-slope_data = smoothdata(gradient(final_overlap_data, time_per_datapoint), 'movmean', 300);
+final_overlap_data = smoothdata(final_overlap_data, 'movmean', 10);
+slope_data = smoothdata(gradient(final_overlap_data, time_per_datapoint), 'movmean', 100);
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
@@ -60,16 +56,15 @@ hold on
 % Plot overlap length on top
 subplot(2, 1, 1)
 hold all
-plot(linspace(start_time, end_time, n_datapoints), final_overlap_data + 0.5, ...
-        'LineWidth', 2);
+plot(linspace(start_time, end_time, n_datapoints), final_overlap_data, 'LineWidth', 2);
 %title(sprintf('Overlap length over time (%g microns or %d sites in length)', ...
  %length, n_sites(2)));
- title('c eff teth = 1000 nM; k on xlink = 0.1 (nM * s)^{-1}');
+ %title('c eff teth = 1000 nM; k on xlink = 0.1 (nM * s)^{-1}');
 ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
 xlim([start_time end_time]);
-ylim([0 n_sites(1) * 0.008]);
+ylim([0 max(mt_lengths) * 0.008]);
 grid on
 grid minor
 

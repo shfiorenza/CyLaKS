@@ -1,5 +1,5 @@
 clear all;
-baseName = 'static_overlapL_500_10';
+baseName = 'bias';
 mt_lengths = [250, 250];
 mt_coords = [0, -125];
 mt_endpoints = mt_coords + mt_lengths;
@@ -20,7 +20,7 @@ mt_one = zeros(1, mt_lengths(1));
 mt_two = zeros(1, mt_lengths(2));
 
 % Avg occupancy data for each MT over all datapoints
-for i_data=1:2:((2*n_datapoints)-1)
+for i_data=5001:2:((2*n_datapoints)-1)
     mt_one = mt_one + double(raw_data(1:mt_lengths(1), i_data)')./n_datapoints;
     mt_two = mt_two + double(raw_data(1:mt_lengths(2), i_data + 1)')./n_datapoints;
 end

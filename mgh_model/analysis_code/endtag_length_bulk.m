@@ -1,10 +1,8 @@
 
 clear variables;
-xlink_concs = 0;%, 1];%, 4]; 
-%name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
-name_structs = ["Endtag_20x_0_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
+xlink_concs = [0]; % , 1, 4];
+base_name = "2019_11_14_endtagScan/endtag_scan_%i_%i_1";
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
-%mt_lengths = [4, 8, 14];
 % experimental parameters
 exp_mt_lengths = [2.4, 4.0, 5.6, 7.2, 8.8, 10.3, 13.5];
 exp_endtags_0 = [1.2, 1.3, 1.4, 1.6, 1.65, 1.75, 2.25]; 
@@ -31,10 +29,10 @@ n_lengths = length(mt_lengths);
 final_data = zeros([n_concs n_lengths]);
 
 for i_conc=1:1:n_concs
-%    xlink_conc = xlink_concs(i_conc);
+    xlink_conc = xlink_concs(i_conc);
     for i_length=1:1:n_lengths
         n_sites = mt_lengths(i_length) * 125;  
-        simName = sprintf(name_structs(i_conc), n_sites);       
+        simName = sprintf(base_name, xlink_conc, n_sites);       
         fileName = sprintf(fileDirectory, sprintf(fileStruct, simName));
         data_file = fopen(fileName);
         motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');

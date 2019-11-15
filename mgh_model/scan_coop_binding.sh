@@ -4,22 +4,17 @@ PARAM_FILE="params_endtag.yaml"
 echo BASE PARAM FILE is $PARAM_FILE
 MT_LENGTH=1000;
 MOT_CONC=0.0;
-for E_SCALE in 225
+for E_INT in 2.25
 do
-	E_INT=$(echo "scale=3; $E_SCALE * 0.01" | bc)
-	for CONC_SCALE in 9 18 92 190 280 380
+	for XLINK_CONC in 0.92 1.80 9.20 19.00 28.00 38.00
 	do
-		XLINK_CONC=$(echo "scale=3; $CONC_SCALE * 0.1" | bc)
-		FILE_NAME="coop_bind_longB"
+		FILE_NAME="coop_bindB_"
+		FILE_NAME+=$E_INT
 		FILE_NAME+="_"
-		FILE_NAME+=$E_SCALE
-		FILE_NAME+="_"
-		FILE_NAME+=$CONC_SCALE
+		FILE_NAME+=$XLINK_CONC
 		echo RUNNING NEW SIM: filename is $FILE_NAME
 		TEMP_PARAMS="params_temp_"
-		TEMP_PARAMS+=$E_SCALE
-		TEMP_PARAMS+="_"
-		TEMP_PARAMS+=$CONC_SCALE
+		TEMP_PARAMS+=$FILE_NAME
 		TEMP_PARAMS+=".yaml"
 		cp $PARAM_FILE $TEMP_PARAMS
 		yq w -i $TEMP_PARAMS microtubules.length[0] $MT_LENGTH
@@ -31,5 +26,5 @@ do
 	done
 	wait
 done
-rm params_temp_*
+rm params_temp_coop_bind_*
 echo END SCAN

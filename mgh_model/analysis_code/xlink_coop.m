@@ -1,11 +1,12 @@
 
 clear variables;
-baseName = 'coop_bind_longB';
+baseName = 'coop_bind';
 mt_length = [1000];
 E_int = [2.25]; %, 2.50, 2.75, 3.00, 3.25];
 exp_scaling = [0.09, 0.14, 0.68, 2.3, 5.0, 11.00];
 exp_scaling = exp_scaling/min(exp_scaling);
-xlink_concs = [0.9, 1.8, 9.2, 19, 28, 38];
+xlink_concs = [0.92, 1.8, 9.2, 19, 28, 38];
+conc_labels = ["0.92", "1.8", "9.2", "19", "28", "38"];
 %xlink_concs = [1,2,10,20,28,38];
 
 n_datapoints = 10000;
@@ -23,7 +24,7 @@ fileStructure = '%s_occupancy.file';
 
 for i_energy=1:n_energies
     for i_conc=1:n_concs
-        simName = sprintf('%s_%i_%i', baseName, int32(E_int(i_energy)*100), int32(xlink_concs(i_conc)*10))
+        simName = sprintf('%s_%0.2f_%s', baseName, E_int(i_energy), conc_labels(i_conc))
         fileName = sprintf(fileDirectory, sprintf(fileStructure, simName));
         xlink_data_file = fopen(fileName);
         xlink_raw_data = fread(xlink_data_file, n_mts * n_sites_max * n_datapoints, '*int');

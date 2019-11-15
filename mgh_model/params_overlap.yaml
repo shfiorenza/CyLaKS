@@ -28,7 +28,7 @@ microtubules:
 motors:
   t_active: 1000
   k_on: 0.000242
-  c_bulk: 6
+  c_bulk: 0.0 # 6
   c_eff_bind: 250000
   k_on_ATP: 2500
   c_ATP: 2
@@ -50,7 +50,7 @@ motors:
 xlinks:
   k_on: 0.000238
   c_bulk: 0.54
-  c_eff_bind: 2500
+  c_eff_bind: 4500
   k_off_i: 0.143
   k_off_ii: 0.0143
   r_0: 32

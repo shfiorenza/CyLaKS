@@ -8,8 +8,8 @@
 #SBATCH --ntasks=18				# number of parallel process
 #SBATCH --time=24:00:00			# walltime, abbreviated by -t
 #SBATCH --job-name=endtag			# name of job
-#SBATCH --output=endtagScan-%j.out    # name of the stdout redirection file
-#SBATCH --error=endtagscan-%j.err		# name of the stderr redirection file
+#SBATCH --output=endtagScan_%j.out    # name of the stdout redirection file
+#SBATCH --error=endtagScan_%j.err		# name of the stderr redirection file
 
 # === Purge all modules and load needed ones ===
 module purge

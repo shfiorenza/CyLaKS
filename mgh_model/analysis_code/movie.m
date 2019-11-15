@@ -1,11 +1,11 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000,500];
+mt_lengths = [1000, 500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-%simName = '2019_11_11_slideScan/slide_scan_50_5000';
-simName = '2019_11_14_slideScan/slide_scan_4250_4500_50';
-%simName = 'test_biasC';
+%simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
+%simName = "2019_11_14_slideScan/slide_scan_500_4500_50";
+simName = "test_occu";
 dur_sec = 30;
 % Pseudo-constant variables
 n_steps = 40000000;

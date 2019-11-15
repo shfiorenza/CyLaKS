@@ -1,7 +1,7 @@
 clear all;
 % Often-changed variables
 mt_lengths = [1000, 500];
-simName = '2019_11_14_slideScan/slide_scan_4250_4500_50';
+simName = '2019_11_14_slideScan/slide_scan_500_2500_5';
 %simName = 'test_bias'
 % Pseudo-constant variables
 n_steps = 60000000;

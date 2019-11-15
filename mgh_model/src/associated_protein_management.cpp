@@ -122,6 +122,11 @@ void AssociatedProteinManagement::SetParameters() {
       teth_energy[x_dub] = 0.5 * k_slack * dr_teth * dr_teth;
     }
   }
+  // Vector that holds the name of each probability and its value
+  std::vector<std::pair<std::string, double>> probabilities;
+  std::string NEIGHBS; // std::to_string(n_neighbs) for convenience
+  std::string X_DIST;  // std::to_string(x) for convenience
+  std::string X_DUB;   // std::to_string(x_dub) for convenience
   // [DIFFUSION STATISTICS FOR CROSSLINKER W/O TETH BELOW] //
   double kbT{parameters_->kbT};
   double delta_t{parameters_->delta_t};
@@ -141,6 +146,7 @@ void AssociatedProteinManagement::SetParameters() {
   p_diffuse_ii_to_rest_.resize(max_neighbs_ + 1);
   p_diffuse_ii_fr_rest_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    NEIGHBS = std::to_string(n_neighbs);
     // For neighb. interactions, we only consider the energy penalty for
     // diffusing away from neighbors (same as unbinding) since lambda = 1.0
     // dE = E_f - E_i
@@ -153,24 +159,26 @@ void AssociatedProteinManagement::SetParameters() {
     }
     p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_diffu_i;
     p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_diffu_i;
-    if (p_diffuse_i_fwd_[n_neighbs] > 1.0) {
-      printf("WARNING: p_diff_i_fwd/bck_[%i] = %g for xlinks\n", n_neighbs,
-             p_diffuse_i_fwd_[n_neighbs]);
-    }
+    probabilities.emplace_back("diff_i_" + NEIGHBS,
+                               p_diffuse_i_fwd_[n_neighbs]);
     p_diffuse_ii_to_rest_[n_neighbs].resize(dist_cutoff_ + 1);
     p_diffuse_ii_fr_rest_[n_neighbs].resize(dist_cutoff_ + 1);
     for (int x{0}; x <= dist_cutoff_; x++) {
-      double U_i{spring_energy[x]}; // Initial energy stored in spring
-      double U_to{0.0}; // Final energy if head diffuses towards (to) rest
+      X_DIST = std::to_string(x);
+      // x_dist if head were to diffuse towards (to) spring rest
+      int x_to{0};
       if (x > 0) {
-        U_to = spring_energy[x - 1];
+        x_to = x - 1;
       }
-      double U_fr{0.0}; // Final energy if head diffuses away from (fr) rest
+      // x_dist if head were to diffuse away from (fr) spring rest
+      int x_fr{0};
       if (x < dist_cutoff_) {
-        U_fr = spring_energy[x + 1];
+        x_fr = x + 1;
       }
-      double dU_to{U_to - U_i};
-      double dU_fr{U_fr - U_i};
+      // dU (U_f - U_i) if head diffuses towards (to) spring rest
+      double dU_to{spring_energy[x_to] - spring_energy[x]};
+      // dU (U_f - U_i) if head diffuses away from (fr) spring rest
+      double dU_fr{spring_energy[x_fr] - spring_energy[x]};
       // Diffusing towards rest is considered an unbinding-type event in regards
       // to Boltzmann factors, since both events let the spring relax
       double weight_to{exp(-lambda_spring * dU_to / kbT)};
@@ -185,16 +193,12 @@ void AssociatedProteinManagement::SetParameters() {
       }
       p_diffuse_ii_to_rest_[n_neighbs][x] =
           weight_neighb * weight_to * p_diffu_ii;
+      probabilities.emplace_back("diff_ii_to_" + NEIGHBS + "_" + X_DIST,
+                                 p_diffuse_ii_to_rest_[n_neighbs][x]);
       p_diffuse_ii_fr_rest_[n_neighbs][x] =
           weight_neighb * weight_fr * p_diffu_ii;
-      if (p_diffuse_ii_to_rest_[n_neighbs][x] > 1.0) {
-        printf("WARNING: p_diffu_ii_to_[%i][%i] = %g for xlinks\n", n_neighbs,
-               x, p_diffuse_ii_to_rest_[n_neighbs][x]);
-      }
-      if (p_diffuse_ii_fr_rest_[n_neighbs][x] > 1.0) {
-        printf("WARNING: p_diffu_ii_fr_[%i][%i] = %g for xlinks\n", n_neighbs,
-               x, p_diffuse_ii_fr_rest_[n_neighbs][x]);
-      }
+      probabilities.emplace_back("diff_ii_fr_" + NEIGHBS + "_" + X_DIST,
+                                 p_diffuse_ii_fr_rest_[n_neighbs][x]);
     }
   }
   // [DIFFUSION STATISTICS INVOLVING TETHER BELOW] //
@@ -205,6 +209,7 @@ void AssociatedProteinManagement::SetParameters() {
   p_diffuse_ii_to_self_fr_teth_.resize(max_neighbs_ + 1);
   p_diffuse_ii_fr_self_to_teth_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    NEIGHBS = std::to_string(n_neighbs);
     p_diffuse_i_to_teth_rest_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     p_diffuse_i_fr_teth_rest_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     p_diffuse_ii_to_both_[n_neighbs].resize(2 * teth_cutoff_ + 1);
@@ -212,20 +217,17 @@ void AssociatedProteinManagement::SetParameters() {
     p_diffuse_ii_fr_self_to_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     p_diffuse_ii_fr_both_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-      // Initial potential energy of tether at this extension
-      double U_i{teth_energy[x_dub]};
+      X_DUB = std::to_string(x_dub);
       // Change in x_dub that brings teth towards rest; -1 if extended (default)
       int dx_rest{-1};
       // However, if tether is compressed, increased x_dub is towards rest
       if (x_dub < 2 * rest_dist_teth) {
         dx_rest = 1;
       }
-      // Potential energy of tether if head steps towards (to) tether rest
-      double U_to{teth_energy[x_dub + dx_rest]};
-      // Potential energy of tether if head steps away from (fr) tether rest
-      double U_fr{teth_energy[x_dub - dx_rest]};
-      double dU_to{U_to - U_i};
-      double dU_fr{U_fr - U_i};
+      // dU (U_f - U_i) for tether if head steps towards (to) tether rest
+      double dU_to{teth_energy[x_dub + dx_rest] - teth_energy[x_dub]};
+      // dU (U_f - U_i) for tether if head steps away from (fr) tether rest
+      double dU_fr{teth_energy[x_dub - dx_rest] - teth_energy[x_dub]};
       // Diffusing towards rest is considered an unbinding-type event in regards
       // to Boltzmann factors, since both events let the spring relax
       double weight_to_teth{exp(-lambda_teth * dU_to / kbT)};
@@ -237,203 +239,49 @@ void AssociatedProteinManagement::SetParameters() {
       }
       p_diffuse_i_to_teth_rest_[n_neighbs][x_dub] =
           p_diffuse_i_fwd_[n_neighbs] * weight_to_teth;
+      probabilities.emplace_back("diff_i_to_teth_" + NEIGHBS + "_" + X_DUB,
+                                 p_diffuse_i_to_teth_rest_[n_neighbs][x_dub]);
       // For singly-bound xlinks, diffusing one site changes x_dub by 2, so keep
       // probability 0.0 for 2*cutoff +/- 1
       if (x_dub > 2 * comp_cutoff_ + 1 and x_dub < 2 * teth_cutoff_ - 1) {
         p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub] =
             p_diffuse_i_bck_[n_neighbs] * weight_fr_teth;
-      }
-      if (p_diffuse_i_to_teth_rest_[n_neighbs][x_dub] > 1.0) {
-        printf("WARNING: p_diffuse_i_to_teth_rest_[%i][%i] = %g for xlinks\n",
-               n_neighbs, x_dub, p_diffuse_i_to_teth_rest_[n_neighbs][x_dub]);
-      }
-      if (p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub] > 1.0) {
-        printf("WARNING: p_diffuse_i_fr_teth_rest_[%i][%i] = %g for xlinks\n",
-               n_neighbs, x_dub, p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub]);
+        probabilities.emplace_back("diff_i_fr_teth_" + NEIGHBS + "_" + X_DUB,
+                                   p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub]);
       }
       p_diffuse_ii_to_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       p_diffuse_ii_fr_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       for (int x{0}; x <= dist_cutoff_; x++) {
+        X_DIST = std::to_string(x);
+        // Diffuse towards both own and tether rest
         p_diffuse_ii_to_both_[n_neighbs][x_dub][x] =
             p_diffuse_ii_to_rest_[n_neighbs][x] * weight_to_teth;
+        probabilities.emplace_back("diff_ii_to_both_" + NEIGHBS + "_" + X_DUB +
+                                       "_" + X_DIST,
+                                   p_diffuse_ii_to_both_[n_neighbs][x_dub][x]);
+        // Diffuse away from both own and tether rest
         p_diffuse_ii_fr_both_[n_neighbs][x_dub][x] =
             p_diffuse_ii_fr_rest_[n_neighbs][x] * weight_fr_teth;
+        probabilities.emplace_back("diff_ii_fr_both_" + NEIGHBS + "_" + X_DUB +
+                                       "_" + X_DIST,
+                                   p_diffuse_ii_fr_both_[n_neighbs][x_dub][x]);
+        // Diffuse towards own rest, but away from tether rest
         p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x] =
             p_diffuse_ii_to_rest_[n_neighbs][x] * weight_fr_teth;
+        probabilities.emplace_back(
+            "diff_ii_to_self_fr_teth_" + NEIGHBS + "_" + X_DUB + "_" + X_DIST,
+            p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x]);
+        // Diffuse away from own rest, but towards tether rest
         p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x] =
             p_diffuse_ii_fr_rest_[n_neighbs][x] * weight_to_teth;
-        if (p_diffuse_ii_to_both_[n_neighbs][x_dub][x] > 1.0) {
-          printf("WARNING: p_diffuse_ii_to_both_[%i][%i][%i] = %g for xlinks\n",
-                 n_neighbs, x_dub, x,
-                 p_diffuse_ii_to_both_[n_neighbs][x_dub][x]);
-        }
-        if (p_diffuse_ii_fr_both_[n_neighbs][x_dub][x] > 1.0) {
-          printf("WARNING: p_diffuse_ii_fr_both_[%i][%i][%i] = %g for xlinks\n",
-                 n_neighbs, x_dub, x,
-                 p_diffuse_ii_fr_both_[n_neighbs][x_dub][x]);
-        }
-        if (p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x] > 1.0) {
-          printf("WARNING: p_diffuse_ii_to_fr_[%i][%i][%i] = %g for xlinks\n",
-                 n_neighbs, x_dub, x,
-                 p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x]);
-        }
-        if (p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x] > 1.0) {
-          printf("WARNING: p_diffuse_ii_fr_to_[%i][%i][%i] = %g for xlinks\n",
-                 n_neighbs, x_dub, x,
-                 p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x]);
-        }
+        probabilities.emplace_back(
+            "diff_ii_fr_self_to_teth_" + NEIGHBS + "_" + X_DUB + "_" + X_DIST,
+            p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x]);
       }
     }
   }
-
-  /*
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    double weight_neighb{neighb_weight_stepping[n_neighbs]};
-    p_diffuse_i_to_teth_rest_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    p_diffuse_i_fr_teth_rest_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    p_diffuse_ii_to_both_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    p_diffuse_ii_to_self_fr_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    p_diffuse_ii_fr_self_to_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    p_diffuse_ii_fr_both_[n_neighbs].resize(2 * teth_cutoff_ + 1);
-    for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-      // Calc x-distances (in nm) for tether
-      double r_x_teth = x_dub * site_size / 2;
-      double r_x_teth_bck = (x_dub - 1) * site_size / 2;
-      double r_x_teth_fwd = (x_dub + 1) * site_size / 2;
-      // Calc total r values
-      double r_teth = sqrt(r_x_teth * r_x_teth + r_y_teth * r_y_teth);
-      double r_teth_bck =
-          sqrt(r_x_teth_bck * r_x_teth_bck + r_y_teth * r_y_teth);
-      double r_teth_fwd =
-          sqrt(r_x_teth_fwd * r_x_teth_fwd + r_y_teth * r_y_teth);
-      // Calc tether exts for current dist and stepping to/from rest
-      double dr_teth = r_teth - r_0_teth, dr_teth_to, dr_teth_fr;
-      if (dr_teth >= 0) {
-        dr_teth_to = r_teth_bck - r_0_teth;
-        dr_teth_fr = r_teth_fwd - r_0_teth;
-      } else {
-        dr_teth_to = r_teth_fwd - r_0_teth;
-        dr_teth_fr = r_teth_bck - r_0_teth;
-      }
-      double dU_fr_teth, dU_to_teth;
-      if (x_dub == 2 * rest_teth) {
-        if (r_0_teth > r_rest_teth) {
-          dU_fr_teth = (k_teth_slack / 2) *
-                       (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-          dU_to_teth = (0.5) * (k_teth_spring * dr_teth_to * dr_teth_to -
-                                k_teth_slack * dr_teth * dr_teth);
-        } else {
-          dU_fr_teth = (k_teth_spring / 2) *
-                       (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-          dU_to_teth = (0.5) * (k_teth_slack * dr_teth_to * dr_teth_to -
-                                k_teth_spring * dr_teth * dr_teth);
-        }
-      } else if (dr_teth > 0) {
-        dU_fr_teth =
-            (k_teth_spring / 2) * (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-        dU_to_teth =
-            (k_teth_spring / 2) * (dr_teth_to * dr_teth_to - dr_teth * dr_teth);
-      } else {
-        dU_fr_teth =
-            (k_teth_slack / 2) * (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-        dU_to_teth =
-            (k_teth_slack / 2) * (dr_teth_to * dr_teth_to - dr_teth * dr_teth);
-      }
-      double weight_to_teth = exp(-dU_to_teth / (2 * kbT));
-      double weight_fr_teth = exp(-dU_fr_teth / (2 * kbT));
-      if (x_dub < 2 * comp_cutoff_ or !parameters_->motors.tethers_active) {
-        weight_to_teth = 0;
-        weight_fr_teth = 0;
-      }
-      if (x_dub < 2 * (comp_cutoff_ + 1) or x_dub > 2 * (teth_cutoff_ - 1)) {
-        weight_fr_teth = 0;
-      }
-      double p_to_teth_i = (weight_neighb * weight_to_teth * delta_t) / tau_i;
-      double p_fr_teth_i = (weight_neighb * weight_fr_teth * delta_t) / tau_i;
-      // Input probabilities for stage_i / tethered xlinks
-      p_diffuse_i_to_teth_rest_[n_neighbs][x_dub] = p_to_teth_i;
-      p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub] = p_fr_teth_i;
-      if (p_to_teth_i > 1)
-        printf("WARNING: p_diffuse_to_teth_i=%g for 2x=%i\n", p_to_teth_i,
-               x_dub);
-      if (p_fr_teth_i > 1)
-        printf("WARNING: p_diffuse_fr_teth_i=%g for 2x=%i\n", p_fr_teth_i,
-               x_dub);
-      // Run through x to get probs for stage_ii tethered xlinks
-      p_diffuse_ii_to_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      p_diffuse_ii_fr_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      for (int x_dist{0}; x_dist <= dist_cutoff_; x_dist++) {
-        double r_x = x_dist * site_size;
-        double r_x_to = (x_dist - 1) * site_size;
-        double r_x_fr = (x_dist + 1) * site_size;
-        double r = sqrt(r_x * r_x + r_y * r_y);
-        double r_to = sqrt(r_x_to * r_x_to + r_y * r_y);
-        double r_fr = sqrt(r_x_fr * r_x_fr + r_y * r_y);
-        // Get extension for current dist and steps to/from rest
-        double dr = r - r_0;
-        double dr_to = r_to - r_0;
-        double dr_fr = r_fr - r_0;
-        if (dr >= 0) {
-          // Get corresponding changes in potential energy
-          double dU_to_rest = (k_spring / 2) * (dr_to * dr_to - dr * dr);
-          double dU_fr_rest = (k_spring / 2) * (dr_fr * dr_fr - dr * dr);
-          // Weights according to Lanksy et al.
-          double weight_to;
-          double weight_fr;
-          if (x_dist == rest_dist_) {
-            weight_to = 0;
-            weight_fr = 2 * exp(-dU_fr_rest / (2 * kbT));
-          } else if (x_dist == dist_cutoff_) {
-            weight_to = exp(-dU_to_rest / (2 * kbT));
-            weight_fr = 0;
-          } else {
-            weight_to = exp(-dU_to_rest / (2 * kbT));
-            weight_fr = exp(-dU_fr_rest / (2 * kbT));
-          }
-          // Convolve these bitches
-          double p_to_both =
-              (weight_neighb * weight_to * weight_to_teth * delta_t) / tau_ii;
-          double p_to_self_fr_teth =
-              (weight_neighb * weight_to * weight_fr_teth * delta_t) / tau_ii;
-          double p_fr_self_to_teth =
-              (weight_neighb * weight_fr * weight_to_teth * delta_t) / tau_ii;
-          double p_fr_both =
-              (weight_neighb * weight_fr * weight_fr_teth * delta_t) / tau_ii;
-          p_diffuse_ii_to_both_[n_neighbs][x_dub][x_dist] = p_to_both;
-          p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x_dist] =
-              p_to_self_fr_teth;
-          p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x_dist] =
-              p_fr_self_to_teth;
-          p_diffuse_ii_fr_both_[n_neighbs][x_dub][x_dist] = p_fr_both;
-
-          if (p_to_both > 1) {
-            printf("WARNING: p_diff_to_both=%g", p_to_both);
-            printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
-          }
-          if (p_to_self_fr_teth > 1) {
-            printf("WARNING: p_diff_to_self_fr_teth=%g", p_to_self_fr_teth);
-            printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
-          }
-          if (p_fr_self_to_teth > 1) {
-            printf("WARNING: p_diff_fr_self_to_teth=%g", p_fr_self_to_teth);
-            printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
-          }
-          if (p_fr_both > 1) {
-            printf("WARNING: p_diff_fr_both=%g", p_fr_both);
-            printf(" for 2x=%i, x=%i\n", x_dub, x_dist);
-          }
-        } else {
-          printf("woah mayne. xlink set parameters TWOO \n");
-          exit(1);
-        }
-      }
-    }
-  }
-  */
   // KMC STATISTICS BELOW
   double k_on = parameters_->xlinks.k_on;
   double c_xlink = parameters_->xlinks.c_bulk;
@@ -457,6 +305,7 @@ void AssociatedProteinManagement::SetParameters() {
   weight_bind_ii_to_teth_.resize(max_neighbs_ + 1);
   weight_bind_ii_fr_teth_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    NEIGHBS = std::to_string(n_neighbs);
     // dE = E_f - E_i;
     double dE = 0.0 - neighb_energy[n_neighbs];
     // We only consider the energy penalty for unbinding since lambda = 1.0
@@ -464,31 +313,23 @@ void AssociatedProteinManagement::SetParameters() {
     // dE has units of kbT, so dividing by its numerical value isn't necessary
     double weight_neighb_unbind{exp(-lambda_neighb * dE)};
     p_bind_i_[n_neighbs] = k_on * c_xlink * delta_t;
+    probabilities.emplace_back("bind_i_" + NEIGHBS, p_bind_i_[n_neighbs]);
     p_unbind_i_[n_neighbs] = weight_neighb_unbind * k_off_i * delta_t;
-    if (p_bind_i_[n_neighbs] > 1.0) {
-      printf("WARNING: p_bind_i_[%i] = %g for xlinks\n", n_neighbs,
-             p_bind_i_[n_neighbs]);
-    }
-    if (p_unbind_i_[n_neighbs] > 1.0) {
-      printf("WARNING: p_unbind_i_[%i] = %g for xlinks\n", n_neighbs,
-             p_unbind_i_[n_neighbs]);
-    }
+    probabilities.emplace_back("unbind_i_" + NEIGHBS, p_unbind_i_[n_neighbs]);
     p_unbind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
     weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
     for (int x{0}; x <= dist_cutoff_; x++) {
+      X_DIST = std::to_string(x);
       // dU = U_f - U_i
       double dU_bind{spring_energy[x] - 0.0};
       double dU_unbind{0.0 - spring_energy[x]};
       double weight_bind{exp(-(1.0 - lambda_spring) * dU_bind / kbT)};
       weight_bind_ii_[n_neighbs][x] = weight_neighb_bind * weight_bind;
-      // printf("weight_bind_ii_[%i][%i] = %g\n", n_neighbs, x, weight_bind);
       double weight_unbind{exp(-lambda_spring * dU_unbind / kbT)};
       p_unbind_ii_[n_neighbs][x] =
           weight_neighb_unbind * weight_unbind * k_off_ii * delta_t;
-      if (p_unbind_ii_[n_neighbs][x] > 1.0) {
-        printf("WARNING: p_unbind_ii_[%i][%i] = %g for xlinks\n", n_neighbs, x,
-               p_unbind_ii_[n_neighbs][x]);
-      }
+      probabilities.emplace_back("unbind_ii_" + NEIGHBS + "_" + X_DIST,
+                                 p_unbind_ii_[n_neighbs][x]);
     }
     // Rates involving both xlink & tether spring
     p_unbind_i_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
@@ -498,20 +339,17 @@ void AssociatedProteinManagement::SetParameters() {
     weight_bind_ii_to_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     weight_bind_ii_fr_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
+      X_DUB = std::to_string(x_dub);
       // dU = U_f - U_i
       double dU_bind{teth_energy[x_dub] - 0.0};
       double dU_unbind{0.0 - teth_energy[x_dub]};
       double weight_bind{exp(-(1.0 - lambda_teth) * dU_bind / kbT)};
       weight_bind_i_teth_[n_neighbs][x_dub] = weight_neighb_bind * weight_bind;
-      // printf("weight_bind_i_teth_[%i][%i] = %g\n", n_neighbs, x_dub,
-      //        weight_bind);
       double weight_unbind{exp(-lambda_teth * dU_unbind / kbT)};
       p_unbind_i_teth_[n_neighbs][x_dub] =
           weight_unbind * p_unbind_i_[n_neighbs];
-      if (p_unbind_i_teth_[n_neighbs][x_dub] > 1) {
-        printf("WARNING: p_unbind_i_teth_[%i][%i] = %g for xlinks\n", n_neighbs,
-               x_dub, p_unbind_i_teth_[n_neighbs][x_dub]);
-      }
+      probabilities.emplace_back("unbind_i_teth_" + NEIGHBS + "_" + X_DUB,
+                                 p_unbind_i_teth_[n_neighbs][x_dub]);
       p_unbind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       p_unbind_ii_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       weight_bind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
@@ -533,50 +371,6 @@ void AssociatedProteinManagement::SetParameters() {
         if (x_dub_fr < 0 or x_dub_fr > 2 * teth_cutoff_) {
           x_dub_fr = 0;
         }
-        /*
-        double dr_x_teth = dx_teth * site_size;
-        double r_x_teth_to, r_x_teth_fr;
-        if (dr_teth >= 0) {
-          r_x_teth_to = r_x_teth - dr_x_teth;
-          r_x_teth_fr = r_x_teth + dr_x_teth;
-        } else {
-          r_x_teth_to = r_x_teth + dr_x_teth;
-          r_x_teth_fr = r_x_teth - dr_x_teth;
-        }
-        double r_teth_to =
-            sqrt(r_x_teth_to * r_x_teth_to + r_y_teth * r_y_teth);
-        double r_teth_fr =
-            sqrt(r_x_teth_fr * r_x_teth_fr + r_y_teth * r_y_teth);
-        double dr_teth_to = r_teth_to - r_0_teth;
-        double dr_teth_fr = r_teth_fr - r_0_teth;
-        double dU_to_teth, dU_fr_teth;
-        int x_fr_rest_dub = abs(2 * rest_teth - x_dub);
-        int dx_teth_dub = 2 * dx_teth;
-        // Check if we're crossing over equil. point of tether
-        if (dx_teth_dub > x_fr_rest_dub) {
-          if (r_teth < r_0_teth) {
-            dU_fr_teth = (k_teth_slack / 2) *
-                         (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-            dU_to_teth = (0.5) * (k_teth_spring * dr_teth_to * dr_teth_to -
-                                  k_teth_slack * dr_teth * dr_teth);
-          } else {
-            dU_fr_teth = (k_teth_spring / 2) *
-                         (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-            dU_to_teth = (0.5) * (k_teth_slack * dr_teth_to * dr_teth_to -
-                                  k_teth_spring * dr_teth * dr_teth);
-          }
-        } else if (dr_teth > 0) {
-          dU_fr_teth = (k_teth_spring / 2) *
-                       (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-          dU_to_teth = (k_teth_spring / 2) *
-                       (dr_teth_to * dr_teth_to - dr_teth * dr_teth);
-        } else {
-          dU_fr_teth = (k_teth_slack / 2) *
-                       (dr_teth_fr * dr_teth_fr - dr_teth * dr_teth);
-          dU_to_teth = (k_teth_slack / 2) *
-                       (dr_teth_to * dr_teth_to - dr_teth * dr_teth);
-        }
-        */
         // dU = U_f - U_i
         double dU_to{teth_energy[x_dub_to] - teth_energy[x_dub]};
         double dU_fr{teth_energy[x_dub_fr] - teth_energy[x_dub]};
@@ -601,14 +395,8 @@ void AssociatedProteinManagement::SetParameters() {
         }
         weight_bind_ii_to_teth_[n_neighbs][x_dub][x] =
             weight_bind_ii_[n_neighbs][x] * weight_to_teth;
-        // printf("weight_bind_ii_to_teth_[%i][%i][%i] = %g\n", n_neighbs,
-        // x_dub,
-        //  x, weight_bind_ii_to_teth_[n_neighbs][x_dub][x]);
         weight_bind_ii_fr_teth_[n_neighbs][x_dub][x] =
             weight_bind_ii_[n_neighbs][x] * weight_fr_teth;
-        // printf("weight_bind_ii_fr_teth_[%i][%i][%i] = %g\n", n_neighbs,
-        // x_dub,
-        //  x, weight_bind_ii_fr_teth_[n_neighbs][x_dub][x]);
         p_unbind_ii_to_teth_[n_neighbs][x_dub][x] =
             p_unbind_ii_[n_neighbs][x] * weight_to_teth;
         p_unbind_ii_fr_teth_[n_neighbs][x_dub][x] =
@@ -630,6 +418,23 @@ void AssociatedProteinManagement::SetParameters() {
   p_tether_free_ = k_tether * c_xlink * delta_t;
   double k_untether = parameters_->motors.k_untether;
   p_untether_free_ = k_untether * delta_t;
+  int align_pos{40};
+  // std::sort(probabilities.begin(), probabilities.end(),
+  //           [](const std::pair<std::string, double> &a,
+  //              const std::pair<std::string, double> &b) {
+  //             return a.first.size() < b.first.size();
+  //           });
+
+  // for (int i_prob{0}; i_prob < probabilities.size(); i_prob++) {
+  //   char probability_report[256];
+  //   int whitespace{align_pos - (int)probabilities[i_prob].first.length() +
+  //   2}; sprintf(probability_report, "XLINKS: p_%s = %g\n",
+  //           probabilities[i_prob].first.c_str(), // whitespace,
+  //           probabilities[i_prob].second);
+  //   if (probabilities[i_prob].second > 0.0) {
+  //     wally_->Log(probability_report);
+  //   }
+  // }
 }
 
 void AssociatedProteinManagement::GenerateXLinks() {
@@ -814,10 +619,13 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(this, ID++, 11, "bind_I", "free_teth",
                          p_bind_i_teth_base_, &n_free_teth_, &free_teth_,
                          ran_int, poisson_i_teth);
-    events_.emplace_back(this, ID++, 21, "bind_II", "bound_I_ALL",
-                         p_bind_ii_base_, &n_bound_i_teth_tot_,
-                         &bound_i_teth_[max_neighbs_ + 1][2 * teth_cutoff_],
-                         ran_int, poisson_ii_teth);
+    // Only create doubly-bound events if n_MTs > 1
+    if (parameters_->microtubules.count > 1) {
+      events_.emplace_back(this, ID++, 21, "bind_II", "bound_I_ALL",
+                           p_bind_ii_base_, &n_bound_i_teth_tot_,
+                           &bound_i_teth_[max_neighbs_ + 1][2 * teth_cutoff_],
+                           ran_int, poisson_ii_teth);
+    }
     for (int n_neighbs(0); n_neighbs <= max_neighbs_; n_neighbs++) {
       //			printf("n neighbs is %i\n", n_neighbs);
       for (int x_dub(2 * comp_cutoff_); x_dub <= 2 * teth_cutoff_; x_dub++) {

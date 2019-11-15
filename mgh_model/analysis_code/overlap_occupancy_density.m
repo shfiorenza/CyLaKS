@@ -2,8 +2,8 @@ clear all
 % READ FIXME BELOW
 % Parameters from sim
 mt_lengths = [1000, 500];
-simName = '2019_11_14_slideScan/slide_scan_500_4500_50';
-%simName = 'test_biasC';
+%simName = '2019_11_14_slideScan/slide_scan_500_2500_5';
+simName = 'test_occu';
 n_steps = 600000000;
 n_datapoints = 10000;
 delta_t = 0.0000025; 

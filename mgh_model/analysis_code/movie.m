@@ -1,6 +1,6 @@
 clear all;
 % Parameters from sim
-mt_lengths = [250];
+mt_lengths = [500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
@@ -9,12 +9,12 @@ simName = 'test';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 10000000;
+n_steps = 20000000;
 n_datapoints = 10000;
 start_frame = 1;
 end_frame = 10000;
 frames_per_plot = 100;
-delta_t = 0.00005; 
+delta_t = 0.000005; 
 xlink_cutoff = 5;
 cutoff = 19;
 % Colors

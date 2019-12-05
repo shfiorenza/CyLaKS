@@ -2,11 +2,11 @@
 clear all;
 % Often-changed variables
 n_sites = 5000;
-simName = 'test';
+simName = 'processivity_420pM';
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.00001;
-n_steps = 10000000;
+delta_t = 0.000005;
+n_steps = 20000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;

@@ -420,7 +420,7 @@ void Curator::PrintMicrotubules() {
           if (xlink->tethered_ == false) {
             printf("x");
             //						printf("%i",
-            //xlink->x_dist_);
+            // xlink->x_dist_);
           } else
             printf("X");
         else {
@@ -685,9 +685,10 @@ void Curator::OutputSimDuration() {
   sim_duration_ = elapsed.count();
   Log("\nTime to execute sim: %.2f seconds.\n", sim_duration_ / n_per_sec_);
   Log("   -Motors: %.2f\n", t_motors_[0] / n_per_sec_);
-  Log("      -Calculating stats: %.2f\n", t_motors_[1] / n_per_sec_);
-  Log("      -Constructing list: %.2f\n", t_motors_[2] / n_per_sec_);
-  Log("      -Execution: %.2f\n", t_motors_[3] / n_per_sec_);
+  Log("      -Updating lists: %.2f\n", t_motors_[1] / n_per_sec_);
+  Log("      -Refreshing populations: %.2f\n", t_motors_[2] / n_per_sec_);
+  Log("      -Generating sequence: %.2f\n", t_motors_[3] / n_per_sec_);
+  Log("      -Executing events: %.2f\n", t_motors_[4] / n_per_sec_);
   Log("   -Xlinks: %.2f\n", t_xlinks_[0] / n_per_sec_);
   Log("      -Updating lists: %.2f\n", t_xlinks_[1] / n_per_sec_);
   Log("      -Refreshing populations: %.2f\n", t_xlinks_[2] / n_per_sec_);

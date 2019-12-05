@@ -1,6 +1,9 @@
 *.file
-*.swp
 *.dat
 *.log
+*.err
+*.out
+*.swp
+*.m~
 *.json
 *.avi

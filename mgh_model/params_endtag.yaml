@@ -8,7 +8,7 @@ eta: 0.001
 microtubules:
   count: 1
   length:
-  - 250
+  - 1250
   - 250
   y_dist: 32
   site_size: 8
@@ -27,7 +27,7 @@ microtubules:
   diffusion_on: false
 motors:
   t_active: 0
-  k_on: 0.000242
+  k_on: 0.05 # 0.000242
   c_bulk: 1.5
   c_eff_bind: 250000
   k_on_ATP: 2500
@@ -49,7 +49,7 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238
-  c_bulk: 0.1
+  c_bulk: 0.0 # 0.1
   c_eff_bind: 2500
   k_off_i: 0.143
   k_off_ii: 0.0143

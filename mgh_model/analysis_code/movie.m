@@ -6,13 +6,13 @@ n_mts = length(mt_lengths);
 %simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
 simName = "2019_12_04_slideScan/slide_scan_2.0_525_5";
 %simName = "test_occu";
-dur_sec = 30;
+dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 60000000;
 n_datapoints = 10000;
 start_frame = 01;
 end_frame = n_datapoints;
-frames_per_plot = 100;
+frames_per_plot = 10;
 delta_t = 0.000025; 
 xlink_cutoff = 5;
 cutoff = 19;
@@ -118,9 +118,11 @@ for i_data=start_frame:frames_per_plot:end_frame
             %}
             
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos-1) (second_pos + max_sites + 1)];
+                ax.XLim = [(first_pos-1) (second_pos + 550 + 1)];
+                %ax.XLim = [(first_pos-1) (second_pos + max_sites + 1)];
             else
-                ax.XLim = [(second_pos-1) (first_pos + max_sites + 1)];
+                ax.XLim = [(second_pos-1) (first_pos + 550 + 1)];
+              %  ax.XLim = [(second_pos-1) (first_pos + max_sites + 1)];
             end
               
         else

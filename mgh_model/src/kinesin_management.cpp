@@ -88,7 +88,7 @@ void KinesinManagement::SetParameters() {
   rest_dist_ = motors_[0].rest_dist_;
   comp_cutoff_ = motors_[0].comp_cutoff_;
   dist_cutoff_ = motors_[0].dist_cutoff_;
-  if (parameters_->motors.tethers_active) {
+  if (parameters_->motors.tethers_active and parameters_->xlinks.c_bulk > 0.0) {
     properties_->wallace.Log("\nFor motors:\n");
     properties_->wallace.Log("  rest_dist is %g\n", rest_dist_);
     properties_->wallace.Log("  comp_cutoff is %i\n", comp_cutoff_);

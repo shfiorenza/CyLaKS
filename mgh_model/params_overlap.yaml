@@ -28,17 +28,17 @@ microtubules:
 motors:
   t_active: 1000
   k_on: 0.000242
-  c_bulk: 0.0 # 6
-  c_eff_bind: 250000
+  c_bulk: 6.0
+  c_eff_bind: 800000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 60 # 117
-  k_hydrolyze_stalled: 5 # 0.1084
-  k_off_i: 45 # 8.75
-  k_off_i_stalled: 0.1 # 718
-  k_off_ii: 180
+  k_hydrolyze: 100 # 60 # 117
+  k_hydrolyze_stalled: 8.33 # 5 # 0.1084
+  k_off_i: 0.45 # 45 # 8.75
+  k_off_i_stalled: 0.01 # 0.1 # 718
+  k_off_ii: 260
   k_tether: 0.1
-  c_eff_tether: 500 # 5000
+  c_eff_tether: 5000
   k_untether: 0.05
   r_0: 120
   k_spring: 0.1325
@@ -49,7 +49,7 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238
-  c_bulk: 0.54
+  c_bulk: 1.0 # 0.54
   c_eff_bind: 4500
   k_off_i: 0.143
   k_off_ii: 0.0143

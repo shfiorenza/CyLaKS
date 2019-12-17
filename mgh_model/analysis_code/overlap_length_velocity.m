@@ -1,7 +1,7 @@
 clear all;
 % Input parameters
 baseName = "2019_12_04_slideScan/slide_scan_2.0_525_%i";
-seeds = [1,2,5];%,6,7,4,8];%,8,9]%,11];
+seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in microns
 % Set file directory
@@ -36,6 +36,7 @@ plus_end_velocity = zeros(length(seeds), n_datapoints);
 % Run through raw coord data to get overlap length at every datapoint
 for i_seed = 1:length(seeds)
     simName = sprintf(baseName, seeds(i_seed))
+    simName = "test_slide"
     % Open mt coordinate file
     mt_coords_file = fopen(sprintf(fileDirectory, sprintf('%s_mt_coord.file', simName)));
     mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'double');

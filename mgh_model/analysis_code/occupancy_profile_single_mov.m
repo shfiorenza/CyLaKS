@@ -3,9 +3,9 @@ clear variables;
 off_ratio = 10;
 k_hydrolyze = 90;
 jam_ratio = 700;
-n_sites = 500;
+n_sites = 250;
 %simName = sprintf('Endtag_20x_0_%i', n_sites);
-simName = 'coopShort_325_92';
+simName = 'endtag_0_250_0';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

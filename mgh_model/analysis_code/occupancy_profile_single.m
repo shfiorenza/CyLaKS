@@ -7,7 +7,7 @@ c_motor = 1.5;
 
 %simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
 %simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
-simName = 'endtag_1250';
+simName = 'endtag_0_1750_0';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

@@ -1,10 +1,10 @@
 clear all;
 % Often-changed variables
-n_sites = 5000;
-simName = 'test6';
+n_sites = 50000;
+simName = 'processivity_20pM_0';
 % Pseudo-constant variables
 n_mts = 1;
-n_datapoints = 100000;
+n_datapoints = 10000;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 motorFileStruct = '%s_motorID.file';

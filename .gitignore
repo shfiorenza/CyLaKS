@@ -4,5 +4,6 @@
 *.log
 *.err
 *.out
+*.avi
 *.m~
 .vscode/

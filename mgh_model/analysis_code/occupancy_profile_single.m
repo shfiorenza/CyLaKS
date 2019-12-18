@@ -1,13 +1,13 @@
 clear all
 % Often-changed variables
-n_sites = 1750;
+n_sites = 1250;
 processivity = 5.3;
 xlink_conc = 2.0;
 c_motor = 1.5;
 
 %simName = sprintf('endtag_scan/Endtag_%#.1fx_%#.1fm_%i', xlink_conc, motor_conc, n_sites);
-simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
-%simName = 'newProc_250x_long/Endtag_1750';
+%simName = sprintf('Endtag_MAYBE_4_%i', n_sites);
+simName = 'endtag_1250';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -17,7 +17,7 @@ active_datapoints = n_datapoints - starting_point;
 
 %fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
 %fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/good_endtags/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};
 

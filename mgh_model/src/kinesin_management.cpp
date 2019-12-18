@@ -42,31 +42,22 @@ void KinesinManagement::SetParameters() {
   double r_y = parameters_->microtubules.y_dist / 2;
 
   // lattice cooperativity jawn - temp
-  n_affinities_ = 24;
-  int bins_per_side = n_affinities_ / 2;
-  double range = 6.048; // microns; MUST BE divisible by bins_per_side
-  double sites_per_bin = range * 125 / bins_per_side;
+  n_affinities_ = 12;
+  int range{60};   // in sites; on either side of the motor
+  double fwhm{30}; // full width at half max of Gaussian
+  double amp{5};   // amplitude of Gaussian we will be sampling from
+  double sites_per_bin{range / n_affinities_};
   // Check the no. of sites per bin is an integer
   if (sites_per_bin != (int)sites_per_bin) {
     printf("fix your stupid lattice coop ya dingus\n");
     exit(1);
   }
-  double bin_size = range / bins_per_side; // microns
-  double fwd_coeff = 4;
-  double bck_coeff = 2.5;
   std::vector<double> affinity_weights(n_affinities_, 0.0);
   for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
-    double weight{0.0};
-    if (i_aff < bins_per_side) {
-      int bin_no = bins_per_side - i_aff;
-      double dist = bin_size * bin_no;
-      weight = bck_coeff * exp(-dist / (3 * range));
-    } else {
-      int bin_no = 2 * bins_per_side - i_aff;
-      double dist = bin_size * bin_no;
-      weight = fwd_coeff * exp(-dist / (6 * range));
-    }
-    affinity_weights[i_aff] = weight;
+    double dist{sites_per_bin * i_aff};
+    affinity_weights[i_aff] =
+        1 + amp * exp((-4 * log(2) * dist * dist) / (fwhm * fwhm));
+    printf("weight is %g for aff no %i\n", affinity_weights[i_aff], i_aff);
   }
 
   // neighbor coop stuff - temps

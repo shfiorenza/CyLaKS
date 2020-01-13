@@ -59,7 +59,8 @@ def kif4a_coop_scaling(params):
     sim_names = []
     param_files = []
     exe_commands = []
-    for conc in kif4a_conc:
+    # Set up order so that largest sim (highest conc) runs first -- not sure if this actually matters
+    for conc in reversed(kif4a_conc):
         # Generate unique simulation name for this iteration, sub-iteration, and kif4a concentration
         sim_name = sim_name_base + "_" + repr(iteration_no) + "." + repr(sub_no) + "_" + repr(conc)
         sim_names.append(sim_name)
@@ -73,7 +74,7 @@ def kif4a_coop_scaling(params):
         # Add parameter file to param_files array so we can rm them later
         param_files.append(param_file)
         # Generate command to execute this simulation
-        exe_cmd = "./sim" + param_file + " " + sim_name
+        exe_cmd = "./sim " + param_file + " " + sim_name
         # Add command to exe_commands array so we can launch them all at once 
         exe_commands.append(exe_cmd)
     # Launch all sims (with different kif4a concentrations) at once
@@ -94,15 +95,15 @@ def kif4a_coop_scaling(params):
         err_lifetime = (exp_lifetimes[i_conc] - kif4a_stats[1]) / exp_err_lifetimes[i_conc]
         err_velocity = (exp_velocities[i_conc] - kif4a_stats[2]) / exp_err_velocities[i_conc]
         weighted_errors.append(err_runlength + err_lifetime + err_velocity)
-    log.info('Weighted errors: {}'.format(weighted_errors))
+    log.info("Weighted errors: {}".format(weighted_errors))
     call_no+=1
     return weighted_errors
 
-already_made = os.path.isfile('./sim')
+already_made = os.path.isfile("./sim")
 if not already_made: call("make -j12 CFG=release sim", shell=True)
-ready_for_output = os.path.isfile('/grad_descent_output/')
+ready_for_output = os.path.isfile("/grad_descent_output/")
 if not ready_for_output: call("mkdir grad_descent_output", shell=True)
-log.info('Start of gradient descent parameter optimization')
-log.info('Initial parameters: {}'.format(param_initialVal))
+log.info("Start of gradient descent parameter optimization")
+log.info("Initial parameters: {}".format(param_initialVal))
 res = least_squares(kif4a_coop_scaling, param_initialVal, bounds=param_bounds,\
         diff_step=step_size, verbose=2, xtol=None)

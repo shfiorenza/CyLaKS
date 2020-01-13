@@ -1,14 +1,14 @@
 seed: 329954433
-n_steps: 20000000
+n_steps: 40000000
 n_datapoints: 10000
 data_threshold: 0
-delta_t: 5e-6
+delta_t: 2.5e-5
 kbT: 4.114
 eta: 0.0001
 microtubules:
   count: 1
   length: 
-  - 5000
+  - 50000
   - 200
   y_dist: 32
   site_size: 8
@@ -26,17 +26,19 @@ microtubules:
   printout_on: false
   diffusion_on: false
 motors:
+  lattice_coop_amp: 7
+  lattice_coop_range: 500
   t_active: 0
-  k_on: 0.005 # 0.025
+  k_on: 0.000358
   c_bulk: 0.020
-  c_eff_bind: 250000
+  c_eff_bind: 800000 # 16000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 60
+  k_hydrolyze: 130 # 100
   k_hydrolyze_stalled: 5
-  k_off_i: 45
+  k_off_i: 2.5 # 5 
   k_off_i_stalled: 0.1
-  k_off_ii: 180
+  k_off_ii: 260
   interaction_energy: 2.1
   k_tether: 0.1
   c_eff_tether: 5000

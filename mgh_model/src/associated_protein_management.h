@@ -40,7 +40,7 @@ public:
 
   int dist_cutoff_; // see assoc. protein header
   int rest_dist_;   // see assoc. protein header
-  int teth_cutoff_; // see kinesin header (dist_cutoff_ there)
+  int teth_cutoff_; // see kinesin header (teth_cutoff_ there)
   int comp_cutoff_; // see kinesin header (comp_cutoff_ there)
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_;

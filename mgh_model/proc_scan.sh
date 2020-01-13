@@ -2,9 +2,9 @@
 echo STARTING ENDTAG SCAN
 PARAM_FILE="params_processivity.yaml"
 echo BASE PARAM FILE is $PARAM_FILE
-for CONC_SCALE in {20,80,120,220,420}; do
+for CONC_SCALE in {20,50,80,120,220,420}; do
 MOT_CONC=$(echo "scale=4; $CONC_SCALE * 0.001" | bc)
-	FILE_NAME="processivity"
+	FILE_NAME="processivityB"
 	FILE_NAME+="_"
 	FILE_NAME+=$CONC_SCALE
 	FILE_NAME+="pM"

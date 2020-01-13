@@ -36,6 +36,8 @@ public:
   // if both are in the same direction w.r.t. this site
   bool EquilibriumInSameDirection();
 
+  void UpdateAffinity();
+
   int GetPRC1NeighborCount();
   int GetKIF4ANeighborCount();
 };

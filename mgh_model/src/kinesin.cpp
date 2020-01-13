@@ -1,6 +1,44 @@
 #include "kinesin.h"
 #include "master_header.h"
 
+int Kinesin::head::GetAffinity() {
+
+  int n_affs{motor_->properties_->kinesin4.n_affinities_};
+  int range{(int)motor_->parameters_->motors.lattice_coop_range};
+  int bin_size{0};
+  if (n_affs > 1) {
+    bin_size = range / (n_affs - 1);
+  }
+
+  for (int delta{1}; delta <= range; delta++) {
+    int i_fwd{site_->index_ + delta};
+    if (i_fwd > 0 and i_fwd < site_->mt_->n_sites_) {
+      if (site_->mt_->lattice_[i_fwd].motor_head_ != nullptr) {
+        if (site_->mt_->lattice_[i_fwd].motor_head_->motor_ != motor_) {
+          // printf("Motor %i @ site %i: \n", motor_->id_, site_->index_);
+          // printf("   has neighb motor %i @ site %i\n",
+          //        site_->mt_->lattice_[i_fwd].motor_head_->motor_->id_,
+          //        i_fwd);
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+    int i_bck{site_->index_ - delta};
+    if (i_bck > 0 and i_bck < site_->mt_->n_sites_) {
+      if (site_->mt_->lattice_[i_bck].motor_head_ != nullptr) {
+        if (site_->mt_->lattice_[i_bck].motor_head_->motor_ != motor_) {
+          // printf("Motor %i @ site %i: \n", motor_->id_, site_->index_);
+          // printf("   has neighb motor %i @ site %i\n",
+          //        site_->mt_->lattice_[i_bck].motor_head_->motor_->id_,
+          //        i_bck);
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+  }
+  return (n_affs - 1);
+}
+
 int Kinesin::head::GetKIF4ANeighbCount() {
   if (site_ == nullptr)
     return 0;
@@ -93,14 +131,14 @@ void Kinesin::CalculateCutoffs() {
       U = (k_spring_ / 2) * dr * dr;
     double boltzmann_weight = exp(U / (2 * kbT));
     if (boltzmann_weight > 100) {
-      dist_cutoff_ = x_dub / 2;
+      teth_cutoff_ = x_dub / 2;
       break;
     }
   }
   if (!parameters_->motors.tethers_active) {
     rest_dist_ = 0;
     comp_cutoff_ = 0;
-    dist_cutoff_ = 0;
+    teth_cutoff_ = 0;
   }
 }
 
@@ -108,8 +146,8 @@ void Kinesin::InitializeNeighborLists() {
 
   int n_mts = parameters_->microtubules.count;
   // Serialize this bitch so we just roll one random number
-  neighbor_xlinks_.resize(n_mts * (2 * dist_cutoff_ + 1));
-  neighbor_sites_.resize(n_mts * (2 * dist_cutoff_ + 1));
+  neighbor_xlinks_.resize(n_mts * (2 * teth_cutoff_ + 1));
+  neighbor_sites_.resize(n_mts * (2 * teth_cutoff_ + 1));
 }
 
 void Kinesin::InitializeWeightLookup() {
@@ -117,9 +155,9 @@ void Kinesin::InitializeWeightLookup() {
   double r_y = parameters_->microtubules.y_dist / 2;
   double kbT = parameters_->kbT;
   double site_size = parameters_->microtubules.site_size;
-  weight_lookup_.resize(2 * dist_cutoff_ + 1);
-  weight_alt_lookup_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  weight_lookup_.resize(2 * teth_cutoff_ + 1);
+  weight_alt_lookup_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     double cosine = r_x / r;
@@ -143,9 +181,9 @@ void Kinesin::InitializeExtensionLookup() {
 
   double r_y = parameters_->microtubules.y_dist / 2;
   double site_size = parameters_->microtubules.site_size;
-  cosine_lookup_.resize(2 * dist_cutoff_ + 1);
-  extension_lookup_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  cosine_lookup_.resize(2 * teth_cutoff_ + 1);
+  extension_lookup_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     cosine_lookup_[x_dub] = r_x / r;
@@ -155,14 +193,13 @@ void Kinesin::InitializeExtensionLookup() {
 
 void Kinesin::InitializeSteppingProbabilities() {
 
-  double kbT = parameters_->kbT;
   // Short-range cooperativity
   // ! Assume lambda = 1 & 0 for stepping from & away from neighbors
   double E_int = -1 * parameters_->motors.interaction_energy;
   // If we step AWAY from a single neighbor, overall E increases
   // Due to our assumption about lambda, same weight applies to
   // stepping from a neighbor TO a neighbor
-  p_step_fr_neighb_ = exp(E_int / kbT);
+  p_step_fr_neighb_ = exp(E_int);
   // Next, handle applied force
   double r_y = parameters_->microtubules.y_dist / 2;
   double site_size = parameters_->microtubules.site_size;
@@ -187,9 +224,9 @@ void Kinesin::InitializeSteppingProbabilities() {
     applied_p_step_ = 1.0;
   }
   // Next, handle tethering forces
-  p_step_to_rest_.resize(2 * dist_cutoff_ + 1);
-  p_step_fr_rest_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  p_step_to_rest_.resize(2 * teth_cutoff_ + 1);
+  p_step_fr_rest_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     double cosine = r_x / r;
@@ -210,7 +247,7 @@ void Kinesin::InitializeSteppingProbabilities() {
     } else if (x_dub <= 2 * comp_cutoff_) {
       p_step_to_rest_[x_dub] = p;
       p_step_fr_rest_[x_dub] = 0;
-    } else if (x_dub < 2 * dist_cutoff_ - 1) {
+    } else if (x_dub < 2 * teth_cutoff_ - 1) {
       p_step_to_rest_[x_dub] = p;
       p_step_fr_rest_[x_dub] = p;
     } else {
@@ -419,7 +456,7 @@ bool Kinesin::AtCutoff() {
   int dx = mt_->delta_x_;
   int drest = GetDirectionTowardRest();
 
-  if ((x_dist_doubled_ >= (2 * dist_cutoff_ - 1) && dx == -drest) ||
+  if ((x_dist_doubled_ >= (2 * teth_cutoff_ - 1) && dx == -drest) ||
       (x_dist_doubled_ <= (2 * comp_cutoff_ + 1) && dx == -drest))
     return true;
   else
@@ -439,7 +476,7 @@ void Kinesin::UpdateNeighborSites() {
       int mt_length = mt->n_sites_;
       double mt_coord = mt->coord_;
       int i_anchor = anchor_coord - mt_coord;
-      for (int dx = -(dist_cutoff_ + 1); dx <= (dist_cutoff_ + 1); dx++) {
+      for (int dx = -(teth_cutoff_ + 1); dx <= (teth_cutoff_ + 1); dx++) {
         int i_site = i_anchor + dx;
         // Start index at first site (0) if site index is <= 0
         if (i_site < 0) {
@@ -453,7 +490,7 @@ void Kinesin::UpdateNeighborSites() {
           double site_coord = i_site + neighbor->mt_->coord_;
           double x = fabs(anchor_coord - site_coord);
           int x_dub = 2 * x;
-          if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * dist_cutoff_ &&
+          if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * teth_cutoff_ &&
               neighbor->occupied_ == false) {
             neighbor_sites_[n_neighbor_sites_] = neighbor;
             n_neighbor_sites_++;
@@ -479,8 +516,8 @@ void Kinesin::UpdateNeighborXlinks() {
       Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
       int mt_length = mt->n_sites_;
       int i_stalk = stalk_coord - mt_->coord_;
-      // Only scan over sites within +/- dist_cutoff_
-      for (int dx = -(dist_cutoff_ + 1); dx <= (dist_cutoff_ + 1); dx++) {
+      // Only scan over sites within +/- teth_cutoff_
+      for (int dx = -(teth_cutoff_ + 1); dx <= (teth_cutoff_ + 1); dx++) {
         int i_site = i_stalk + dx;
         // Start index at first site (0) if site index is <= 0
         if (i_site < 0) {
@@ -496,7 +533,7 @@ void Kinesin::UpdateNeighborXlinks() {
             double anchor_coord = xlink->GetAnchorCoordinate();
             double x = fabs(anchor_coord - stalk_coord);
             int x_dub = 2 * x;
-            if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * dist_cutoff_ &&
+            if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * teth_cutoff_ &&
                 xlink->tethered_ == false) {
               if (xlink->heads_active_ == 1) {
                 neighbor_xlinks_[n_neighbor_xlinks_] = xlink;
@@ -531,7 +568,7 @@ void Kinesin::UpdateExtension() {
     double anchor_coord = xlink_->GetAnchorCoordinate();
     double x_dist = fabs(anchor_coord - stalk_coord);
     x_dist_doubled_ = 2 * x_dist;
-    if (x_dist_doubled_ > 2 * dist_cutoff_ ||
+    if (x_dist_doubled_ > 2 * teth_cutoff_ ||
         x_dist_doubled_ < 2 * comp_cutoff_) {
       ForceUntether();
     } else {

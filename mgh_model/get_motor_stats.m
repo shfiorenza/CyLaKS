@@ -1,8 +1,8 @@
+function mot_stats = get_motor_stats(sim_name)
 
-clear all;
 % Often-changed variables
 n_sites = 50000;
-simName = 'test';
+simName = sim_name;
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
@@ -10,7 +10,6 @@ n_steps = 40000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
-active_datapoints = n_datapoints - starting_point;
 time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
 
@@ -68,7 +67,7 @@ for i_data = starting_point:1:n_datapoints - 1
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
             motor_ID = active_motors(i_mt, i_adj);
-            future_site = find(future_IDs == motor_ID);
+            future_site = find(future_IDs == motor_ID, 1);
             if isempty(future_site)
                 % Calculate distance traveled
                 end_site = find(motor_IDs == motor_ID);
@@ -98,16 +97,10 @@ end
 % trim arrays to get rid of un-used containers
 run_lengths = run_lengths(1:n_runs);
 run_times = run_times(1:n_runs);
-% prep figure
-fig1 = figure();
-set(fig1, 'Position', [50, 50, 960, 600]);
 
 % matlab's exponential fit always goes to zero; offset it appropriately
 min_run = min(run_lengths);
 run_lengths = run_lengths - min_run;
-% plot run length histogram
-n_bins = int32(sqrt(n_runs));
-hist = histfit(run_lengths, n_bins, 'exponential');
 % fit distribution of shifted run lengths
 run_dist = fitdist(run_lengths, 'exponential');
 mean_run = run_dist.mu + min_run;
@@ -118,7 +111,6 @@ sigma_run = abs(conf_inv_run(2) - conf_inv_run(1)) / 2;
 min_time = min(run_times);
 run_times = run_times - min_time;
 % fit distribution of shifted run times
-%hist2 = histfit(run_times, n_bins, 'exponential');
 time_dist = fitdist(run_times, 'exponential');
 % get mean run time
 mean_time = time_dist.mu + min_time;
@@ -127,19 +119,12 @@ conf_inv_time = paramci(time_dist);
 % calculate sigma
 sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
 
-% Display mean values on run length histogram itself
-dim1 = [0.55 0.65 0.2 0.2];
-str1 = sprintf('Mean run length: %#.1f +/- %#.1g microns', mean_run, sigma_run);
-annotation('textbox',dim1,'String',str1,'FitBoxToText','on');
-dim2 = [0.55 0.6 0.2 0.2];
-str2 = sprintf('Mean run time: %#.1f +/- %#.1g seconds', mean_time, sigma_time);
-annotation('textbox',dim2,'String',str2,'FitBoxToText','on');
-dim3 = [0.55 0.55 0.2 0.2];
-vel = round(single(mean_run * 1000 / mean_time), -1);
-sigma_vel = round(single(sqrt((sigma_time/mean_time)^2 + (sigma_run/mean_run)^2) * vel),-1);
-str3 = sprintf('Calculated velocity: %#d +/- %#d nm/s', vel, sigma_vel);
-annotation('textbox',dim3,'String',str3,'FitBoxToText','on');
-% Cosmetic stuff
-title(sprintf('Run length histogram for %i micron MT', int32(n_sites * 0.008)));
-xlabel('Run length (um)');
-ylabel('Counts');
+% Calculate avg velocity
+vel = mean_run * 1000 / mean_time;
+sigma_vel = sqrt((sigma_time/mean_time)^2 + (sigma_run/mean_run)^2) * vel;
+
+mot_stats(1) = mean_run;
+mot_stats(2) = mean_time;
+mot_stats(3) = vel;
+
+end

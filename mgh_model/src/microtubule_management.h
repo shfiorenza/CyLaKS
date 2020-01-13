@@ -13,12 +13,13 @@ private:
   system_properties *properties_ = nullptr;
 
 public:
+  int n_affs_{0};
+  bool up_to_date_{false};
+
   int n_sites_tot_ = 0;
   int n_unoccupied_ = 0;
   std::vector<int> n_unoccupied_xl_;
   std::vector<std::vector<int>> n_unoccupied_mot_;
-
-  int n_affs_{0};
 
   std::vector<Microtubule> mt_list_;
   Vec<ENTRY_T> unoccupied_list_;
@@ -33,6 +34,8 @@ public:
 
   void SetParameters();
   void GenerateMicrotubules();
+
+  void FlagForUpdate();
 
   void UnoccupiedCheck(Tubulin *site);
   void UnoccupiedCheck(int i_mt, int i_site);

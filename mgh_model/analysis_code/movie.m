@@ -1,10 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = [500];
+mt_lengths = [50000];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'test';
+simName = 'testL';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
@@ -236,8 +236,7 @@ for i_data=start_frame:frames_per_plot:end_frame
         % Array of xlink IDs for this MT
         xlink_IDs = xlink_data(:, i_mt, i_data);
         % Array of xlink IDs for neighbor MT
-        neighb_IDs = zeros(max_sites);
-        neighb_IDs(:) = -1;
+        neighb_IDs = zeros(max_sites, 1) - 1;
         neighb_mt_pos = 0;
         neighb_mt_height = 0;
         if(n_mts > 1)

@@ -54,6 +54,7 @@ void Microtubule::GenerateLattice() {
   }
 }
 
+/*
 void Microtubule::UpdateAffinities(Tubulin *site) {
 
   int epicenter = site->index_;
@@ -89,6 +90,7 @@ void Microtubule::UpdateAffinities(Tubulin *site) {
     }
   }
 }
+*/
 
 void Microtubule::UpdateExtensions() {
 

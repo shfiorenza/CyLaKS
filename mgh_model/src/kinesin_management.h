@@ -37,12 +37,12 @@ public:
   bool verbose_{false};
 
   // coop stuff
-  int n_affinities_;
-  int max_neighbs_;
-  double interaction_energy_; // in kBT
+  int n_affinities_{11};
+  // int deformation_range_{};
+  int max_neighbs_{2};
 
   // See kinesin header for meaningful description of below
-  int dist_cutoff_;
+  int teth_cutoff_;
   int comp_cutoff_;
   double rest_dist_;
 

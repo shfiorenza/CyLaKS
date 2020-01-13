@@ -3,6 +3,8 @@
 
 struct kinesin_parameters {
 
+  double lattice_coop_amp;
+  double lattice_coop_range;
   double t_active;            // Time at which motors/ATP is flowed in
   double k_on;                // Binding rate of ADP heads to MT; 1/(nM*s)
   double c_bulk;              // Bulk concentration of motors; nM

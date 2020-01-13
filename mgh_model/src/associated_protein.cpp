@@ -61,7 +61,7 @@ void AssociatedProtein::CalculateCutoffs() {
 void AssociatedProtein::InitializeNeighborLists() {
 
   int n_mts = parameters_->microtubules.count;
-  int teth_cutoff = properties_->kinesin4.dist_cutoff_;
+  int teth_cutoff = properties_->kinesin4.teth_cutoff_;
   neighbor_sites_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
   teth_neighbor_sites_.resize(n_mts * (2 * teth_cutoff + 1));
   teth_neighbor_sites_ii_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
@@ -102,7 +102,7 @@ void AssociatedProtein::InitializeLookupTables() {
     }
   }
   /* Next, construct lookup table for bind_i_teth weights */
-  int teth_cutoff = properties_->kinesin4.dist_cutoff_;
+  int teth_cutoff = properties_->kinesin4.teth_cutoff_;
   int comp_cutoff = properties_->kinesin4.comp_cutoff_;
   double k_teth = parameters_->motors.k_spring;
   double k_slack = parameters_->motors.k_slack;
@@ -343,7 +343,7 @@ void AssociatedProtein::UpdateNeighborSites_I_Teth() {
   n_teth_neighbor_sites_ = 0;
   if (tethered_ == true && heads_active_ == 0) {
     int n_mts = parameters_->microtubules.count;
-    int teth_cutoff = properties_->kinesin4.dist_cutoff_;
+    int teth_cutoff = properties_->kinesin4.teth_cutoff_;
     int comp_cutoff = properties_->kinesin4.comp_cutoff_;
     double stalk_coord = motor_->GetStalkCoordinate();
     //		printf("stalk coord is %g\n\n", anchor_coord);

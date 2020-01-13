@@ -32,7 +32,7 @@ void MicrotubuleManagement::SetParameters() {
     unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_);
   }
   // motor cooperativity stuff
-  n_affs_ = 24;
+  n_affs_ = properties_->kinesin4.n_affinities_;
   n_unoccupied_mot_.resize(n_affs_);
   unoccupied_list_mot_.resize(n_affs_);
   for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
@@ -51,27 +51,10 @@ void MicrotubuleManagement::GenerateMicrotubules() {
   mt_list_.resize(n_mts);
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
-    /*
-    int n_sites = mt_list_[i_mt].n_sites_;
-    int midpoint = n_sites / 2;
-    int bins_per_side = 12;
-    int sites_per_bin = 63;
-    for (int i_site{0}; i_site < n_sites; i_site++) {
-      if (i_site < midpoint) {
-        int delta = midpoint - i_site;
-        int affinity = bins_per_side - (delta / sites_per_bin) - 1;
-        mt_list_[i_mt].lattice_[i_site].affinity_ = affinity;
-        printf("site %i has affinity %i\n", i_site, affinity);
-      } else {
-        int delta = i_site - midpoint;
-        int affinity = 2 * bins_per_side - (delta / sites_per_bin) - 1;
-        mt_list_[i_mt].lattice_[i_site].affinity_ = affinity;
-        printf("site %i has affinity %i\n", i_site, affinity);
-      }
-    }
-    */
   }
 }
+
+void MicrotubuleManagement::FlagForUpdate() { up_to_date_ = false; }
 
 void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site) {
 
@@ -125,6 +108,9 @@ void MicrotubuleManagement::UpdateNeighbors() {
 
 void MicrotubuleManagement::UpdateUnoccupied() {
 
+  if (up_to_date_) {
+    return;
+  }
   n_unoccupied_ = 0;
   for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
     n_unoccupied_xl_[n_neighbs] = 0;
@@ -136,24 +122,23 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   }
   for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
     int n_sites = parameters_->microtubules.length[i_mt];
-    int i_plus = mt_list_[i_mt].plus_end_;
-    int i_minus = mt_list_[i_mt].minus_end_;
-    int dx = mt_list_[i_mt].delta_x_;
     for (int i_site = 0; i_site < n_sites; i_site++) {
       Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
+      //     site->UpdateAffinity();
       if (site->occupied_ == false) {
         unoccupied_list_[n_unoccupied_] = site;
         n_unoccupied_++;
-        int n_neighbs = site->GetPRC1NeighborCount();
-        unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]] = site;
-        n_unoccupied_xl_[n_neighbs]++;
-        int aff = site->affinity_;
-        n_neighbs = site->GetKIF4ANeighborCount();
-        int index = n_unoccupied_mot_[aff][n_neighbs]++;
-        unoccupied_list_mot_[aff][n_neighbs][index] = site;
+        int prc1_neighbs{site->GetPRC1NeighborCount()};
+        int prc1_index{n_unoccupied_xl_[prc1_neighbs]++};
+        unoccupied_list_xl_[prc1_neighbs][prc1_index] = site;
+        int kif4a_neighbs{site->GetKIF4ANeighborCount()};
+        int kif4a_aff{site->affinity_};
+        int kif4a_index{n_unoccupied_mot_[kif4a_aff][kif4a_neighbs]++};
+        unoccupied_list_mot_[kif4a_aff][kif4a_neighbs][kif4a_index] = site;
       }
     }
   }
+  up_to_date_ = true;
 }
 
 Tubulin *MicrotubuleManagement::GetUnoccupiedSite() {

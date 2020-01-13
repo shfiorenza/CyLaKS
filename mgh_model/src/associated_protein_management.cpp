@@ -59,7 +59,7 @@ void AssociatedProteinManagement::SetParameters() {
   // potential energy (dU) associated with that step
   dist_cutoff_ = xlinks_[0].dist_cutoff_;
   rest_dist_ = xlinks_[0].rest_dist_;
-  teth_cutoff_ = properties_->kinesin4.dist_cutoff_;
+  teth_cutoff_ = properties_->kinesin4.teth_cutoff_;
   comp_cutoff_ = properties_->kinesin4.comp_cutoff_;
   if (parameters_->motors.tethers_active) {
     properties_->wallace.Log("\nFor crosslinkers:\n");
@@ -121,7 +121,7 @@ void AssociatedProteinManagement::SetParameters() {
     }
   }
   // DIFFUSION STATISTICS INVOLVING TETHER BELOW
-  int teth_cutoff = properties_->kinesin4.motors_[0].dist_cutoff_;
+  int teth_cutoff = properties_->kinesin4.motors_[0].teth_cutoff_;
   double k_teth_spring = properties_->kinesin4.motors_[0].k_spring_;
   double k_teth_slack = properties_->kinesin4.motors_[0].k_slack_;
   double r_0_teth = properties_->kinesin4.motors_[0].r_0_;

@@ -49,6 +49,7 @@ public:
       else
         return &motor_->head_one_;
     }
+    int GetAffinity();
     int GetKIF4ANeighbCount();
   };
 
@@ -67,7 +68,7 @@ public:
   // x_dist_dub is used to index the tether extension of motors, e.g.
   // an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
   int x_dist_doubled_; // in no. of sites
-  int dist_cutoff_;    // max value x_dist (not 2x) can be
+  int teth_cutoff_;    // max value x_dist (not 2x) can be
   int comp_cutoff_;    // min value x_dist (not 2x) can be
   double rest_dist_;   // spring extension is ~0 for this
 

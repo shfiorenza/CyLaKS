@@ -82,6 +82,8 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->eta = input["eta"].as<double>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
+  params->motors.lattice_coop_amp = motors["lattice_coop_amp"].as<double>();
+  params->motors.lattice_coop_range = motors["lattice_coop_range"].as<double>();
   params->motors.t_active = motors["t_active"].as<double>();
   params->motors.k_on = motors["k_on"].as<double>();
   params->motors.c_bulk = motors["c_bulk"].as<double>();
@@ -158,6 +160,8 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   Log("    kbT = %g pN*nm\n", params->kbT);
   Log("    eta = %g (pN*s)/um^2\n", params->eta);
   Log("\n  Kinesin (motor) parameters:\n");
+  Log("    lattice_coop_amp = %g\n", params->motors.lattice_coop_amp);
+  Log("    lattice_coop_range = %g\n", params->motors.lattice_coop_range);
   Log("    t_active = %g seconds\n", params->motors.t_active);
   Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
   Log("    c_bulk = %g nM\n", params->motors.c_bulk);
@@ -563,7 +567,7 @@ void Curator::OutputData() {
   double mt_coord_array[n_mts];
   double *mt_coord_ptr = mt_coord_array;
   // For extension statistics, data is on a per-extension basis
-  int motor_ext_cutoff = properties_->kinesin4.dist_cutoff_;
+  int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
   int motor_extension_array[2 * motor_ext_cutoff + 1];
   int *motor_extension_ptr = motor_extension_array;
   int xlink_ext_cutoff = properties_->prc1.dist_cutoff_;
@@ -626,7 +630,7 @@ void Curator::OutputData() {
             tether_coord_array[i_site] = anchor_coord;
             double stalk_coord = motor->GetStalkCoordinate();
             double teth_dist = abs(anchor_coord - stalk_coord);
-            if (teth_dist > motor->dist_cutoff_) {
+            if (teth_dist > motor->teth_cutoff_) {
               Log("woah, teth dist is %g\n", teth_dist);
             }
           } else

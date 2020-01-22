@@ -228,26 +228,27 @@ void MicrotubuleManagement::RunDiffusion() {
     /*	Calculate MT displacements for this timestep */
     int displacement[n_mts];
     for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-      if (current_time >= parameters_->microtubules.immobile_until[i_mt]) {
-        double velocity = forces_summed[i_mt] / mt_list_[i_mt].gamma_;
-        // gaussian noise is added
-        double sigma = sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_);
-        double noise = properties_->gsl.GetGaussianNoise(sigma);
-        double raw_displacement = velocity * delta_t_eff + noise;
-        double site_displacement = raw_displacement / site_size;
-        // Get number of sites MT is expected to move
-        int n_steps = (int)site_displacement;
-        // Use leftover as a prob. to roll for another step
-        double leftover = fabs(site_displacement - n_steps);
-        double ran = properties_->gsl.GetRanProb();
-        if (ran < leftover and site_displacement > 0)
-          n_steps++;
-        else if (ran < leftover and site_displacement < 0)
-          n_steps--;
-        // Store value in array
-        displacement[i_mt] = n_steps;
-      } else
+      if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
         displacement[i_mt] = 0;
+        continue;
+      }
+      double velocity = forces_summed[i_mt] / mt_list_[i_mt].gamma_;
+      // gaussian noise is added
+      double sigma = sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_);
+      double noise = properties_->gsl.GetGaussianNoise(sigma);
+      double raw_displacement = velocity * delta_t_eff + noise;
+      double site_displacement = raw_displacement / site_size;
+      // Get number of sites MT is expected to move
+      int n_steps = (int)site_displacement;
+      // Use leftover as a prob. to roll for another step
+      double leftover = fabs(site_displacement - n_steps);
+      double ran = properties_->gsl.GetRanProb();
+      if (ran < leftover and site_displacement > 0)
+        n_steps++;
+      else if (ran < leftover and site_displacement < 0)
+        n_steps--;
+      // Store value in array
+      displacement[i_mt] = n_steps;
     }
     finish = sys_clock::now();
     elapsed = std::chrono::duration_cast<t_unit>(finish - start2);

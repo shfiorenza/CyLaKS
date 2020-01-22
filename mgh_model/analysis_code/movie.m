@@ -1,20 +1,20 @@
 clear all;
 % Parameters from sim
-mt_lengths = [50000];
+mt_lengths = [1000];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'testL';
+simName = 'test';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 20000000;
+n_steps = 40000000;
 n_datapoints = 10000;
-start_frame = 1;
+start_frame = 01;
 end_frame = 10000;
 frames_per_plot = 100;
-delta_t = 0.000005; 
+delta_t = 0.000025; 
 xlink_cutoff = 5;
 cutoff = 19;
 % Colors
@@ -126,8 +126,8 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
               
         else
-            ax.XLim = [first_pos-1 first_pos + 250];
-            %ax.XLim = [first_pos (first_pos + n_sites + 1)];
+           % ax.XLim = [first_pos-1 first_pos + 250];
+            ax.XLim = [first_pos (first_pos + n_sites + 1)];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...

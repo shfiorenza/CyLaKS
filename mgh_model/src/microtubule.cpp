@@ -41,7 +41,6 @@ void Microtubule::SetParameters() {
   double eta = parameters_->eta;
   // see radhika sliding paper for any of this to make sense
   double numerator = 2 * 3.14159 * big_l * (eta / 1000000);
-  ;
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
 }

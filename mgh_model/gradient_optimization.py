@@ -27,11 +27,11 @@ exp_sigma_0 = np.array(map(lambda x,y: sqrt(x**2 + y**2), exp_err_x, exp_err_y_0
 exp_sigma_1 = np.array(map(lambda x,y: sqrt(x**2 + y**2), exp_err_x, exp_err_y_1))
 exp_sigma_4 = np.array(map(lambda x,y: sqrt(x**2 + y**2), exp_err_x, exp_err_y_4))
 
-initial_params =  np.array([0.1, 0.05, 5000]);
-labels = ["k_tether", "k_untether", "c_eff_tether"];
-param_bounds = ([0.00001, 0.00005, 50], [15, 15, 15000]);
-step_size = [0.01, 0.01, 100];
-xlink_concs = [1, 4];
+initial_params =  np.array([0.1, 0.05, 5000])
+labels = ["k_tether", "k_untether", "c_eff_tether"]
+param_bounds = ([0.00001, 0.00005, 50], [15, 15, 15000])
+step_size = [0.01, 0.01, 100]
+xlink_concs = [1, 4]
 #params_0 = np.array([8.75, 718, 117, 0.107])
 #labels = ["k_off_i", "k_off_i_stalled", "k_hydrolyze", "k_hydrolyze_stalled"]
 #param_bounds = ([1, 10, 15, 0.01], [50, 1000, 150, 15])
@@ -63,12 +63,12 @@ def endtag_lengths(params):
         sim_name = sim_base + "_" + repr(iteration_no) + "." + repr(sub_no) + "_" + repr(conc)
         param_file = "params_" + sim_base + "_" + repr(conc) + ".yaml"
         call("cp " + params_base + " " + param_file, shell=True)
-        call("yq w -i " + param_file + " xlinks.c_bulk " + repr(float(conc)/10), shell=True); 
+        call("yq w -i " + param_file + " xlinks.c_bulk " + repr(float(conc)/10), shell=True)
         yaml_edit = "yq w -i " + param_file + " motors."
         for i in range(len(params)): call(yaml_edit + labels[i] + " " + repr(params[i]), shell=True)
         for i_length in reversed(range(len(mt_lengths))):
             n_sites = mt_lengths[i_length] * 125
-            temp_params = "params_temp_" + repr(conc) + "_" + repr(n_sites) + ".yaml";
+            temp_params = "params_temp_" + repr(conc) + "_" + repr(n_sites) + ".yaml"
             call("cp " + param_file + " " + temp_params, shell=True)
             yaml_edit = "yq w -i " + temp_params + " microtubules."
             call(yaml_edit + "length[0] " + repr(n_sites), shell=True)

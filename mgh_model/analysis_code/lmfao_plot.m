@@ -1,8 +1,11 @@
 concentrations = [20, 50, 80, 120, 220, 420];
 
-runlengths = [1.1, 1.3, 1.4, 1.6, 2.1, 4.9];
-lifetimes = [1.7, 2.7, 2.9, 4.4, 7.1, 24.7];
-velocities = [620, 460, 480, 360, 300, 200];
+runlengths = [1.1, 1.0, 1.2, 1.2, 1.7, 3.9];
+err_runlengths = [0.1, 0.07, 0.06, 0.05, 0.05, 0.09];
+lifetimes = [2.3, 1.9, 2.9, 3.2, 5.1, 19.3];
+err_lifetimes = [0.2, 0.1, 0.2, 0.1, 0.2, 0.4];
+velocities = [490, 540, 420, 390, 330, 200];
+err_velocities = [70, 50, 30, 20, 20, 10];
 
 %{
 runlengths = [1.1, 1.2, 1.6, 1.5, 1.8, 4.6];
@@ -46,7 +49,7 @@ set(fig1, 'Position', [50, 50, 2*720, 2*240])
 subplot(1, 4, 1)
 errorbar(concentrations, exp_runlengths, exp_err_runlengths, ':d','LineWidth', 2);
 hold on
-plot(concentrations, runlengths, '--o','LineWidth', 2);
+errorbar(concentrations, runlengths, err_runlengths, '--o','LineWidth', 2);
 ylabel('Run length (microns)');
 xlim([0 440]);
 ylim([0 5]);
@@ -54,7 +57,7 @@ ylim([0 5]);
 subplot(1, 4, 2)
 errorbar(concentrations, exp_lifetimes, exp_err_lifetimes, ':d','LineWidth', 2);
 hold on
-plot(concentrations, lifetimes, '--o', 'LineWidth', 2);
+errorbar(concentrations, lifetimes, err_lifetimes, '--o', 'LineWidth', 2);
 xlabel('KIF4A concentration (pM)');
 ylabel('Life time (seconds)');
 xlim([0 440]);
@@ -63,7 +66,7 @@ ylim([0 30]);
 subplot(1, 4, 3)
 errorbar(concentrations, exp_velocities, exp_err_velocities, ':d','LineWidth', 2);
 hold on
-plot(concentrations, velocities, '--o', 'LineWidth', 2);
+errorbar(concentrations, velocities, err_velocities, '--o', 'LineWidth', 2);
 ylabel('Velocity (nm/s)');
 xlim([0 440]);
 ylim([0 1000]);

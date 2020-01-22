@@ -2,7 +2,7 @@
 clear all;
 % Often-changed variables
 n_sites = 50000;
-simName = 'test';
+simName = 'processivity_20pM';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;

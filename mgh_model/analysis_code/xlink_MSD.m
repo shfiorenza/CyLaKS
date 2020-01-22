@@ -42,7 +42,7 @@ MSD = zeros([n_taus 1]);
 
 for i_tau = 1:1:n_taus
     
-    tau = starting_tau + (i_tau-1) * tau_increment;
+    tau = starting_tau + (i_tau - 1) * tau_increment;
     tau_step = int32(tau / time_per_datapoint);
     
     for i_data = (tau_step + starting_point):tau_step:n_datapoints

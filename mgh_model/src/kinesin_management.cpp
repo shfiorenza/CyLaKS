@@ -696,6 +696,10 @@ void KinesinManagement::Update_Relay(std::string event, std::string taret_pop) {
 
 void KinesinManagement::Update_All_Lists() {
 
+  if (lists_up_to_date_) {
+    return;
+  }
+
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
   Update_Bound_NULL();
@@ -714,6 +718,7 @@ void KinesinManagement::Update_All_Lists() {
     Update_Bound_Teth();
     Update_Bound_Unteth();
   }
+  lists_up_to_date_ = true;
 }
 
 void KinesinManagement::Update_Free_Teth() {
@@ -1226,6 +1231,7 @@ void KinesinManagement::Run_KMC() {
   }
   for (int i_event = 0; i_event < events_to_exe_.size(); i_event++) {
     events_to_exe_[i_event]->Execute();
+    lists_up_to_date_ = false;
   }
   if (verbose_) {
     printf("Finished motor KMC cycle\n");

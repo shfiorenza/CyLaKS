@@ -27,6 +27,8 @@ private:
   int n_scratched_ = 0;
   Vec<POP_T *> scratch_;
 
+  bool lists_up_to_date_{false};
+
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_ = nullptr;
   system_properties *properties_ = nullptr;

@@ -1,4 +1,4 @@
-seed: 198261346419
+seed: 198261346418
 n_steps: 6000000 # 0
 n_datapoints: 10000
 data_threshold: 0
@@ -8,7 +8,7 @@ eta: 0.001
 microtubules:
   count: 2
   length:
-  - 1000
+  - 5000
   - 500
   y_dist: 32
   site_size: 8
@@ -21,8 +21,8 @@ microtubules:
   - 0
   - 0
   immobile_until:
-  - 0 # 9500
-  - 0 # 500
+  - 0
+  - 0
   printout_on: false
   diffusion_on: true
 motors:

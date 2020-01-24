@@ -42,6 +42,9 @@ void Microtubule::SetParameters() {
   double numerator = (2 * 3.14159 * big_l * eta) / 1000000;
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
+  printf("\nGamma is %g (pN*s)/nm for mt #%i\n", gamma_, index_);
+  printf("    D = %g um^2/s\n", (parameters_->kbT / gamma_) * 1e-6);
+  printf("    (Length is %i sites)\n", n_sites_);
 }
 
 void Microtubule::GenerateLattice() {

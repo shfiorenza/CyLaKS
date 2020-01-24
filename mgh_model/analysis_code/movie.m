@@ -1,6 +1,6 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000,500];
+mt_lengths = [500,500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
@@ -60,7 +60,7 @@ fig1 = figure;
 set(fig1, 'Position', [0 100 1600 400]);
 
 mt_data_file = fopen(mtFile);
-mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
+mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 

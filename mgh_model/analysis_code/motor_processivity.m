@@ -1,4 +1,4 @@
-%{
+
 clear all;
 % Often-changed variables
 n_sites = 50000;
@@ -111,7 +111,7 @@ for i_seed = 1:n_seeds
     all_run_lengths = [all_run_lengths run_lengths(i_seed,1:n_runs(i_seed))];
     all_run_times = [all_run_times run_times(i_seed, 1:n_runs(i_seed))];
 end
-%}
+
 % prep figure
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600]);

@@ -174,110 +174,99 @@ Tubulin *MicrotubuleManagement::GetUnoccupiedSite(int n_neighbs) {
 
 void MicrotubuleManagement::RunDiffusion() {
 
+  // If diffusion is disabled for this simulation, immediately return
   if (!parameters_->microtubules.diffusion_on) {
     return;
   }
-  double delta_t = parameters_->delta_t;
-  int n_mts = parameters_->microtubules.count;
-  double current_time = properties_->current_step_ * delta_t;
-  bool mts_active{false};
+  int n_mts{parameters_->microtubules.count};
+  bool mts_inactive{true};
+  double delta_t{parameters_->delta_t};
+  double current_time{properties_->current_step_ * delta_t};
+  // Check that at least one microtubule is active (not immobilized)
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
     if (current_time >= parameters_->microtubules.immobile_until[i_mt]) {
-      mts_active = true;
+      mts_inactive = false;
     }
   }
-  if (!mts_active) {
+  // If no microtubules are active, return
+  if (mts_inactive) {
     return;
   }
+  double kbT{parameters_->kbT};
+  double site_size{parameters_->microtubules.site_size};
+  // Number of iterations to split diffusion step into
   int n_iterations = 10;
+  // Adjust dt so that total time over all iterations is equal to one timestep
   double delta_t_eff = delta_t / n_iterations;
-  double site_size = parameters_->microtubules.site_size;
-  double kbT = parameters_->kbT;
+  // Loop thru iterations
   for (int i_it{0}; i_it < n_iterations; i_it++) {
-    sys_timepoint start1 = sys_clock::now();
-    /*	Sum up all forces exerted on the MTs 	*/
+    // Sum up all forces exerted on each microtubule
     double forces_summed[n_mts];
     for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-      mt_list_[i_mt].UpdateExtensions();
+      forces_summed[i_mt] = 0.0; // mt_list_[i_mt].GetNetForce();
     }
-    for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-      forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
-      // if (mt_list_[i_mt].GetNetForce_Motors() != 0) {
-      //   printf("motor force for mt %i is %g\n", i_mt,
-      //          mt_list_[i_mt].GetNetForce_Motors());
-      // }
-      //       printf("force is %g for mt #%i\n", forces_summed[i_mt],
-      //       i_mt);
-    }
-    // Check for symmetry
-    double tolerance = 0.000001;
-    for (int i_mt{0}; i_mt < n_mts; i_mt += 2) {
-      double delta = fabs(forces_summed[i_mt] + forces_summed[i_mt + 1]);
-      if (delta > tolerance) {
-        printf("aw man in MT diffusion\n");
-        printf("for mt %i: %g, for mt %i: %g\n", i_mt, forces_summed[i_mt],
-               i_mt + 1, -forces_summed[i_mt + 1]);
-        exit(1);
-      }
-    }
-    sys_timepoint finish = sys_clock::now();
-    auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
-    properties_->wallace.t_MTs_[1] += elapsed.count();
-    sys_timepoint start2 = sys_clock::now();
-    elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-    /*	Calculate MT displacements for this timestep */
+    // Calculate the displacement of each microtubule
     int displacement[n_mts];
     for (int i_mt{0}; i_mt < n_mts; i_mt++) {
+      // If microtubule is still immobilized, set displacement to 0 and continue
       if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
         displacement[i_mt] = 0;
         continue;
       }
-      double velocity = forces_summed[i_mt] / mt_list_[i_mt].gamma_;
-      // gaussian noise is added
-      double sigma = sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_);
-      double noise = properties_->gsl.GetGaussianNoise(sigma);
-      double raw_displacement = velocity * delta_t_eff + noise;
-      double site_displacement = raw_displacement / site_size;
-      // Get number of sites MT is expected to move
-      int n_steps = (int)site_displacement;
-      // Use leftover as a prob. to roll for another step
-      double leftover = fabs(site_displacement - n_steps);
-      double ran = properties_->gsl.GetRanProb();
-      if (ran < leftover and site_displacement > 0)
-        n_steps++;
-      else if (ran < leftover and site_displacement < 0)
-        n_steps--;
-      // Store value in array
-      displacement[i_mt] = n_steps;
+      double x_sq{site_size * site_size};
+      double D{kbT / mt_list_[i_mt].gamma_};
+      double tau{x_sq / (2 * D)};
+      double p_diffu{delta_t_eff / tau};
+      double ran0 = properties_->gsl.GetRanProb();
+      if (ran0 < p_diffu) {
+        double ran1 = properties_->gsl.GetRanProb();
+        if (ran1 < 0.5) {
+          displacement[i_mt] = -1;
+        } else {
+          displacement[i_mt] = 1;
+        }
+      } else {
+        displacement[i_mt] = 0;
+      }
+      /*
+       // Calculate instanteous velocity due to forces using drag coefficient
+       double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
+       // Add gaussian noise
+       double sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
+       double noise{properties_->gsl.GetGaussianNoise(sigma)};
+       // Calculate raw displacement in nanometers
+       double raw_displacement{velocity * delta_t_eff + noise};
+       // Convert nm displacement to no. of sites
+       double site_displacement{raw_displacement / site_size};
+       int n_steps{(int)site_displacement};
+       // Use leftover as a prob. to roll for another step
+       double leftover{fabs(site_displacement - n_steps)};
+       double ran{properties_->gsl.GetRanProb()};
+       if (ran < leftover) {
+         if (site_displacement > 0) {
+           n_steps++;
+         } else if (site_displacement < 0) {
+           n_steps--;
+         } else {
+           printf("WHAT\n");
+         }
+       }
+       displacement[i_mt] = n_steps;
+       */
+      // printf("Noise is %g: ", noise);
+      // printf("leftover is %g | ", leftover);
+      // printf("displacement was %i\n", n_steps);
     }
-    finish = sys_clock::now();
-    elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-    properties_->wallace.t_MTs_[2] += elapsed.count();
-    start2 = sys_clock::now();
     /*  Run through MT list and update displacementsi */
     for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-      Microtubule *mt = &mt_list_[i_mt];
-      Microtubule *neighb = &mt_list_[mt->mt_index_adj_];
-      int n_steps = displacement[i_mt];
-      if (n_steps != 0) {
-        int dx = 0;
-        if (n_steps > 0)
-          dx = 1;
-        else if (n_steps < 0) {
-          dx = -1;
-          n_steps = abs(n_steps);
-        }
-        for (int i_step = 0; i_step < n_steps; i_step++) {
-          mt->coord_ += dx;
-        }
-        mt->UpdateExtensions();
-        neighb->UpdateExtensions();
+      if (displacement[i_mt] == 0) {
+        continue;
       }
+      // Microtubule *mt = &mt_list_[i_mt];
+      // Microtubule *neighb = mt->neighbor_;
+      mt_list_[i_mt].coord_ += displacement[i_mt];
+      // mt->UpdateExtensions();
+      // neighb->UpdateExtensions();
     }
-    finish = sys_clock::now();
-    elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-    properties_->wallace.t_MTs_[3] += elapsed.count();
-    elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
-    properties_->wallace.t_MTs_[0] += elapsed.count();
   }
 }

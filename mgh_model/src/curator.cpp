@@ -352,8 +352,8 @@ void Curator::OutputData() {
   FILE *total_force_file = properties_->total_force_file_;
   FILE *motor_head_status_file = properties_->motor_head_status_file_;
   // Create arrays to store data; ptrs to write it to file
-  double mt_coord_array[n_mts];
-  double *mt_coord_ptr = mt_coord_array;
+  int mt_coord_array[n_mts];
+  int *mt_coord_ptr = mt_coord_array;
   // For extension statistics, data is on a per-extension basis
   int motor_ext_cutoff = properties_->kinesin4.dist_cutoff_;
   int motor_extension_array[2 * motor_ext_cutoff + 1];
@@ -382,7 +382,7 @@ void Curator::OutputData() {
     bool motor_head_status_array[max_length];
     for (int i_site = 0; i_site < max_length; i_site++) {
       motor_head_status_array[i_site] = false;
-    };
+    }
     bool *motor_head_status_ptr = motor_head_status_array;
     // Run through all sites on this particular MT
     for (int i_site = 0; i_site < mt_length; i_site++) {
@@ -461,7 +461,7 @@ void Curator::OutputData() {
   //   i_mt);
   // }
   // Write the data to respective files one timestep at a time
-  fwrite(mt_coord_ptr, sizeof(double), n_mts, mt_coord_file);
+  fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
   fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
   fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
   fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);

@@ -12,12 +12,12 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization"
+sim_name_base = "kif4a_coop_optimization_DOS"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
 param_label = ["lattice_coop_amp", "lattice_coop_range"]
-param_initialVal =  np.array([7, 500])
+param_initialVal =  np.array([7.1337, 580])
 param_bounds = ([1, 10], [25, 750])
 step_size = [0.5, 10]
 

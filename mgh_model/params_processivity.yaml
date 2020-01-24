@@ -35,9 +35,9 @@ motors:
   k_on_ATP: 2500
   c_ATP: 2
   k_hydrolyze: 130 # 100
-  k_hydrolyze_stalled: 5
+  k_hydrolyze_stalled: 130 # 5
   k_off_i: 2.5 # 5 
-  k_off_i_stalled: 0.1
+  k_off_i_stalled: 2.5 # 0.1
   k_off_ii: 260
   interaction_energy: 2.1
   k_tether: 0.1

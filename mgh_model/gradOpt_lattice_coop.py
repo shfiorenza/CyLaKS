@@ -12,7 +12,7 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization_DOS"
+sim_name_base = "kif4a_coop_optimization_TRES"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
@@ -24,14 +24,14 @@ step_size = [0.5, 10]
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
 # Experimental Kif4A run lengths at each concentration
-exp_runlengths = [0.97, 1.31, 2.42, 1.66, 1.96, 2.86]
+exp_runlengths = [0.9735, 1.310, 2.420, 1.659, 1.964, 2.855]
 exp_err_runlengths = [0.18, 0.32, 0.35, 0.94, 0.31, 0.72]
 # Experiemntal Kif4A life times at each concentration
-exp_lifetimes = [1.8, 2.1, 7.1, 5.2, 8.3, 17.9]
-exp_err_lifetimes = [0.6, 0.7, 1.7, 5.9, 2.6, 3.9]
+exp_lifetimes = [1.821, 2.083, 7.096, 5.233, 8.308, 17.95]
+exp_err_lifetimes = [0.56, 0.75, 1.8, 5.9, 2.6, 3.9]
 # Experimental Kif4A velocities at each concentration
-exp_velocities = [600, 710, 360, 310, 310, 180]
-exp_err_velocities = [80, 110, 50, 80, 40, 40]
+exp_velocities = [598.6, 709.9, 360.8, 311.2, 308.52, 180.7]
+exp_err_velocities = [76, 110, 49, 78, 40, 38]
 
 # Create logger to record history of optimizer 
 log = logging.getLogger()
@@ -55,6 +55,8 @@ def kif4a_coop_scaling(params):
     sub_no = int(call_no % len(params))
     log.info("Beginning of iteration {}.{}".format(iteration_no, sub_no))
     log.info("Parameters: {}".format(params))
+    # Delete all output files that weren't saved (not enough mem to keep them all)
+    call("make clean-output", shell=True)
     # We must ensure that the coop range is divisible by 10
     rounded_range = round(params[1], -1)
     if rounded_range != params[1]:
@@ -103,8 +105,6 @@ def kif4a_coop_scaling(params):
     log.info("Weighted errors: {}".format(weighted_errors))
     # Move log file into output folder to keep a record of all runs 
     call("mv *.log grad_descent_output", shell=True)
-    # Delete all other output files (not enough mem to keep them all)
-    call("make clean-output", shell=True)
     # Remove temporary parameter files
     for file in param_files: call("rm " + file, shell=True)
     call_no+=1

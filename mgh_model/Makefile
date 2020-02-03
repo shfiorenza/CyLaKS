@@ -34,11 +34,11 @@ INCLUDES = $(GSLINCS) $(YAMLINCS)
 LIBS = $(GSLLIBS) $(YAMLLIBS)
 
 # Combine compiler and linker flags
-ifeq ($(CFG),release)
-    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
+ifeq ($(CFG),debug)
+    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
     export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
 else
-    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(DCOMPILE_FLAGS)
+    export CXXFLAGS := $(CXXFLAGS) $(COMPILE_FLAGS) $(RCOMPILE_FLAGS)
     export LDFLAGS := $(LDFLAGS) $(LINK_FLAGS)
 endif
 
@@ -50,6 +50,8 @@ MAIN_SOURCES = $(SIM_SRC)
 SRCS = $(filter-out $(MAIN_SOURCES) $(EXCLUDE_SOURCES), $(SOURCES))
 OBJECTS = $(SRCS:$(SRCDIR)/%.$(SRCEXT)=$(OBJDIR)/%.o)
 SIM_OBJ = $(SIM_SRC:$(SRCDIR)/%.$(SRCEXT)=$(OBJDIR)/%.o)
+
+sim: dirs $(BINDIR)/sim; cp $(BINDIR)/sim sim
 
 .PHONY: dirs
 dirs:
@@ -66,7 +68,6 @@ clean:
 clean-output:
 	rm -f *.file *.log
 
-sim: dirs $(BINDIR)/sim; cp $(BINDIR)/sim sim
 
 $(BINDIR)/sim: $(OBJECTS) $(SIM_OBJ)
 	$(CXX) $^ -o $@ $(LDFLAGS) $(LIBS)

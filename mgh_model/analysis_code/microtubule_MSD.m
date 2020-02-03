@@ -1,10 +1,10 @@
 clear all;
-simName = "MT_diffu_alt10x";
+simName = "test";
 n_mts = 2;
-max_tau = 4.515; 
+max_tau = 300; 
 % Pseudo-constant variables
 site_size = 0.008; % in um
-delta_t = 2.5e-5;
+delta_t = 2.5e-3;
 n_steps = 6000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;

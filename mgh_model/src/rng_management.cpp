@@ -33,6 +33,11 @@ double RandomNumberManagement::GetGaussianNoise(double sigma) {
   return gsl_ran_gaussian(rng_, sigma);
 }
 
+double RandomNumberManagement::GetGaussianPDF(double x, double sigma) {
+
+  return gsl_ran_gaussian_pdf(x, sigma);
+}
+
 int RandomNumberManagement::SampleNormalDist(double sigma) {
 
   double p = 0.00001;

@@ -194,79 +194,82 @@ void MicrotubuleManagement::RunDiffusion() {
   }
   double kbT{parameters_->kbT};
   double site_size{parameters_->microtubules.site_size};
-  // Number of iterations to split diffusion step into
-  int n_iterations = 10;
-  // Adjust dt so that total time over all iterations is equal to one timestep
-  double delta_t_eff = delta_t / n_iterations;
-  // Loop thru iterations
-  for (int i_it{0}; i_it < n_iterations; i_it++) {
-    // Sum up all forces exerted on each microtubule
-    double forces_summed[n_mts];
-    for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-      forces_summed[i_mt] = 0.0; // mt_list_[i_mt].GetNetForce();
+  // Sum up all forces exerted on each microtubule
+  double forces_summed[n_mts];
+  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+    forces_summed[i_mt] = 0.0; // mt_list_[i_mt].GetNetForce();
+  }
+  // Calculate the displacement of each microtubule
+  int displacement[n_mts];
+  for (int i_mt{0}; i_mt < n_mts; i_mt++) {
+    // If microtubule is still immobilized, set displacement to 0 and continue
+    if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
+      displacement[i_mt] = 0;
+      continue;
     }
-    // Calculate the displacement of each microtubule
-    int displacement[n_mts];
-    for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-      // If microtubule is still immobilized, set displacement to 0 and continue
-      if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
-        displacement[i_mt] = 0;
-        continue;
-      }
-      double x_sq{site_size * site_size};
-      double D{kbT / mt_list_[i_mt].gamma_};
-      double tau{x_sq / (2 * D)};
-      double p_diffu{delta_t_eff / tau};
-      double ran0 = properties_->gsl.GetRanProb();
-      if (ran0 < p_diffu) {
-        double ran1 = properties_->gsl.GetRanProb();
-        if (ran1 < 0.5) {
-          displacement[i_mt] = -1;
-        } else {
-          displacement[i_mt] = 1;
-        }
+    /*
+    double x_sq{site_size * site_size};
+    double D{kbT / mt_list_[i_mt].gamma_};
+    double tau{x_sq / (2 * D)};
+    double p_diffu{delta_t / tau};
+    double ran0 = properties_->gsl.GetRanProb();
+    if (ran0 < p_diffu) {
+      double ran1 = properties_->gsl.GetRanProb();
+      if (ran1 < 0.5) {
+        displacement[i_mt] = -1;
       } else {
-        displacement[i_mt] = 0;
+        displacement[i_mt] = 1;
       }
-      /*
-       // Calculate instanteous velocity due to forces using drag coefficient
-       double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
-       // Add gaussian noise
-       double sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
-       double noise{properties_->gsl.GetGaussianNoise(sigma)};
-       // Calculate raw displacement in nanometers
-       double raw_displacement{velocity * delta_t_eff + noise};
-       // Convert nm displacement to no. of sites
-       double site_displacement{raw_displacement / site_size};
-       int n_steps{(int)site_displacement};
-       // Use leftover as a prob. to roll for another step
-       double leftover{fabs(site_displacement - n_steps)};
-       double ran{properties_->gsl.GetRanProb()};
-       if (ran < leftover) {
-         if (site_displacement > 0) {
-           n_steps++;
-         } else if (site_displacement < 0) {
-           n_steps--;
-         } else {
-           printf("WHAT\n");
-         }
-       }
-       displacement[i_mt] = n_steps;
-       */
-      // printf("Noise is %g: ", noise);
-      // printf("leftover is %g | ", leftover);
-      // printf("displacement was %i\n", n_steps);
+    } else {
+      displacement[i_mt] = 0;
     }
-    /*  Run through MT list and update displacementsi */
-    for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-      if (displacement[i_mt] == 0) {
-        continue;
+    */
+    // Calculate instanteous velocity due to forces using drag coefficient
+    double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
+    // Convert velocity from nm/s to n_sites/s and calculate mean displacement
+    double dx_mean{velocity * delta_t};
+    // Add gaussan noise, meant to represent thermal motion
+    double dx_sigma{sqrt(2 * kbT * delta_t / mt_list_[i_mt].gamma_)};
+    // Convert mean and sigma from nm to n_sites
+    dx_mean /= site_size;
+    dx_sigma /= site_size;
+    int sigma_cutoff{3};
+    // Construct a discrete gaussian cumulative distribution table
+    int range{(int)ceil(fabs(dx_mean) + dx_sigma * sigma_cutoff)};
+    double discrete_cdf[2 * range + 1];
+    double p_cum{0.0};
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      // dx goes from -range to +range
+      int dx{i_bin - range};
+      p_cum += properties_->gsl.GetGaussianPDF(dx - dx_mean, dx_sigma);
+      discrete_cdf[i_bin] = p_cum;
+    }
+    // Normalize table so that last entry is 1.0
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      discrete_cdf[i_bin] /= discrete_cdf[2 * range];
+      // printf("discrete_cdf[%i] = %g (dx=%i)\n", i_bin, discrete_cdf[i_bin],
+      //        i_bin - range);
+    }
+    // exit(1);
+    // Roll a random number to determine which dx to choose
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      if (ran < discrete_cdf[i_bin]) {
+        displacement[i_mt] = i_bin - range;
+        // printf("displacement is %i\n", displacement[i_mt]);
+        break;
       }
-      // Microtubule *mt = &mt_list_[i_mt];
-      // Microtubule *neighb = mt->neighbor_;
-      mt_list_[i_mt].coord_ += displacement[i_mt];
-      // mt->UpdateExtensions();
-      // neighb->UpdateExtensions();
     }
+  }
+  /*  Run through MT list and update displacementsi */
+  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+    // if (displacement[i_mt] == 0) {
+    //   continue;
+    // }
+    // Microtubule *mt = &mt_list_[i_mt];
+    // Microtubule *neighb = mt->neighbor_;
+    mt_list_[i_mt].coord_ += displacement[i_mt];
+    // mt->UpdateExtensions();
+    // neighb->UpdateExtensions();
   }
 }

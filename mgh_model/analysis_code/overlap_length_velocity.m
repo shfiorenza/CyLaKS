@@ -1,6 +1,6 @@
 clear all;
 % Input parameters
-baseName = "2019_12_04_slideScan/slide_scan_2.0_525_%i";
+baseName = "test";
 seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in microns
@@ -36,10 +36,10 @@ plus_end_velocity = zeros(length(seeds), n_datapoints);
 % Run through raw coord data to get overlap length at every datapoint
 for i_seed = 1:length(seeds)
     simName = sprintf(baseName, seeds(i_seed))
-    simName = "test_slide"
+    simName = "test"
     % Open mt coordinate file
     mt_coords_file = fopen(sprintf(fileDirectory, sprintf('%s_mt_coord.file', simName)));
-    mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'double');
+    mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'int');
     fclose(mt_coords_file);
     for i_data = start_point + 1: n_datapoints
         mt_coords = mt_coord_data(:, i_data)';
@@ -87,7 +87,7 @@ ylabel('Plus-end distance (microns)');
 xlabel('Time (s)');
 axis tight
 xlim([start_time end_time]);
-ylim([0 4.5]);
+%ylim([0 4.5]);
 grid on
 grid minor
 
@@ -100,7 +100,7 @@ title('Sliding velocity over time');
 ylabel('Sliding velocity (nm/s)');
 xlabel('Time (s)');
 xlim([start_time end_time]);
-ylim([-60 40]);
+%ylim([-60 40]);
 %axis tight
 grid on
 grid minor

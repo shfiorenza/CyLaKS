@@ -39,7 +39,7 @@ void Microtubule::SetParameters() {
   double eta = parameters_->eta;                                 // in um^-2!!
   // see radhika sliding paper for any of this to make sense
   // divide by 10^6 to convert eta to nm^-2
-  double numerator = (2 * 3.14159 * big_l * eta) / 1000000;
+  double numerator = (2 * 3.14159 * big_l * eta) / 1e6;
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
   printf("\nGamma is %g (pN*s)/nm for mt #%i\n", gamma_, index_);

@@ -8,8 +8,8 @@ eta: 0.001
 microtubules:
   count: 2
   length:
-  - 5000
   - 500
+  - 5000
   y_dist: 32
   site_size: 8
   radius: 12.5

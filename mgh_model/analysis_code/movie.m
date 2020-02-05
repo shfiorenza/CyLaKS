@@ -4,13 +4,13 @@ mt_lengths = [1250];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'processivityF_420pM';
+simName = 'test';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 400000000;
-n_datapoints = 100000;
+n_steps = 4000000; %00;
+n_datapoints = 10000; %0;
 start_frame = 01;
 end_frame = n_datapoints;
 frames_per_plot = 1000;

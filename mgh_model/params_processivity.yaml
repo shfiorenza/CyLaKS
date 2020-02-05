@@ -1,5 +1,5 @@
 seed: 329954433
-n_steps: 40000000 # 0
+n_steps: 40000000 #0
 n_datapoints: 10000 # 0
 data_threshold: 0
 delta_t: 2.5e-5

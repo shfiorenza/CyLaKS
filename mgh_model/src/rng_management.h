@@ -1,43 +1,38 @@
 #ifndef _RNG_MANAGEMENT_H
 #define _RNG_MANAGEMENT_H
-#include <vector>
-#include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_rng.h>
+#include <vector>
 
 struct system_parameters;
 struct system_properties;
 
-class RandomNumberManagement{
-	private:
-		const gsl_rng_type *generator_type_ = gsl_rng_mt19937;
-	public:
-		gsl_rng *rng_;		
-		std::vector<gsl_rng*> kinesin_rngs_; 
-		std::vector<gsl_rng*> crosslinker_rngs_; 
+class RandomNumberManagement {
+private:
+  const gsl_rng_type *generator_type_ = gsl_rng_mt19937;
 
-		system_parameters *parameters_ = nullptr;
-		system_properties *properties_ = nullptr;
-	private:
+public:
+  gsl_rng *rng_;
+  std::vector<gsl_rng *> kinesin_rngs_;
+  std::vector<gsl_rng *> crosslinker_rngs_;
 
-	public:
-		RandomNumberManagement();
-		void Initialize(system_parameters *parameters, 
-				system_properties *properties);
-		void CleanUp();
+  system_parameters *parameters_ = nullptr;
+  system_properties *properties_ = nullptr;
 
-		int GetRanInt(int n);
-		double GetRanProb();
-		double GetGaussianNoise(double sigma);
+private:
+public:
+  RandomNumberManagement();
+  void Initialize(system_parameters *parameters, system_properties *properties);
+  void CleanUp();
 
-		int SampleNormalDist(double sigma);
-		int SampleAbsNormalDist(double sigma);
+  int GetRanInt(int n);
+  void SetRanIndices(int indices[], int n, int m);
+  double GetRanProb();
+  double GetGaussianNoise(double sigma);
 
-		int SampleBinomialDist(double p, int n);
-		int SampleBinomialDist_Kinesin(double p, int n, int i_rng);
-		int SampleBinomialDist_Crosslinker(double p, int n, int i_rng); 
+  void Shuffle(void *array, size_t length, size_t element_size);
 
-		int SamplePoissonDist(double n_avg);
-		int SamplePoissonDist_Kinesin(double n_avg, int i_rng);
-		int SamplePoissonDist_Crosslinker(double n_avg, int i_rng);
+  int SampleBinomialDist(double p, int n);
+  int SamplePoissonDist(double n_avg);
 };
 #endif

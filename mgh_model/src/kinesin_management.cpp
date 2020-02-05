@@ -360,6 +360,14 @@ void KinesinManagement::InitializeEvents() {
       return 0;
     }
   };
+  /* * Choose n random indices from the range [0, m) * */
+  auto get_ran_indices = [&](int *indices, int n, int m) {
+    if (m > 1) {
+      properties_->gsl.SetRanIndices(indices, n, m);
+    } else {
+      indices[0] = 0;
+    }
+  };
   /* * Binomial probabilitiy distribution; sampled to predict most events * */
   auto binomial = [&](double p, int n) {
     if (n > 0) {
@@ -370,7 +378,6 @@ void KinesinManagement::InitializeEvents() {
   };
   /* *** Event entries *** */
   // Bind_I: bind first motor head to MT and release ADP
-  auto update_unnoc = [&]() { properties_->microtubules.UpdateUnoccupied(); };
   auto exe_bind_i = [&](ENTRY_T target) {
     SITE_T *site = std::get<SITE_T *>(target);
     if (site != nullptr) {
@@ -385,14 +392,14 @@ void KinesinManagement::InitializeEvents() {
       std::string affinity = std::to_string(i_aff);
       std::string n_neighbs = std::to_string(i_neighb);
       std::string name = "bind_i_" + affinity + "_" + n_neighbs;
-      std::string tar = "unnoc_" + affinity + "_" + n_neighbs;
       events_.emplace_back(
-          this, id++, name, Vec<Str>{tar}, p_bind_i_[i_aff][i_neighb],
+          name, p_bind_i_[i_aff][i_neighb],
           &properties_->microtubules.n_unoccupied_mot_[i_aff][i_neighb],
           &properties_->microtubules.unoccupied_list_mot_[i_aff][i_neighb],
-          update_unnoc, exe_bind_i, binomial, ran_int);
+          exe_bind_i, binomial, get_ran_indices);
     }
   }
+  /*
   // Bind_ATP: bind ATP to motor heads that have released their ADP
   auto update_NULL = [&]() { Update_Bound_NULL(); };
   auto exe_bind_ATP = [&](ENTRY_T target) {
@@ -427,6 +434,8 @@ void KinesinManagement::InitializeEvents() {
                        p_hydrolyze_stalled_, &n_bound_ATP_stalled_,
                        &bound_ATP_stalled_, update_ATP_st, exe_hydrolyze,
                        binomial, ran_int);
+  */
+  /*
   // Bind_II: binds docked motor head to MT and releases its ADP
   auto update_docked = [&]() { Update_Docked(); };
   auto exe_bind_ii = [&](ENTRY_T target) {
@@ -445,11 +454,10 @@ void KinesinManagement::InitializeEvents() {
       std::string name = "bind_ii_" + affinity + "_" + n_neighbs;
       std::string tar1 = "docked_" + affinity + "_" + n_neighbs;
       std::string tar2 = "bound_ADPP_i_" + affinity + "_" + n_neighbs;
-      events_.emplace_back(this, id++, name, Vec<Str>{tar1, tar2}, false,
-                           p_bind_ii_[i_aff][i_neighb],
-                           &n_docked_[i_aff][i_neighb],
-                           &docked_[i_aff][i_neighb], update_docked,
-                           exe_bind_ii, binomial, ran_int);
+      events_.emplace_back(
+          this, id++, name, Vec<Str>{tar1, tar2}, p_bind_ii_[i_aff][i_neighb],
+          &n_docked_[i_aff][i_neighb], &docked_[i_aff][i_neighb], update_docked,
+          exe_bind_ii, binomial, ran_int);
     }
   }
   // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
@@ -515,6 +523,7 @@ void KinesinManagement::InitializeEvents() {
                            update_ADPP_i_st, exe_unbind_i, binomial, ran_int);
     }
   }
+  */
   /*
   if tethers ARE active, serialize all extension-based events
   if (parameters_->motors.tethers_active) {
@@ -574,37 +583,39 @@ void KinesinManagement::InitializeEvents() {
     }
   }
   */
-  // Scan through all events and segregate them based on target population
-  for (int i_event{0}; i_event < events_.size(); i_event++) {
-    std::vector<EVENT_T *> competitors = {&events_[i_event]};
-    // For each event, compare all target populations to those of other events
-    for (const auto &tar_pop_main : events_[i_event].targets_) {
-      // Only compare to events with higher index to avoid double-counting
-      for (int j_event{i_event + 1}; j_event < events_.size(); j_event++) {
-        // Look at each target population of this alterate event
-        for (const auto &tar_pop_alt : events_[j_event].targets_) {
-          // If target populations are equal, add this event to partition
-          if (tar_pop_main == tar_pop_alt) {
-            competitors.push_back(&events_[j_event]);
-          }
-        }
-      }
-    }
-    // Only add populations that have more than one competitor
-    if (competitors.size() > 1) {
-      events_by_pop_.push_back(competitors);
-    }
-  }
+  /*
+   // Scan through all events and segregate them based on target population
+   for (int i_event{0}; i_event < events_.size(); i_event++) {
+     std::vector<EVENT_T *> competitors = {&events_[i_event]};
+     // For each event, compare all target populations to those of other events
+     for (const auto &tar_pop_main : events_[i_event].targets_) {
+       // Only compare to events with higher index to avoid double-counting
+       for (int j_event{i_event + 1}; j_event < events_.size(); j_event++) {
+         // Look at each target population of this alterate event
+         for (const auto &tar_pop_alt : events_[j_event].targets_) {
+           // If target populations are equal, add this event to partition
+           if (tar_pop_main == tar_pop_alt) {
+             competitors.push_back(&events_[j_event]);
+           }
+         }
+       }
+     }
+     // Only add populations that have more than one competitor
+     if (competitors.size() > 1) {
+       events_by_pop_.push_back(competitors);
+     }
+   }
 
-  for (int i_pop(0); i_pop < events_by_pop_.size(); i_pop++) {
-    printf("KMC event partition #%i (size %lu): ", i_pop,
-           events_by_pop_[i_pop].size());
-    for (int i_entry{0}; i_entry < events_by_pop_[i_pop].size(); i_entry++) {
-      std::cout << events_by_pop_[i_pop][i_entry]->name_ << " (targets "
-                << events_by_pop_[i_pop][i_entry]->targets_[0] << "), ";
-    }
-    printf("\n");
-  }
+   for (int i_pop(0); i_pop < events_by_pop_.size(); i_pop++) {
+     printf("KMC event partition #%i (size %lu): ", i_pop,
+            events_by_pop_[i_pop].size());
+     for (int i_entry{0}; i_entry < events_by_pop_[i_pop].size(); i_entry++) {
+       std::cout << events_by_pop_[i_pop][i_entry]->name_ << " (targets "
+                 << events_by_pop_[i_pop][i_entry]->targets_[0] << "), ";
+     }
+     printf("\n");
+   }
+   */
 }
 
 Kinesin *KinesinManagement::GetFreeMotor() {
@@ -1268,45 +1279,32 @@ void KinesinManagement::Refresh_Populations() {
 
 void KinesinManagement::Generate_Execution_Sequence() {
 
-  int n_events = Sample_Event_Statistics();
-  if (n_events > 0) {
-    EVENT_T *pre_array[n_events];
-    int i_array{0};
-    for (int i_event{0}; i_event < events_.size(); i_event++) {
-      int n_expected = events_[i_event].n_expected_;
-      // if (properties_->current_step_ == 249056) {
-      //   printf("%i expected for %s\n", n_expected,
-      //          events_[i_event].name_.c_str());
-      // }
-      for (int i_entry(0); i_entry < n_expected; i_entry++) {
-        // Make sure we don't bamboozle ourselves
-        if (i_array >= n_events) {
-          printf("WOAH BUDDY. check MOT genKMC\n");
-          exit(1);
-        }
-        // Store & pass ptr to this event
-        pre_array[i_array] = &events_[i_event];
-        i_array++;
-      }
-    }
-    if (i_array != n_events) {
-      printf("NOT SURE in MOTUR GEN KMC \n");
-      printf("i_array: %i | n_events: %i\n", i_array, n_events);
-      printf("step: %i\n", properties_->current_step_);
-      exit(1);
-    }
-    // Shuffle for some guuuud random exe order
-    if (n_events > 1) {
-      gsl_ran_shuffle(properties_->gsl.rng_, pre_array, n_events,
-                      sizeof(EVENT_T *));
-    }
-    // Transfer info to permanent vector owned by MGMT
-    events_to_exe_.resize(n_events);
-    for (int i_entry(0); i_entry < n_events; i_entry++) {
-      events_to_exe_[i_entry] = pre_array[i_entry];
-    }
-  } else {
+  int n_events{Sample_Event_Statistics()};
+  if (n_events == 0) {
     events_to_exe_.clear();
+    return;
+  }
+  int i_array{0};
+  EVENT_T *pre_array[n_events];
+  for (auto &&event : events_) {
+    for (int i_entry{0}; i_entry < event.n_expected_; i_entry++) {
+      pre_array[i_array++] = &event;
+    }
+  }
+  if (i_array != n_events) {
+    printf("NOT SURE in MOTUR GEN KMC \n");
+    printf("i_array: %i | n_events: %i\n", i_array, n_events);
+    printf("step: %i\n", properties_->current_step_);
+    exit(1);
+  }
+  // Shuffle for some guuuud random exe order
+  if (n_events > 1) {
+    properties_->gsl.Shuffle(pre_array, n_events, sizeof(EVENT_T *));
+  }
+  // Transfer info to permanent vector owned by MGMT
+  events_to_exe_.resize(n_events);
+  for (int i_entry(0); i_entry < n_events; i_entry++) {
+    events_to_exe_[i_entry] = pre_array[i_entry];
   }
 }
 
@@ -1381,6 +1379,7 @@ int KinesinManagement::Sample_Event_Statistics() {
     }
   }
   */
+  /*
   // Scan through all target pops. & ensure none will become negative
   for (int i_pop{0}; i_pop < events_by_pop_.size(); i_pop++) {
     int n_competitors = events_by_pop_[i_pop].size();
@@ -1421,7 +1420,7 @@ int KinesinManagement::Sample_Event_Statistics() {
       if (n_avail_loc == 0 and n_events_loc > 0) {
         printf("uhhhh ?? - %i\n", n_events_loc);
         std::cout << events_by_pop_[i_pop][0]->name_ << std::endl;
-        std::cout << events_by_pop_[i_pop][0]->targets_[0] << std::endl;
+        //     std::cout << events_by_pop_[i_pop][0]->targets_[0] << std::endl;
         exit(1);
       }
       while (n_events_loc > n_avail_loc) {
@@ -1442,6 +1441,7 @@ int KinesinManagement::Sample_Event_Statistics() {
       }
     }
   }
+  */
   return n_events_tot;
 }
 

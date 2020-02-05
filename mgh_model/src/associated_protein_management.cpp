@@ -1457,7 +1457,7 @@ void AssociatedProteinManagement::Generate_Execution_Sequence() {
           exit(1);
         }
         // Store & pass unique index of this event
-        pre_array[i_array] = events_[i_event].id_;
+        pre_array[i_array] = 0; // events_[i_event].id_;
         i_array++;
       }
     }
@@ -1505,7 +1505,7 @@ int AssociatedProteinManagement::Sample_Event_Statistics() {
         // printf("uhhhh ?? - %i\n",
         // n_events_loc);
         std::cout << events_[IDs_by_pop_[i_pop][0]].name_ << std::endl;
-        std::cout << events_[IDs_by_pop_[i_pop][0]].targets_[0] << std::endl;
+        // std::cout << events_[IDs_by_pop_[i_pop][0]].targets_[0] << std::endl;
       }
       while (n_events_loc > n_avail_loc) {
         double p_cum = 0;
@@ -1548,8 +1548,8 @@ int AssociatedProteinManagement::Sample_Event_Statistics() {
         if (n_avail_loc > 0) {
           std::cout << events_[abs(eventIDs_by_root_[i_root][0])].name_
                     << std::endl;
-          std::cout << events_[abs(eventIDs_by_root_[i_root][0])].targets_[0]
-                    << std::endl;
+          // std::cout << events_[abs(eventIDs_by_root_[i_root][0])].targets_[0]
+          //           << std::endl;
         }
         n_avail_loc /= 2;
       }
@@ -1557,8 +1557,8 @@ int AssociatedProteinManagement::Sample_Event_Statistics() {
         printf("uhhhh TWO ?? - %i\n", n_events_loc);
         std::cout << events_[abs(eventIDs_by_root_[i_root][0])].name_
                   << std::endl;
-        std::cout << events_[abs(eventIDs_by_root_[i_root][0])].targets_[0]
-                  << std::endl;
+        // std::cout << events_[abs(eventIDs_by_root_[i_root][0])].targets_[0]
+        //           << std::endl;
       }
       while (n_events_loc > n_avail_loc) {
         double p_cum = 0;

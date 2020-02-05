@@ -7,22 +7,18 @@
 
 template <typename MGMT_T, typename ENTRY_T> class Event {
 private:
-  // Pointer to manager of this event
-  MGMT_T manager_;
   // Pointer to list of available specific targets; dynamically updated
   std::vector<ENTRY_T> *target_pool_;
-  // Function that updates target_pool_ vector
-  std::function<void(void)> update_targets_;
+  // Targets that this event will execute o
+  std::vector<ENTRY_T> targets_;
   // Function that actually executes this event
   std::function<void(ENTRY_T)> exe_;
   // Probabilitiy distribution we sample to predict no. of events each timestep
   std::function<int(double, int)> prob_dist_;
-  // Generic random integer generator; returns an int from 0 to input N
-  std::function<int(int)> ran_int_;
+  // Get n random indices in the range [0, m)
+  std::function<void(int *, int, int)> get_ran_indices_;
 
 public:
-  // Unique ID of this event in event_ list held by MGMT
-  int id_ = -1;
   // Expected number of events to occur for current given timestep
   int n_expected_ = 0;
   // Pointer to no. of specific targets this event can act on; dynamic
@@ -31,62 +27,46 @@ public:
   double p_occur_ = 0.0;
   // Name of this event, e.g., "Bind_II_Teth"
   std::string name_ = "bruh";
-  // List of populations that this event targets
-  std::vector<std::string> targets_ = {"nope"};
-  // Whether or not n_avail_ is redundant in stat correction
-  bool is_not_redundant_ = true;
 
 private:
-  void UpdateTargetPool() { update_targets_(); }
-  ENTRY_T GetActiveEntry() {
-    ENTRY_T target;
-    if (manager_->verbose_) {
-      printf("%i avail for ", *n_avail_);
-      std::cout << name_ << std::endl;
+  void SetTargets() {
+    if (n_expected_ > 0) {
+      printf("%i expected for %s\n", n_expected_, name_.c_str());
     }
-    if (*n_avail_ > 0) {
-      target = target_pool_->at(ran_int_(*n_avail_));
-    } else {
-      target = manager_->CheckScratchFor(targets_[0]);
+    targets_.reserve(n_expected_);
+    int indices[n_expected_];
+    get_ran_indices_(indices, n_expected_, *n_avail_);
+    // int *indices = get_ran_indices_(n_expected_, *n_avail_);
+    if (n_expected_ > 0) {
+      printf("yo\n");
     }
-    return target;
+    for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
+      printf("Index #%i: %i\n", i_entry, indices[i_entry]);
+      targets_.push_back(target_pool_->at(indices[i_entry]));
+    }
   }
-  void ExecuteEventOn(ENTRY_T target) { exe_(target); }
 
 public:
-  Event(MGMT_T manager, int id, std::string name,
-        std::vector<std::string> targets, double p_occur, int *n_avail,
-        std::vector<ENTRY_T> *target_pool, std::function<void(void)> update,
+  Event(std::string name, double p_occur, int *n_avail,
+        std::vector<ENTRY_T> *target_pool,
         std::function<void(ENTRY_T)> exe_funct,
         std::function<int(double, int)> prob_dist,
-        std::function<int(int)> ran_int)
-      : manager_{manager}, id_{id}, name_{name}, targets_{targets},
-        is_not_redundant_{true}, p_occur_{p_occur}, n_avail_{n_avail},
-        target_pool_{target_pool}, update_targets_{update}, exe_{exe_funct},
-        prob_dist_{prob_dist}, ran_int_{ran_int} {}
-  Event(MGMT_T manager, int id, std::string name,
-        std::vector<std::string> targets, bool is_not_redundant, double p_occur,
-        int *n_avail, std::vector<ENTRY_T> *target_pool,
-        std::function<void(void)> update,
-        std::function<void(ENTRY_T)> exe_funct,
-        std::function<int(double, int)> prob_dist,
-        std::function<int(int)> ran_int)
-      : manager_{manager}, id_{id}, name_{name}, targets_{targets},
-        is_not_redundant_{is_not_redundant}, p_occur_{p_occur},
-        n_avail_{n_avail}, target_pool_{target_pool}, update_targets_{update},
-        exe_{exe_funct}, prob_dist_{prob_dist}, ran_int_{ran_int} {}
+        std::function<void(int *, int, int)> get_ran_indices)
+      : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
+        target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
+        get_ran_indices_{get_ran_indices} {}
   int SampleStatistics() {
     if (*n_avail_ > 0) {
       n_expected_ = prob_dist_(p_occur_, *n_avail_);
+      SetTargets();
     } else {
       n_expected_ = 0;
     }
     return n_expected_;
   }
   void Execute() {
-    UpdateTargetPool();
-    ENTRY_T target = GetActiveEntry();
-    ExecuteEventOn(target);
+    exe_(targets_.back());
+    targets_.pop_back();
   }
 };
 #endif

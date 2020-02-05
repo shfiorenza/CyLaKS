@@ -2,7 +2,7 @@
 
 clear all
 % Often-changed variables
-n_sites = 5000;
+n_sites = 1250;
 processivity = 5.3;
 xlink_conc = 2.0;
 c_motor = 1.5;
@@ -13,7 +13,7 @@ simName = 'test';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 10000;
+n_datapoints = 100000;
 starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';

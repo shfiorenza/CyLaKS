@@ -2,11 +2,12 @@
 #define _MASTER_HEADER_H
 
 /* Include header files for system libraries. */
-#include <map>
-#include <cmath>
-#include <string>
-#include <iostream>
 #include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <iterator>
+#include <map>
+#include <string>
 #include <sys/stat.h>
 
 /* Include system parameters and properties structures. */

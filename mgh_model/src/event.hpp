@@ -75,12 +75,13 @@ public:
         is_not_redundant_{is_not_redundant}, p_occur_{p_occur},
         n_avail_{n_avail}, target_pool_{target_pool}, update_targets_{update},
         exe_{exe_funct}, prob_dist_{prob_dist}, ran_int_{ran_int} {}
-  void SampleStatistics() {
+  int SampleStatistics() {
     if (*n_avail_ > 0) {
       n_expected_ = prob_dist_(p_occur_, *n_avail_);
     } else {
       n_expected_ = 0;
     }
+    return n_expected_;
   }
   void Execute() {
     UpdateTargetPool();

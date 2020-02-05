@@ -15,10 +15,6 @@ int Kinesin::head::GetAffinity() {
     if (i_fwd > 0 and i_fwd < site_->mt_->n_sites_) {
       if (site_->mt_->lattice_[i_fwd].motor_head_ != nullptr) {
         if (site_->mt_->lattice_[i_fwd].motor_head_->motor_ != motor_) {
-          // printf("Motor %i @ site %i: \n", motor_->id_, site_->index_);
-          // printf("   has neighb motor %i @ site %i\n",
-          //        site_->mt_->lattice_[i_fwd].motor_head_->motor_->id_,
-          //        i_fwd);
           return ((delta - 1) / bin_size);
         }
       }
@@ -27,10 +23,6 @@ int Kinesin::head::GetAffinity() {
     if (i_bck > 0 and i_bck < site_->mt_->n_sites_) {
       if (site_->mt_->lattice_[i_bck].motor_head_ != nullptr) {
         if (site_->mt_->lattice_[i_bck].motor_head_->motor_ != motor_) {
-          // printf("Motor %i @ site %i: \n", motor_->id_, site_->index_);
-          // printf("   has neighb motor %i @ site %i\n",
-          //        site_->mt_->lattice_[i_bck].motor_head_->motor_->id_,
-          //        i_bck);
           return ((delta - 1) / bin_size);
         }
       }
@@ -40,6 +32,7 @@ int Kinesin::head::GetAffinity() {
 }
 
 int Kinesin::head::GetKIF4ANeighbCount() {
+
   if (site_ == nullptr)
     return 0;
   else {
@@ -313,6 +306,37 @@ Kinesin::head *Kinesin::StoreDockSite() {
   } else {
     printf("error; cannot store dock site\n");
     exit(1);
+  }
+}
+
+Tubulin *Kinesin::GetDockSite() {
+
+  if (heads_active_ != 1) {
+    printf("err 1 in Kinesin::GetDockSite\n");
+    printf("*** EXITING ***\n");
+    exit(1);
+  }
+  Kinesin::head *active_head = GetActiveHead();
+  if (active_head->ligand_ != "ADPP") {
+    printf("err 2 in Kinesin::GetDockSite\n");
+    printf("*** EXITING ***\n");
+    exit(1);
+  }
+  int i_dock{-1};
+  if (active_head->trailing_) {
+    i_dock = active_head->site_->index_ + mt_->delta_x_;
+  } else {
+    i_dock = active_head->site_->index_ - mt_->delta_x_;
+  }
+  if (i_dock >= 0 and i_dock < mt_->n_sites_) {
+    Tubulin *dock_site = &mt_->lattice_[i_dock];
+    if (dock_site->occupied_) {
+      return nullptr;
+    } else {
+      return dock_site;
+    }
+  } else {
+    return nullptr;
   }
 }
 

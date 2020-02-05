@@ -1,19 +1,19 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000];
+mt_lengths = [1250];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'test';
+simName = 'processivityF_420pM';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 40000000;
-n_datapoints = 10000;
+n_steps = 400000000;
+n_datapoints = 100000;
 start_frame = 01;
-end_frame = 10000;
-frames_per_plot = 100;
+end_frame = n_datapoints;
+frames_per_plot = 1000;
 delta_t = 0.000025; 
 xlink_cutoff = 5;
 cutoff = 19;

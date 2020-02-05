@@ -147,6 +147,7 @@ public:
 
   POP_T *CheckScratchFor(std::string pop);
   void SaveToScratch(POP_T *head);
+  void SaveNeighbsToScratch(SITE_T *site);
   void ReportExecutionOf(std::string event_name);
   void ReportFailureOf(std::string event_name);
 

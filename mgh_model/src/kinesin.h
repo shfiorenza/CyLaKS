@@ -103,6 +103,7 @@ public:
   head *GetActiveHead();
   head *GetDockedHead();
   head *StoreDockSite();
+  Tubulin *GetDockSite();
   double GetStalkCoordinate(); // tail originates from stalk
   double GetDockedCoordinate();
   void ChangeConformation(); // FIXME add applied force w/ teth

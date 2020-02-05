@@ -124,7 +124,7 @@ void MicrotubuleManagement::UpdateUnoccupied() {
     int n_sites = parameters_->microtubules.length[i_mt];
     for (int i_site = 0; i_site < n_sites; i_site++) {
       Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
-      //     site->UpdateAffinity();
+      site->UpdateAffinity();
       if (site->occupied_ == false) {
         unoccupied_list_[n_unoccupied_] = site;
         n_unoccupied_++;

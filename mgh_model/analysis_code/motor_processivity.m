@@ -1,13 +1,13 @@
 
 clear all;
 % Often-changed variables
-n_sites = 50000;
-simName = 'test_proc';
+n_sites = 1250;
+simName = 'processivityF_420pM';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 40000000;
-n_datapoints = 10000;
+n_steps = 400000000;
+n_datapoints = 100000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
@@ -39,6 +39,18 @@ starting_datapoint = zeros([n_mts*n_sites 1]) - 1;
 for i_data = starting_point:1:n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
+        future_IDs = motor_data(:, i_mt, i_data + 1);
+        endtag_boundary = 2;
+        % Determine end-tag region; ignore motors that terminate here
+        for i_site=1:n_sites
+           motor_ID = future_IDs(i_site);
+           if motor_ID ~= -1
+               endtag_boundary = i_site + 10;
+           else
+               break;    
+           end
+        end
+        
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -65,7 +77,7 @@ for i_data = starting_point:1:n_datapoints - 1
             end
         end
         % Check one datapoint into the future to see if any motors unbound
-        future_IDs = motor_data(:, i_mt, i_data + 1);
+
         n_deleted = 0;
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
@@ -81,12 +93,24 @@ for i_data = starting_point:1:n_datapoints - 1
                 start_datapoint = starting_datapoint(motor_ID);
                 delta_t = abs(i_data - start_datapoint);
                 run_time = delta_t * time_per_datapoint;
+                velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if run_time >= time_cutoff
+                if run_time > time_cutoff && end_site(1) > endtag_boundary
+
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
-                    velocities(n_runs) = run_length / run_time * 1000; % convert to nm/s
+                    velocities(n_runs) = (run_length / run_time) * 1000; % convert to nm/s  
+                    %{
+                    if run_time > 100
+                       fprintf("Motor %i had lifetime %g\n", motor_ID, run_time); 
+                       fprintf("End site: %i, endtag_boundary: %i\n", end_site(1), endtag_boundary);
+                    end
+                    if velocities(n_runs) < 40
+                       fprintf("Motor %i had vel %g\n", motor_ID, velocities(n_runs)); 
+                       fprintf("End site: %i, endtag_boundary: %i\n", end_site(1), endtag_boundary);
+                    end
+                    %}
                 end
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
@@ -134,7 +158,7 @@ sigma_vel = round(abs(conf_inv_vel(2) - conf_inv_vel(1)) / 2, 1, 'significant');
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600]);
 % plot run length histogram
-n_bins = int32(n_runs/5); %int32(sqrt(n_runs));
+n_bins = int32(sqrt(n_runs));
 hist = histfit(runlengths, n_bins, 'exponential');
 % Display mean runlength
 dim1 = [0.55 0.65 0.2 0.2];

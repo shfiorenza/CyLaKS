@@ -69,12 +69,15 @@ void Tubulin::UpdateAffinity() {
 
   int n_affs{properties_->kinesin4.n_affinities_};
   int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / n_affs};
+  int bin_size{0};
+  if (n_affs > 1) {
+    bin_size = range / (n_affs - 1);
+  }
+  if (motor_head_ != nullptr) {
+    affinity_ = 0;
+    return;
+  }
 
-  printf("YO WE UPDATIN AFFINITIES\n");
-  exit(1);
-
-  affinity_ = n_affs - 1;
   for (int delta{1}; delta <= range; delta++) {
     int i_fwd{index_ + delta};
     if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
@@ -91,6 +94,7 @@ void Tubulin::UpdateAffinity() {
       }
     }
   }
+  affinity_ = n_affs - 1;
 }
 
 int Tubulin::GetPRC1NeighborCount() {

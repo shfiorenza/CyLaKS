@@ -616,7 +616,10 @@ void Kinesin::ForceUntether() {
 
 void Kinesin::UntetherSatellite() {
 
-  if (tethered_ == true) {
+  if (!tethered_) {
+    return;
+  }
+  if (xlink_->heads_active_ == 0) {
     // Remove satellite xlink from active_, replace with last entry
     int i_last = properties_->prc1.n_active_ - 1;
     AssociatedProtein *last_entry = properties_->prc1.active_[i_last];
@@ -632,9 +635,6 @@ void Kinesin::UntetherSatellite() {
     // Update motor details
     tethered_ = false;
     xlink_ = nullptr;
-  } else {
-    printf("Error in motor UntethSatellite()\n");
-    exit(1);
   }
 }
 

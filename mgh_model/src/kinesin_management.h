@@ -138,16 +138,12 @@ public:
   void Update_Bound_ADPP_II();
 
   void Run_KMC();
-  void Refresh_Populations();
   void Generate_Execution_Sequence();
   int Sample_Event_Statistics();
 
   double GetWeight_TetherBound();
   double GetWeight_BindTethered();
 
-  POP_T *CheckScratchFor(std::string pop);
-  void SaveToScratch(POP_T *head);
-  void SaveNeighbsToScratch(SITE_T *site);
   void ReportExecutionOf(std::string event_name);
   void ReportFailureOf(std::string event_name);
 

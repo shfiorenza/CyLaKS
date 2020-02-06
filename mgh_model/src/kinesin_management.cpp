@@ -350,18 +350,8 @@ void KinesinManagement::InitializeLists() {
 
 void KinesinManagement::InitializeEvents() {
 
-  /* * Serialized & unique index of each KMC event * */
-  int id{0};
-  /* * Basic random integer generator; passed to all events * */
-  auto ran_int = [&](int n) {
-    if (n > 0) {
-      return properties_->gsl.GetRanInt(n);
-    } else {
-      return 0;
-    }
-  };
-  /* * Choose n random indices from the range [0, m) * */
-  auto get_ran_indices = [&](int *indices, int n, int m) {
+  /* * Function that sets n random indices from the range [0, m) * */
+  auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
     } else {
@@ -376,7 +366,7 @@ void KinesinManagement::InitializeEvents() {
       return 0;
     }
   };
-  /* *** Event entries *** */
+  /* * Event entries * */
   // Bind_I: bind first motor head to MT and release ADP
   auto exe_bind_i = [&](ENTRY_T target) {
     SITE_T *site = std::get<SITE_T *>(target);
@@ -396,12 +386,10 @@ void KinesinManagement::InitializeEvents() {
           name, p_bind_i_[i_aff][i_neighb],
           &properties_->microtubules.n_unoccupied_mot_[i_aff][i_neighb],
           &properties_->microtubules.unoccupied_list_mot_[i_aff][i_neighb],
-          exe_bind_i, binomial, get_ran_indices);
+          exe_bind_i, binomial, set_ran_indices);
     }
   }
-  /*
   // Bind_ATP: bind ATP to motor heads that have released their ADP
-  auto update_NULL = [&]() { Update_Bound_NULL(); };
   auto exe_bind_ATP = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
     if (head != nullptr) {
@@ -411,11 +399,9 @@ void KinesinManagement::InitializeEvents() {
       ReportFailureOf("bind_ATP");
     }
   };
-  events_.emplace_back(this, id++, "bind_ATP", Vec<Str>{"bound_NULL"},
-                       p_bind_ATP_, &n_bound_NULL_, &bound_NULL_, update_NULL,
-                       exe_bind_ATP, binomial, ran_int);
+  events_.emplace_back("bind_ATP", p_bind_ATP_, &n_bound_NULL_, &bound_NULL_,
+                       exe_bind_ATP, binomial, set_ran_indices);
   // Hydrolyze: convert ATP to ADPP
-  auto update_ATP = [&]() { Update_Bound_ATP(); };
   auto exe_hydrolyze = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
     if (head != nullptr) {
@@ -425,19 +411,13 @@ void KinesinManagement::InitializeEvents() {
       ReportFailureOf("hydrolyze");
     }
   };
-  events_.emplace_back(this, id++, "hydrolyze", Vec<Str>{"bound_ATP"},
-                       p_hydrolyze_, &n_bound_ATP_, &bound_ATP_, update_ATP,
-                       exe_hydrolyze, binomial, ran_int);
+  events_.emplace_back("hydrolyze", p_hydrolyze_, &n_bound_ATP_, &bound_ATP_,
+                       exe_hydrolyze, binomial, set_ran_indices);
   // Hydrolyze_stalled: same as Hydrolyze but only targets stalled motors
-  auto update_ATP_st = [&]() { Update_Bound_ATP_Stalled(); };
-  events_.emplace_back(this, id++, "hydrolyze_st", Vec<Str>{"bound_ATP_st"},
-                       p_hydrolyze_stalled_, &n_bound_ATP_stalled_,
-                       &bound_ATP_stalled_, update_ATP_st, exe_hydrolyze,
-                       binomial, ran_int);
-  */
-  /*
+  events_.emplace_back("hydrolyze_stalled", p_hydrolyze_stalled_,
+                       &n_bound_ATP_stalled_, &bound_ATP_stalled_,
+                       exe_hydrolyze, binomial, set_ran_indices);
   // Bind_II: binds docked motor head to MT and releases its ADP
-  auto update_docked = [&]() { Update_Docked(); };
   auto exe_bind_ii = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
     if (head != nullptr) {
@@ -452,16 +432,12 @@ void KinesinManagement::InitializeEvents() {
       std::string affinity = std::to_string(i_aff);
       std::string n_neighbs = std::to_string(i_neighb);
       std::string name = "bind_ii_" + affinity + "_" + n_neighbs;
-      std::string tar1 = "docked_" + affinity + "_" + n_neighbs;
-      std::string tar2 = "bound_ADPP_i_" + affinity + "_" + n_neighbs;
       events_.emplace_back(
-          this, id++, name, Vec<Str>{tar1, tar2}, p_bind_ii_[i_aff][i_neighb],
-          &n_docked_[i_aff][i_neighb], &docked_[i_aff][i_neighb], update_docked,
-          exe_bind_ii, binomial, ran_int);
+          name, p_bind_ii_[i_aff][i_neighb], &n_docked_[i_aff][i_neighb],
+          &docked_[i_aff][i_neighb], exe_bind_ii, binomial, set_ran_indices);
     }
   }
   // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
-  auto update_ADPP_ii = [&]() { Update_Bound_ADPP_II(); };
   auto exe_unbind_ii = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
     if (head != nullptr) {
@@ -479,14 +455,13 @@ void KinesinManagement::InitializeEvents() {
       std::string n_neighbs = std::to_string(i_neighb);
       std::string name = "unbind_ii_" + affinity + "_" + n_neighbs;
       std::string tar = "bound_ADPP_ii_" + affinity + "_" + n_neighbs;
-      events_.emplace_back(
-          this, id++, name, Vec<Str>{tar}, p_unbind_ii_[i_aff][i_neighb],
-          &n_bound_ADPP_ii_[i_aff][i_neighb], &bound_ADPP_ii_[i_aff][i_neighb],
-          update_ADPP_ii, exe_unbind_ii, binomial, ran_int);
+      events_.emplace_back(name, p_unbind_ii_[i_aff][i_neighb],
+                           &n_bound_ADPP_ii_[i_aff][i_neighb],
+                           &bound_ADPP_ii_[i_aff][i_neighb], exe_unbind_ii,
+                           binomial, set_ran_indices);
     }
   }
   // Unbind_I: Converts ADPP to ADP and unbinds a singly-bound head
-  auto update_ADPP_i = [&]() { Update_Bound_ADPP_I(); };
   auto exe_unbind_i = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
     if (head != nullptr) {
@@ -501,29 +476,18 @@ void KinesinManagement::InitializeEvents() {
       std::string affinity = std::to_string(i_aff);
       std::string n_neighbs = std::to_string(i_neighb);
       std::string name = "unbind_i_" + affinity + "_" + n_neighbs;
-      std::string tar = "bound_ADPP_i_" + affinity + "_" + n_neighbs;
-      events_.emplace_back(
-          this, id++, name, Vec<Str>{tar}, p_unbind_i_[i_aff][i_neighb],
-          &n_bound_ADPP_i_[i_aff][i_neighb], &bound_ADPP_i_[i_aff][i_neighb],
-          update_ADPP_i, exe_unbind_i, binomial, ran_int);
-    }
-  }
-  // Unbind_I_Stalled: Same as unbind_I but only targets stalled motors
-  auto update_ADPP_i_st = [&]() { Update_Bound_ADPP_I_Stalled(); };
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
-    for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
-      std::string affinity = std::to_string(i_aff);
-      std::string n_neighbs = std::to_string(i_neighb);
-      std::string name = "unbind_i_st_" + affinity + "_" + n_neighbs;
-      std::string tar = "bound_ADPP_i_st_" + affinity + "_" + n_neighbs;
-      events_.emplace_back(this, id++, name, Vec<Str>{tar},
-                           p_unbind_i_stalled_[i_aff][i_neighb],
+      std::string name_st = "unbind_i_stalled_" + affinity + "_" + n_neighbs;
+      events_.emplace_back(name, p_unbind_i_[i_aff][i_neighb],
+                           &n_bound_ADPP_i_[i_aff][i_neighb],
+                           &bound_ADPP_i_[i_aff][i_neighb], exe_unbind_i,
+                           binomial, set_ran_indices);
+      // Unbind_I_Stalled: Same as unbind_I but only targets stalled motors
+      events_.emplace_back(name_st, p_unbind_i_stalled_[i_aff][i_neighb],
                            &n_bound_ADPP_i_stalled_[i_aff][i_neighb],
                            &bound_ADPP_i_stalled_[i_aff][i_neighb],
-                           update_ADPP_i_st, exe_unbind_i, binomial, ran_int);
+                           exe_unbind_i, binomial, set_ran_indices);
     }
   }
-  */
   /*
   if tethers ARE active, serialize all extension-based events
   if (parameters_->motors.tethers_active) {
@@ -653,30 +617,6 @@ int KinesinManagement::GetNumBoundUntethered() {
 }
 */
 
-/*
-void KinesinManagement::Update_Relay(std::string event, std::string taret_pop) {
-
-  if (event == std::string{"bind_i"}) {
-    properties_->microtubules.UpdateUnoccupied();
-  } else if (event == std::string{"bind_ATP"}) {
-    Update_Bound_NULL();
-  } else if (event == std::string{"hydrolyze"}) {
-    Update_Bound_ATP();
-  } else if (event == std::string{"hydrolyze_st"}) {
-    Update_Bound_ATP_Stalled();
-  } else if (event == std::string{"bind_ii"}) {
-    properties_->microtubules.UpdateUnoccupied();
-    Update_Docked();
-  } else if (event == std::string{"unbind_ii"}) {
-    Update_Bound_ADPP_II();
-  } else if (event == std::string{"unbind_i"}) {
-    Update_Bound_ADPP_I();
-  } else if (event == std::string{"unbind_i_st"}) {
-    Update_Bound_ADPP_I_Stalled();
-  }
-}
-*/
-
 void KinesinManagement::Update_All_Lists() {
 
   if (lists_up_to_date_) {
@@ -792,23 +732,11 @@ void KinesinManagement::Update_Bound_NULL() {
   n_bound_NULL_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
-    bool eligible{false};
-    if (!motor->tethered_) {
-      eligible = true;
-    } else if (motor->xlink_->heads_active_ == 0) {
-      eligible = true;
+    if (motor->head_one_.ligand_ == "NULL") {
+      bound_NULL_[n_bound_NULL_++] = &motor->head_one_;
     }
-    if (eligible) {
-      if (motor->head_one_.site_ != nullptr and
-          motor->head_one_.ligand_ == "NULL") {
-        bound_NULL_[n_bound_NULL_] = &motor->head_one_;
-        n_bound_NULL_++;
-      }
-      if (motor->head_two_.site_ != nullptr and
-          motor->head_two_.ligand_ == "NULL") {
-        bound_NULL_[n_bound_NULL_] = &motor->head_two_;
-        n_bound_NULL_++;
-      }
+    if (motor->head_two_.ligand_ == "NULL") {
+      bound_NULL_[n_bound_NULL_++] = &motor->head_two_;
     }
   }
 }
@@ -969,7 +897,8 @@ void KinesinManagement::Update_Bound_ADPP_I_Tethered() {
     }
     for (int i_motor = 0; i_motor < n_active_; i_motor++) {
       Kinesin *motor = active_[i_motor];
-      if (motor->heads_active_ == 1 && motor->tethered_ && !motor->IsStalled())
+      if (motor->heads_active_ == 1 && motor->tethered_ &&
+    !motor->IsStalled())
     {
         // Don't count motors with just satellite xlinks
         if (motor->xlink_->heads_active_ > 0) {
@@ -1005,7 +934,8 @@ void KinesinManagement::Update_Bound_ADPP_I_Tethered_Stalled() {
     }
     for (int i_motor = 0; i_motor < n_active_; i_motor++) {
       Kinesin *motor = active_[i_motor];
-      if (motor->heads_active_ == 1 && motor->tethered_ && motor->IsStalled()) {
+      if (motor->heads_active_ == 1 && motor->tethered_ && motor->IsStalled())
+    {
         // Don't count motors with just satellite xlinks
         if (motor->xlink_->heads_active_ > 0) {
           motor->UpdateExtension();
@@ -1118,13 +1048,16 @@ void KinesinManagement::Update_Bound_Unteth() {
 
 void KinesinManagement::Run_KMC() {
 
+  // replace w/ an inactive_ flag
   if (parameters_->motors.c_bulk == 0.0) {
     return;
   }
-  if (properties_->current_step_ >= 1417783) {
-    // if (properties_->current_step_ >= 35809720) {
-    // verbose_ = true;
-  }
+
+  // if (n_active_ > 0) {
+  //   verbose_ = true;
+  // } else {
+  //   verbose_ = false;
+  // }
 
   // sys_time start = sys_clock::now();
   if (verbose_) {
@@ -1136,13 +1069,6 @@ void KinesinManagement::Run_KMC() {
   }
   // sys_time finish_list = sys_clock::now();
   // properties_->wallace.t_motors_[1] += (finish_list - start).count();
-  if (verbose_) {
-    printf("Starting Refresh_Populations()\n");
-  }
-  Refresh_Populations();
-  if (verbose_) {
-    printf("Finished Refresh_Populations()\n");
-  }
   // sys_time finish_pops = sys_clock::now();
   // properties_->wallace.t_motors_[2] += (finish_pops - finish_list).count();
   if (verbose_) {
@@ -1168,113 +1094,6 @@ void KinesinManagement::Run_KMC() {
   // sys_time finish_all = sys_clock::now();
   // properties_->wallace.t_motors_[4] += (finish_all - finish_seq).count();
   // properties_->wallace.t_motors_[0] += (finish_all - start).count();
-}
-
-void KinesinManagement::Refresh_Populations() {
-
-  // If tethers are active, update all tether extensions
-  if (parameters_->motors.tethers_active and parameters_->xlinks.c_bulk > 0.0) {
-    for (int i_entry{0}; i_entry < n_active_; i_entry++) {
-      active_[i_entry]->UpdateExtension();
-    }
-  }
-  // Define our 'refresh' function to be called on any outdated motors
-  auto refresh = [&](POP_T *head) {
-    Kinesin *entry = head->motor_;
-    entry->head_one_.in_scratch_ = false;
-    entry->head_two_.in_scratch_ = false;
-    std::string state;
-    if (entry->heads_active_ == 0) {
-      // If tethered, automatically classified as "free_teth"
-      if (entry->tethered_) {
-        state = std::string("free_teth");
-      }
-      // Otherwise, homeboy was iced and needs to be removed
-      else {
-        state = std::string("unbound");
-      }
-      entry->head_one_.state_ = state;
-      entry->head_two_.state_ = state;
-    }
-    // Singly-bound motors
-    else if (entry->heads_active_ == 1) {
-      std::string inactive_state;
-      POP_T *active_head = entry->GetActiveHead();
-      // If active head is not bound to ADPP, inactive head is simply "unbound"
-      if (active_head->ligand_ != std::string{"ADPP"}) {
-        state = std::string{"bound_"} + active_head->ligand_;
-        if (active_head->ligand_ == "ATP" and entry->IsStalled()) {
-          state += std::string{"_st"};
-        }
-        inactive_state = std::string{"unbound"};
-      }
-      // Otherwise if active head is bound to ADPP, inactive head is docked
-      else {
-        state = std::string{"bound_ADPP_i"};
-        if (entry->IsStalled()) {
-          state += std::string{"_st"};
-        }
-        state += "_";
-        state += std::to_string(active_head->GetAffinity());
-        state += "_";
-        state += std::to_string(active_head->GetKIF4ANeighbCount());
-        Tubulin *dock_site = entry->GetDockSite();
-        if (dock_site != nullptr) {
-          inactive_state = std::string{"docked_"};
-          // Use active head's affinity to prevent self-cooperativity
-          inactive_state += std::to_string(active_head->GetAffinity());
-          inactive_state += "_";
-          // Discount active head as a site neighbor to prevent self-coop
-          int neighbs_eff = dock_site->GetKIF4ANeighborCount() - 1;
-          inactive_state += std::to_string(neighbs_eff);
-        } else {
-          inactive_state = std::string{"unbound"};
-        }
-      }
-      active_head->state_ = state;
-      active_head->GetOtherHead()->state_ = inactive_state;
-    }
-    // Doubly-bound motors
-    else {
-      // Do head one first
-      if (entry->head_one_.ligand_ != std::string{"ADPP"}) {
-        state = std::string{"bound_"} + entry->head_one_.ligand_;
-        if (entry->head_one_.ligand_ == "ATP" and entry->IsStalled()) {
-          state += std::string{"_st"};
-        }
-      } else {
-        state = std::string{"bound_ADPP_ii"};
-        state += "_";
-        state += std::to_string(entry->head_one_.GetAffinity());
-        state += "_";
-        state += std::to_string(entry->head_one_.GetKIF4ANeighbCount());
-      }
-      entry->head_one_.state_ = state;
-      // Head two next
-      if (entry->head_two_.ligand_ != std::string{"ADPP"}) {
-        state = std::string{"bound_"} + entry->head_two_.ligand_;
-        if (entry->head_two_.ligand_ == "ATP" and entry->IsStalled()) {
-          state += std::string{"_st"};
-        }
-      } else {
-        state = std::string{"bound_ADPP_ii"};
-        state = std::string{"bound_ADPP_ii"};
-        state += "_";
-        state += std::to_string(entry->head_two_.GetAffinity());
-        state += "_";
-        state += std::to_string(entry->head_two_.GetKIF4ANeighbCount());
-      }
-      entry->head_two_.state_ = state;
-    }
-  };
-  // Update all current entries in scratch_
-  for (int i_entry{0}; i_entry < n_scratched_; i_entry++) {
-    if (scratch_[i_entry]->in_scratch_) {
-      refresh(scratch_[i_entry]);
-    }
-  }
-  // Clear scratch_ list
-  n_scratched_ = 0;
 }
 
 void KinesinManagement::Generate_Execution_Sequence() {
@@ -1318,6 +1137,7 @@ int KinesinManagement::Sample_Event_Statistics() {
     if (event.n_expected_ > *event.n_avail_) {
       printf("Error; %i events expected but only %i available for %s\n",
              event.n_expected_, *event.n_avail_, event.name_.c_str());
+      exit(1);
     }
     // If verbose flag is active, report statistics
     if (verbose_) {
@@ -1325,123 +1145,35 @@ int KinesinManagement::Sample_Event_Statistics() {
              event.name_.c_str(), *event.n_avail_);
     }
   }
-  /*
-  // Ensure that competing events will not turn any populations negative
-  for (auto &&competitors : events_by_pop_) {
-    if (verbose_) {
-      printf("Checking the following competitors:\n");
-    }
-    int n_active_competitors{0};
-    int n_events_loc{0};
-    int n_avail_loc{0};
-    double p_tot{0.0};
-    for (auto &&event_ptr : competitors) {
-      if (verbose_) {
-        printf("  %s: %i expected\n", event_ptr->name_.c_str(),
-               event_ptr->n_expected_);
-      }
-      n_events_loc += event_ptr->n_expected_;
-      p_tot += event_ptr->n_expected_ * event_ptr->p_occur_;
-      if (event_ptr->n_expected_ > 0) {
-        n_active_competitors++;
-      }
-      if (event_ptr->is_not_redundant_) {
-        n_avail_loc += *event_ptr->n_avail_;
-      }
-    }
-    if (verbose_) {
-      printf("%i total events; %i targets available\n", n_events_loc,
-             n_avail_loc);
-    }
-    if (n_avail_loc == 0 and n_events_loc > 0) {
-      printf("Error; %i total events, but only %i targets available\n",
-             n_events_loc, n_avail_loc);
-      for (const auto &event_ptr : competitors) {
-        printf("  %s: %i expected (%i avail)\n", event_ptr->name_.c_str(),
-               event_ptr->n_expected_, *event_ptr->n_avail_);
-      }
-      printf("(@ step #%i)\n", properties_->current_step_);
-      exit(1);
-    }
-    while (n_events_loc > n_avail_loc) {
-      double p_cum{0.0};
-      double ran{properties_->gsl.GetRanProb()};
-      for (auto &&event_ptr : competitors) {
-        p_cum += event_ptr->n_expected_ * event_ptr->p_occur_ / p_tot;
-        if (ran < p_cum) {
-          event_ptr->n_expected_--;
-          n_events_tot--;
-          n_events_loc--;
-          p_tot -= event_ptr->p_occur_;
-          break;
-        }
-      }
+  std::pair<ENTRY_T, EVENT_T *> candidates[n_events_tot];
+  int i_candidate{0};
+  for (auto &&event : events_) {
+    for (auto &&target : event.targets_) {
+      candidates[i_candidate++] = std::make_pair(target, &event);
     }
   }
-  */
-  /*
-  // Scan through all target pops. & ensure none will become negative
-  for (int i_pop{0}; i_pop < events_by_pop_.size(); i_pop++) {
-    int n_competitors = events_by_pop_[i_pop].size();
-    // Skip entries that only have 1 competitor; they shouldn't go negative
-    if (n_competitors == 1) {
+  for (int i_entry{0}; i_entry < n_events_tot; i_entry++) {
+    if (candidates[i_entry].second->name_.substr(0, 7) == "bind_i_") {
       continue;
     }
-    int n_active_competitors{0};
-    int n_events_loc{0};
-    int n_avail_loc{0};
-    double p_tot{0.0};
-    if (verbose_) {
-      printf("Checking partition #%i: \n", i_pop);
-    }
-    for (int i_entry{0}; i_entry < n_competitors; i_entry++) {
-      if (verbose_) {
-        printf("    ");
-        std::cout << events_by_pop_[i_pop][i_entry]->name_;
-        printf(" is a competitor");
+    for (int j_entry{i_entry + 1}; j_entry < n_events_tot; j_entry++) {
+      if (candidates[j_entry].second->name_.substr(0, 7) == "bind_i_") {
+        continue;
       }
-      n_events_loc += events_by_pop_[i_pop][i_entry]->n_expected_;
-      if (verbose_) {
-        printf(" (%i expected)", events_by_pop_[i_pop][i_entry]->n_expected_);
-      }
-      p_tot += (events_by_pop_[i_pop][i_entry]->n_expected_ *
-                events_by_pop_[i_pop][i_entry]->p_occur_);
-      if (events_by_pop_[i_pop][i_entry]->n_expected_ > 0 and
-          events_by_pop_[i_pop][i_entry]->is_not_redundant_) {
-        n_avail_loc += *events_by_pop_[i_pop][i_entry]->n_avail_;
-        n_active_competitors++;
-      }
-    }
-    if (verbose_) {
-      printf("%i events loc\n", n_events_loc);
-      printf("%i tot available\n", n_avail_loc);
-    }
-    if (n_active_competitors > 0) {
-      if (n_avail_loc == 0 and n_events_loc > 0) {
-        printf("uhhhh ?? - %i\n", n_events_loc);
-        std::cout << events_by_pop_[i_pop][0]->name_ << std::endl;
-        //     std::cout << events_by_pop_[i_pop][0]->targets_[0] << std::endl;
-        exit(1);
-      }
-      while (n_events_loc > n_avail_loc) {
-        double p_cum{0};
+      if (std::get<POP_T *>(candidates[i_entry].first)->motor_ ==
+          std::get<POP_T *>(candidates[j_entry].first)->motor_) {
+        double p_one{candidates[i_entry].second->p_occur_};
+        double p_two{candidates[j_entry].second->p_occur_};
         double ran{properties_->gsl.GetRanProb()};
-        for (int i_entry(0); i_entry < n_competitors; i_entry++) {
-          p_cum += (events_by_pop_[i_pop][i_entry]->n_expected_ *
-                    events_by_pop_[i_pop][i_entry]->p_occur_ / p_tot);
-          if (p_cum >= ran and
-              events_by_pop_[i_pop][i_entry]->n_expected_ > 0) {
-            events_by_pop_[i_pop][i_entry]->n_expected_--;
-            n_events_tot--;
-            n_events_loc--;
-            p_tot -= events_by_pop_[i_pop][i_entry]->p_occur_;
-            break;
-          }
+        if (ran < p_one / (p_one + p_two)) {
+          candidates[i_entry].second->RemoveTarget(candidates[i_entry].first);
+        } else {
+          candidates[j_entry].second->RemoveTarget(candidates[j_entry].first);
         }
+        n_events_tot--;
       }
     }
   }
-  */
   return n_events_tot;
 }
 
@@ -1465,112 +1197,6 @@ double KinesinManagement::GetWeight_TetherBound() {
   return weight;
 }
 
-Kinesin::head *KinesinManagement::CheckScratchFor(std::string pop) {
-
-  if (verbose_) {
-    printf("Scratch was checked for ");
-    std::cout << pop << std::endl;
-  }
-  POP_T *head(nullptr);
-  for (int i_entry(0); i_entry < n_scratched_; i_entry++) {
-    if (verbose_) {
-      printf("   entry #%i: ", i_entry);
-      std::cout << scratch_[i_entry]->state_ << std::endl;
-    }
-    if (scratch_[i_entry]->state_ == pop) {
-      head = scratch_[i_entry];
-      if (verbose_) {
-        printf("successfully found!\n");
-      }
-      break;
-    }
-  }
-  return head;
-}
-
-void KinesinManagement::SaveToScratch(POP_T *head) {
-
-  if (!head->in_scratch_) {
-    head->in_scratch_ = true;
-    scratch_[n_scratched_++] = head;
-    if (verbose_) {
-      std::cout << head->state_;
-      printf(" was saved to scratch.\n");
-    }
-  }
-  int n_neighbs{0};
-  if (head->site_ != nullptr) {
-    n_neighbs = head->site_->GetKIF4ANeighborCount();
-  }
-  if (n_neighbs == 1) {
-    POP_T *neighb;
-    int i_site = head->site_->index_;
-    int mt_length = head->site_->mt_->n_sites_;
-    if (i_site == 0) {
-      neighb = head->site_->mt_->lattice_[i_site + 1].motor_head_;
-    } else if (i_site == mt_length - 1) {
-      neighb = head->site_->mt_->lattice_[i_site - 1].motor_head_;
-    } else if (head->site_->mt_->lattice_[i_site + 1].motor_head_ != nullptr) {
-      neighb = head->site_->mt_->lattice_[i_site + 1].motor_head_;
-    } else if (head->site_->mt_->lattice_[i_site - 1].motor_head_ != nullptr) {
-      neighb = head->site_->mt_->lattice_[i_site - 1].motor_head_;
-    }
-    if (!neighb->in_scratch_) {
-      neighb->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb;
-    }
-  } else if (n_neighbs == 2) {
-    POP_T *neighb_one, *neighb_two;
-    int i_site = head->site_->index_;
-    neighb_one = head->site_->mt_->lattice_[i_site + 1].motor_head_;
-    if (!neighb_one->in_scratch_) {
-      neighb_one->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb_one;
-    }
-    neighb_two = head->site_->mt_->lattice_[i_site - 1].motor_head_;
-    if (!neighb_two->in_scratch_) {
-      neighb_two->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb_two;
-    }
-  }
-}
-
-void KinesinManagement::SaveNeighbsToScratch(SITE_T *site) {
-
-  int n_neighbs = site->GetKIF4ANeighborCount();
-  if (n_neighbs == 1) {
-    POP_T *neighb;
-    int i_site = site->index_;
-    int mt_length = site->mt_->n_sites_;
-    if (i_site == 0) {
-      neighb = site->mt_->lattice_[i_site + 1].motor_head_;
-    } else if (i_site == mt_length - 1) {
-      neighb = site->mt_->lattice_[i_site - 1].motor_head_;
-    } else if (site->mt_->lattice_[i_site + 1].motor_head_ != nullptr) {
-      neighb = site->mt_->lattice_[i_site + 1].motor_head_;
-    } else if (site->mt_->lattice_[i_site - 1].motor_head_ != nullptr) {
-      neighb = site->mt_->lattice_[i_site - 1].motor_head_;
-    }
-    if (!neighb->in_scratch_) {
-      neighb->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb;
-    }
-  } else if (n_neighbs == 2) {
-    POP_T *neighb_one, *neighb_two;
-    int i_site = site->index_;
-    neighb_one = site->mt_->lattice_[i_site + 1].motor_head_;
-    if (!neighb_one->in_scratch_) {
-      neighb_one->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb_one;
-    }
-    neighb_two = site->mt_->lattice_[i_site - 1].motor_head_;
-    if (!neighb_two->in_scratch_) {
-      neighb_two->in_scratch_ = true;
-      scratch_[n_scratched_++] = neighb_two;
-    }
-  }
-}
-
 void KinesinManagement::ReportExecutionOf(std::string event_name) {
 
   if (not verbose_) {
@@ -1588,8 +1214,6 @@ void KinesinManagement::ReportFailureOf(std::string event_name) {
 
 void KinesinManagement::KMC_Bind_I(SITE_T *site) {
 
-  // Save neighbors of unbound site to scratch_ before modifying them
-  SaveNeighbsToScratch(site);
   // Get random free motor
   Kinesin *motor = GetFreeMotor();
   // Update site details
@@ -1659,8 +1283,6 @@ void KinesinManagement::KMC_Bind_I_Tethered() {
 */
 void KinesinManagement::KMC_Bind_ATP(POP_T *head) {
 
-  // Save this entry to scratch before modifying it
-  SaveToScratch(head);
   // Update motor head
   head->ligand_ = "ATP";
   // If head is leading, change conformation
@@ -1669,100 +1291,31 @@ void KinesinManagement::KMC_Bind_ATP(POP_T *head) {
   }
 }
 
-/* FIXME delete this jawn once u verify it isn't needed
-void KinesinManagement::KMC_Bind_ATP_Tethered(int x_dub) {
-
-  Update_Bound_NULL_Teth();
-  //	printf("%i bound_NULL\n", n_bound_NULL_);
-  int n_bound = n_bound_NULL_tethered_[x_dub];
-  if (n_bound > 0) {
-    // Get a random bound_NULL motor
-    int i_entry = properties_->gsl.GetRanInt(n_bound);
-    Kinesin::head *head = bound_NULL_tethered_[x_dub][i_entry];
-    // Verify correctness
-    if (head->ligand_ != "NULL" || head->site_ == nullptr) {
-      printf("Error in KMC_Bind_ATP_Teth()\n");
-      exit(1);
-    }
-    // Update motor head
-    head->ligand_ = "ATP";
-    // If head is leading, change conformation
-    if (!head->trailing_) {
-      // If endpausing is active, don't step off MT boundary sites
-      if (parameters_->motors.endpausing_active) {
-        Microtubule *mt = head->site_->mt_;
-        int i_site = head->site_->index_;
-        int dx = mt->delta_x_;
-        int mt_length = mt->n_sites_ - 1;
-        if (!(i_site == 0 && dx == -1) && !(i_site == mt_length && dx == 1)) {
-          head->motor_->ChangeConformation();
-        }
-      } else
-        head->motor_->ChangeConformation();
-    }
-    head->motor_->UpdateExtension();
-  } else {
-    printf("Failed to Bind_ATP_Teth: no bound_NULL motors.\n");
-    //		exit(1);
-  }
-}
-*/
-
 void KinesinManagement::KMC_Hydrolyze(POP_T *head) {
 
   // Save this entry to scratch before modifying it
-  SaveToScratch(head);
   head->ligand_ = "ADPP";
 }
 
 void KinesinManagement::KMC_Bind_II(POP_T *head) {
 
-  if (head->motor_->heads_active_ == 1) {
-    // Save active head to scratch before binding
-    SaveToScratch(head->GetOtherHead());
-    // Verify that proposed site is unoccupied
-    Tubulin *dock_site = head->motor_->GetDockSite();
-    // Save neighbors of dock_site to scratch_ before modifying them
-    SaveNeighbsToScratch(dock_site);
-    if (dock_site == nullptr) {
-      printf("Error in KMC_Bind_II(): Dock is occupied!!\n");
-      exit(1);
-    }
-    // Update site
-    dock_site->motor_head_ = head;
-    dock_site->occupied_ = true;
-    // Update motor
-    head->site_ = dock_site;
-    head->state_ = "old_docked_boi";
-    head->ligand_ = "NULL";
-    head->motor_->heads_active_++;
-    properties_->microtubules.FlagForUpdate();
-  } else if (head->stored_dock_site_ != nullptr) {
-    printf("YO YO YO THE STORED SITE WORKS\n");
-    // Save active head to scratch before binding
-    SaveToScratch(head->GetOtherHead());
-    Tubulin *dock_site = head->stored_dock_site_;
-    if (dock_site->occupied_) {
-      printf("Error in Bind_II: option 2\n");
-      exit(1);
-    }
-    SaveNeighbsToScratch(dock_site);
-    // Update site
-    dock_site->motor_head_ = head;
-    dock_site->occupied_ = true;
-    // Update motor
-    head->site_ = dock_site;
-    head->ligand_ = "NULL";
-    head->motor_->heads_active_++;
-    // Save newly-bound head to scratch
-    SaveToScratch(head);
-    head->stored_dock_site_ = nullptr;
-    properties_->microtubules.FlagForUpdate();
-  } else {
-    printf("failed to Bind_II\n");
-    exit(1);
+  // Verify that proposed site is unoccupied
+  Tubulin *dock_site = head->motor_->GetDockSite();
+  if (dock_site == nullptr) {
+    printf("woah.\n");
+    return;
   }
+  // Update site
+  dock_site->motor_head_ = head;
+  dock_site->occupied_ = true;
+  // Update motor
+  head->site_ = dock_site;
+  head->state_ = "old_docked_boi";
+  head->ligand_ = "NULL";
+  head->motor_->heads_active_++;
+  properties_->microtubules.FlagForUpdate();
 }
+
 /*
 void KinesinManagement::KMC_Bind_II_Tethered(int x_dub) {
 
@@ -1800,78 +1353,45 @@ void KinesinManagement::KMC_Bind_II_Tethered(int x_dub) {
 */
 void KinesinManagement::KMC_Unbind_II(POP_T *head) {
 
-  if (head->motor_->heads_active_ == 2) {
-    // Save entry to scratch before we modify it
-    SaveToScratch(head->GetOtherHead());
-    SaveNeighbsToScratch(head->site_);
-    // Update site
-    head->site_->occupied_ = false;
-    head->site_->motor_head_ = nullptr;
-    // Update motor
-    head->site_ = nullptr;
-    head->ligand_ = "ADP";
-    head->motor_->heads_active_--;
-    properties_->microtubules.FlagForUpdate();
-    if (head->motor_->frustrated_) {
-      if (head->trailing_) {
-        head->motor_->ChangeConformation();
-      } else {
-        head->motor_->frustrated_ = false;
-      }
-    }
-    if (head->motor_->frustrated_) {
-      printf("somethin wicked in motor unbind_ii\n");
-      exit(1);
-    }
-  } else {
+  if (head->motor_->heads_active_ != 2) {
     printf("WACK in unbind_ii\n");
-    // exit(1);
+    exit(1);
   }
+  // Update site
+  head->site_->occupied_ = false;
+  head->site_->motor_head_ = nullptr;
+  // Update motor
+  head->site_ = nullptr;
+  head->ligand_ = "ADP";
+  head->motor_->heads_active_--;
+  head->RelieveFrustration();
+  properties_->microtubules.FlagForUpdate();
 }
 
 void KinesinManagement::KMC_Unbind_I(POP_T *head) {
 
-  if (head->motor_->heads_active_ == 1) {
-    POP_T *docked_head = head->motor_->StoreDockSite();
-    if (docked_head != nullptr) {
-      SaveToScratch(docked_head);
-    }
-    SaveNeighbsToScratch(head->site_);
-    // Update site
-    head->site_->occupied_ = false;
-    head->site_->motor_head_ = nullptr;
-    // Update motor
-    head->site_ = nullptr;
-    head->ligand_ = "ADP";
-    head->motor_->heads_active_--;
-    head->motor_->mt_ = nullptr;
-    properties_->microtubules.FlagForUpdate();
-    // If this motor has a satellite xlink, untether it
-    if (head->motor_->xlink_ != nullptr) {
-      if (head->motor_->xlink_->heads_active_ == 0) {
-        head->motor_->UntetherSatellite();
-      } else {
-        printf("Error in KMC_Unbind_I: tethed to bound xlink?\n");
-        exit(1);
-      }
-    }
-    if (head->motor_->heads_active_ == 0) {
-      // Remove this motor from active_, replace with last entry
-      int this_index = head->motor_->active_index_;
-      if (this_index != n_active_ - 1) {
-        Kinesin *last_entry = active_[n_active_ - 1];
-        active_[this_index] = last_entry;
-        last_entry->active_index_ = this_index;
-      }
-      n_active_--;
-    }
-  }
-  /*
-  else {
-    printf("WHUT\n");
+  if (head->motor_->heads_active_ != 1) {
+    printf("nawp. nuh-uh. KMC_Unbind_I()\n");
     exit(1);
   }
-  */
+  // Update site
+  head->site_->occupied_ = false;
+  head->site_->motor_head_ = nullptr;
+  // Update motor
+  head->site_ = nullptr;
+  head->ligand_ = "ADP";
+  head->motor_->heads_active_--;
+  head->motor_->mt_ = nullptr;
+  head->motor_->UntetherSatellite();
+  properties_->microtubules.FlagForUpdate();
+  // Remove this motor from active_, replace with last entry
+  int this_index = head->motor_->active_index_;
+  if (this_index != n_active_ - 1) {
+    Kinesin *last_entry = active_[n_active_ - 1];
+    active_[this_index] = last_entry;
+    last_entry->active_index_ = this_index;
+  }
+  n_active_--;
 }
 
 /*

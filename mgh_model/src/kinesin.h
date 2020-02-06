@@ -49,6 +49,15 @@ public:
       else
         return &motor_->head_one_;
     }
+    void RelieveFrustration() {
+      if (motor_->frustrated_) {
+        if (trailing_) {
+          motor_->ChangeConformation();
+        } else {
+          motor_->frustrated_ = false;
+        }
+      }
+    }
     int GetAffinity();
     int GetKIF4ANeighbCount();
   };

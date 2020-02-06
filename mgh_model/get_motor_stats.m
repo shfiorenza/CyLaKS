@@ -1,13 +1,13 @@
 function mot_stats = get_motor_stats(sim_name)
 
 % Often-changed variables
-n_sites = 50000;
+n_sites = 1250;
 simName = sim_name;
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 40000000;
-n_datapoints = 10000;
+n_steps = 400000000;
+n_datapoints = 100000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 time_cutoff = time_per_datapoint; %0.3;    %in seconds
@@ -37,6 +37,17 @@ starting_datapoint = zeros([n_mts*n_sites 1]) - 1;
 for i_data = starting_point:1:n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
+        future_IDs = motor_data(:, i_mt, i_data + 1);
+        endtag_boundary = 1;
+        % Determine end-tag region; ignore motors that terminate here
+        for i_site=1:n_sites
+           motor_ID = future_IDs(i_site);
+           if motor_ID ~= -1
+               endtag_boundary = i_site + 1;
+           else
+               break;    
+           end
+        end
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -63,7 +74,7 @@ for i_data = starting_point:1:n_datapoints - 1
             end
         end
         % Check one datapoint into the future to see if any motors unbound
-        future_IDs = motor_data(:, i_mt, i_data + 1);
+
         n_deleted = 0;
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
@@ -79,12 +90,13 @@ for i_data = starting_point:1:n_datapoints - 1
                 start_datapoint = starting_datapoint(motor_ID);
                 delta_t = abs(i_data - start_datapoint);
                 run_time = delta_t * time_per_datapoint;
+                velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if run_time >= time_cutoff
+                if run_time > time_cutoff && end_site(1) > endtag_boundary
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
-                    velocities(n_runs) = run_length / run_time * 1000; % convert to nm/s
+                    velocities(n_runs) = velocity;  
                 end
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
@@ -108,8 +120,6 @@ runlengths = runlengths - min_run;
 % fit distribution of shifted run lengths
 run_dist = fitdist(runlengths, 'exponential');
 mean_run = run_dist.mu + min_run;
-conf_inv_run = paramci(run_dist);
-sigma_run = abs(conf_inv_run(2) - conf_inv_run(1)) / 2;
 
 % matlab's exponential fit always goes to zero; offset it appropriately
 min_time = min(lifetimes);
@@ -118,15 +128,10 @@ lifetimes = lifetimes - min_time;
 time_dist = fitdist(lifetimes, 'exponential');
 % get mean run time
 mean_time = time_dist.mu + min_time;
-% get confidence interval of mean run time
-conf_inv_time = paramci(time_dist);
-% calculate sigma
-sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
 
 vel_dist = fitdist(velocities, 'normal');
 mean_vel = vel_dist.mu;
-conf_inv_vel = paramci(vel_dist);
-sigma_vel = abs(conf_inv_vel(2) - conf_inv_vel(1)) / 2;
+
 
 mot_stats(1) = mean_run;
 mot_stats(2) = mean_time;

@@ -45,7 +45,7 @@ for i_data = starting_point:1:n_datapoints - 1
         for i_site=1:n_sites
            motor_ID = future_IDs(i_site);
            if motor_ID ~= -1
-               endtag_boundary = i_site + 10;
+               endtag_boundary = i_site + 1;
            else
                break;    
            end

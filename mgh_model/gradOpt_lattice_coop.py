@@ -12,12 +12,12 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization_TRES"
+sim_name_base = "kif4a_coop_optimization_quattro"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
 param_label = ["lattice_coop_amp", "lattice_coop_range"]
-param_initialVal =  np.array([7.1337, 580])
+param_initialVal = np.array([7.1337, 580])
 param_bounds = ([1, 10], [25, 750])
 step_size = [0.5, 10]
 
@@ -33,7 +33,7 @@ exp_err_lifetimes = [0.56, 0.75, 1.8, 5.9, 2.6, 3.9]
 exp_velocities = [598.6, 709.9, 360.8, 311.2, 308.52, 180.7]
 exp_err_velocities = [76, 110, 49, 78, 40, 38]
 
-# Create logger to record history of optimizer 
+# Create logger to record history of optimizer
 log = logging.getLogger()
 log.setLevel(logging.DEBUG)
 format = logging.Formatter('%(asctime)s - %(message)s', '%Y-%m-%d %H:%M:%S')
@@ -41,12 +41,14 @@ format = logging.Formatter('%(asctime)s - %(message)s', '%Y-%m-%d %H:%M:%S')
 terminal_log_handler = logging.StreamHandler()
 terminal_log_handler.setFormatter(format)
 log.addHandler(terminal_log_handler)
-# Add handler that prints log to file 
+# Add handler that prints log to file
 file_log_handler = logging.FileHandler(log_file)
 file_log_handler.setFormatter(format)
 log.addHandler(file_log_handler)
 
 call_no = 0
+
+
 def kif4a_coop_scaling(params):
     global call_no
     # Keep track of which iteration of the gradient descent algorithm we're on
@@ -60,7 +62,8 @@ def kif4a_coop_scaling(params):
     # We must ensure that the coop range is divisible by 10
     rounded_range = round(params[1], -1)
     if rounded_range != params[1]:
-        log.info(" **** Coop range ROUNDED from {} to {} ****".format(params[1], rounded_range))
+        log.info(
+            " **** Coop range ROUNDED from {} to {} ****".format(params[1], rounded_range))
         params[1] = rounded_range
     # Make names, param files, and execution commands for sims with different kif4a concentrations
     sim_names = []
@@ -69,51 +72,64 @@ def kif4a_coop_scaling(params):
     # Set up order so that largest sim (highest conc) runs first -- not sure if this actually matters
     for conc in kif4a_conc:
         # Generate unique simulation name for this iteration, sub-iteration, and kif4a concentration
-        sim_name = sim_name_base + "_" + repr(iteration_no) + "." + repr(sub_no) + "_" + repr(conc)
+        sim_name = sim_name_base + "_" + \
+            repr(iteration_no) + "." + repr(sub_no) + "_" + repr(conc)
         sim_names.append(sim_name)
         # Name parameter file in the same fashion
         param_file = "temp_params_" + sim_name + ".yaml"
         # Copy base parameter file and make desired parameter edits
         call("cp " + param_file_base + " " + param_file, shell=True)
         yaml_edit = "yq w -i " + param_file + " motors."
-        call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001), shell=True) # Convert conc from pM to nM
-        for i in range(len(params)): 
-            call(yaml_edit + param_label[i] + " " + repr(params[i]), shell=True)
+        call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
+             shell=True)  # Convert conc from pM to nM
+        for i in range(len(params)):
+            call(yaml_edit + param_label[i] +
+                 " " + repr(params[i]), shell=True)
         # Add parameter file to param_files array so we can rm them later
         param_files.append(param_file)
         # Generate command to execute this simulation
         exe_cmd = "./sim " + param_file + " " + sim_name
-        # Add command to exe_commands array so we can launch them all at once 
+        # Add command to exe_commands array so we can launch them all at once
         exe_commands.append(exe_cmd)
     # Launch all sims (with different kif4a concentrations) at once
-    sims = [ Popen(sim_exe, shell=True) for sim_exe in exe_commands ] 
+    sims = [Popen(sim_exe, shell=True) for sim_exe in exe_commands]
     # Wait for all simulations to finish
-    for sim in sims: sim.wait()
+    for sim in sims:
+        sim.wait()
     # Calculate errors
     weighted_errors = []
     for i_conc in range(len(kif4a_conc)):
         kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
-        err_runlength = (exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
+        err_runlength = (
+            exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
         log.info("      Runlength error: {}".format(err_runlength))
-        err_lifetime = (exp_lifetimes[i_conc] - kif4a_stats[0][1]) / exp_err_lifetimes[i_conc]
+        err_lifetime = (
+            exp_lifetimes[i_conc] - kif4a_stats[0][1]) / exp_err_lifetimes[i_conc]
         log.info("      Lifetime error: {}".format(err_lifetime))
-        err_velocity = (exp_velocities[i_conc] - kif4a_stats[0][2]) / exp_err_velocities[i_conc]
+        err_velocity = (
+            exp_velocities[i_conc] - kif4a_stats[0][2]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
-        weighted_errors.append(err_runlength**2 + err_lifetime**2 + err_velocity**2)
+        weighted_errors.append(
+            err_runlength**2 + err_lifetime**2 + err_velocity**2)
     log.info("Weighted errors: {}".format(weighted_errors))
-    # Move log file into output folder to keep a record of all runs 
+    # Move log file into output folder to keep a record of all runs
     call("mv *.log grad_descent_output", shell=True)
     # Remove temporary parameter files
-    for file in param_files: call("rm " + file, shell=True)
-    call_no+=1
+    for file in param_files:
+        call("rm " + file, shell=True)
+    call_no += 1
     return weighted_errors
 
+
 already_made = os.path.isfile("./sim")
-if not already_made: call("make -j12 CFG=release sim", shell=True)
+if not already_made:
+    call("make -j12 CFG=release sim", shell=True)
 ready_for_output = os.path.isfile("/grad_descent_output/")
-if not ready_for_output: call("mkdir grad_descent_output", shell=True)
+if not ready_for_output:
+    call("mkdir grad_descent_output", shell=True)
 log.info("Start of gradient descent parameter optimization")
 log.info("Initial parameters: {}".format(param_initialVal))
-res = least_squares(kif4a_coop_scaling, param_initialVal, bounds=param_bounds, diff_step=step_size, verbose=2, xtol=None)
+res = least_squares(kif4a_coop_scaling, param_initialVal,
+                    bounds=param_bounds, diff_step=step_size, verbose=2, xtol=None)

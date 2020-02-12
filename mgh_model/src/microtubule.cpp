@@ -24,27 +24,45 @@ void Microtubule::SetParameters() {
     minus_end_ = n_sites_ - 1;
     delta_x_ = -1;
     mt_index_adj_ = index_ + 1; // FIXME
-    neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
+    if (mt_index_adj_ < parameters_->microtubules.count) {
+      neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
+    } else {
+      neighbor_ = nullptr;
+    }
   } else if (index_ % 2 == 1) {
     polarity_ = 1;
     plus_end_ = n_sites_ - 1;
     minus_end_ = 0;
     delta_x_ = 1;
     mt_index_adj_ = index_ - 1; // FIXME
-    neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
+    if (mt_index_adj_ > 0) {
+      neighbor_ = &properties_->microtubules.mt_list_[mt_index_adj_];
+    } else {
+      neighbor_ = nullptr;
+    }
   }
-  double big_l = n_sites_ * parameters_->microtubules.site_size; // in nm
-  double radius = parameters_->microtubules.radius;              // in nm
-  double height = parameters_->microtubules.elevation;           // in nm
-  double eta = parameters_->eta;                                 // in um^-2!!
+  double site_size{parameters_->microtubules.site_size};
+  double big_l = n_sites_ * site_size;                 // in nm
+  double radius = parameters_->microtubules.radius;    // in nm
+  double height = parameters_->microtubules.elevation; // in nm
+  double eta = parameters_->eta;                       // in um^-2 (!!!)
   // see radhika sliding paper for any of this to make sense
   // divide by 10^6 to convert eta to nm^-2
-  double numerator = (2 * 3.14159 * big_l * eta) / 1e6;
+  double numerator = (2 * 3.14159 * big_l * eta) * 1e-6;
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
-  printf("\nGamma is %g (pN*s)/nm for mt #%i\n", gamma_, index_);
-  printf("    D = %g um^2/s\n", (parameters_->kbT / gamma_) * 1e-6);
-  printf("    (Length is %i sites)\n", n_sites_);
+  double tau{site_size * site_size / (2 * parameters_->kbT / gamma_)};
+  if (tau > parameters_->delta_t) {
+    steps_per_iteration_ = (int)round(tau / parameters_->delta_t);
+  } else {
+    steps_per_iteration_ = 1;
+  }
+  properties_->wallace.Log("\nFor microtubule #%i:\n", index_);
+  properties_->wallace.Log("    Gamma = %g (pN*s)/nm\n", gamma_);
+  properties_->wallace.Log("    D = %g um^2/s\n",
+                           (parameters_->kbT / gamma_) * 1e-6);
+  properties_->wallace.Log("    Tau = %g seconds\n", tau);
+  properties_->wallace.Log("    (%i steps per update)\n", steps_per_iteration_);
 }
 
 void Microtubule::GenerateLattice() {

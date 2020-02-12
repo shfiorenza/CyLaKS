@@ -20,7 +20,8 @@ public:
   int n_sites_; // Number of tubulin sites on MT
   int coord_;   // Absolute coordinate of left-most edge of MT
 
-  double gamma_; // in units of pN / nm ???
+  double gamma_; // in units of (pN*s) / nm
+  int steps_per_iteration_{0};
 
   Microtubule *neighbor_ = nullptr; // FIXME for 1+ neighbors
 

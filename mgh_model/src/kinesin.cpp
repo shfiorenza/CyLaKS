@@ -1,12 +1,54 @@
 #include "kinesin.h"
 #include "master_header.h"
 
+int Kinesin::head::GetAffinity() {
+
+  int n_affs{motor_->properties_->kinesin4.n_affinities_};
+  int range{(int)motor_->parameters_->motors.lattice_coop_range};
+  int bin_size{0};
+  if (n_affs > 1) {
+    bin_size = range / (n_affs - 1);
+  }
+
+  for (int delta{1}; delta <= range; delta++) {
+    int i_fwd{site_->index_ + delta};
+    if (i_fwd > 0 and i_fwd < site_->mt_->n_sites_) {
+      if (site_->mt_->lattice_[i_fwd].motor_head_ != nullptr) {
+        if (site_->mt_->lattice_[i_fwd].motor_head_->motor_ != motor_) {
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+    int i_bck{site_->index_ - delta};
+    if (i_bck > 0 and i_bck < site_->mt_->n_sites_) {
+      if (site_->mt_->lattice_[i_bck].motor_head_ != nullptr) {
+        if (site_->mt_->lattice_[i_bck].motor_head_->motor_ != motor_) {
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+  }
+  return (n_affs - 1);
+}
+
+int Kinesin::head::GetKIF4ANeighbCount() {
+
+  if (site_ == nullptr)
+    return 0;
+  else {
+    int n_neighbs = site_->GetKIF4ANeighborCount();
+    if (motor_->heads_active_ == 2)
+      n_neighbs--;
+    return n_neighbs;
+  }
+}
+
 Kinesin::Kinesin() {}
 
 void Kinesin::Initialize(system_parameters *parameters,
-                         system_properties *properties, int ID) {
+                         system_properties *properties, int id) {
 
-  ID_ = ID;
+  id_ = id;
   parameters_ = parameters;
   properties_ = properties;
   SetParameters();
@@ -82,9 +124,14 @@ void Kinesin::CalculateCutoffs() {
       U = (k_spring_ / 2) * dr * dr;
     double boltzmann_weight = exp(U / (2 * kbT));
     if (boltzmann_weight > 100) {
-      dist_cutoff_ = x_dub / 2;
+      teth_cutoff_ = x_dub / 2;
       break;
     }
+  }
+  if (!parameters_->motors.tethers_active) {
+    rest_dist_ = 0;
+    comp_cutoff_ = 0;
+    teth_cutoff_ = 0;
   }
 }
 
@@ -92,8 +139,8 @@ void Kinesin::InitializeNeighborLists() {
 
   int n_mts = parameters_->microtubules.count;
   // Serialize this bitch so we just roll one random number
-  neighbor_xlinks_.resize(n_mts * (2 * dist_cutoff_ + 1));
-  neighbor_sites_.resize(n_mts * (2 * dist_cutoff_ + 1));
+  neighbor_xlinks_.resize(n_mts * (2 * teth_cutoff_ + 1));
+  neighbor_sites_.resize(n_mts * (2 * teth_cutoff_ + 1));
 }
 
 void Kinesin::InitializeWeightLookup() {
@@ -101,9 +148,9 @@ void Kinesin::InitializeWeightLookup() {
   double r_y = parameters_->microtubules.y_dist / 2;
   double kbT = parameters_->kbT;
   double site_size = parameters_->microtubules.site_size;
-  weight_lookup_.resize(2 * dist_cutoff_ + 1);
-  weight_alt_lookup_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  weight_lookup_.resize(2 * teth_cutoff_ + 1);
+  weight_alt_lookup_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     double cosine = r_x / r;
@@ -127,9 +174,9 @@ void Kinesin::InitializeExtensionLookup() {
 
   double r_y = parameters_->microtubules.y_dist / 2;
   double site_size = parameters_->microtubules.site_size;
-  cosine_lookup_.resize(2 * dist_cutoff_ + 1);
-  extension_lookup_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  cosine_lookup_.resize(2 * teth_cutoff_ + 1);
+  extension_lookup_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     cosine_lookup_[x_dub] = r_x / r;
@@ -139,11 +186,17 @@ void Kinesin::InitializeExtensionLookup() {
 
 void Kinesin::InitializeSteppingProbabilities() {
 
+  // Short-range cooperativity
+  // ! Assume lambda = 1 & 0 for stepping from & away from neighbors
+  double E_int = -1 * parameters_->motors.interaction_energy;
+  // If we step AWAY from a single neighbor, overall E increases
+  // Due to our assumption about lambda, same weight applies to
+  // stepping from a neighbor TO a neighbor
+  p_step_fr_neighb_ = exp(E_int);
+  // Next, handle applied force
   double r_y = parameters_->microtubules.y_dist / 2;
-  double kbT = parameters_->kbT;
   double site_size = parameters_->microtubules.site_size;
   double f_stall = parameters_->motors.stall_force;
-  // First, handle applied force
   if (parameters_->motors.applied_force > 0) {
     double f_app = parameters_->motors.applied_force;
     /*
@@ -158,13 +211,15 @@ void Kinesin::InitializeSteppingProbabilities() {
     double f_x = f_app * cosine;
     double p = sqrt(1 - (f_x / f_stall));
     applied_p_step_ = p;
-    if (ID_ == 0)
+    if (id_ == 0)
       printf("p_step scaled from 1 to %g\n", applied_p_step_);
+  } else {
+    applied_p_step_ = 1.0;
   }
   // Next, handle tethering forces
-  p_step_to_rest_.resize(2 * dist_cutoff_ + 1);
-  p_step_fr_rest_.resize(2 * dist_cutoff_ + 1);
-  for (int x_dub = 0; x_dub <= 2 * dist_cutoff_; x_dub++) {
+  p_step_to_rest_.resize(2 * teth_cutoff_ + 1);
+  p_step_fr_rest_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub = 0; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x = (double)x_dub * site_size / 2;
     double r = sqrt(r_x * r_x + r_y * r_y);
     double cosine = r_x / r;
@@ -185,7 +240,7 @@ void Kinesin::InitializeSteppingProbabilities() {
     } else if (x_dub <= 2 * comp_cutoff_) {
       p_step_to_rest_[x_dub] = p;
       p_step_fr_rest_[x_dub] = 0;
-    } else if (x_dub < 2 * dist_cutoff_ - 1) {
+    } else if (x_dub < 2 * teth_cutoff_ - 1) {
       p_step_to_rest_[x_dub] = p;
       p_step_fr_rest_[x_dub] = p;
     } else {
@@ -236,15 +291,64 @@ Kinesin::head *Kinesin::GetDockedHead() {
   }
 }
 
+Kinesin::head *Kinesin::StoreDockSite() {
+
+  if (heads_active_ == 1) {
+    int i_dock = GetDockedCoordinate() - mt_->coord_;
+    Tubulin *dock = &mt_->lattice_[i_dock];
+    if (dock->occupied_) {
+      return nullptr;
+    } else {
+      head *docked_head = GetDockedHead();
+      docked_head->stored_dock_site_ = dock;
+      return docked_head;
+    }
+  } else {
+    printf("error; cannot store dock site\n");
+    exit(1);
+  }
+}
+
+Tubulin *Kinesin::GetDockSite() {
+
+  if (heads_active_ != 1) {
+    printf("err 1 in Kinesin::GetDockSite\n");
+    printf("*** EXITING ***\n");
+    exit(1);
+  }
+  Kinesin::head *active_head = GetActiveHead();
+  if (active_head->ligand_ != "ADPP") {
+    printf("err 2 in Kinesin::GetDockSite\n");
+    printf("*** EXITING ***\n");
+    exit(1);
+  }
+  int i_dock{-1};
+  if (active_head->trailing_) {
+    i_dock = active_head->site_->index_ + mt_->delta_x_;
+  } else {
+    i_dock = active_head->site_->index_ - mt_->delta_x_;
+  }
+  if (i_dock >= 0 and i_dock < mt_->n_sites_) {
+    Tubulin *dock_site = &mt_->lattice_[i_dock];
+    if (dock_site->occupied_) {
+      return nullptr;
+    } else {
+      return dock_site;
+    }
+  } else {
+    return nullptr;
+  }
+}
+
 double Kinesin::GetStalkCoordinate() {
 
   if (heads_active_ == 1) {
     Tubulin *site = GetActiveHead()->site_;
     double site_coord = site->index_ + mt_->coord_;
     if (GetActiveHead()->trailing_) {
-      return site_coord + ((double)mt_->delta_x_ / 2);
+      return site_coord + ((double)mt_->delta_x_) / 2;
     } else {
-      return site_coord - ((double)mt_->delta_x_ / 2);
+      return site_coord - ((double)mt_->delta_x_) / 2;
     }
   } else if (heads_active_ == 2) {
     int i_one = head_one_.site_->index_;
@@ -278,54 +382,66 @@ double Kinesin::GetDockedCoordinate() {
 
 void Kinesin::ChangeConformation() {
 
-  if (!tethered_) {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      if (parameters_->motors.applied_force > 0) {
-        double ran = properties_->gsl.GetRanProb();
-        if (ran < applied_p_step_) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      } else {
-        head_one_.trailing_ = !head_one_.trailing_;
-        head_two_.trailing_ = !head_two_.trailing_;
-      }
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
-  } else if (xlink_->heads_active_ == 0) {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      head_one_.trailing_ = !head_one_.trailing_;
-      head_two_.trailing_ = !head_two_.trailing_;
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
-  } else {
-    if (heads_active_ == 1) {
-      frustrated_ = false;
-      // Roll for conformational change
-      int dx_rest = GetDirectionTowardRest();
-      double ran = properties_->gsl.GetRanProb();
-      if (mt_->delta_x_ == dx_rest) {
-        if (ran < p_step_to_rest_[x_dist_doubled_]) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      } else {
-        if (ran < p_step_fr_rest_[x_dist_doubled_]) {
-          head_one_.trailing_ = !head_one_.trailing_;
-          head_two_.trailing_ = !head_two_.trailing_;
-        }
-      }
-    } else if (heads_active_ == 2)
-      frustrated_ = true;
-    else
-      printf("Error in Kinesin::ChangeConformation()\n");
+  if (heads_active_ == 0) {
+    printf("'bruh' moment in kinesin:changeConformation\n");
+    exit(1);
+  } else if (heads_active_ == 2) {
+    // ? Which of these is more physical?
+    // Frustrated makes detailed balance easier, but ...
+    //// UnbindTrailingHead();
+    frustrated_ = true;
+    return;
   }
+  frustrated_ = false;
+  int i_site = GetActiveHead()->site_->index_;
+  if (parameters_->motors.endpausing_active and i_site == mt_->plus_end_) {
+    return;
+  }
+  double p_step{1.0};
+  p_step *= applied_p_step_;
+  if (tethered_) {
+    // Motors tethered to satellite xlinks behave as if untethered
+    if (xlink_->heads_active_ > 0) {
+      int dx_rest = GetDirectionTowardRest();
+      if (mt_->delta_x_ == dx_rest) {
+        p_step *= p_step_to_rest_[x_dist_doubled_];
+      } else {
+        p_step *= p_step_fr_rest_[x_dist_doubled_];
+      }
+    }
+  }
+  if (i_site != mt_->minus_end_) {
+    if (mt_->lattice_[i_site - mt_->delta_x_].motor_head_ != nullptr) {
+      p_step *= p_step_fr_neighb_;
+    }
+  }
+  double ran{0.0};
+  if (p_step < 1.0) {
+    ran = properties_->gsl.GetRanProb();
+  }
+  if (ran < p_step) {
+    head_one_.trailing_ = !head_one_.trailing_;
+    head_two_.trailing_ = !head_two_.trailing_;
+  }
+}
+
+void Kinesin::UnbindTrailingHead() {
+
+  head *trailing_head{nullptr};
+  if (head_one_.trailing_) {
+    trailing_head = &head_one_;
+  } else {
+    trailing_head = &head_two_;
+  }
+  // Update site
+  trailing_head->site_->occupied_ = false;
+  trailing_head->site_->motor_head_ = nullptr;
+  // Update motor
+  trailing_head->site_ = nullptr;
+  trailing_head->ligand_ = "ADP";
+  trailing_head->state_ = "ripped off";
+  trailing_head->GetOtherHead()->state_ = "solo stepper";
+  heads_active_--;
 }
 
 bool Kinesin::IsStalled() {
@@ -348,8 +464,6 @@ bool Kinesin::IsStalled() {
       front_head = &head_two_;
     else
       front_head = &head_one_;
-    //		if(front_head->ligand_ != "ATP") return false;
-    //		else{
     int i_front = front_head->site_->index_;
     Microtubule *mt = front_head->site_->mt_;
     int i_plus = mt->plus_end_;
@@ -358,7 +472,6 @@ bool Kinesin::IsStalled() {
       return true;
     else
       return mt->lattice_[i_front + dx].occupied_;
-    //		}
   }
 }
 
@@ -367,7 +480,7 @@ bool Kinesin::AtCutoff() {
   int dx = mt_->delta_x_;
   int drest = GetDirectionTowardRest();
 
-  if ((x_dist_doubled_ >= (2 * dist_cutoff_ - 1) && dx == -drest) ||
+  if ((x_dist_doubled_ >= (2 * teth_cutoff_ - 1) && dx == -drest) ||
       (x_dist_doubled_ <= (2 * comp_cutoff_ + 1) && dx == -drest))
     return true;
   else
@@ -387,7 +500,7 @@ void Kinesin::UpdateNeighborSites() {
       int mt_length = mt->n_sites_;
       double mt_coord = mt->coord_;
       int i_anchor = anchor_coord - mt_coord;
-      for (int dx = -(dist_cutoff_ + 1); dx <= (dist_cutoff_ + 1); dx++) {
+      for (int dx = -(teth_cutoff_ + 1); dx <= (teth_cutoff_ + 1); dx++) {
         int i_site = i_anchor + dx;
         // Start index at first site (0) if site index is <= 0
         if (i_site < 0) {
@@ -401,7 +514,7 @@ void Kinesin::UpdateNeighborSites() {
           double site_coord = i_site + neighbor->mt_->coord_;
           double x = fabs(anchor_coord - site_coord);
           int x_dub = 2 * x;
-          if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * dist_cutoff_ &&
+          if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * teth_cutoff_ &&
               neighbor->occupied_ == false) {
             neighbor_sites_[n_neighbor_sites_] = neighbor;
             n_neighbor_sites_++;
@@ -427,8 +540,8 @@ void Kinesin::UpdateNeighborXlinks() {
       Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
       int mt_length = mt->n_sites_;
       int i_stalk = stalk_coord - mt_->coord_;
-      // Only scan over sites within +/- dist_cutoff_
-      for (int dx = -(dist_cutoff_ + 1); dx <= (dist_cutoff_ + 1); dx++) {
+      // Only scan over sites within +/- teth_cutoff_
+      for (int dx = -(teth_cutoff_ + 1); dx <= (teth_cutoff_ + 1); dx++) {
         int i_site = i_stalk + dx;
         // Start index at first site (0) if site index is <= 0
         if (i_site < 0) {
@@ -444,7 +557,7 @@ void Kinesin::UpdateNeighborXlinks() {
             double anchor_coord = xlink->GetAnchorCoordinate();
             double x = fabs(anchor_coord - stalk_coord);
             int x_dub = 2 * x;
-            if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * dist_cutoff_ &&
+            if (x_dub >= 2 * comp_cutoff_ && x_dub <= 2 * teth_cutoff_ &&
                 xlink->tethered_ == false) {
               if (xlink->heads_active_ == 1) {
                 neighbor_xlinks_[n_neighbor_xlinks_] = xlink;
@@ -468,7 +581,7 @@ void Kinesin::UpdateNeighborXlinks() {
 
 void Kinesin::UpdateExtension() {
 
-  if (heads_active_ == 0 or !tethered_) {
+  if (heads_active_ == 0 || tethered_ == false) {
     x_dist_doubled_ = 0;
     extension_ = 0;
   } else if (xlink_->heads_active_ == 0) {
@@ -479,7 +592,7 @@ void Kinesin::UpdateExtension() {
     double anchor_coord = xlink_->GetAnchorCoordinate();
     double x_dist = fabs(anchor_coord - stalk_coord);
     x_dist_doubled_ = 2 * x_dist;
-    if (x_dist_doubled_ > 2 * dist_cutoff_ or
+    if (x_dist_doubled_ > 2 * teth_cutoff_ ||
         x_dist_doubled_ < 2 * comp_cutoff_) {
       ForceUntether();
     } else {
@@ -491,7 +604,6 @@ void Kinesin::UpdateExtension() {
 
 void Kinesin::ForceUntether() {
 
-  //  printf("untethered motor - FORCED\n");
   // Update motor
   tethered_ = false;
   x_dist_doubled_ = 0;
@@ -504,7 +616,10 @@ void Kinesin::ForceUntether() {
 
 void Kinesin::UntetherSatellite() {
 
-  if (tethered_ == true) {
+  if (!tethered_) {
+    return;
+  }
+  if (xlink_->heads_active_ == 0) {
     // Remove satellite xlink from active_, replace with last entry
     int i_last = properties_->prc1.n_active_ - 1;
     AssociatedProtein *last_entry = properties_->prc1.active_[i_last];
@@ -520,15 +635,12 @@ void Kinesin::UntetherSatellite() {
     // Update motor details
     tethered_ = false;
     xlink_ = nullptr;
-  } else {
-    printf("Error in motor UntethSatellite()\n");
-    exit(1);
   }
 }
 
 int Kinesin::GetDirectionTowardRest() {
 
-  if (tethered_) {
+  if (tethered_ == true) {
     if (xlink_->heads_active_ > 0) {
       double stalk_coord = GetStalkCoordinate();
       double rest_coord = GetRestLengthCoordinate();
@@ -582,12 +694,12 @@ double Kinesin::GetRestLengthCoordinate() {
 
 double Kinesin::GetTetherForce(Tubulin *site) {
 
-  if (tethered_ and heads_active_ > 0) {
+  if (tethered_ == true && heads_active_ > 0) {
     // Ensure we're not tethered to a satellite xlink
     if (xlink_->heads_active_ > 0) {
       UpdateExtension();
       // Make sure we didn't force an untether event
-      if (tethered_) {
+      if (tethered_ == true) {
         double force_mag;
         if (extension_ < 0)
           force_mag = extension_ * k_slack_;
@@ -603,8 +715,6 @@ double Kinesin::GetTetherForce(Tubulin *site) {
           force = force_mag * cosine_;
         else
           force = -1 * force_mag * cosine_;
-        // printf("teth force is %g for motor %i on MT %i\n", force, ID_,
-        //        mt_->index_);
         return force;
       } else
         return 0;

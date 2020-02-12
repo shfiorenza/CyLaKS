@@ -3,10 +3,6 @@ clear all;
 simNameBase = "mt_diffusion";
 mt_lengths = [125, 500, 2000]; % in n_sites
 D_expected = [1.36, 0.340, 0.0851];
-%{
-mt_lengths = [125, 250, 500, 1000, 2000, 4000]; % in n_sites
-D_expected = [1.36, 0.681, 0.340, 0.170, 0.0851, 0.0423];
-%}
 seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 n_mts = length(mt_lengths);
 n_seeds = length(seeds);
@@ -93,47 +89,16 @@ set(fig1, 'Position', [50, 50, 1500, 400]);
 taus = linspace(min_tau, max_tau, n_taus);
 
 for i_mt = 1 : n_mts
-subplot(1, n_mts, i_mt)
-errorbar(taus, MSD(i_mt, :), MSD_err(i_mt, :), 'o', 'LineWidth', 2); %, 'Color', [0 0.447 0.741])
-hold on
-plot([0 max_tau], [0 2*D_expected(i_mt)*max_tau], '--', 'LineWidth', 2); %, 'Color', [0.85 0.325 0.098]); 
-ylabel("Mean squared displacement (um^2)");
-xlabel("Tau (s)");
-if mt_lengths(i_mt) * site_size == 1
-    title(sprintf("Microtubule length = %g micron", mt_lengths(i_mt) * site_size));
-else
-    title(sprintf("Microtubule length = %g microns", mt_lengths(i_mt) * site_size));
+    subplot(1, n_mts, i_mt)
+    errorbar(taus, MSD(i_mt, :), MSD_err(i_mt, :), 'o', 'LineWidth', 2); %, 'Color', [0 0.447 0.741])
+    hold on
+    plot([0 max_tau], [0 2*D_expected(i_mt)*max_tau], '--', 'LineWidth', 2); %, 'Color', [0.85 0.325 0.098]);
+    ylabel("Mean squared displacement (um^2)");
+    xlabel("Tau (s)");
+    if mt_lengths(i_mt) * site_size == 1
+        title(sprintf("Microtubule length = %g micron", mt_lengths(i_mt) * site_size));
+    else
+        title(sprintf("Microtubule length = %g microns", mt_lengths(i_mt) * site_size));
+    end
+    legend(["Simulation data", "Theory"], 'location', 'northwest');
 end
-legend(["Simulation data", "Theory"], 'location', 'northwest');
-end
-%{
-subplot(1, 3, 2)
-errorbar(taus, MSD(3, :), MSD_err(3, :), 'o', 'LineWidth', 2, 'Color', [0.4940    0.1840    0.5560])
-hold on
-plot([0 max_tau], [0 2*D_expected(3)*max_tau], '--', 'LineWidth', 2, 'Color', [0.4660    0.6740    0.1880]); 
-ylabel("Mean squared displacement (um^2)");
-xlabel("Tau (s)");
-title(sprintf("Length = %g microns", mt_lengths(3) * site_size));
-legend(["Simulation data", "Theory"], 'location', 'northwest');
-
-subplot(1, 3, 3)
-errorbar(taus, MSD(6, :), MSD_err(6, :), 'o', 'LineWidth', 2, 'Color', [0.6350    0.0780    0.1840])
-hold on
-plot([0 max_tau], [0 2*D_expected(6)*max_tau], '--', 'LineWidth', 2, 'Color', [0.3010    0.7450    0.9330]); 
-ylabel("Mean squared displacement (um^2)");
-xlabel("Tau (s)");
-title(sprintf("Length = %g microns", mt_lengths(6) * site_size));
-legend(["Simulation data", "Theory"], 'location', 'northwest');
-%}
-%{
-for i_mt = 1 : 1 : n_mts
-    %errorbar(taus, MSD(i_mt, :), MSD_err(i_mt, :), 'LineWidth', 2, 'Color', RGBArray(i_mt,:));
-    plot(taus, MSD(i_mt, :), 'LineWidth', 2, 'Color', RGBArray(i_mt, :));
-end
-legendLabel = "Length = " + num2str(mt_lengths'* site_size, "%i") + " microns";
-legend(legendLabel, 'location', 'northwest', 'AutoUpdate', 'off');
-for i_mt = 1 : 1 : n_mts
-    plot([0 max_tau], [0 2*D_expected(i_mt)*max_tau], '--', 'LineWidth', 2, ...
-        'Color', RGBArray(i_mt, :)); 
-end
-%}

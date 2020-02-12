@@ -322,7 +322,7 @@ void Curator::InitializeSimObjects() {
   // PRC1: passive crosslinkers that can doubly-bind to overlapping MTs
   properties_->prc1.Initialize(parameters_, properties_);
   // Gsl: wrapper class for GSL library; manages random number generation
-  properties_->gsl.Initialize(parameters_, properties_);
+  properties_->gsl.Initialize(parameters_);
 }
 
 void Curator::OutputData() {
@@ -349,7 +349,7 @@ void Curator::OutputData() {
   int mt_coord_array[n_mts];
   int *mt_coord_ptr = mt_coord_array;
   // For extension statistics, data is on a per-extension basis
-  int motor_ext_cutoff = properties_->kinesin4.dist_cutoff_;
+  int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
   int motor_extension_array[2 * motor_ext_cutoff + 1];
   int *motor_extension_ptr = motor_extension_array;
   int xlink_ext_cutoff = properties_->prc1.dist_cutoff_;
@@ -402,7 +402,7 @@ void Curator::OutputData() {
       else if (site->motor_head_ != nullptr) {
         Kinesin *motor = site->motor_head_->motor_;
         occupancy_array[i_site] = motor->speciesID_;
-        motor_ID_array[i_site] = motor->ID_;
+        motor_ID_array[i_site] = motor->id_;
         xlink_ID_array[i_site] = -1;
         motor_head_status_array[i_site] = site->motor_head_->trailing_;
         if (motor->tethered_ == true) {
@@ -412,7 +412,7 @@ void Curator::OutputData() {
             tether_coord_array[i_site] = anchor_coord;
             double stalk_coord = motor->GetStalkCoordinate();
             double teth_dist = abs(anchor_coord - stalk_coord);
-            if (teth_dist > motor->dist_cutoff_) {
+            if (teth_dist > motor->teth_cutoff_) {
               Log("woah, teth dist is %g\n", teth_dist);
             }
           } else
@@ -450,10 +450,6 @@ void Curator::OutputData() {
     int max = prc1->max_neighbs_;
     xlink_extension_array[i_ext] = prc1->n_bound_ii_[max + 1][i_ext];
   }
-  // for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-  //   printf("net motor force = %g for mt #%i\n", motor_force_array[i_mt],
-  //   i_mt);
-  // }
   // Write the data to respective files one timestep at a time
   fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
   fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);

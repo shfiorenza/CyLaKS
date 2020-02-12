@@ -15,9 +15,10 @@ values = log{1,2};
 % Read in number of MTs
 n_mts = str2double(values{contains(params, "count")});
 % Read in length of each MTs
-[length_one, length_two] = values{contains(params, "length")};
+[length_one, length_two, length_three] = values{contains(params, "length")};
 mt_lengths(1) = sscanf(length_one, '%i');
 mt_lengths(2) = sscanf(length_two, '%i');
+mt_lengths(3) = sscanf(length_three, '%i');
 % Read in system parameters
 n_steps = str2double(values{contains(params, "n_steps")});
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
@@ -35,8 +36,10 @@ plus_end_velocity = zeros(length(seeds), n_datapoints);
 
 % Run through raw coord data to get overlap length at every datapoint
 for i_seed = 1:length(seeds)
-    simName = sprintf(baseName, seeds(i_seed))
-    simName = "test"
+    simName = baseName;
+    if length(seeds) > 1
+        simName = sprintf("%s_%i", baseName, seeds(i_seed));
+    end
     % Open mt coordinate file
     mt_coords_file = fopen(sprintf(fileDirectory, sprintf('%s_mt_coord.file', simName)));
     mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'int');

@@ -38,9 +38,6 @@ void MicrotubuleManagement::GenerateMicrotubules() {
   mt_list_.resize(n_mts);
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
-    // for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
-    //   PushToUnoccupied(&mt_list_[i_mt].lattice_[i_site]);
-    // }
   }
 }
 
@@ -180,11 +177,13 @@ void MicrotubuleManagement::RunDiffusion() {
   }
   int n_mts{parameters_->microtubules.count};
   bool mts_inactive{true};
+  int current_step{properties_->current_step_};
   double delta_t{parameters_->delta_t};
-  double current_time{properties_->current_step_ * delta_t};
+  double current_time{current_step * delta_t};
   // Check that at least one microtubule is active (not immobilized)
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-    if (current_time >= parameters_->microtubules.immobile_until[i_mt]) {
+    if (current_step % mt_list_[i_mt].steps_per_iteration_ == 0 and
+        current_time >= parameters_->microtubules.immobile_until[i_mt]) {
       mts_inactive = false;
     }
   }
@@ -197,39 +196,25 @@ void MicrotubuleManagement::RunDiffusion() {
   // Sum up all forces exerted on each microtubule
   double forces_summed[n_mts];
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-    forces_summed[i_mt] = 0.0; // mt_list_[i_mt].GetNetForce();
+    mt_list_[i_mt].UpdateExtensions();
+    forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
+    forces_summed[i_mt] += parameters_->microtubules.applied_force;
   }
-  // Calculate the displacement of each microtubule
+  // Calculate the displacement of each microtubule (in n_sites)
   int displacement[n_mts];
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
     // If microtubule is still immobilized, set displacement to 0 and continue
-    if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
+    if (current_time < parameters_->microtubules.immobile_until[i_mt] or
+        current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
       displacement[i_mt] = 0;
       continue;
     }
-    /*
-    double x_sq{site_size * site_size};
-    double D{kbT / mt_list_[i_mt].gamma_};
-    double tau{x_sq / (2 * D)};
-    double p_diffu{delta_t / tau};
-    double ran0 = properties_->gsl.GetRanProb();
-    if (ran0 < p_diffu) {
-      double ran1 = properties_->gsl.GetRanProb();
-      if (ran1 < 0.5) {
-        displacement[i_mt] = -1;
-      } else {
-        displacement[i_mt] = 1;
-      }
-    } else {
-      displacement[i_mt] = 0;
-    }
-    */
+    double delta_t_eff{delta_t * mt_list_[i_mt].steps_per_iteration_};
     // Calculate instanteous velocity due to forces using drag coefficient
     double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
-    // Convert velocity from nm/s to n_sites/s and calculate mean displacement
-    double dx_mean{velocity * delta_t};
+    double dx_mean{velocity * delta_t_eff};
     // Add gaussan noise, meant to represent thermal motion
-    double dx_sigma{sqrt(2 * kbT * delta_t / mt_list_[i_mt].gamma_)};
+    double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
     // Convert mean and sigma from nm to n_sites
     dx_mean /= site_size;
     dx_sigma /= site_size;
@@ -247,29 +232,25 @@ void MicrotubuleManagement::RunDiffusion() {
     // Normalize table so that last entry is 1.0
     for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
       discrete_cdf[i_bin] /= discrete_cdf[2 * range];
-      // printf("discrete_cdf[%i] = %g (dx=%i)\n", i_bin, discrete_cdf[i_bin],
-      //        i_bin - range);
     }
-    // exit(1);
     // Roll a random number to determine which dx to choose
     double ran{properties_->gsl.GetRanProb()};
     for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
       if (ran < discrete_cdf[i_bin]) {
         displacement[i_mt] = i_bin - range;
-        // printf("displacement is %i\n", displacement[i_mt]);
         break;
       }
     }
   }
   /*  Run through MT list and update displacementsi */
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-    // if (displacement[i_mt] == 0) {
-    //   continue;
-    // }
-    // Microtubule *mt = &mt_list_[i_mt];
-    // Microtubule *neighb = mt->neighbor_;
+    if (displacement[i_mt] == 0) {
+      continue;
+    }
     mt_list_[i_mt].coord_ += displacement[i_mt];
-    // mt->UpdateExtensions();
-    // neighb->UpdateExtensions();
+    mt_list_[i_mt].UpdateExtensions();
+    if (mt_list_[i_mt].neighbor_ != nullptr) {
+      // mt_list_[i_mt].neighbor_->UpdateExtensions();
+    }
   }
 }

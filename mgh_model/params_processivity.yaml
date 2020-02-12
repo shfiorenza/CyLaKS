@@ -6,6 +6,7 @@ delta_t: 2.5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
+  steps_per_iteration: 10
   count: 1
   length: 
   - 50000

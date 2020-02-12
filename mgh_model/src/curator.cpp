@@ -155,6 +155,32 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->delta_t = input["delta_t"].as<double>();
   params->kbT = input["kbT"].as<double>();
   params->eta = input["eta"].as<double>();
+  /* Microtubule parameters below */
+  YAML::Node mts = input["microtubules"];
+  params->microtubules.count = mts["count"].as<int>();
+  params->microtubules.length = mts["length"].as<std::vector<int>>();
+  params->microtubules.y_dist = mts["y_dist"].as<double>();
+  params->microtubules.site_size = mts["site_size"].as<double>();
+  params->microtubules.radius = mts["radius"].as<double>();
+  params->microtubules.elevation = mts["elevation"].as<double>();
+  params->microtubules.start_coord =
+      mts["start_coord"].as<std::vector<double>>();
+  params->microtubules.immobile_until =
+      mts["immobile_until"].as<std::vector<double>>();
+  // Check to make sure there are enough vector entries for given MT count
+  int n_lengths = mts["length"].size();
+  int n_start_coords = mts["start_coord"].size();
+  int n_immo = mts["immobile_until"].size();
+  if (params->microtubules.count > n_lengths ||
+      params->microtubules.count > n_start_coords ||
+      params->microtubules.count > n_immo) {
+    Log("\nError! More MTs than given parameters; ");
+    Log("check vector entries in parameter file!\n\n");
+    exit(1);
+  }
+  params->microtubules.applied_force = mts["applied_force"].as<double>();
+  params->microtubules.printout_on = mts["printout_on"].as<bool>();
+  params->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
   params->motors.t_active = motors["t_active"].as<double>();
@@ -191,35 +217,6 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->xlinks.diffu_coeff_i = xlinks["diffu_coeff_i"].as<double>();
   params->xlinks.diffu_coeff_ii = xlinks["diffu_coeff_ii"].as<double>();
   params->xlinks.interaction_energy = xlinks["interaction_energy"].as<double>();
-  /* Microtubule parameters below */
-  YAML::Node mts = input["microtubules"];
-  params->microtubules.count = mts["count"].as<int>();
-  params->microtubules.length = mts["length"].as<std::vector<int>>();
-  params->microtubules.y_dist = mts["y_dist"].as<double>();
-  params->microtubules.site_size = mts["site_size"].as<double>();
-  params->microtubules.radius = mts["radius"].as<double>();
-  params->microtubules.elevation = mts["elevation"].as<double>();
-  params->microtubules.start_coord =
-      mts["start_coord"].as<std::vector<double>>();
-  params->microtubules.imposed_velocity =
-      mts["imposed_velocity"].as<std::vector<double>>();
-  params->microtubules.immobile_until =
-      mts["immobile_until"].as<std::vector<double>>();
-  // Check to make sure there are enough vector entries for given MT count
-  int n_lengths = mts["length"].size();
-  int n_start_coords = mts["start_coord"].size();
-  int n_imp_vel = mts["imposed_velocity"].size();
-  int n_immo = mts["immobile_until"].size();
-  if (params->microtubules.count > n_lengths ||
-      params->microtubules.count > n_start_coords ||
-      params->microtubules.count > n_imp_vel ||
-      params->microtubules.count > n_immo) {
-    Log("\nError! More MTs than given parameters; ");
-    Log("check vector entries in parameter file!\n\n");
-    exit(1);
-  }
-  params->microtubules.printout_on = mts["printout_on"].as<bool>();
-  params->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   // Store params pointer as parameters_ in Curator
   parameters_ = params;
   int n_steps = parameters_->n_steps;
@@ -233,6 +230,29 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   Log("    delta_t = %g s\n", params->delta_t);
   Log("    kbT = %g pN*nm\n", params->kbT);
   Log("    eta = %g (pN*s)/um^2\n", params->eta);
+  Log("\n  Microtubule (mt) parameters:\n");
+  Log("    count = %i\n", params->microtubules.count);
+  for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
+    Log("    length = %i sites for mt %i\n", params->microtubules.length[i_mt],
+        i_mt);
+  }
+  Log("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
+  Log("    site_size = %g nm\n", params->microtubules.site_size);
+  Log("    radius = %g nm\n", params->microtubules.radius);
+  Log("    elevation = %g nm above surface\n", params->microtubules.elevation);
+  for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
+    double start_coord = params->microtubules.start_coord[i_mt];
+    Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
+  }
+  for (int i_mt = 0; i_mt < n_immo; i_mt++) {
+    double immo = params->microtubules.immobile_until[i_mt];
+    Log("    immobile until = %g s for mt %i\n", immo, i_mt);
+  }
+  Log("    applied_force = %g pN\n", params->microtubules.applied_force);
+  Log("    printout_on = %s\n",
+      params->microtubules.printout_on ? "true" : "false");
+  Log("    diffusion_on = %s\n",
+      params->microtubules.diffusion_on ? "true" : "false");
   Log("\n  Kinesin (motor) parameters:\n");
   Log("    t_active = %g seconds\n", params->motors.t_active);
   Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
@@ -268,32 +288,6 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   Log("    diffu_coeff_i = %g um^2/s\n", params->xlinks.diffu_coeff_i);
   Log("    diffu_coeff_ii = %g um^2/s\n", params->xlinks.diffu_coeff_ii);
   Log("    interaction_energy = %g kbT\n", params->xlinks.interaction_energy);
-  Log("\n  Microtubule (mt) parameters:\n");
-  Log("    count = %i\n", params->microtubules.count);
-  for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
-    Log("    length = %i sites for mt %i\n", params->microtubules.length[i_mt],
-        i_mt);
-  }
-  Log("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
-  Log("    site_size = %g nm\n", params->microtubules.site_size);
-  Log("    radius = %g nm\n", params->microtubules.radius);
-  Log("    elevation = %g nm above surface\n", params->microtubules.elevation);
-  for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
-    double start_coord = params->microtubules.start_coord[i_mt];
-    Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
-  }
-  for (int i_mt = 0; i_mt < n_imp_vel; i_mt++) {
-    double imp_vel = params->microtubules.imposed_velocity[i_mt];
-    Log("    imposed_velocity = %g nm/s for mt %i\n", imp_vel, i_mt);
-  }
-  for (int i_mt = 0; i_mt < n_immo; i_mt++) {
-    double immo = params->microtubules.immobile_until[i_mt];
-    Log("    immobile until = %g s for mt %i\n", immo, i_mt);
-  }
-  Log("    printout_on = %s\n",
-      params->microtubules.printout_on ? "true" : "false");
-  Log("    diffusion_on = %s\n",
-      params->microtubules.diffusion_on ? "true" : "false");
   Log("\nTotal simulation duration: %g seconds\n", delta_t * n_steps);
 }
 

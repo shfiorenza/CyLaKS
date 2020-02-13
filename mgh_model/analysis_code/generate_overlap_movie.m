@@ -1,13 +1,13 @@
 clear;
 close all;
-simName = 'test';
-n_sites = 1000;
+simName = 'Endtag_1750';
+n_sites = 1750;
 n_mts = 1;
 n_datapoints = 10000;
-n_steps = 40000000;
+n_steps = 60000000;
 delta_t = 0.000025; % seconds
 movie_name = "test_mov";
-movie_frames_per_plot = 100;
+movie_frames_per_plot = 50;
 movie_duration = 30; % real life seconds
 movie_dwell_time = 5; % in sim-seconds; time between each 'image'
 movie_start = 01; % datapoint to start at
@@ -88,10 +88,10 @@ for i_data=movie_start:movie_frames_per_plot:n_datapoints-movie_frames_per_plot
     imagesc(imageRGB); axis image
     set(gca,'Xtick',[]); set(gca,'Ytick',[]);
     
-    dim = [0.0105 0.62 0.3 0.3];
+    dim = [0.15 0.62 0.5 0.25];
     time = (i_data - 1) * time_per_frame;
     str = sprintf('Time: %#.2f seconds', time);
-    annotation('textbox',dim,'String',str,'FitBoxToText','on');
+    annotation('textbox',dim,'String',str,'FitBoxToText','on', 'BackgroundColor', [1 1 1]);
     drawnow();
     writeVideo(v, getframe(gcf)); 
 end

@@ -1,6 +1,6 @@
 clear;
 close all;
-simName = 'test';
+simName = 'Endtag_1000';
 n_sites = 1000;
 n_datapoints = 10000;
 n_mts = 1;

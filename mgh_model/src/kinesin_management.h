@@ -39,8 +39,7 @@ public:
   bool verbose_{false};
 
   // coop stuff
-  int n_affinities_{11};
-  // int deformation_range_{};
+  int n_affinities_{1}; // {11};
   int max_neighbs_{2};
 
   // See kinesin header for meaningful description of below

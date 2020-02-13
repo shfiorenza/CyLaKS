@@ -72,6 +72,9 @@ void Tubulin::UpdateAffinity() {
   int bin_size{0};
   if (n_affs > 1) {
     bin_size = range / (n_affs - 1);
+  } else {
+    affinity_ = 0;
+    return;
   }
   if (motor_head_ != nullptr) {
     affinity_ = 0;

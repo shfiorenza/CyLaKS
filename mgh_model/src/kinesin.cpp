@@ -8,6 +8,8 @@ int Kinesin::head::GetAffinity() {
   int bin_size{0};
   if (n_affs > 1) {
     bin_size = range / (n_affs - 1);
+  } else {
+    return 0;
   }
 
   for (int delta{1}; delta <= range; delta++) {

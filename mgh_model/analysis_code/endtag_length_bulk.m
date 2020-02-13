@@ -2,7 +2,7 @@
 clear variables;
 xlink_concs = 0;%, 1];%, 4]; 
 %name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
-name_structs = ["Endtag_20x_0_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
+name_structs = ["EndtagB_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
 %mt_lengths = [4, 8, 14];
 % experimental parameters
@@ -89,7 +89,7 @@ end
 %}
 
 set(0, 'DefaultLineLineWidth', 1.25);
-set(0,'DefaultLegendAutoUpdate','off');
+%set(0,'DefaultLegendAutoUpdate','off');
 fig1 = figure(1);
 set(fig1,'Position', [50, 50, 2*480, 2*300])
 hold on
@@ -98,15 +98,17 @@ colors = ['b'; 'r'; 'k'];
 err_config = [{'^b', 'b', 'b'}; {'^r', 'r', 'r'}; {'^k', 'k', 'k'}];
 for(i=1:1:n_concs)
     plot(mt_lengths, final_data(i, :),'*','LineWidth',2, 'MarkerSize', 15, 'Color', colors(i,:));
+    errorbarxy(exp_mt_lengths, exp_endtags(i,:), exp_errs_x, exp_errs_y(i, :), err_config(i, :));
+    line(exp_line_x, exp_line_y(i, :), 'Color', colors(i, :));
 end
 
 %legendLabel = cellstr(num2str(xlink_concs' / 10, '%#.1f nM PRC1'));
-legendLabel = {'0.0 nM PRC1', '0.1 nM PRC1', '0.4 nM PRC1'};
+%legendLabel = {'0.0 nM PRC1', '0.1 nM PRC1', '0.4 nM PRC1'};
+legendLabel = ["Simulation data", "Experimental data", "Experimental line of best fit"];
 legend(legendLabel, 'location', 'northwest', 'FontSize', 14);
 
 for(i=1:1:n_concs)
-    errorbarxy(exp_mt_lengths, exp_endtags(i,:), exp_errs_x, exp_errs_y(i, :), err_config(i, :));
-    line(exp_line_x, exp_line_y(i, :), 'Color', colors(i, :));
+
 end
 
 %title('k on xlink = 0.05 (nM*s)^{-1}; c eff teth = 150 nM; kD teth = 0.2 nM');

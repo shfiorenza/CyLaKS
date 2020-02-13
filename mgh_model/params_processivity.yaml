@@ -4,7 +4,7 @@ n_datapoints: 100000
 data_threshold: 0
 delta_t: 2.5e-5
 kbT: 4.114
-eta: 0.0001
+eta: 0.001
 microtubules:
   count: 1
   length: 

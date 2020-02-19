@@ -23,6 +23,11 @@ int RandomNumberManagement::GetRanInt(int n) {
 
 double RandomNumberManagement::GetRanProb() { return gsl_rng_uniform(rng_); }
 
+double RandomNumberManagement::GetGaussianPDF(double x, double sigma) {
+
+  return gsl_ran_gaussian_pdf(x, sigma);
+}
+
 void RandomNumberManagement::SetRanIndices(int indices[], int n, int m) {
 
   int integer_pool[m];

@@ -581,7 +581,7 @@ void Kinesin::UpdateNeighborXlinks() {
 
 void Kinesin::UpdateExtension() {
 
-  if (heads_active_ == 0 || tethered_ == false) {
+  if (heads_active_ == 0 or !tethered_) {
     x_dist_doubled_ = 0;
     extension_ = 0;
   } else if (xlink_->heads_active_ == 0) {

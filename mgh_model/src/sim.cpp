@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
   for (int i_step{0}; i_step < parameters.n_steps; i_step++) {
     properties.wallace.UpdateTimestep(i_step);
     properties.kinesin4.RunKMC();
-    properties.prc1.Run_KMC();
+    properties.prc1.RunKMC();
     properties.microtubules.RunDiffusion();
   }
   // Clean up simulation before exiting

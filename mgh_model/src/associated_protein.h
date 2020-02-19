@@ -12,51 +12,59 @@ struct system_parameters;
 class AssociatedProtein {
 private:
   template <typename DATA_T> using Vec = std::vector<DATA_T>;
-  // Indices for lookup tables correspond to x_dist
+  // Index scheme: [x (proposed)];
   Vec<double> cosine_lookup_;
   Vec<double> extension_lookup_;
-  // 1st index is n_neighbs (as in PRC1 neighbs); 2nd is x_dist
+  // Index scheme: [n_prc1_neighbs][x (proposed)]
   Vec<Vec<double>> weight_bind_ii_;
+  // Index scheme: [n_prc1_neighbs][x_dub (proposed)]
   Vec<Vec<double>> weight_bind_i_teth_;
+  // Index scheme: [n_prc1_neighbs][x_dub (current)][x (proposed)]
   Vec<Vec<Vec<double>>> weight_bind_ii_to_teth_;
   Vec<Vec<Vec<double>>> weight_bind_ii_fr_teth_;
-
-  Curator *wally_{nullptr};
+  // Neighbor lists second-stage binding (not to be confused w/ PRC1 neighbs)
+  int n_neighbor_sites_ii_{0};
+  int n_neighbor_sites_i_teth_{0};
+  int n_neighbor_sites_ii_teth_{0};
+  Vec<Tubulin *> neighbor_sites_ii_;
+  Vec<Tubulin *> neighbor_sites_i_teth_;
+  Vec<Tubulin *> neighbor_sites_ii_teth_;
+  // Pointers to global system parameters & properties
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
+  // Pointer to system curator, Wallace
+  Curator *wally_{nullptr};
 
 public:
-  // Neighbor lists; not to be confused with no. of PRC1 neighbs
-  Vec<Tubulin *> neighbor_sites_;
-  Vec<Tubulin *> teth_neighbor_sites_;
-  Vec<Tubulin *> teth_neighbor_sites_ii_;
+  // Monomer structure -- each xlink has two
   struct Monomer {
     AssociatedProtein *xlink_;
     Tubulin *site_{nullptr};
-    std::string state_{std::string("unbound")};
-    bool in_scratch_{false};
-    void UpdateState();
-    int GetPRC1NeighbCount() { return xlink_->GetPRC1NeighbCount(this); }
-    int GetDirectionToRest() { return xlink_->GetDirectionToRest(site_); }
     Monomer *GetOtherHead() {
-      if (this == &xlink_->head_one_)
+      if (this == &xlink_->head_one_) {
         return &xlink_->head_two_;
-      else
+      } else {
         return &xlink_->head_one_;
+      }
+    }
+    int GetDirectionTowardRest() {
+      return xlink_->GetDirectionTowardRest(site_);
+    }
+    int GetPRC1NeighborCount() {
+      if (site_ == nullptr) {
+        return 0;
+      } else {
+        return site_->GetPRC1NeighborCount();
+      }
     }
   };
 
   // see kinesin header for description of variables
-  int ID_{-1};
-  int speciesID_{1};
+  int id_{-1};
+  int species_id_{1};
   int active_index_{-1};
   int heads_active_{0};
   // For neighbor lists; not to be confused with no. of PRC1 neighbs
-  int n_neighbor_sites_{0};
-  int n_teth_neighbor_sites_{0};
-  int n_teth_neighbor_sites_ii_{0};
-
-  int max_neighbs_{2};
 
   // x_dist_ is used to index the xlink extensions for lookup
   // e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
@@ -66,8 +74,8 @@ public:
 
   double r_0_{0.0};
   double k_spring_{0.0};
-  double extension_{0.0}; // current extension of xlink in nm
   double cosine_{0.0};    // of angle of xlink w/ respect to MT
+  double extension_{0.0}; // current extension of xlink in nm
 
   Monomer head_one_{.xlink_ = this}, head_two_{.xlink_ = this};
 
@@ -81,28 +89,30 @@ private:
 
 public:
   AssociatedProtein();
-  void Initialize(system_parameters *parameters, system_properties *properties,
-                  int ID);
+  void Initialize(system_parameters *, system_properties *, int id);
 
   Monomer *GetActiveHead();
-  Tubulin *GetActiveHeadSite();
   double GetAnchorCoordinate();
-  int GetPRC1NeighbCount(Monomer *head);
+  double GetExtensionForce(Tubulin *site);
+  int GetDirectionTowardRest(Tubulin *site);
 
-  void UpdateNeighborSites_II();
-  void UpdateNeighborSites_I_Teth();
-  void UpdateNeighborSites_II_Teth();
   void UpdateExtension();
   void ForceUnbind();
   void UntetherSatellite();
+  bool HasSatellite();
 
-  int GetDirectionToRest(Tubulin *site);
-  double GetExtensionForce(Tubulin *site);
-  double GetBindingWeight_II(Tubulin *neighbor);
-  double GetBindingWeight_I_Teth(Tubulin *neighbor);
-  double GetBindingWeight_II_Teth(Tubulin *neighbor);
   Tubulin *GetSiteCloserToTethRest();
   Tubulin *GetSiteFartherFromTethRest();
+
+  void UpdateNeighbors_Bind_II();
+  void UpdateNeighbors_Bind_I_Teth();
+  void UpdateNeighbors_Bind_II_Teth();
+  double GetWeight_Bind_II(Tubulin *neighbor);
+  double GetWeight_Bind_I_Teth(Tubulin *neighbor);
+  double GetWeight_Bind_II_Teth(Tubulin *neighbor);
+  double GetTotalWeight_Bind_II();
+  double GetTotalWeight_Bind_I_Teth();
+  double GetTotalWeight_Bind_II_Teth();
   Tubulin *GetWeightedSite_Bind_II();
   Tubulin *GetWeightedSite_Bind_I_Teth();
   Tubulin *GetWeightedSite_Bind_II_Teth();

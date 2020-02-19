@@ -68,20 +68,14 @@ bool Tubulin::EquilibriumInSameDirection() {
 int Tubulin::GetPRC1NeighborCount() {
 
   int n_neighbs{0};
-  int i_plus = mt_->plus_end_;
-  int i_minus = mt_->minus_end_;
-  int dx = mt_->delta_x_;
-  if (index_ == i_plus) {
-    if (mt_->lattice_[index_ - dx].xlink_head_ != nullptr)
+  int mt_end{mt_->n_sites_ - 1};
+  for (int delta{-1}; delta <= 1; delta += 2) {
+    int i_scan = index_ + delta;
+    if (i_scan < 0 or i_scan > mt_end) {
+      continue;
+    } else if (mt_->lattice_[i_scan].xlink_head_ != nullptr) {
       n_neighbs++;
-  } else if (index_ == i_minus) {
-    if (mt_->lattice_[index_ + dx].xlink_head_ != nullptr)
-      n_neighbs++;
-  } else {
-    if (mt_->lattice_[index_ - dx].xlink_head_ != nullptr)
-      n_neighbs++;
-    if (mt_->lattice_[index_ + dx].xlink_head_ != nullptr)
-      n_neighbs++;
+    }
   }
   return n_neighbs;
 }

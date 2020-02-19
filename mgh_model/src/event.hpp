@@ -1,7 +1,6 @@
 #ifndef _EVENT
 #define _EVENT
 #include <functional>
-#include <iostream>
 #include <string>
 #include <variant>
 
@@ -30,12 +29,13 @@ public:
 
 private:
   void SetTargets() {
-    targets_.reserve(n_expected_);
+    if (n_expected_ > targets_.size()) {
+      targets_.resize(n_expected_);
+    }
     int indices[n_expected_];
     set_ran_indices_(indices, n_expected_, *n_avail_);
     for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
-      // printf("Index #%i: %i\n", i_entry, indices[i_entry]);
-      targets_.push_back(target_pool_->at(indices[i_entry]));
+      targets_[i_entry] = target_pool_->at(indices[i_entry]);
     }
   }
 
@@ -49,31 +49,17 @@ public:
         target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
         set_ran_indices_{get_ran_indices} {}
   int SampleStatistics() {
-    if (*n_avail_ > 0) {
-      n_expected_ = prob_dist_(p_occur_, *n_avail_);
-      SetTargets();
-    } else {
-      n_expected_ = 0;
-    }
+    n_expected_ = prob_dist_(p_occur_, *n_avail_);
+    SetTargets();
     return n_expected_;
   }
-  void RemoveTarget(ENTRY_T tar) {
-    if (n_expected_ == 1) {
-      targets_.pop_back();
-      n_expected_--;
-      return;
-    }
-    for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
-      if (std::get<2>(targets_[i_entry]) == std::get<2>(tar)) {
-        targets_[i_entry] = targets_[n_expected_ - 1];
-        targets_.pop_back();
-        n_expected_--;
-      }
-    }
+  void RemoveTarget(int index) {
+    targets_[index] = targets_[n_expected_ - 1];
+    n_expected_--;
   }
   void Execute() {
-    exe_(targets_.back());
-    targets_.pop_back();
+    exe_(targets_[n_expected_ - 1]);
+    n_expected_--;
   }
 };
 #endif

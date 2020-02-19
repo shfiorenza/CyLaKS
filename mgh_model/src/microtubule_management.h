@@ -1,6 +1,6 @@
 #ifndef _MICROTUBULE_MANAGEMENT_
 #define _MICROTUBULE_MANAGEMENT_
-#include "entry.h"
+#include "entry.hpp"
 #include "microtubule.h" // Includes <vector> lib as well
 class Tubulin;
 struct system_parameters;

@@ -40,7 +40,7 @@ void KinesinManagement::SetParameters() {
   double lambda_lattice{0.5}; // For Boltzmann factor of lattice interactions
 
   // Get general sim params
-  double delta_t = parameters_->delta_t;
+  double delta_t{parameters_->delta_t};
   double kbT{parameters_->kbT};
   double r_y{parameters_->microtubules.y_dist / 2};
   double site_size{parameters_->microtubules.site_size};
@@ -601,21 +601,6 @@ Kinesin *KinesinManagement::GetFreeMotor() {
   }
   return motor;
 }
-
-/*
-Kinesin *KinesinManagement::GetBoundUntetheredMotor() {
-
-  Update_Bound_Unteth();
-  int i_motor = properties_->gsl.GetRanInt(n_bound_untethered_);
-  return std::get<POP_T *>(bound_untethered_[i_motor])->motor_;
-}
-
-int KinesinManagement::GetNumBoundUntethered() {
-
-  Update_Bound_Unteth();
-  return n_bound_untethered_;
-}
-*/
 
 void KinesinManagement::Update_All_Lists() {
 

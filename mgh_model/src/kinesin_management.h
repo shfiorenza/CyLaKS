@@ -1,10 +1,10 @@
 #ifndef _KINESIN_MANAGEMENT
 #define _KINESIN_MANAGEMENT
-#include "entry.h"
+#include "entry.hpp"
 #include "event.hpp"
-class Curator;
 struct system_parameters;
 struct system_properties;
+class Curator;
 
 class KinesinManagement {
 private:
@@ -48,13 +48,13 @@ public:
   double rest_dist_;
 
   // Populations are untethered/mixed unless otherwise specified
-  int n_motors_ = 0; // Total number of motors in system
-  int n_active_ = 0; // Motors actively bound to some MT/xlink
-  int n_free_tethered_ = 0;
-  int n_bound_NULL_ = 0;
-  int n_bound_ATP_ = 0;
-  int n_bound_ATP_stalled_ = 0;
-  int n_bound_untethered_ = 0;
+  int n_motors_{0}; // Total number of motors in system
+  int n_active_{0}; // Motors actively bound to some MT/xlink
+  int n_free_tethered_{0};
+  int n_bound_NULL_{0};
+  int n_bound_ATP_{0};
+  int n_bound_ATP_stalled_{0};
+  int n_bound_untethered_{0};
   // Below population sizes are indexed by [tubulin_affinity][n_neighbs]
   Vec<Vec<int>> n_docked_;
   Vec<Vec<int>> n_bound_ADPP_i_;

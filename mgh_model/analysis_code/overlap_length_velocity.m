@@ -1,6 +1,6 @@
 clear all;
 % Input parameters
-baseName = "test";
+baseName = "test_slide";
 seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in microns
@@ -15,10 +15,10 @@ values = log{1,2};
 % Read in number of MTs
 n_mts = str2double(values{contains(params, "count")});
 % Read in length of each MTs
-[length_one, length_two, length_three] = values{contains(params, "length")};
+[length_one, length_two] = values{contains(params, "length")};
 mt_lengths(1) = sscanf(length_one, '%i');
 mt_lengths(2) = sscanf(length_two, '%i');
-mt_lengths(3) = sscanf(length_three, '%i');
+% mt_lengths(3) = sscanf(length_three, '%i');
 % Read in system parameters
 n_steps = str2double(values{contains(params, "n_steps")});
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');

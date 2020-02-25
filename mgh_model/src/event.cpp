@@ -1,6 +1,7 @@
-#include "event.h"
-#include "associated_protein_management.h" 
+#include "event.hpp"
+#include "associated_protein.h"
+#include "kinesin.h"
+#include "tubulin.h"
 
-template class
-Event<AssociatedProteinManagement*, 
-	  std::variant<Tubulin*, AssociatedProtein::Monomer*, Kinesin::head*>>;
+template class Event<
+    std::variant<Tubulin *, AssociatedProtein::Monomer *, Kinesin::Monomer *>>;

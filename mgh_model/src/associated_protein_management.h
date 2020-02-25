@@ -11,19 +11,23 @@ class AssociatedProteinManagement {
 private:
   // Use a template for 'Vec' rather than std::vector (aesthetic only)
   template <class DATA_T> using Vec = std::vector<DATA_T>;
-  // Data types
+  // Define data types
   using POP_T = AssociatedProtein::Monomer;
-  using ALT_T = Kinesin::head;
+  using ALT_T = Kinesin::Monomer;
   using SITE_T = Tubulin;
-  using MGMT_T = AssociatedProteinManagement;
   // ENTRY_T is defined in entry.h header
-  using EVENT_T = Event<MGMT_T *, ENTRY_T>;
+  using EVENT_T = Event<ENTRY_T>;
   // All possible KMC event objects; arbitrary sequential order
   Vec<EVENT_T> events_;
   // Number of events to execute at any given timestep
   int n_events_to_exe_{0};
   // List of events to execute any given timestep; dynamically updated
   Vec<EVENT_T *> events_to_exe_;
+  int verbosity_{0};
+  bool population_active_{false};
+  bool crosslinking_active_{false};
+  bool tethering_active_{false};
+  bool lists_up_to_date_{false};
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
@@ -31,13 +35,9 @@ private:
   Curator *wally_{nullptr};
 
 public:
+  // Index scheme: [n_neighbs][x_dub][x]
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<std::pair<int, int>>>>> p_actual_;
-
-  bool verbose_{false};
-  bool population_active_{false};
-  bool crosslinking_active_{false};
-  bool tethering_active_{false};
 
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_{2};
@@ -66,8 +66,8 @@ public:
   Vec<Vec<Vec<int>>> n_bound_ii_teth_oppo_;
 
   /* Probabilities of possible KMC events */
-  double p_bind_i_teth_base_;
-  double p_bind_ii_base_;
+  double p_avg_bind_i_teth_;
+  double p_avg_bind_ii_;
   double p_tether_free_;
   double p_untether_free_;
   // First index is number of PRC1 neighbors: [0], [1], or [2]
@@ -99,8 +99,8 @@ public:
   /* Lists that track different population types */
   Vec<AssociatedProtein> xlinks_; // Actual xlink objects
   Vec<AssociatedProtein *> active_;
-  Vec<AssociatedProtein *> bound_unteth_;
   Vec<ENTRY_T> free_teth_;
+  Vec<ENTRY_T> bound_unteth_;
   // Target pools for poisson processes (do not track n_neighbs/etc.)
   Vec<ENTRY_T> bind_ii_candidates_;
   Vec<ENTRY_T> bind_i_teth_candidates_;
@@ -128,17 +128,19 @@ public:
   void Initialize(system_parameters *parameters, system_properties *properties);
 
   AssociatedProtein *GetFreeXlink();
-  AssociatedProtein *GetBoundUntetheredXlink();
 
   void AddToActive(AssociatedProtein *xlink);
   void RemoveFromActive(AssociatedProtein *xlink);
 
-  void Update_Free_Teth();
-  void Update_Bound_Unteth();
+  void FlagForUpdate();
+
+  void Update_Extensions();
   void Update_Bound_I();
   void Update_Bound_I_Teth();
   void Update_Bound_II();
   void Update_Bound_II_Teth();
+  void Update_Bound_Unteth();
+  void Update_Free_Teth();
 
   double GetWeight_Bind_II();
   double GetWeight_Bind_I_Teth();

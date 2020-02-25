@@ -1,11 +1,11 @@
 clear all;
 % Parameters from sim
-mt_lengths = [5000,500];
+mt_lengths = [1000,500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
 %simName = "2019_12_04_slideScan/slide_scan_2.0_525_5";
-simName = "test";
+simName = "test_slide_weakerXL";
 dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 60000000;
@@ -105,7 +105,7 @@ for i_data=start_frame:frames_per_plot:end_frame
     for i_mt=1:1:n_mts
         n_sites = mt_lengths(i_mt);
         
-        mt_pos = mt_data(i_mt, i_data)*site_width;
+        mt_pos = double(mt_data(i_mt, i_data)*site_width);
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         if(n_mts > 1)
@@ -280,7 +280,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                             % To ensure spring is only plotted once per
                             % xlink, only plot on odd-numbered MTs
                             xa = xlink_center_x; ya = xlink_height + site_height;
-                            xb = neighb_center_x; yb = neighb_height - site_height;
+                            xb = double(neighb_center_x); yb = neighb_height - site_height;
                             ne = 6; a = 6; ro = 1;
                             [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
                             plot(xs,ys,'LineWidth', 1, 'Color', purple);

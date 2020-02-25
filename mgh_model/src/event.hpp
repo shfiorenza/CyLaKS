@@ -4,7 +4,7 @@
 #include <string>
 #include <variant>
 
-template <typename MGMT_T, typename ENTRY_T> class Event {
+template <typename ENTRY_T> class Event {
 private:
   // Pointer to list of available targets to act on; dynamically updated
   std::vector<ENTRY_T> *target_pool_;
@@ -19,11 +19,11 @@ public:
   // Targets that this event will act on this timestep
   std::vector<ENTRY_T> targets_;
   // Expected number of events to occur for current given timestep
-  int n_expected_ = 0;
+  int n_expected_{0};
   // Pointer to no. of specific targets this event can act on; dynamic
-  int *n_avail_ = nullptr;
+  int *n_avail_{nullptr};
   // Probability that this event will occur each timestep
-  double p_occur_ = 0.0;
+  double p_occur_{0.0};
   // Name of this event, e.g., "Bind_II_Teth"
   std::string name_ = "bruh";
 
@@ -53,9 +53,14 @@ public:
     SetTargets();
     return n_expected_;
   }
-  void RemoveTarget(int index) {
-    targets_[index] = targets_[n_expected_ - 1];
-    n_expected_--;
+  void RemoveTarget(ENTRY_T tar) {
+    for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
+      if (tar == targets_[i_entry]) {
+        targets_[i_entry] = targets_[n_expected_ - 1];
+        n_expected_--;
+        return;
+      }
+    }
   }
   void Execute() {
     exe_(targets_[n_expected_ - 1]);

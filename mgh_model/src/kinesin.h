@@ -2,52 +2,50 @@
 #define _KINESIN
 #include <string>
 #include <vector>
+class Curator;
+class Tubulin;
 class AssociatedProtein;
 class Microtubule;
-class Tubulin;
 struct system_properties;
 struct system_parameters;
 
 class Kinesin {
 private:
+  template <typename DATA_T> using Vec = std::vector<DATA_T>;
   // Indices for lookup tables correspond to distance
   // in (no. of sites)/2, NOT extension of tether
   // e.g. ...lookup_[1] is an x-dist of 1/2 of a site
-  std::vector<double> cosine_lookup_;
-  std::vector<double> extension_lookup_;
-  std::vector<double> weight_lookup_;
-  std::vector<double> weight_alt_lookup_;
-  std::vector<double> p_step_to_rest_;
-  std::vector<double> p_step_fr_rest_;
-  double p_step_fr_neighb_;
-
-  // Neighbor sites are for when the motor is tethered but unbound
-  std::vector<Tubulin *> neighbor_sites_;
-  // Neighbor xlinks are for when the motor is bound but untethered
-  std::vector<AssociatedProtein *> neighbor_xlinks_;
-
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
+  // Index scheme: [x_dist_doubled] (current)
+  Vec<double> cosine_lookup_;
+  Vec<double> extension_lookup_;
+  // Index scheme: [x_dub] (proposed)
+  Vec<double> weight_tether_bound_;
+  // Index scheme: [tubulin_affinity][n_kif4a_neighbs][x_dub] (proposed)
+  Vec<Vec<Vec<double>>> weight_bind_i_teth_;
+  // Neighbor lists for tethering (not to be confused w/ Kif4a neighbs)
+  int n_neighbors_bind_i_teth_{0};
+  int n_neighbors_tether_bound_{0};
+  Vec<Tubulin *> neighbors_bind_i_teth_;
+  Vec<AssociatedProtein *> neighbors_tether_bound_;
+  // Pointers to global system parameters & properties
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
+  // Pointer to system curator, Wallace
+  Curator *wally_{nullptr};
 
 public:
-  struct head {
+  // Monomer structure -- each motor has two
+  struct Monomer {
     Kinesin *motor_;
-    Tubulin *site_;
+    Tubulin *site_{nullptr};
     bool trailing_;
-    bool in_scratch_{false};
-    std::string ligand_;
-    std::string state_;
-    Tubulin *stored_dock_site_{nullptr};
-
-    head(Kinesin *parent, Tubulin *site, bool trailing, std::string ligand,
-         std::string state)
-        : motor_{parent}, site_{site}, trailing_{trailing}, ligand_{ligand},
-          state_{state} {}
-    head *GetOtherHead() {
-      if (this == &motor_->head_one_)
+    std::string ligand_{"ADP"};
+    Monomer *GetOtherHead() {
+      if (this == &motor_->head_one_) {
         return &motor_->head_two_;
-      else
+      } else {
         return &motor_->head_one_;
+      }
     }
     void RelieveFrustration() {
       if (motor_->frustrated_) {
@@ -59,81 +57,67 @@ public:
       }
     }
     int GetAffinity();
-    int GetKIF4ANeighbCount();
+    int GetKif4ANeighborCount();
+    int GetKif4ANeighborCount_Step();
   };
 
-  int max_neighbs_{2};
-
-  int id_;            // Unique id of this kinesin in resevoir
-  int speciesID_ = 2; // Unique id of this species (kinesin)
-  int active_index_;  // index of this motor in active_ list
-  int heads_active_ = 0;
-  int n_neighbor_sites_ = 0;
-  int n_neighbor_xlinks_ = 0;
-
-  bool tethered_{false};
-  bool frustrated_{false};
-
+  int id_;               // Unique id of this kinesin in resevoir
+  int species_id_{2};    // Unique id of this species (kinesin)
+  int active_index_{-1}; // index of this motor in active_ list
+  int heads_active_{0};
   // x_dist_dub is used to index the tether extension of motors, e.g.
   // an x_dist_dub of 10 means an extension of -80 nm (40 - 120)
-  int x_dist_doubled_; // in no. of sites
-  int teth_cutoff_;    // max value x_dist (not 2x) can be
-  int comp_cutoff_;    // min value x_dist (not 2x) can be
-  double rest_dist_;   // spring extension is ~0 for this
+  int x_dist_doubled_{0}; // in no. of sites
+  int comp_cutoff_{0};    // min value x_dist (not 2x) can be
+  double rest_dist_{0};   // spring extension is ~0 for this
+  int teth_cutoff_{0};    // max value x_dist (not 2x) can be
 
-  double r_0_;       // in nm
-  double k_spring_;  // in pN / nm
-  double k_slack_;   // in pN / nm
-  double extension_; // in nm
-  double cosine_;    // of motor tether angle w.r.t. horizontal
+  double r_0_{0.0};       // in nm
+  double k_spring_{0.0};  // in pN / nm
+  double k_slack_{0.0};   // in pN / nm
+  double cosine_{0.0};    // of motor tether angle w.r.t. horizontal
+  double extension_{0.0}; // in nm
 
-  // stats from perpetually applied force
-  double applied_p_step_;
+  Monomer head_one_{.motor_ = this}, head_two_{.motor_ = this};
 
-  head head_one_ = head(this, nullptr, false, "ADP", "unbound"),
-       head_two_ = head(this, nullptr, true, "ADP", "unbound");
-
-  AssociatedProtein *xlink_ = nullptr;
-  Microtubule *mt_ = nullptr;
+  bool frustrated_{false};
+  bool tethered_{false};
+  Microtubule *mt_{nullptr};
+  AssociatedProtein *xlink_{nullptr};
 
 private:
   void SetParameters();
-  void CalculateCutoffs();
+  void InitializeLookupTables();
   void InitializeNeighborLists();
-  void InitializeWeightLookup();
-  void InitializeExtensionLookup();
-  void InitializeSteppingProbabilities();
 
 public:
   Kinesin();
-  void Initialize(system_parameters *parameters, system_properties *properties,
-                  int id);
-
-  head *GetActiveHead();
-  head *GetDockedHead();
-  head *StoreDockSite();
+  void Initialize(system_parameters *, system_properties *, int id);
+  // Functions related to baseline function
+  Monomer *GetActiveHead();
+  Monomer *GetDockedHead();
   Tubulin *GetDockSite();
-  double GetStalkCoordinate(); // tail originates from stalk
   double GetDockedCoordinate();
-  void ChangeConformation(); // FIXME add applied force w/ teth
-  void UnbindTrailingHead();
+  void ChangeConformation();
   bool IsStalled();
-
-  bool AtCutoff();
-  void UpdateNeighborSites();
-  void UpdateNeighborXlinks();
+  // Functions related to tethering
+  int GetDirectionTowardRest();
+  double GetStalkCoordinate();
+  double GetRestLengthCoordinate();
+  double GetTetherForce(Tubulin *site);
   void UpdateExtension();
   void ForceUntether();
   void UntetherSatellite();
-
-  int GetDirectionTowardRest();
-  double GetRestLengthCoordinate(); // coord where ext ~ 0 when bound
-  double GetTetherForce(Tubulin *site);
-  double GetTotalBindingWeight();
-  double GetBindingWeight(Tubulin *site);
-  double GetTotalTetheringWeight();
-  double GetTetheringWeight(AssociatedProtein *xlink);
-  Tubulin *GetWeightedNeighborSite();
-  AssociatedProtein *GetWeightedNeighborXlink();
+  bool HasSatellite(); // FIXME
+  bool AtCutoff();
+  // Functions related to neighbor lists
+  void UpdateNeighbors_Bind_I_Teth();
+  void UpdateNeighbors_Tether_Bound();
+  double GetWeight_Bind_I_Teth(Tubulin *site);
+  double GetWeight_Tether_Bound(AssociatedProtein *xlink);
+  double GetTotalWeight_Bind_I_Teth();
+  double GetTotalWeight_Tether_Bound();
+  Tubulin *GetWeightedSite_Bind_I_Teth();
+  AssociatedProtein *GetWeightedXlink_Tether_Bound();
 };
 #endif

@@ -1,6 +1,15 @@
 #include "associated_protein.h"
 #include "master_header.h"
 
+int AssociatedProtein::Monomer::GetPRC1NeighborCount() {
+
+  if (site_ == nullptr) {
+    return 0;
+  } else {
+    return site_->GetPRC1NeighborCount();
+  }
+}
+
 AssociatedProtein::AssociatedProtein() {}
 
 void AssociatedProtein::Initialize(system_parameters *parameters,
@@ -73,21 +82,20 @@ void AssociatedProtein::InitializeNeighborLists() {
 
   int n_mts{parameters_->microtubules.count};
   int teth_cutoff{properties_->kinesin4.teth_cutoff_};
-  neighbor_sites_ii_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
-  neighbor_sites_i_teth_.resize(n_mts * (2 * teth_cutoff + 1));
-  neighbor_sites_ii_teth_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
+  neighbors_bind_ii_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
+  neighbors_bind_i_teth_.resize(n_mts * (2 * teth_cutoff + 1));
+  neighbors_bind_ii_teth_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
 }
 
 AssociatedProtein::Monomer *AssociatedProtein::GetActiveHead() {
 
-  if (heads_active_ == 1) {
-    if (head_one_.site_ != nullptr) {
-      return &head_one_;
-    } else if (head_two_.site_ != nullptr) {
-      return &head_two_;
-    } else {
-      wally_->ErrorExit("AssociatedProtein::GetActiveHead [1]");
-    }
+  if (heads_active_ != 1) {
+    wally_->ErrorExit("AssociatedProtein::GetActiveHead [1]");
+  }
+  if (head_one_.site_ != nullptr) {
+    return &head_one_;
+  } else if (head_two_.site_ != nullptr) {
+    return &head_two_;
   } else {
     wally_->ErrorExit("AssociatedProtein::GetActiveHead [2]");
   }
@@ -116,23 +124,23 @@ double AssociatedProtein::GetAnchorCoordinate() {
 
 double AssociatedProtein::GetExtensionForce(Tubulin *site) {
 
-  if (heads_active_ == 2) {
-    UpdateExtension();
-    // Make sure we didn't force an unbinding event
-    if (heads_active_ == 2) {
-      double force_mag{extension_ * k_spring_};
-      double force{force_mag * cosine_};
-      int site_coord{site->index_ + site->mt_->coord_};
-      if (site_coord > GetAnchorCoordinate()) {
-        force *= -1;
-      }
-      return force;
-    } else {
-      return 0;
-    }
-  } else {
+  if (heads_active_ == 0) {
     wally_->ErrorExit("AssociatedProtein::GetExtensionForce()");
   }
+  if (heads_active_ == 1) {
+    return 0.0;
+  }
+  double force_x{-1 * k_spring_ * extension_ * cosine_};
+  int site_coord{site->index_ + site->mt_->coord_};
+  // Cosine values are defined assuming the objects experiencing the spring
+  // force are the RIGHT of the xlink head, i.e. in the positive direction.
+  // Since our cosine values do not go negative, we must multiply by -1 if the
+  // site is to the LEFT of the xlink head, i.e., in the negative direction.
+  double spring_center{GetAnchorCoordinate()};
+  if (site_coord < spring_center) {
+    force_x *= -1;
+  }
+  return force_x;
 }
 
 int AssociatedProtein::GetDirectionTowardRest(Tubulin *site) {
@@ -263,28 +271,23 @@ void AssociatedProtein::ForceUnbind() {
     // Update motor extension since anchor coord has changed
     motor_->UpdateExtension();
   }
+  properties_->prc1.FlagForUpdate();
+  properties_->kinesin4.FlagForUpdate();
 }
 
 void AssociatedProtein::UntetherSatellite() {
 
-  if (!tethered_) {
+  if (!HasSatellite()) {
     return;
   }
-  if (motor_->heads_active_ == 0) {
-    // Remove satellite motor from active_ list, replace with last entry
-    int i_last{properties_->kinesin4.n_active_ - 1};
-    Kinesin *last_entry{properties_->kinesin4.active_[i_last]};
-    int i_this{motor_->active_index_};
-    properties_->kinesin4.active_[i_this] = last_entry;
-    last_entry->active_index_ = i_this;
-    properties_->kinesin4.n_active_--;
-    // Update motor details
-    motor_->tethered_ = false;
-    motor_->xlink_ = nullptr;
-    // Update xlink details
-    tethered_ = false;
-    motor_ = nullptr;
-  }
+  properties_->kinesin4.RemoveFromActive(motor_);
+  properties_->kinesin4.FlagForUpdate();
+  // Update motor details
+  motor_->tethered_ = false;
+  motor_->xlink_ = nullptr;
+  // Update xlink details
+  tethered_ = false;
+  motor_ = nullptr;
 }
 
 bool AssociatedProtein::HasSatellite() {
@@ -379,7 +382,7 @@ Tubulin *AssociatedProtein::GetSiteFartherFromTethRest() {
 
 void AssociatedProtein::UpdateNeighbors_Bind_II() {
 
-  n_neighbor_sites_ii_ = 0;
+  n_neighbors_bind_ii_ = 0;
   Tubulin *site{GetActiveHead()->site_};
   Microtubule *neighb_mt{site->mt_->neighbor_};
   int site_coord{site->mt_->coord_ + site->index_};
@@ -396,7 +399,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_II() {
     }
     Tubulin *neighb = &neighb_mt->lattice_[i_neighb];
     if (!neighb->occupied_) {
-      neighbor_sites_ii_[n_neighbor_sites_ii_++] = neighb;
+      neighbors_bind_ii_[n_neighbors_bind_ii_++] = neighb;
     }
   }
 }
@@ -406,7 +409,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_I_Teth() {
   if (!tethered_ or heads_active_ != 0) {
     wally_->ErrorExit("AssociatedProtein::UpdateNeighborSites_I_Teth()");
   }
-  n_neighbor_sites_i_teth_ = 0;
+  n_neighbors_bind_i_teth_ = 0;
   int teth_cutoff{properties_->kinesin4.teth_cutoff_};
   int comp_cutoff{properties_->kinesin4.comp_cutoff_};
   double stalk_coord{motor_->GetStalkCoordinate()};
@@ -429,7 +432,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_I_Teth() {
         int neighb_coord{i_neighb + mt->coord_};
         int x_dub{(int)(2 * fabs(stalk_coord - neighb_coord))};
         if (x_dub >= 2 * comp_cutoff and x_dub <= 2 * teth_cutoff) {
-          neighbor_sites_i_teth_[n_neighbor_sites_i_teth_++] = neighb;
+          neighbors_bind_i_teth_[n_neighbors_bind_i_teth_++] = neighb;
         }
       }
     }
@@ -441,7 +444,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_II_Teth() {
   if (!tethered_ or heads_active_ != 1) {
     wally_->ErrorExit("AssociatedProtein::UpdateNeighborSites_I_Teth()");
   }
-  n_neighbor_sites_ii_teth_ = 0;
+  n_neighbors_bind_ii_teth_ = 0;
   int teth_cutoff{properties_->kinesin4.teth_cutoff_};
   int comp_cutoff{properties_->kinesin4.comp_cutoff_};
   double stalk_coord{motor_->GetStalkCoordinate()};
@@ -465,7 +468,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_II_Teth() {
       double new_anchor_coord{(double)(site_coord + neighb_coord) / 2};
       int x_dub{(int)(2 * fabs(new_anchor_coord - stalk_coord))};
       if (x_dub >= 2 * comp_cutoff and x_dub <= 2 * teth_cutoff) {
-        neighbor_sites_ii_teth_[n_neighbor_sites_ii_teth_++] = neighb;
+        neighbors_bind_ii_teth_[n_neighbors_bind_ii_teth_++] = neighb;
       }
     }
   }
@@ -529,8 +532,8 @@ double AssociatedProtein::GetTotalWeight_Bind_II() {
 
   double tot_weight{0.0};
   UpdateNeighbors_Bind_II();
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_ii_; i_neighb++) {
-    tot_weight += GetWeight_Bind_II(neighbor_sites_ii_[i_neighb]);
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
+    tot_weight += GetWeight_Bind_II(neighbors_bind_ii_[i_neighb]);
   }
   return tot_weight;
 }
@@ -539,8 +542,8 @@ double AssociatedProtein::GetTotalWeight_Bind_I_Teth() {
 
   double tot_weight{0.0};
   UpdateNeighbors_Bind_I_Teth();
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_i_teth_; i_neighb++) {
-    tot_weight += GetWeight_Bind_I_Teth(neighbor_sites_i_teth_[i_neighb]);
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    tot_weight += GetWeight_Bind_I_Teth(neighbors_bind_i_teth_[i_neighb]);
   }
   return tot_weight;
 }
@@ -549,8 +552,8 @@ double AssociatedProtein::GetTotalWeight_Bind_II_Teth() {
 
   double tot_weight{0.0};
   UpdateNeighbors_Bind_II_Teth();
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_ii_teth_; i_neighb++) {
-    tot_weight += GetWeight_Bind_II_Teth(neighbor_sites_ii_teth_[i_neighb]);
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_teth_; i_neighb++) {
+    tot_weight += GetWeight_Bind_II_Teth(neighbors_bind_ii_teth_[i_neighb]);
   }
   return tot_weight;
 }
@@ -560,8 +563,8 @@ Tubulin *AssociatedProtein::GetWeightedSite_Bind_II() {
   double weight_tot{GetTotalWeight_Bind_II()};
   double ran{properties_->gsl.GetRanProb()};
   double p_cum{0.0};
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_ii_; i_neighb++) {
-    Tubulin *neighb{neighbor_sites_ii_[i_neighb]};
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
+    Tubulin *neighb{neighbors_bind_ii_[i_neighb]};
     p_cum += GetWeight_Bind_II(neighb) / weight_tot;
     if (ran < p_cum) {
       return neighb;
@@ -576,8 +579,8 @@ Tubulin *AssociatedProtein::GetWeightedSite_Bind_I_Teth() {
   double weight_tot{GetTotalWeight_Bind_I_Teth()};
   double ran{properties_->gsl.GetRanProb()};
   double p_cum{0.0};
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_i_teth_; i_neighb++) {
-    Tubulin *neighb{neighbor_sites_i_teth_[i_neighb]};
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    Tubulin *neighb{neighbors_bind_i_teth_[i_neighb]};
     p_cum += GetWeight_Bind_I_Teth(neighb) / weight_tot;
     if (ran < p_cum) {
       return neighb;
@@ -592,8 +595,8 @@ Tubulin *AssociatedProtein::GetWeightedSite_Bind_II_Teth() {
   double weight_tot{GetTotalWeight_Bind_II_Teth()};
   double ran{properties_->gsl.GetRanProb()};
   double p_cum{0.0};
-  for (int i_neighb{0}; i_neighb < n_neighbor_sites_ii_teth_; i_neighb++) {
-    Tubulin *neighb{neighbor_sites_ii_teth_[i_neighb]};
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_teth_; i_neighb++) {
+    Tubulin *neighb{neighbors_bind_ii_teth_[i_neighb]};
     p_cum += GetWeight_Bind_II_Teth(neighb) / weight_tot;
     if (ran < p_cum) {
       return neighb;

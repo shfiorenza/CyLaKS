@@ -1,13 +1,13 @@
 clear all
 % READ FIXME BELOW
 % Parameters from sim
-mt_lengths = [1000, 500];
+mt_lengths = [500, 500];
 %simName = '2019_11_14_slideScan/slide_scan_500_2500_5';
-simName = 'test_occu';
-n_steps = 600000000;
+simName = 'test3';
+n_steps = 60000000;
 n_datapoints = 10000;
 delta_t = 0.0000025; 
-unpin_time = 500;
+unpin_time = 100;
 
 n_sites_max = max(mt_lengths);
 n_sites_min = min(mt_lengths);
@@ -33,7 +33,7 @@ occupancyFile = sprintf(fileDirectory, sprintf(occupancyFileName, simName));
 
 % Read in and reshape data structure
 mt_coord_data_file = fopen(mtFile);
-mt_coord_raw_data = fread(mt_coord_data_file, n_mts * n_datapoints, '*double');
+mt_coord_raw_data = fread(mt_coord_data_file, n_mts * n_datapoints, '*int');
 fclose(mt_coord_data_file);
 mt_coord_data = reshape(mt_coord_raw_data, n_mts, n_datapoints);
 

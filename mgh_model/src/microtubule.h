@@ -2,12 +2,16 @@
 #define _MICROTUBULE_H
 #include "tubulin.h"
 #include <vector>
-
+class Curator;
 struct system_parameters;
 struct system_properties;
 
 class Microtubule {
 private:
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
+  Curator *wally_{nullptr};
+
 public:
   int index_;     // Index of MT in mt_list
   int polarity_;  // 0 for plus end on right; 1 for left
@@ -20,24 +24,21 @@ public:
   int n_sites_; // Number of tubulin sites on MT
   int coord_;   // Absolute coordinate of left-most edge of MT
 
-  double gamma_; // in units of (pN*s) / nm
   int steps_per_iteration_{0};
+  double gamma_; // in units of (pN*s) / nm
 
   Microtubule *neighbor_ = nullptr; // FIXME for 1+ neighbors
 
   std::vector<Tubulin> lattice_; // All tubulin sites
 
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
-
 private:
+  void SetParameters();
+  void GenerateLattice();
+
 public:
   Microtubule();
   void Initialize(system_parameters *parameters, system_properties *properties,
                   int i_mt);
-
-  void SetParameters();
-  void GenerateLattice();
 
   void UpdateExtensions();
 

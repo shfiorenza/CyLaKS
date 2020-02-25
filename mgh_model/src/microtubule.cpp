@@ -6,6 +6,7 @@ Microtubule::Microtubule() {}
 void Microtubule::Initialize(system_parameters *parameters,
                              system_properties *properties, int i_mt) {
 
+  wally_ = &properties->wallace;
   parameters_ = parameters;
   properties_ = properties;
   index_ = i_mt;
@@ -45,7 +46,7 @@ void Microtubule::SetParameters() {
   double big_l = n_sites_ * site_size;                 // in nm
   double radius = parameters_->microtubules.radius;    // in nm
   double height = parameters_->microtubules.elevation; // in nm
-  double eta = parameters_->eta;                       // in um^-2 (!!!)
+  double eta = parameters_->eta;                       // in (pN*s)/um^2 (!!!)
   // see radhika sliding paper for any of this to make sense
   // divide by 10^6 to convert eta to nm^-2
   double numerator = (2 * 3.14159 * big_l * eta) * 1e-6;
@@ -92,70 +93,44 @@ void Microtubule::UpdateExtensions() {
 
 double Microtubule::GetNetForce() {
 
-  double forces_summed = 0;
-  for (int i_site = 0; i_site < n_sites_; i_site++) {
-    Tubulin *site = &lattice_[i_site];
-    // Check if site is occupied by xlink head
+  double forces_summed{0.0};
+  for (int i_site{0}; i_site < n_sites_; i_site++) {
+    Tubulin *site{&lattice_[i_site]};
+    // If site is unoccupied, continue on in for loop
+    if (!site->occupied_) {
+      continue;
+    }
+    // Check if site is occupied by an xlink head
     if (site->xlink_head_ != nullptr) {
-      AssociatedProtein *xlink = site->xlink_head_->xlink_;
-      // If doubly-bound, get force from self and potentially teth
-      if (xlink->heads_active_ == 2) {
-        forces_summed += xlink->GetExtensionForce(site);
-        if (xlink->tethered_) {
-          Kinesin *motor = xlink->motor_;
-          // Only bound motors have valid tether extensions
-          if (motor->heads_active_ > 0) {
-            // Only motors on OTHER MTs can exert a force
-            if (motor->mt_ != site->mt_) {
-              forces_summed += motor->GetTetherForce(site);
-            }
-          }
-        }
-      }
-      // Otherwise if singly-bound, check for tether force
-      else if (xlink->tethered_) {
-        Kinesin *motor = xlink->motor_;
-        // Only bound motors have valid tether extensions
-        if (motor->heads_active_ > 0) {
-          // Only motors on OTHER MTs can exert a force
-          if (motor->mt_ != site->mt_) {
-            forces_summed += motor->GetTetherForce(site);
-          }
+      AssociatedProtein *xlink{site->xlink_head_->xlink_};
+      // Add xlink force (returns 0.0 if not doubly-bound)
+      forces_summed += xlink->GetExtensionForce(site);
+      // If xlink is tethered to non-satellite motor, add tether force too
+      if (xlink->tethered_ and !xlink->HasSatellite()) {
+        // Only motors tethered to OTHER MTs can exert a force
+        if (xlink->motor_->mt_ != site->mt_) {
+          forces_summed += xlink->motor_->GetTetherForce(site);
         }
       }
     }
-    // Otherwise, check if occupied by motor head
+    // Check if site is occupied by a motor head
     else if (site->motor_head_ != nullptr) {
-      Kinesin *motor = site->motor_head_->motor_;
-      // Motors can only exert a force if they are tethered
-      if (motor->tethered_) {
-        AssociatedProtein *xlink = motor->xlink_;
-        // singly-bound xlinks must be on other MTs to exert a force
-        if (xlink->heads_active_ == 1) {
-          Tubulin *xlink_site = xlink->GetActiveHeadSite();
-          if (xlink_site->mt_ != site->mt_) {
-            // With 1 head active, no danger of double counting
-            if (motor->heads_active_ == 1) {
-              forces_summed += motor->GetTetherForce(site);
-            }
-            // With 2 heads active, only get force from front
-            else if (site == motor->head_one_.site_) {
-              forces_summed += motor->GetTetherForce(site);
-            }
-          }
+      Kinesin *motor{site->motor_head_->motor_};
+      // Only motors tethered to non-satellite xlinks can exert a force
+      if (motor->tethered_ and !motor->HasSatellite()) {
+        // If tethered xlink is doubly-bound, add reactionary force
+        if (motor->xlink_->heads_active_ == 2) {
+          // (returns 0.0 if site == head_two_.site to avoid double counting)
+          forces_summed += motor->GetTetherForce(site);
         }
-        // If xlink is doubly-bound, get reaction force
-        else if (xlink->heads_active_ == 2) {
-          // With 1 head active, no danger of double counting
-          if (motor->heads_active_ == 1) {
-            forces_summed += motor->GetTetherForce(site);
-          }
-          // With 2 heads active, only get force from front
-          else if (site == motor->head_one_.site_) {
-            forces_summed += motor->GetTetherForce(site);
-          }
+        // Otherwise, we need to ensure the xlink isn't on the same MT
+        else if (motor->mt_ != motor->xlink_->GetActiveHead()->site_->mt_) {
+          // (returns 0.0 if site == head_two_.site to avoid double counting)
+          forces_summed += motor->GetTetherForce(site);
         }
       }
+    } else {
+      wally_->ErrorExit("Microtubule::GetNetForce()");
     }
   }
   return forces_summed;
@@ -202,7 +177,7 @@ double Microtubule::GetNetForce_Motors() {
         AssociatedProtein *xlink = motor->xlink_;
         // singly-bound xlinks must be on other MTs to exert a force
         if (xlink->heads_active_ == 1) {
-          Tubulin *xlink_site = xlink->GetActiveHeadSite();
+          Tubulin *xlink_site = xlink->GetActiveHead()->site_;
           if (xlink_site->mt_ != site->mt_) {
             // With 1 head active, no danger of double counting
             if (motor->heads_active_ == 1) {

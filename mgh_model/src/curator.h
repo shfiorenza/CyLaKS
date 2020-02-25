@@ -12,6 +12,7 @@ using t_unit = std::chrono::duration<double, std::nano>;
 
 class Curator {
 private:
+  FILE *log_file_{nullptr};
   int data_threshold_{0};
   int n_steps_recorded_{0};
   int n_steps_per_output_{0};
@@ -50,11 +51,23 @@ public:
                             int argc, system_properties *properties,
                             system_parameters *parameters);
   void ErrorExit(const char *function_name);
-  template <typename... Args> void Log(const char *msg, const Args... args);
   void UpdateTimestep(int i_step);
   void PrintMicrotubules();
   void PrintMicrotubules(double pause_duration);
   void PauseSim(double duration);
   void CleanUp();
+  template <typename... Args> void Log(const char *msg, const Args... args) {
+    // This is technically a horrendous vulnerability, but we don't care about
+    // hackers in our sim; also should never be linked to input
+    int chars_printed{printf(msg, args..., "no security error plz :)")};
+    int chars_written{fprintf(log_file_, msg, args..., "no error plz :)")};
+    if (chars_printed < 0 or chars_written < 0) {
+      printf("Fatal error in Curator::Log()\n");
+      printf(" *** EXITING ***\n");
+      fprintf(log_file_, "Fatal error in Curator::Log()\n");
+      fprintf(log_file_, " *** EXITING ***\n");
+      exit(1);
+    }
+  }
 };
 #endif

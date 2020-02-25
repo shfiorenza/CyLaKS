@@ -1,16 +1,15 @@
 seed: 198261346418
-n_steps: 6000000 # 0
+n_steps: 60000000
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 2.5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  count: 3
+  count: 2
   length:
-  - 125
+  - 1000
   - 500
-  - 2000
   y_dist: 32
   site_size: 8
   radius: 12.5
@@ -18,25 +17,26 @@ microtubules:
   start_coord:
   - 0
   - 0
-  - 0
   immobile_until:
-  - 0
-  - 0
-  - 0
+  - 9500
+  - 500
   applied_force: 0.0
   printout_on: false
   diffusion_on: true
 motors:
+  lattice_coop_amp: 5
+  lattice_coop_range: 750
+  interaction_energy: 1.5
   t_active: 1000
-  k_on: 0.000242
-  c_bulk: 0.0 # 6.0
+  k_on: 0.000358
+  c_bulk: 6.0
   c_eff_bind: 800000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 100 # 60 # 117
-  k_hydrolyze_stalled: 8.33 # 5 # 0.1084
-  k_off_i: 0.45 # 45 # 8.75
-  k_off_i_stalled: 0.01 # 0.1 # 718
+  k_hydrolyze: 130
+  k_hydrolyze_stalled: 130
+  k_off_i: 2.5
+  k_off_i_stalled: 2.5
   k_off_ii: 260
   k_tether: 0.1
   c_eff_tether: 5000
@@ -50,12 +50,12 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238
-  c_bulk: 0.0 # 1.0 # 0.54
+  c_bulk: 0.54
   c_eff_bind: 4500
   k_off_i: 0.143
   k_off_ii: 0.0143
   r_0: 32
-  k_spring: 0.453
+  k_spring: 0.453 # 0.06 # 0.1 #0.453
   diffu_coeff_i: 0.131
   diffu_coeff_ii: 0.0655
   interaction_energy: 2.25

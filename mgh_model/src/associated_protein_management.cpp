@@ -6,7 +6,6 @@ AssociatedProteinManagement::AssociatedProteinManagement() {}
 void AssociatedProteinManagement::Initialize(system_parameters *parameters,
                                              system_properties *properties) {
 
-  verbose_ = false;
   wally_ = &properties->wallace;
   parameters_ = parameters;
   properties_ = properties;
@@ -44,12 +43,16 @@ void AssociatedProteinManagement::CalculateCutoffs() {
       break;
     }
   }
+  dist_cutoff_ = 9;
+  /*
   if (dist_cutoff_ > 9) {
     printf("As of now, x_dist must be less than 10");
     printf(" (currenly %i with k_spring=%g)\n", dist_cutoff_, k_spring);
     wally_->ErrorExit("AP_MGMT::CalculateCutoffs() [2]");
   }
+  */
   if (parameters_->microtubules.count > 1) {
+    crosslinking_active_ = true;
     wally_->Log("\nFor crosslinkers:\n");
     wally_->Log("  rest_dist is %i\n", rest_dist_);
     wally_->Log("  dist_cutoff is %i\n\n", dist_cutoff_);
@@ -63,9 +66,6 @@ void AssociatedProteinManagement::SetParameters() {
   if (parameters_->xlinks.c_bulk > 0.0) {
     population_active_ = true;
   }
-  if (parameters_->microtubules.count > 1) {
-    crosslinking_active_ = true;
-  }
   if (parameters_->motors.tethers_active and parameters_->motors.c_bulk > 0.0) {
     tethering_active_ = true;
   }
@@ -73,7 +73,7 @@ void AssociatedProteinManagement::SetParameters() {
     For events that result in a change in energy, we use Boltzmann factors to
     scale rates appropriately. Detailed balance is satisfied with the factors:
                   exp{-(1 - lambda)*(delta_E)/(kB*T)}, and
-                  exp{-(lambda)*(delta_E)/(kB*T)}
+                  exp{(lambda)*(delta_E)/(kB*T)}
     for an event and its complement (e.g., binding and unbinding), where lambda
     is a constant that ranges from 0 to 1, delta_E is the change in energy that
     results from the event, kB is Boltzmann's constant, and T is the temperature
@@ -85,7 +85,6 @@ void AssociatedProteinManagement::SetParameters() {
   // Lambda = 0.5 means the weight is equally split between binding & unbinding
   double lambda_teth{0.5}; // lambda for tether spring energies
   // Calculate neighbor interaction energies
-  max_neighbs_ = 2;
   interaction_energy_ = -1 * parameters_->xlinks.interaction_energy;
   std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -114,9 +113,9 @@ void AssociatedProteinManagement::SetParameters() {
   double k_slack{parameters_->motors.k_slack};
   double r_0_teth{parameters_->motors.r_0};
   double r_y_teth{parameters_->microtubules.y_dist / 2};
-  double rest_dist_teth{properties_->kinesin4.motors_[0].rest_dist_};
-  teth_cutoff_ = properties_->kinesin4.motors_[0].teth_cutoff_;
-  comp_cutoff_ = properties_->kinesin4.motors_[0].comp_cutoff_;
+  double rest_dist_teth{properties_->kinesin4.rest_dist_};
+  teth_cutoff_ = properties_->kinesin4.teth_cutoff_;
+  comp_cutoff_ = properties_->kinesin4.comp_cutoff_;
   std::vector<double> teth_energy(2 * teth_cutoff_ + 1, 0.0);
   for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x_teth{((double)x_dub / 2) * site_size};
@@ -197,7 +196,6 @@ void AssociatedProteinManagement::SetParameters() {
           weight_neighb * weight_fr * p_diffu_ii;
     }
   }
-  // p_theory_.emplace("diffuse_i_fwd", p_diffuse_i_fwd_);
   // [DIFFUSION STATISTICS INVOLVING TETHER BELOW] //
   p_diffuse_i_to_teth_rest_.resize(max_neighbs_ + 1);
   p_diffuse_i_fr_teth_rest_.resize(max_neighbs_ + 1);
@@ -267,9 +265,9 @@ void AssociatedProteinManagement::SetParameters() {
   if (!parameters_->motors.tethers_active) {
     c_eff_teth = 0;
   }
-  p_bind_i_teth_base_ = k_on * c_eff_teth * delta_t;
+  p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
   double c_eff_bind = parameters_->xlinks.c_eff_bind;
-  p_bind_ii_base_ = k_on * c_eff_bind * delta_t;
+  p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
   double k_off_i = parameters_->xlinks.k_off_i;
   double k_off_ii = parameters_->xlinks.k_off_ii;
   p_bind_i_.resize(max_neighbs_ + 1);
@@ -387,6 +385,95 @@ void AssociatedProteinManagement::SetParameters() {
   p_tether_free_ = k_tether * c_xlink * delta_t;
   double k_untether = parameters_->motors.k_untether;
   p_untether_free_ = k_untether * delta_t;
+  // Add these johnnys to our p_theory_ map; need to pad so all are 3-D
+  p_theory_["p_diffuse_i_fwd"] = {{p_diffuse_i_fwd_}};
+  p_theory_["p_diffuse_i_bck"] = {{p_diffuse_i_bck_}};
+  p_theory_["p_diffuse_ii_to_rest"] = {p_diffuse_ii_to_rest_};
+  p_theory_["p_diffuse_ii_fr_rest"] = {p_diffuse_ii_fr_rest_};
+  p_theory_["p_diffuse_i_to_teth_rest"] = {p_diffuse_i_to_teth_rest_};
+  p_theory_["p_diffuse_i_fr_teth_rest"] = {p_diffuse_i_fr_teth_rest_};
+  p_theory_["p_diffuse_ii_to_both"] = p_diffuse_ii_to_both_;
+  p_theory_["p_diffuse_ii_fr_both"] = p_diffuse_ii_fr_both_;
+  p_theory_["p_diffuse_ii_to_self_fr_teth"] = p_diffuse_ii_to_self_fr_teth_;
+  p_theory_["p_diffuse_ii_fr_self_to_teth"] = p_diffuse_ii_fr_self_to_teth_;
+  p_theory_["p_bind_i"] = {{p_bind_i_}};
+  p_theory_["p_avg_bind_i_teth"] = {{{p_avg_bind_i_teth_}}};
+  p_theory_["p_avg_bind_ii"] = {{{p_avg_bind_ii_}}};
+  p_theory_["p_unbind_i"] = {{p_unbind_i_}};
+  p_theory_["p_unbind_i_teth"] = {p_unbind_i_teth_};
+  p_theory_["p_unbind_ii"] = {{p_unbind_ii_}};
+  p_theory_["p_unbind_ii_to_teth"] = p_unbind_ii_to_teth_;
+  p_theory_["p_unbind_ii_fr_teth"] = p_unbind_ii_fr_teth_;
+  p_theory_["p_tether_free"] = {{{p_tether_free_}}};
+  p_theory_["p_untether_free"] = {{{p_untether_free_}}};
+  // Manually construct probabilities used in Poisson processes using weights
+  Vec<Vec<Vec<double>>> p_bind_ii;
+  Vec<Vec<Vec<double>>> p_bind_i_teth;
+  Vec<Vec<Vec<double>>> p_bind_ii_to_teth;
+  Vec<Vec<Vec<double>>> p_bind_ii_fr_teth;
+  // Gotta pad the first two so that they're 3-D vectors
+  p_bind_ii.resize(1);
+  p_bind_i_teth.resize(1);
+  for (int i_scratch{0}; i_scratch < 1; i_scratch++) {
+    p_bind_ii[i_scratch].resize(max_neighbs_ + 1);
+    p_bind_i_teth[i_scratch].resize(max_neighbs_ + 1);
+    p_bind_ii_to_teth.resize(max_neighbs_ + 1);
+    p_bind_ii_fr_teth.resize(max_neighbs_ + 1);
+    for (int n_neighbs{0}; n_neighbs <= 2; n_neighbs++) {
+      p_bind_ii[i_scratch][n_neighbs].resize(dist_cutoff_ + 1);
+      for (int x{0}; x <= dist_cutoff_; x++) {
+        p_bind_ii[i_scratch][n_neighbs][x] =
+            weight_bind_ii_[n_neighbs][x] * p_avg_bind_ii_;
+      }
+      p_bind_i_teth[i_scratch][n_neighbs].resize(2 * teth_cutoff_ + 1);
+      p_bind_ii_to_teth[n_neighbs].resize(2 * teth_cutoff_ + 1);
+      p_bind_ii_fr_teth[n_neighbs].resize(2 * teth_cutoff_ + 1);
+      for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
+        p_bind_i_teth[i_scratch][n_neighbs][x_dub] =
+            weight_bind_i_teth_[n_neighbs][x_dub] * p_avg_bind_i_teth_;
+        p_bind_ii_to_teth[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
+        p_bind_ii_fr_teth[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
+        for (int x{0}; x <= dist_cutoff_; x++) {
+          p_bind_ii_to_teth[n_neighbs][x_dub][x] =
+              weight_bind_ii_to_teth_[n_neighbs][x_dub][x] * p_avg_bind_ii_;
+          p_bind_ii_fr_teth[n_neighbs][x_dub][x] =
+              weight_bind_ii_fr_teth_[n_neighbs][x_dub][x] * p_avg_bind_ii_;
+        }
+      }
+    }
+  }
+  p_theory_["p_bind_ii"] = p_bind_ii;
+  p_theory_["p_bind_i_teth"] = p_bind_i_teth;
+  p_theory_["p_bind_ii_to_teth"] = p_bind_ii_to_teth;
+  p_theory_["p_bind_ii_fr_teth"] = p_bind_ii_fr_teth;
+  // READ EM OUT
+  for (const auto &entry : p_theory_) {
+    auto label = entry.first;
+    auto value = entry.second;
+    for (int i{0}; i < value.size(); i++) {
+      for (int j{0}; j < value[i].size(); j++) {
+        for (int k{0}; k < value[i][j].size(); k++) {
+          std::string name{label + "_"};
+          if (value.size() > 1) {
+            name += "[" + std::to_string(i) + "]";
+          }
+          if (value[i].size() > 1) {
+            name += "[" + std::to_string(j) + "]";
+          }
+          if (value[i][j].size() > 1) {
+            name += "[" + std::to_string(k) + "]";
+          }
+          if (verbosity_ >= 3) {
+            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          }
+          if (value[i][j][k] > 0.5) {
+            wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
+            wally_->ErrorExit("AP_MGMT:SetParameters()");
+          }
+        }
+      }
+    }
+  }
 }
 
 void AssociatedProteinManagement::GenerateXLinks() {
@@ -398,8 +485,8 @@ void AssociatedProteinManagement::GenerateXLinks() {
     n_xlinks_ += parameters_->microtubules.length[i_mt];
   }
   xlinks_.resize(n_xlinks_);
-  for (int idx{0}; idx < n_xlinks_; idx++) {
-    xlinks_[idx].Initialize(parameters_, properties_, idx);
+  for (int id{0}; id < n_xlinks_; id++) {
+    xlinks_[id].Initialize(parameters_, properties_, id);
   }
 }
 
@@ -571,11 +658,10 @@ void AssociatedProteinManagement::InitializeEvents() {
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
     event_name = "bind_i" + N_NEIGHBS;
-    events_.emplace_back(
-        event_name, p_bind_i_[n_neighbs],
-        &properties_->microtubules.n_unoccupied_xl_[n_neighbs],
-        &properties_->microtubules.unoccupied_list_xl_[n_neighbs], exe_bind_i,
-        binomial, set_ran_indices);
+    events_.emplace_back(event_name, p_bind_i_[n_neighbs],
+                         &properties_->microtubules.n_unocc_xlink_[n_neighbs],
+                         &properties_->microtubules.unocc_xlink_[n_neighbs],
+                         exe_bind_i, binomial, set_ran_indices);
   }
   // Bind_I_Teth: same as above but for tethered unbound xlinks (satellites)
   if (tethering_active_) {
@@ -590,10 +676,15 @@ void AssociatedProteinManagement::InitializeEvents() {
         return 0;
       }
       int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
-      Set_Bind_I_Teth_Candidates(n_expected);
+      if (n_expected > 0) {
+        if (n_expected > n) {
+          n_expected = n;
+        }
+        Set_Bind_I_Teth_Candidates(n_expected);
+      }
       return n_expected;
     };
-    events_.emplace_back(event_name, p_bind_i_teth_base_,
+    events_.emplace_back(event_name, p_avg_bind_i_teth_,
                          &n_bind_i_teth_candidates_, &bind_i_teth_candidates_,
                          exe_bind_i_teth, poisson_i_teth, set_ran_indices);
   }
@@ -610,10 +701,15 @@ void AssociatedProteinManagement::InitializeEvents() {
         return 0;
       }
       int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
-      Set_Bind_II_Candidates(n_expected);
+      if (n_expected > 0) {
+        if (n_expected > n) {
+          n_expected = n;
+        }
+        Set_Bind_II_Candidates(n_expected);
+      }
       return n_expected;
     };
-    events_.emplace_back(event_name, p_bind_ii_base_, &n_bind_ii_candidates_,
+    events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
                          &bind_ii_candidates_, exe_bind_ii, poisson_ii,
                          set_ran_indices);
   }
@@ -630,10 +726,15 @@ void AssociatedProteinManagement::InitializeEvents() {
         return 0;
       }
       int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
-      Set_Bind_II_Teth_Candidates(n_expected);
+      if (n_expected > 0) {
+        if (n_expected > n) {
+          n_expected = n;
+        }
+        Set_Bind_II_Teth_Candidates(n_expected);
+      }
       return n_expected;
     };
-    events_.emplace_back(event_name, p_bind_ii_base_,
+    events_.emplace_back(event_name, p_avg_bind_ii_,
                          &n_bind_ii_teth_candidates_, &bind_ii_teth_candidates_,
                          exe_bind_ii_teth, poisson_ii_teth, set_ran_indices);
   }
@@ -650,7 +751,7 @@ void AssociatedProteinManagement::InitializeEvents() {
       std::string X_DIST{"_" + std::to_string(x)};
       event_name = "unbind_ii" + N_NEIGHBS + X_DIST;
       events_.emplace_back(event_name, p_unbind_ii_[n_neighbs][x],
-                           &n_bound_ii_[n_neighbs][x], bound_ii_[n_neighbs][x],
+                           &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
                            exe_unbind_ii, binomial, set_ran_indices);
     }
   }
@@ -718,9 +819,9 @@ void AssociatedProteinManagement::InitializeEvents() {
       Tether_Free(std::get<ALT_T *>(target));
     };
     events_.emplace_back(event_name, p_tether_free_,
-                         &properties_->kinesin4.n_bound_untethered_,
-                         &properties_->kinesin4.bound_untethered_,
-                         exe_tether_free, binomial, set_ran_indices);
+                         &properties_->kinesin4.n_bound_unteth_,
+                         &properties_->kinesin4.bound_unteth_, exe_tether_free,
+                         binomial, set_ran_indices);
     // Untether_satellite: untethers satellite xlinks from bound motors
     event_name = "untether_satellite";
     auto exe_untether_sat = [&](ENTRY_T target) {
@@ -752,19 +853,6 @@ AssociatedProtein *AssociatedProteinManagement::GetFreeXlink() {
   return xlink;
 }
 
-AssociatedProtein *AssociatedProteinManagement::GetBoundUntetheredXlink() {
-
-  Update_Bound_Unteth();
-  if (n_bound_unteth_ > 0) {
-    int i_entry = properties_->gsl.GetRanInt(n_bound_unteth_);
-    AssociatedProtein *xlink = bound_unteth_[i_entry];
-    return xlink;
-  } else {
-    printf("Error in GetUnTetheredXlink: no untethered xlinks!\n");
-    exit(1);
-  }
-}
-
 void AssociatedProteinManagement::AddToActive(AssociatedProtein *xlink) {
 
   active_[n_active_] = xlink;
@@ -776,41 +864,28 @@ void AssociatedProteinManagement::RemoveFromActive(AssociatedProtein *xlink) {
 
   AssociatedProtein *last_entry = active_[n_active_ - 1];
   int this_index = xlink->active_index_;
-  if (this_index != n_active_ - 1) {
-    active_[this_index] = last_entry;
-    last_entry->active_index_ = this_index;
-  }
+  active_[this_index] = last_entry;
+  last_entry->active_index_ = this_index;
   n_active_--;
 }
 
-void AssociatedProteinManagement::Update_Free_Teth() {
+void AssociatedProteinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
-  n_free_teth_ = 0;
-  n_bind_i_teth_candidates_ = 0;
-  for (int i_entry{0}; i_entry < n_active_; i_entry++) {
-    AssociatedProtein *xlink = active_[i_entry];
-    if (xlink->heads_active_ == 0 and xlink->tethered_) {
-      if (xlink->motor_->heads_active_ == 0) {
-        wally_->ErrorExit("AP_MGMT::Update_Free_Teth()\n");
-      }
-      free_teth_[n_free_teth_++] = &xlink->head_one_;
-      bind_i_teth_candidates_[n_bind_i_teth_candidates_++] = &xlink->head_one_;
-    }
+void AssociatedProteinManagement::Update_Extensions() {
+
+  if (!crosslinking_active_ and !tethering_active_) {
+    return;
   }
-}
-
-void AssociatedProteinManagement::Update_Bound_Unteth() {
-
-  n_bound_unteth_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
-    AssociatedProtein *xlink = active_[i_entry];
-    if (xlink->heads_active_ > 0 and !xlink->tethered_) {
-      bound_unteth_[n_bound_unteth_++] = xlink;
-    }
+    active_[i_entry]->UpdateExtension();
   }
 }
 
 void AssociatedProteinManagement::Update_Bound_I() {
+
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Bound_I()\n");
+  }
 
   n_bind_ii_candidates_ = 0;
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -818,17 +893,28 @@ void AssociatedProteinManagement::Update_Bound_I() {
   }
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     AssociatedProtein *xlink = active_[i_entry];
-    if (!xlink->tethered_ or xlink->HasSatellite()) {
-      AssociatedProtein::Monomer *head = xlink->GetActiveHead();
-      int n_neighbs = head->GetPRC1NeighborCount();
-      bound_i_[n_neighbs][n_bound_i_[n_neighbs]++] = head;
-      bind_ii_candidates_[n_bind_ii_candidates_++] = head;
+    if (xlink->heads_active_ == 1) {
+      if (!xlink->tethered_ or xlink->HasSatellite()) {
+        AssociatedProtein::Monomer *head = xlink->GetActiveHead();
+        int n_neighbs = head->GetPRC1NeighborCount();
+        bound_i_[n_neighbs][n_bound_i_[n_neighbs]++] = head;
+        bind_ii_candidates_[n_bind_ii_candidates_++] = head;
+      }
+    }
+  }
+  if (verbosity_ >= 1) {
+    wally_->Log(" n_bind_ii_candidates = %i\n", n_bind_ii_candidates_);
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+      wally_->Log(" n_bound_i_[%i] = %i\n", n_neighbs, n_bound_i_[n_neighbs]);
     }
   }
 }
 
 void AssociatedProteinManagement::Update_Bound_I_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Bound_I_Teth()\n");
+  }
   n_bind_ii_teth_candidates_ = 0;
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
@@ -837,21 +923,25 @@ void AssociatedProteinManagement::Update_Bound_I_Teth() {
   }
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     AssociatedProtein *xlink = active_[i_entry];
-    if (xlink->heads_active_ == 1 and xlink->tethered_) {
-      if (xlink->motor_->heads_active_ > 0) {
-        int x_dub = xlink->motor_->x_dist_doubled_;
-        AssociatedProtein::Monomer *head = xlink->GetActiveHead();
-        int n_neighbs = head->GetPRC1NeighborCount();
-        bound_i_teth_[n_neighbs][x_dub][n_bound_i_teth_[n_neighbs][x_dub]++] =
-            head;
-        bind_ii_teth_candidates_[n_bind_ii_teth_candidates_++] = head;
-      }
+    if (xlink->heads_active_ != 1) {
+      continue;
+    }
+    if (xlink->tethered_ and !xlink->HasSatellite()) {
+      int x_dub = xlink->motor_->x_dist_doubled_;
+      AssociatedProtein::Monomer *head = xlink->GetActiveHead();
+      int n_neighbs = head->GetPRC1NeighborCount();
+      int index{n_bound_i_teth_[n_neighbs][x_dub]++};
+      bound_i_teth_[n_neighbs][x_dub][index] = head;
+      bind_ii_teth_candidates_[n_bind_ii_teth_candidates_++] = head;
     }
   }
 }
 
 void AssociatedProteinManagement::Update_Bound_II() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Bound_II()\n");
+  }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     for (int x{0}; x <= dist_cutoff_; x++) {
       n_bound_ii_[n_neighbs][x] = 0;
@@ -878,6 +968,9 @@ void AssociatedProteinManagement::Update_Bound_II() {
 
 void AssociatedProteinManagement::Update_Bound_II_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Bound_II_Teth()\n");
+  }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
       for (int x{0}; x <= dist_cutoff_; x++) {
@@ -936,8 +1029,49 @@ void AssociatedProteinManagement::Update_Bound_II_Teth() {
   }
 }
 
+void AssociatedProteinManagement::Update_Bound_Unteth() {
+
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Bound_Unteth()\n");
+  }
+  n_bound_unteth_ = 0;
+  for (int i_entry{0}; i_entry < n_active_; i_entry++) {
+    AssociatedProtein *xlink = active_[i_entry];
+    if (xlink->tethered_) {
+      continue;
+    }
+    if (xlink->heads_active_ == 1) {
+      bound_unteth_[n_bound_unteth_++] = xlink->GetActiveHead();
+    } else {
+      bound_unteth_[n_bound_unteth_++] = &xlink->head_one_;
+    }
+  }
+}
+
+void AssociatedProteinManagement::Update_Free_Teth() {
+
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Update_Free_Teth()\n");
+  }
+  n_free_teth_ = 0;
+  n_bind_i_teth_candidates_ = 0;
+  for (int i_entry{0}; i_entry < n_active_; i_entry++) {
+    AssociatedProtein *xlink = active_[i_entry];
+    if (xlink->heads_active_ == 0 and xlink->tethered_) {
+      if (xlink->motor_->heads_active_ == 0) {
+        wally_->ErrorExit("AP_MGMT::Update_Free_Teth()\n");
+      }
+      free_teth_[n_free_teth_++] = &xlink->head_one_;
+      bind_i_teth_candidates_[n_bind_i_teth_candidates_++] = &xlink->head_one_;
+    }
+  }
+}
+
 double AssociatedProteinManagement::GetWeight_Bind_II() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::GetWeight_Bind_II()\n");
+  }
   double weight{0.0};
   for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
     POP_T *head{std::get<POP_T *>(bind_ii_candidates_[i_entry])};
@@ -948,6 +1082,9 @@ double AssociatedProteinManagement::GetWeight_Bind_II() {
 
 double AssociatedProteinManagement::GetWeight_Bind_I_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::GetWeight_Bind_I_Teth()\n");
+  }
   double weight{0.0};
   for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
     POP_T *head{std::get<POP_T *>(bind_i_teth_candidates_[i_entry])};
@@ -958,8 +1095,17 @@ double AssociatedProteinManagement::GetWeight_Bind_I_Teth() {
 
 double AssociatedProteinManagement::GetWeight_Bind_II_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::GetWeight_Bind_II_Teth()\n");
+  }
+  if (verbosity_ >= 2) {
+    wally_->Log("   %i candidates\n", n_bind_ii_teth_candidates_);
+  }
   double weight{0.0};
   for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
+    if (verbosity_ >= 2) {
+      wally_->Log("   accessing entry #%i\n", i_entry);
+    }
     POP_T *head{std::get<POP_T *>(bind_ii_teth_candidates_[i_entry])};
     weight += head->xlink_->GetTotalWeight_Bind_II_Teth();
   }
@@ -968,6 +1114,9 @@ double AssociatedProteinManagement::GetWeight_Bind_II_Teth() {
 
 void AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Set_Bind_II_Candidates()\n");
+  }
   double weight[n_bind_ii_candidates_];
   double weight_total{0.0};
   for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
@@ -976,7 +1125,7 @@ void AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
     weight_total += weight[i_entry];
   }
   if (weight_total == 0.0) {
-    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Candidate()\n");
+    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Candidates()\n");
   }
   ENTRY_T selected_candidates[n_to_set];
   for (int i_set{0}; i_set < n_to_set; i_set++) {
@@ -1001,6 +1150,9 @@ void AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
 
 void AssociatedProteinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Set_Bind_I_Teth_Candidates()\n");
+  }
   double weight[n_bind_i_teth_candidates_];
   double weight_total{0.0};
   for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
@@ -1009,7 +1161,7 @@ void AssociatedProteinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
     weight_total += weight[i_entry];
   }
   if (weight_total == 0.0) {
-    wally_->ErrorExit("AP_MGMT::Set_Bind_I_Teth_Candidate()\n");
+    wally_->ErrorExit("AP_MGMT::Set_Bind_I_Teth_Candidates()");
   }
   ENTRY_T selected_candidates[n_to_set];
   for (int i_set{0}; i_set < n_to_set; i_set++) {
@@ -1034,6 +1186,9 @@ void AssociatedProteinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
 
 void AssociatedProteinManagement::Set_Bind_II_Teth_Candidates(int n_to_set) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::Set_Bind_II_Teth_Candidates()\n");
+  }
   double weight[n_bind_ii_teth_candidates_];
   double weight_total{0.0};
   for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
@@ -1042,7 +1197,7 @@ void AssociatedProteinManagement::Set_Bind_II_Teth_Candidates(int n_to_set) {
     weight_total += weight[i_entry];
   }
   if (weight_total == 0.0) {
-    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Teth_Candidate()\n");
+    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Teth_Candidates()\n");
   }
   ENTRY_T selected_candidates[n_to_set];
   for (int i_set{0}; i_set < n_to_set; i_set++) {
@@ -1067,6 +1222,9 @@ void AssociatedProteinManagement::Set_Bind_II_Teth_Candidates(int n_to_set) {
 
 void AssociatedProteinManagement::RunKMC() {
 
+  // if (properties_->current_step_ > 4907210) {
+  //   verbosity_ = 2;
+  // }
   if (!population_active_) {
     return;
   }
@@ -1078,16 +1236,26 @@ void AssociatedProteinManagement::RunKMC() {
 
 void AssociatedProteinManagement::UpdateLists() {
 
+  /*
+  if (lists_up_to_date_) {
+    return;
+  }
+  */
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::UpdateLists()\n");
+  }
+  // lists_up_to_date_ = true;
+  Update_Extensions();
   properties_->microtubules.UpdateUnoccupied();
   Update_Bound_I();
-  if (parameters_->microtubules.count > 1) {
+  if (crosslinking_active_) {
     Update_Bound_II();
   }
-  if (parameters_->motors.c_bulk > 0.0 and parameters_->motors.tethers_active) {
+  if (tethering_active_) {
     Update_Free_Teth();
     Update_Bound_Unteth();
     Update_Bound_I_Teth();
-    if (parameters_->microtubules.count > 1) {
+    if (crosslinking_active_) {
       Update_Bound_II_Teth();
     }
     properties_->kinesin4.Update_Bound_Unteth();
@@ -1096,82 +1264,97 @@ void AssociatedProteinManagement::UpdateLists() {
 
 void AssociatedProteinManagement::SampleEventStatistics() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::SampleEventStatistics()\n");
+  }
   n_events_to_exe_ = 0;
   for (auto &&event : events_) {
+    if (verbosity_ >= 2) {
+      // wally_->Log("Sampling statistics for %s\n", event.name_.c_str());
+    }
     n_events_to_exe_ += event.SampleStatistics();
     // Ensure no funny business occurs with statistics
     if (event.n_expected_ > *event.n_avail_) {
       printf("Error; %i events expected but only %i available for %s\n",
              event.n_expected_, *event.n_avail_, event.name_.c_str());
-      wally_->ErrorExit("AP_MGMT::SampleEventStatistics");
+      wally_->ErrorExit("AP_MGMT::SampleEventStatistics()");
     }
+    if (verbosity_ >= 2 and event.n_expected_ > 0) {
+      wally_->Log(" %i events expected for %s (%i avail)\n", event.n_expected_,
+                  event.name_.c_str(), *event.n_avail_);
+    }
+  }
+  if (verbosity_ >= 2) {
+    wally_->Log(" %i events expected pre-correction\n", n_events_to_exe_);
   }
   if (n_events_to_exe_ <= 1) {
     return;
   }
-  // Put all events with > 1 target into an active_ array
-  EVENT_T *active_events[n_events_to_exe_];
+  // Put all events with >1 target into an active_ array
+  std::pair<EVENT_T *, ENTRY_T> active_events[n_events_to_exe_];
   int i_active{0};
   for (auto &&event : events_) {
+    // Add a ptr to the event for each target it has
     for (int i_tar{0}; i_tar < event.n_expected_; i_tar++) {
-      active_events[i_active++] = &event;
+      active_events[i_active++] = std::make_pair(&event, event.targets_[i_tar]);
+      if (verbosity_ >= 2) {
+        wally_->Log(" Added %s to active_events\n", event.name_.c_str());
+      }
     }
   }
-  // Scan through all active events to ensure that no two target the same
-  // xlink
-  int n_removed_tot{0};
-  for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
-    EVENT_T *event_i = active_events[i_event];
-    // For each event, compare each target
-    int n_removed_i{0};
-    for (int i_tar{0}; i_tar < event_i->n_expected_; i_tar++) {
-      i_tar -= n_removed_i;
-      AssociatedProtein *xlink_i{nullptr};
+  // Scan through all active events to ensure that no two target the same xlink
+  for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
+    EVENT_T *event_i = active_events[i_entry].first;
+    AssociatedProtein *xlink_i{nullptr};
+    try {
+      xlink_i = std::get<POP_T *>(active_events[i_entry].second)->xlink_;
+    } catch (...) {
+      continue;
+    }
+    for (int j_entry{i_entry + 1}; j_entry < n_events_to_exe_; j_entry++) {
+      EVENT_T *event_j = active_events[j_entry].first;
+      AssociatedProtein *xlink_j{nullptr};
       try {
-        xlink_i = std::get<POP_T *>(event_i->targets_[i_tar])->xlink_;
+        xlink_j = std::get<POP_T *>(active_events[j_entry].second)->xlink_;
       } catch (...) {
         continue;
       }
-      // Compare w/ events starting at i + 1 to avoid double counting
-      for (int j_event{i_event + 1}; j_event < n_events_to_exe_; j_event++) {
-        EVENT_T *event_j = active_events[j_event];
-        // If events are identical (i.e., n_expected > 1 for an event), skip
-        if (event_i == event_j) {
-          continue;
+      // If event_i and event_j target different xlinks, continue
+      if (xlink_i != xlink_j) {
+        continue;
+      }
+      double p_one{event_i->p_occur_};
+      double p_two{event_j->p_occur_};
+      double ran{properties_->gsl.GetRanProb()};
+      if (ran < p_one / (p_one + p_two)) {
+        if (verbosity_ >= 2) {
+          wally_->Log("Removed xlink #%i from %s targets\n", xlink_i->id_,
+                      event_i->name_.c_str());
         }
-        // Otherwise, scan over targets of event_j
-        int n_removed_j{0};
-        for (int j_tar{0}; j_tar < event_j->n_expected_; j_tar++) {
-          j_tar -= n_removed_j;
-          AssociatedProtein *xlink_j{nullptr};
-          try {
-            xlink_j = std::get<POP_T *>(event_j->targets_[j_tar])->xlink_;
-          } catch (...) {
-            continue;
-          }
-          // If event_i and event_j have the same target, roll to remove one
-          if (xlink_i == xlink_j) {
-            double p_one{event_i->p_occur_};
-            double p_two{event_j->p_occur_};
-            double ran{properties_->gsl.GetRanProb()};
-            if (ran < p_one / (p_one + p_two)) {
-              event_i->RemoveTarget(i_tar);
-              n_removed_i++;
-            } else {
-              event_j->RemoveTarget(j_tar);
-              n_removed_j++;
-            }
-            n_removed_tot++;
-          }
+        event_i->RemoveTarget(active_events[i_entry].second);
+        active_events[i_entry] = active_events[n_events_to_exe_ - 1];
+        i_entry--;
+        n_events_to_exe_--;
+        break;
+      } else {
+        if (verbosity_ >= 2) {
+          wally_->Log("Removed xlink #%i from %s targets\n", xlink_j->id_,
+                      event_j->name_.c_str());
         }
+        event_j->RemoveTarget(active_events[j_entry].second);
+        active_events[j_entry] = active_events[n_events_to_exe_ - 1];
+        j_entry--;
+        n_events_to_exe_--;
       }
     }
   }
-  n_events_to_exe_ -= n_removed_tot;
 }
 
 void AssociatedProteinManagement::GenerateExecutionSequence() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::GenerateExecutionSequence()\n");
+  }
   if (n_events_to_exe_ == 0) {
     return;
   }
@@ -1183,10 +1366,13 @@ void AssociatedProteinManagement::GenerateExecutionSequence() {
     }
   }
   if (i_array != n_events_to_exe_) {
-    wally_->ErrorExit("AssociatedProteinMGMT::GenerateExecutionSequence()");
+    wally_->ErrorExit("AP_MGMT::GenerateExecutionSequence()");
   }
   if (n_events_to_exe_ > 1) {
     properties_->gsl.Shuffle(pre_array, n_events_to_exe_, sizeof(EVENT_T *));
+  }
+  if (n_events_to_exe_ > events_to_exe_.size()) {
+    events_to_exe_.resize(n_events_to_exe_);
   }
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     events_to_exe_[i_event] = pre_array[i_event];
@@ -1195,13 +1381,20 @@ void AssociatedProteinManagement::GenerateExecutionSequence() {
 
 void AssociatedProteinManagement::ExecuteEvents() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting AP_MGMT::ExecuteEvents()\n");
+  }
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     events_to_exe_[i_event]->Execute();
+    FlagForUpdate();
   }
 }
 
 void AssociatedProteinManagement::Diffuse(POP_T *head, int dir) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Diffuse()\n");
+  }
   if (head->site_ == nullptr) {
     printf("woah buddy; u cant diffuse on a NULL site!!!\n");
     return;
@@ -1220,41 +1413,47 @@ void AssociatedProteinManagement::Diffuse(POP_T *head, int dir) {
     new_site->xlink_head_ = head;
     new_site->occupied_ = true;
     head->site_ = new_site;
-    head->xlink_->UpdateExtension();
     properties_->microtubules.FlagForUpdate();
   }
 }
 
 void AssociatedProteinManagement::Bind_I(SITE_T *site) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Bind_I()\n");
+  }
   AssociatedProtein *xlink{GetFreeXlink()};
   site->xlink_head_ = &xlink->head_one_;
   site->occupied_ = true;
   xlink->heads_active_++;
   xlink->head_one_.site_ = site;
-  xlink->UpdateExtension();
   AddToActive(xlink);
   properties_->microtubules.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Bind_I_Teth(POP_T *satellite_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Bind_I_Teth()\n");
+  }
   AssociatedProtein *xlink{satellite_head->xlink_};
   Tubulin *site{xlink->GetWeightedSite_Bind_I_Teth()};
   if (site == nullptr) {
-    printf("failed to XLINK Bind_I_Free_Tethered\n");
+    printf("failed toBind_I_Free_Tethered (XLINK)\n");
     return;
   }
   site->xlink_head_ = satellite_head;
   site->occupied_ = true;
   satellite_head->site_ = site;
   xlink->heads_active_++;
-  xlink->UpdateExtension();
   properties_->microtubules.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Bind_II(POP_T *bound_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Bind_II()\n");
+  }
   POP_T *unbound_head{bound_head->GetOtherHead()};
   AssociatedProtein *xlink{bound_head->xlink_};
   Tubulin *site{nullptr};
@@ -1276,31 +1475,34 @@ void AssociatedProteinManagement::Bind_II(POP_T *bound_head) {
   site->occupied_ = true;
   unbound_head->site_ = site;
   xlink->heads_active_++;
-  xlink->UpdateExtension();
   properties_->microtubules.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Unbind_II(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Unbind_II()\n");
+  }
   AssociatedProtein *xlink{head->xlink_};
   Tubulin *site{head->site_};
   site->xlink_head_ = nullptr;
   site->occupied_ = false;
   head->site_ = nullptr;
   xlink->heads_active_--;
-  xlink->UpdateExtension();
   properties_->microtubules.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Unbind_I(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Unbind_I()\n");
+  }
   AssociatedProtein *xlink{head->xlink_};
   Tubulin *site{head->site_};
   site->xlink_head_ = nullptr;
   site->occupied_ = false;
   head->site_ = nullptr;
   xlink->heads_active_--;
-  xlink->UpdateExtension();
   xlink->UntetherSatellite();
   if (!xlink->tethered_) {
     RemoveFromActive(xlink);
@@ -1310,6 +1512,9 @@ void AssociatedProteinManagement::Unbind_I(POP_T *head) {
 
 void AssociatedProteinManagement::Tether_Free(ALT_T *untethered_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Tether_Free()\n");
+  }
   AssociatedProtein *xlink{GetFreeXlink()};
   Kinesin *motor{untethered_head->motor_};
   xlink->motor_ = motor;
@@ -1317,10 +1522,14 @@ void AssociatedProteinManagement::Tether_Free(ALT_T *untethered_head) {
   motor->xlink_ = xlink;
   motor->tethered_ = true;
   AddToActive(xlink);
+  properties_->kinesin4.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Executing AP_MGMT::Untether_Free()\n");
+  }
   AssociatedProtein *xlink{satellite_head->xlink_};
   Kinesin *motor{xlink->motor_};
   xlink->motor_ = nullptr;
@@ -1328,4 +1537,5 @@ void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
   motor->xlink_ = nullptr;
   motor->tethered_ = false;
   RemoveFromActive(xlink);
+  properties_->kinesin4.FlagForUpdate();
 }

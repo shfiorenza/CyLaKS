@@ -1,8 +1,8 @@
 clear all;
 % Often-changed variables
-n_sites = [1000,500];
+n_sites = [500,500];
 %simName = '2019_11_11_slideScan/slide_scan_500_5000';
-simName = 'test_biasC';
+simName = 'test';
 % Pseudo-constant variables
 n_mts = length(n_sites);
 n_steps = 400000000;
@@ -42,9 +42,9 @@ grid on
 grid minor
 %axis tight
 
-smoothed_motors = smooth(motor_data(1,:), 100);
+smoothed_motors = smooth(motor_data, 100);
 subplot(3, 1, 2)
-plot(linspace(start_time, end_time, n_datapoints), smoothed_motors, 'LineWidth', 2);
+plot(linspace(start_time, end_time, n_datapoints), smoothed_motors(1, :), 'LineWidth', 2);
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
 title('Motor (tether) forces');
 ylabel('Net force (pN)');

@@ -79,7 +79,7 @@ void Curator::GenerateLogFile(char *sim_name) {
       }
     }
   }
-  properties_->log_file_ = OpenFile(log_file, "w");
+  log_file_ = OpenFile(log_file, "w");
 }
 
 void Curator::GenerateDataFiles(char *sim_name) {
@@ -384,7 +384,7 @@ void Curator::OutputData() {
       // If unoccupied, store the speciesID of tubulin to occupancy
       // and an ID of -1 (null) to motor/xlink ID files
       if (site->occupied_ == false) {
-        occupancy_array[i_site] = site->speciesID_;
+        occupancy_array[i_site] = site->species_id_;
         motor_ID_array[i_site] = -1;
         xlink_ID_array[i_site] = -1;
         tether_coord_array[i_site] = -1;
@@ -392,16 +392,16 @@ void Curator::OutputData() {
       // If occupied by xlink, store its species ID to occupancy_file,
       // its unique ID to the xlink ID file, and -1 to motor ID file
       else if (site->xlink_head_ != nullptr) {
-        occupancy_array[i_site] = site->xlink_head_->xlink_->speciesID_;
+        occupancy_array[i_site] = site->xlink_head_->xlink_->species_id_;
         motor_ID_array[i_site] = -1;
-        xlink_ID_array[i_site] = site->xlink_head_->xlink_->ID_;
+        xlink_ID_array[i_site] = site->xlink_head_->xlink_->id_;
         tether_coord_array[i_site] = -1;
       }
       // If occupied by motor, store its species ID to occupancy_file,
       // its unique ID to the motor ID file, and -1 to xlink ID file
       else if (site->motor_head_ != nullptr) {
         Kinesin *motor = site->motor_head_->motor_;
-        occupancy_array[i_site] = motor->speciesID_;
+        occupancy_array[i_site] = motor->species_id_;
         motor_ID_array[i_site] = motor->id_;
         xlink_ID_array[i_site] = -1;
         motor_head_status_array[i_site] = site->motor_head_->trailing_;
@@ -443,12 +443,12 @@ void Curator::OutputData() {
   // Scan through kinesin4/prc1 statistics to get extension occupancies
   for (int i_ext = 0; i_ext <= 2 * motor_ext_cutoff; i_ext++) {
     KinesinManagement *kinesin4 = &properties_->kinesin4;
-    motor_extension_array[i_ext] = kinesin4->n_bound_tethered_[i_ext];
+    motor_extension_array[i_ext] = kinesin4->n_bound_teth_[i_ext];
   }
   for (int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++) {
     AssociatedProteinManagement *prc1 = &properties_->prc1;
-    int max = prc1->max_neighbs_;
-    xlink_extension_array[i_ext] = prc1->n_bound_ii_[max + 1][i_ext];
+    //  int max = prc1->max_neighbs_;
+    // xlink_extension_array[i_ext] = prc1->n_bound_ii_[max + 1][i_ext];
   }
   // Write the data to respective files one timestep at a time
   fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
@@ -487,7 +487,7 @@ void Curator::OutputSimDuration() {
 
 void Curator::CloseDataFiles() {
 
-  fclose(properties_->log_file_);
+  fclose(log_file_);
   fclose(properties_->occupancy_file_);
   fclose(properties_->motor_ID_file_);
   fclose(properties_->xlink_ID_file_);
@@ -508,6 +508,7 @@ void Curator::ErrorExit(const char *function_name) {
   exit(1);
 }
 
+/*
 template <typename... Args>
 void Curator::Log(const char *msg, const Args... args) {
 
@@ -521,6 +522,7 @@ void Curator::Log(const char *msg, const Args... args) {
     exit(1);
   }
 }
+*/
 
 void Curator::UpdateTimestep(int i_step) {
 

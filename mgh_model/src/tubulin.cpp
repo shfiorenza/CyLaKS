@@ -16,9 +16,9 @@ void Tubulin::Initialize(system_parameters *parameters,
 
 bool Tubulin::EquilibriumInSameDirection() {
 
-  if (occupied_ == true && xlink_head_ != nullptr) {
-    if (xlink_head_->xlink_->heads_active_ == 2 &&
-        xlink_head_->xlink_->tethered_ == true) {
+  if (occupied_ and xlink_head_ != nullptr) {
+    if (xlink_head_->xlink_->tethered_ and
+        xlink_head_->xlink_->heads_active_ == 2) {
       Kinesin *motor = xlink_head_->xlink_->motor_;
       double site_coord = index_ + mt_->coord_;
       double xlink_rest = xlink_head_->xlink_->GetAnchorCoordinate();
@@ -65,8 +65,77 @@ bool Tubulin::EquilibriumInSameDirection() {
   }
 }
 
+void Tubulin::UpdateAffinity() {
+
+  if (motor_head_ != nullptr) {
+    affinity_ = 0;
+    return;
+  }
+  int n_affs{properties_->kinesin4.n_affinities_};
+  if (n_affs <= 1) {
+    affinity_ = 0;
+    return;
+  }
+  int range{(int)parameters_->motors.lattice_coop_range};
+  int bin_size{range / (n_affs - 1)};
+
+  for (int delta{1}; delta <= range; delta++) {
+    int i_fwd{index_ + delta};
+    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
+      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
+        affinity_ = (delta - 1) / bin_size;
+        return;
+      }
+    }
+    int i_bck{index_ - delta};
+    if (i_bck > 0 and i_bck < mt_->n_sites_) {
+      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
+        affinity_ = (delta - 1) / bin_size;
+        return;
+      }
+    }
+  }
+  affinity_ = n_affs - 1;
+}
+
+int Tubulin::GetAffinityExcluding(Kinesin *motor) {
+
+  int n_affs{properties_->kinesin4.n_affinities_};
+  if (n_affs <= 1) {
+    return 0;
+  }
+  int range{(int)parameters_->motors.lattice_coop_range};
+  int bin_size{0};
+  if (n_affs > 1) {
+    bin_size = range / (n_affs - 1);
+  }
+
+  for (int delta{1}; delta <= range; delta++) {
+    int i_fwd{index_ + delta};
+    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
+      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
+        if (mt_->lattice_[i_fwd].motor_head_->motor_ != motor) {
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+    int i_bck{index_ - delta};
+    if (i_bck > 0 and i_bck < mt_->n_sites_) {
+      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
+        if (mt_->lattice_[i_bck].motor_head_->motor_ != motor) {
+          return ((delta - 1) / bin_size);
+        }
+      }
+    }
+  }
+  return (n_affs - 1);
+}
+
 int Tubulin::GetPRC1NeighborCount() {
 
+  if (properties_->prc1.max_neighbs_ == 0) {
+    return 0;
+  }
   int n_neighbs{0};
   int mt_end{mt_->n_sites_ - 1};
   for (int delta{-1}; delta <= 1; delta += 2) {
@@ -74,6 +143,24 @@ int Tubulin::GetPRC1NeighborCount() {
     if (i_scan < 0 or i_scan > mt_end) {
       continue;
     } else if (mt_->lattice_[i_scan].xlink_head_ != nullptr) {
+      n_neighbs++;
+    }
+  }
+  return n_neighbs;
+}
+
+int Tubulin::GetKif4ANeighborCount() {
+
+  if (properties_->kinesin4.max_neighbs_ == 0) {
+    return 0;
+  }
+  int n_neighbs{0};
+  int mt_end{mt_->n_sites_ - 1};
+  for (int delta{-1}; delta <= 1; delta += 2) {
+    int i_scan = index_ + delta;
+    if (i_scan < 0 or i_scan > mt_end) {
+      continue;
+    } else if (mt_->lattice_[i_scan].motor_head_ != nullptr) {
       n_neighbs++;
     }
   }

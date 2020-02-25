@@ -9,21 +9,22 @@ struct system_properties;
 
 class Tubulin {
 private:
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
+
 public:
   int index_; // Index of tubulin site in MT lattice
   int coord_; // Absolute coord of tubulin site
-  int speciesID_ = 0;
+  int species_id_ = 0;
+  int affinity_{0};
 
   int unocc_index_[2] = {-1, -1};
 
-  bool occupied_ = false;
+  bool occupied_{false};
 
-  Microtubule *mt_ = nullptr;
-  Kinesin::head *motor_head_ = nullptr;
-  AssociatedProtein::Monomer *xlink_head_ = nullptr;
-
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
+  Microtubule *mt_{nullptr};
+  Kinesin::Monomer *motor_head_{nullptr};
+  AssociatedProtein::Monomer *xlink_head_{nullptr};
 
 private:
 public:
@@ -36,6 +37,11 @@ public:
   // if both are in the same direction w.r.t. this site
   bool EquilibriumInSameDirection();
 
+  void UpdateAffinity();
+
+  int GetAffinityExcluding(Kinesin *motor);
+
   int GetPRC1NeighborCount();
+  int GetKif4ANeighborCount();
 };
 #endif

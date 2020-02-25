@@ -17,38 +17,36 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 
 void MicrotubuleManagement::SetParameters() {
 
-  int n_mts = parameters_->microtubules.count;
-  n_sites_tot_ = 0;
-  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     n_sites_tot_ += parameters_->microtubules.length[i_mt];
   }
-  // int n_sites_bulk = n_sites_tot_ - 2*n_mts;
-  unoccupied_list_.resize(n_sites_tot_);
-  n_unoccupied_xl_.resize(3);
-  unoccupied_list_xl_.resize(3);
-  for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-    n_unoccupied_xl_[n_neighbs] = 0;
-    unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_);
+  n_unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+  unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
+    n_unocc_xlink_[n_neighbs] = 0;
+    unocc_xlink_[n_neighbs].resize(n_sites_tot_);
+  }
+  n_unocc_motor_.resize(n_affinities_);
+  unocc_motor_.resize(n_affinities_);
+  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+    n_unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
+    unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
+      n_unocc_motor_[i_aff][n_neighbs] = 0;
+      unocc_motor_[i_aff][n_neighbs].resize(n_sites_tot_);
+    }
   }
 }
 
 void MicrotubuleManagement::GenerateMicrotubules() {
 
-  int n_mts = parameters_->microtubules.count;
-  mt_list_.resize(n_mts);
-  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+  mt_list_.resize(parameters_->microtubules.count);
+  for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
   }
 }
 
-void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site) {
-
-  if (site->motor_head_ != nullptr || site->xlink_head_ != nullptr) {
-    printf("Error @ site %i_%i: should be unoccupied\n", site->mt_->index_,
-           site->index_);
-    exit(1);
-  }
-}
+void MicrotubuleManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void MicrotubuleManagement::UpdateNeighbors() {
 
@@ -70,102 +68,28 @@ void MicrotubuleManagement::UpdateUnoccupied() {
     return;
   }
   lists_up_to_date_ = true;
-  n_unoccupied_ = 0;
-  for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-    n_unoccupied_xl_[n_neighbs] = 0;
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
+    n_unocc_xlink_[n_neighbs] = 0;
   }
-  for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
-    int n_sites = parameters_->microtubules.length[i_mt];
-    int i_plus = mt_list_[i_mt].plus_end_;
-    int i_minus = mt_list_[i_mt].minus_end_;
-    int dx = mt_list_[i_mt].delta_x_;
-    for (int i_site = 0; i_site < n_sites; i_site++) {
-      Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
-      if (site->occupied_ == false) {
-        unoccupied_list_[n_unoccupied_] = site;
-        n_unoccupied_++;
-        int n_neighbs = 0;
-        if (i_site == i_plus) {
-          if (mt_list_[i_mt].lattice_[i_site - dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        } else if (i_site == i_minus) {
-          if (mt_list_[i_mt].lattice_[i_site + dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        } else {
-          if (mt_list_[i_mt].lattice_[i_site - dx].xlink_head_ != nullptr)
-            n_neighbs++;
-          if (mt_list_[i_mt].lattice_[i_site + dx].xlink_head_ != nullptr)
-            n_neighbs++;
-        }
-        unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]] = site;
-        n_unoccupied_xl_[n_neighbs]++;
-      }
+  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
+      n_unocc_motor_[i_aff][n_neighbs] = 0;
     }
   }
-}
-
-void MicrotubuleManagement::FlagForUpdate() { lists_up_to_date_ = false; }
-
-void MicrotubuleManagement::PushToUnoccupied(Tubulin *site) {
-
-  // Place in generic unocc_ list first
-  unoccupied_list_[n_unoccupied_] = site;
-  site->unocc_index_[0] = n_unoccupied_++;
-  // Next, place in neighbor-specific unocc_ list
-  int n_neighbs = site->GetPRC1NeighborCount();
-  unoccupied_list_xl_[n_neighbs][n_unoccupied_xl_[n_neighbs]] = site;
-  site->unocc_index_[1] = n_unoccupied_xl_[n_neighbs]++;
-}
-
-void MicrotubuleManagement::DeleteFromUnoccupied(Tubulin *site) {
-
-  // Delete from generic unocc_ first
-  Tubulin *last_entry = unoccupied_list_[n_unoccupied_ - 1];
-  int site_index = site->unocc_index_[0];
-  unoccupied_list_[site_index] = last_entry;
-  last_entry->unocc_index_[0] = site_index;
-  site->unocc_index_[0] = -1;
-  n_unoccupied_--;
-  // Next, delete from neighor_specific unocc_
-  int n_neighbs = site->GetPRC1NeighborCount();
-  int n_unocc = n_unoccupied_xl_[n_neighbs];
-  last_entry = std::get<Tubulin *>(unoccupied_list_xl_[n_neighbs][n_unocc - 1]);
-  site_index = site->unocc_index_[1];
-  unoccupied_list_xl_[n_neighbs][site_index] = last_entry;
-  last_entry->unocc_index_[1] = site_index;
-  site->unocc_index_[1] = -1;
-  n_unoccupied_xl_[n_neighbs]--;
-}
-
-Tubulin *MicrotubuleManagement::GetUnoccupiedSite() {
-
-  UpdateUnoccupied();
-  int n_unoccupied = n_unoccupied_;
-  // Make sure an unoccupied site exists
-  if (n_unoccupied > 0) {
-    int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
-    Tubulin *site = unoccupied_list_[i_entry];
-    UnoccupiedCheck(site);
-    return site;
-  } else {
-    printf("Error: GetUnoccupiedSite called, but no unoccupied sites\n");
-    exit(1);
-  }
-}
-
-Tubulin *MicrotubuleManagement::GetUnoccupiedSite(int n_neighbs) {
-
-  UpdateUnoccupied();
-  int n_unoccupied = n_unoccupied_xl_[n_neighbs];
-  if (n_unoccupied > 0) {
-    int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
-    Tubulin *site =
-        std::get<Tubulin *>(unoccupied_list_xl_[n_neighbs][i_entry]);
-    UnoccupiedCheck(site);
-    return site;
-  } else {
-    printf("Error: GetUnoccupiedSiteNEIGHB called, but no sites\n");
-    exit(1);
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
+    for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
+      Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
+      site->UpdateAffinity();
+      if (site->occupied_) {
+        continue;
+      }
+      int n_neighbs_xl{site->GetPRC1NeighborCount()};
+      unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
+      int n_neighbs_mot{site->GetKif4ANeighborCount()};
+      int tub_aff{site->affinity_};
+      int index{n_unocc_motor_[tub_aff][n_neighbs_mot]++};
+      unocc_motor_[tub_aff][n_neighbs_mot][index] = site;
+    }
   }
 }
 
@@ -195,10 +119,18 @@ void MicrotubuleManagement::RunDiffusion() {
   double site_size{parameters_->microtubules.site_size};
   // Sum up all forces exerted on each microtubule
   double forces_summed[n_mts];
+  properties_->prc1.Update_Extensions();
+  properties_->kinesin4.Update_Extensions();
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-    mt_list_[i_mt].UpdateExtensions();
     forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
     forces_summed[i_mt] += parameters_->microtubules.applied_force;
+  }
+  // Check for symmetry
+  double delta{forces_summed[0] + forces_summed[1]};
+  double tolerance{0.0001};
+  if (delta > tolerance) {
+    printf("Error in RunMTDiffusion\n");
+    exit(1);
   }
   // Calculate the displacement of each microtubule (in n_sites)
   int displacement[n_mts];
@@ -248,9 +180,7 @@ void MicrotubuleManagement::RunDiffusion() {
       continue;
     }
     mt_list_[i_mt].coord_ += displacement[i_mt];
-    mt_list_[i_mt].UpdateExtensions();
-    if (mt_list_[i_mt].neighbor_ != nullptr) {
-      // mt_list_[i_mt].neighbor_->UpdateExtensions();
-    }
+    properties_->prc1.FlagForUpdate();
+    properties_->kinesin4.FlagForUpdate();
   }
 }

@@ -9,42 +9,33 @@ struct system_properties;
 class MicrotubuleManagement {
 private:
   template <class DATA_T> using Vec = std::vector<DATA_T>;
+  int n_sites_tot_{0};
+  int max_neighbs_xlink_{2};
+  int max_neighbs_motor_{0}; // {2};
+  int n_affinities_{1};      // {11};
+  bool lists_up_to_date_{false};
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
 
 public:
-  int n_sites_tot_{0};
-  int n_unoccupied_{0};
-  std::vector<int> n_unoccupied_xl_;
+  Vec<int> n_unocc_xlink_;
+  Vec<Vec<int>> n_unocc_motor_;
+  Vec<Vec<ENTRY_T>> unocc_xlink_;
+  Vec<Vec<Vec<ENTRY_T>>> unocc_motor_;
 
-  bool lists_up_to_date_{false};
-
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
-
-  std::vector<Microtubule> mt_list_;
-  std::vector<Tubulin *> unoccupied_list_;
-  Vec<Vec<ENTRY_T>> unoccupied_list_xl_;
+  Vec<Microtubule> mt_list_;
 
 private:
-public:
-  MicrotubuleManagement();
-
-  void Initialize(system_parameters *parameters, system_properties *properties);
-
   void SetParameters();
   void GenerateMicrotubules();
 
-  void UnoccupiedCheck(Tubulin *site);
-
-  void UpdateNeighbors();
-  void UpdateUnoccupied();
+public:
+  MicrotubuleManagement();
+  void Initialize(system_parameters *parameters, system_properties *properties);
 
   void FlagForUpdate();
-
-  void PushToUnoccupied(Tubulin *site);
-  void DeleteFromUnoccupied(Tubulin *site);
-
-  Tubulin *GetUnoccupiedSite();
-  Tubulin *GetUnoccupiedSite(int n_neighbs);
+  void UpdateNeighbors();
+  void UpdateUnoccupied();
 
   void RunDiffusion();
 };

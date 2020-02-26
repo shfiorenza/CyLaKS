@@ -3,11 +3,20 @@
 
 Curator::Curator() {}
 
-void Curator::InitializeSimulation(char *exe_name, char *param_file,
-                                   char *sim_name, int argc,
-                                   system_properties *properties,
+void Curator::InitializeSimulation(char *argv[], system_properties *properties,
                                    system_parameters *parameters) {
 
+  char *exe_name{argv[0]};
+  char *param_file{argv[1]};
+  char *sim_name{argv[2]};
+  char *test_mode{argv[3]};
+  int argc{0};
+  while (true) {
+    if (argv[argc] == nullptr) {
+      break;
+    }
+    argc++;
+  }
   properties_ = properties;
   // User input must have correct number of arguments
   CheckArgs(exe_name, argc);
@@ -41,11 +50,13 @@ bool Curator::FileExists(std::string file_name) {
 
 void Curator::CheckArgs(char *exe_name, int argc) {
 
-  if (argc != 3) {
-    Log("\nWrong number of command-line arguments in main\n");
-    Log("Usage: %s parameters.yaml sim_name\n\n", exe_name);
-    exit(1);
+  if (argc > 2 and argc < 5) {
+    return;
   }
+  printf("\nWrong number of command-line arguments in main\nUsage: ");
+  printf("%s parameters.yaml sim_name (required) test_mode (optional)\n\n",
+         exe_name);
+  exit(1);
 }
 
 void Curator::GenerateLogFile(char *sim_name) {
@@ -306,11 +317,6 @@ void Curator::SetLocalParameters() {
     t_xlinks_[i] = 0;
     t_MTs_[i] = 0;
   }
-  // XXX lmfao fix me
-  t_xlinks_[4] = 0;
-  t_xlinks_[5] = 0;
-  t_xlinks_[6] = 0;
-  t_xlinks_[7] = 0;
 }
 
 void Curator::InitializeSimObjects() {
@@ -467,6 +473,7 @@ void Curator::OutputSimDuration() {
   finish_ = sys_clock::now();
   double sim_duration{(double)(finish_ - start_).count()};
   Log("\nTime to execute sim: %.2f seconds.\n", sim_duration / n_per_sec);
+  /*
   Log("   -Motors: %.2f\n", t_motors_[0] / n_per_sec);
   Log("      -Calculating stats: %.2f\n", t_motors_[1] / n_per_sec);
   Log("      -Constructing list: %.2f\n", t_motors_[2] / n_per_sec);
@@ -483,6 +490,7 @@ void Curator::OutputSimDuration() {
   Log("      -Summing forces: %.2f\n", t_MTs_[1] / n_per_sec);
   Log("      -Calculating displacement: %.2f\n", t_MTs_[2] / n_per_sec);
   Log("      -Execution: %.2f\n", t_MTs_[3] / n_per_sec);
+  */
 }
 
 void Curator::CloseDataFiles() {
@@ -507,22 +515,6 @@ void Curator::ErrorExit(const char *function_name) {
   Log(" *** EXITING ***\n");
   exit(1);
 }
-
-/*
-template <typename... Args>
-void Curator::Log(const char *msg, const Args... args) {
-
-  int chars_printed{printf(msg, args...)};
-  int chars_written{fprintf(properties_->log_file_, msg, args...)};
-  if (chars_printed < 0 or chars_written < 0) {
-    printf("Fatal error in Curator::Log()\n");
-    printf(" *** EXITING ***\n");
-    fprintf(properties_->log_file_, "Fatal error in Curator::Log()\n");
-    fprintf(properties_->log_file_, " *** EXITING ***\n");
-    exit(1);
-  }
-}
-*/
 
 void Curator::UpdateTimestep(int i_step) {
 

@@ -307,6 +307,57 @@ void KinesinManagement::SetParameters() {
       }
     }
   }
+  p_theory_["hydrolyze"] = {{{p_hydrolyze_}}};
+  p_theory_["hydrolyze_st"] = {{{p_hydrolyze_st_}}};
+  if (tethering_active_) {
+    p_theory_["tether_free"] = {{{p_tether_free_}}};
+    p_theory_["untether_satellite"] = {{{p_untether_satellite_}}};
+    p_theory_["bind_i_teth"] = {{{p_avg_bind_i_teth_}}};
+    p_theory_["tether_bound"] = {{{p_avg_tether_bound_}}};
+    p_theory_["untether_bound"] = {{p_untether_bound_}};
+  }
+  p_theory_["bind_ATP"] = {{p_bind_ATP_}};
+  if (tethering_active_) {
+    p_theory_["bind_ATP_to_teth"] = {p_bind_ATP_to_teth_};
+    p_theory_["bind_ATP_fr_teth"] = {p_bind_ATP_fr_teth_};
+  }
+  p_theory_["bind_i"] = {p_bind_i_};
+  p_theory_["bind_ii"] = {p_bind_ii_};
+  p_theory_["unbind_ii"] = {p_unbind_ii_};
+  p_theory_["unbind_i"] = {p_unbind_i_};
+  p_theory_["unbind_i_st"] = {p_unbind_i_st_};
+  if (tethering_active_) {
+    p_theory_["unbind_i_teth"] = p_unbind_i_teth_;
+    p_theory_["unbind_i_teth_st"] = p_unbind_i_teth_st_;
+  }
+  // READ EM OUT
+  for (const auto &entry : p_theory_) {
+    auto label = entry.first;
+    auto value = entry.second;
+    for (int i{0}; i < value.size(); i++) {
+      for (int j{0}; j < value[i].size(); j++) {
+        for (int k{0}; k < value[i][j].size(); k++) {
+          std::string name{"p_" + label + "_"};
+          if (value.size() > 1) {
+            name += "[" + std::to_string(i) + "]";
+          }
+          if (value[i].size() > 1) {
+            name += "[" + std::to_string(j) + "]";
+          }
+          if (value[i][j].size() > 1) {
+            name += "[" + std::to_string(k) + "]";
+          }
+          if (verbosity_ >= 3) {
+            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          }
+          if (value[i][j][k] > 0.5) {
+            wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
+            wally_->ErrorExit("Kin_MGMT:SetParameters()");
+          }
+        }
+      }
+    }
+  }
 }
 
 void KinesinManagement::GenerateMotors() {
@@ -452,7 +503,13 @@ void KinesinManagement::InitializeEvents() {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "bind_i" + AFFINITY + N_NEIGHBS;
+      event_name = "bind_i";
+      if (n_affinities_ > 1) {
+        event_name += AFFINITY;
+      }
+      if (max_neighbs_ > 0) {
+        event_name += N_NEIGHBS;
+      }
       events_.emplace_back(
           event_name, p_bind_i_[i_aff][n_neighbs],
           &properties_->microtubules.n_unocc_motor_[i_aff][n_neighbs],
@@ -497,7 +554,10 @@ void KinesinManagement::InitializeEvents() {
   }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_step; n_neighbs++) {
     std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-    event_name = "bind_ATP" + N_NEIGHBS;
+    event_name = "bind_ATP";
+    if (max_neighbs_ > 0) {
+      event_name += N_NEIGHBS;
+    }
     events_.emplace_back(event_name, p_bind_ATP_[n_neighbs],
                          &n_bound_NULL_[n_neighbs], &bound_NULL_[n_neighbs],
                          exe_bind_ATP, binomial, set_ran_indices);
@@ -533,7 +593,7 @@ void KinesinManagement::InitializeEvents() {
   events_.emplace_back(event_name, p_hydrolyze_, &n_bound_ATP_, &bound_ATP_,
                        exe_hydrolyze, binomial, set_ran_indices);
   // Hydrolyze_stalled: same as Hydrolyze but only targets stalled motors
-  event_name = "hydrolyze_stalled";
+  event_name = "hydrolyze_st";
   events_.emplace_back(event_name, p_hydrolyze_st_, &n_bound_ATP_st_,
                        &bound_ATP_st_, exe_hydrolyze, binomial,
                        set_ran_indices);
@@ -551,7 +611,13 @@ void KinesinManagement::InitializeEvents() {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "bind_ii" + AFFINITY + N_NEIGHBS;
+      event_name = "bind_ii";
+      if (n_affinities_ > 1) {
+        event_name += AFFINITY;
+      }
+      if (max_neighbs_ > 0) {
+        event_name += N_NEIGHBS;
+      }
       events_.emplace_back(event_name, p_bind_ii_[i_aff][n_neighbs],
                            &n_docked_[i_aff][n_neighbs],
                            &docked_[i_aff][n_neighbs], exe_bind_ii, binomial,
@@ -571,14 +637,19 @@ void KinesinManagement::InitializeEvents() {
     }
   };
   for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
-    for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
-      std::string affinity = std::to_string(i_aff);
-      std::string n_neighbs = std::to_string(i_neighb);
-      std::string name = "unbind_ii_" + affinity + "_" + n_neighbs;
-      std::string tar = "bound_ADPP_ii_" + affinity + "_" + n_neighbs;
-      events_.emplace_back(name, p_unbind_ii_[i_aff][i_neighb],
-                           &n_bound_ADPP_ii_[i_aff][i_neighb],
-                           &bound_ADPP_ii_[i_aff][i_neighb], exe_unbind_ii,
+    std::string AFFINITY{"_" + std::to_string(i_aff)};
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
+      event_name = "unbind_ii";
+      if (n_affinities_ > 1) {
+        event_name += AFFINITY;
+      }
+      if (max_neighbs_ > 0) {
+        event_name += N_NEIGHBS;
+      }
+      events_.emplace_back(event_name, p_unbind_ii_[i_aff][n_neighbs],
+                           &n_bound_ADPP_ii_[i_aff][n_neighbs],
+                           &bound_ADPP_ii_[i_aff][n_neighbs], exe_unbind_ii,
                            binomial, set_ran_indices);
     }
   }
@@ -596,13 +667,25 @@ void KinesinManagement::InitializeEvents() {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "unbind_i" + AFFINITY + N_NEIGHBS;
+      event_name = "unbind_i";
+      if (n_affinities_ > 1) {
+        event_name += AFFINITY;
+      }
+      if (max_neighbs_ > 0) {
+        event_name += N_NEIGHBS;
+      }
       events_.emplace_back(event_name, p_unbind_i_[i_aff][n_neighbs],
                            &n_bound_ADPP_i_[i_aff][n_neighbs],
                            &bound_ADPP_i_[i_aff][n_neighbs], exe_unbind_i,
                            binomial, set_ran_indices);
       // Unbind_I_Stalled: Same as unbind_I but only targets stalled motors
-      event_name = "unbind_i_st" + AFFINITY + N_NEIGHBS;
+      event_name = "unbind_i_st";
+      if (n_affinities_ > 1) {
+        event_name += AFFINITY;
+      }
+      if (max_neighbs_ > 0) {
+        event_name += N_NEIGHBS;
+      }
       events_.emplace_back(event_name, p_unbind_i_st_[i_aff][n_neighbs],
                            &n_bound_ADPP_i_st_[i_aff][n_neighbs],
                            &bound_ADPP_i_st_[i_aff][n_neighbs], exe_unbind_i,
@@ -678,9 +761,56 @@ void KinesinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_untether_satellite_, &n_satellites_,
                          &satellites_, exe_untether, binomial, set_ran_indices);
   }
-  wally_->Log("\nMotor events: \n");
-  for (const auto &event : events_) {
-    wally_->Log("   %s\n", event.name_.c_str());
+  if (verbosity_ >= 3) {
+    wally_->Log("\nMotor events: \n");
+    for (const auto &event : events_) {
+      wally_->Log("   %s\n", event.name_.c_str());
+    }
+  }
+}
+
+void KinesinManagement::ReportProbabilities() {
+
+  for (const auto &entry : p_theory_) {
+    auto label = entry.first;
+    auto value = entry.second;
+    for (int i{0}; i < value.size(); i++) {
+      for (int j{0}; j < value[i].size(); j++) {
+        for (int k{0}; k < value[i][j].size(); k++) {
+          std::string name{label};
+          if (value.size() > 1) {
+            name += "_" + std::to_string(i);
+          }
+          if (value[i].size() > 1) {
+            name += "_" + std::to_string(j);
+          }
+          if (value[i][j].size() > 1) {
+            name += "_" + std::to_string(k);
+          }
+          auto event = std::find_if(
+              events_.begin(), events_.end(),
+              [&name](EVENT_T const &event) { return event.name_ == name; });
+          if (event->name_ != name) {
+            printf("Couldn't find %s\n", name.c_str());
+            continue;
+          }
+          if (event->n_opportunities_tot_ == 0) {
+            printf("No statistics for %s\n", name.c_str());
+            continue;
+          }
+          double n_exe_tot{(double)event->n_executed_tot_};
+          double n_opp_tot{(double)event->n_opportunities_tot_};
+          if (n_opp_tot < 0.0) {
+            printf("WHAT?? n_opp = %g\n", n_opp_tot);
+            exit(1);
+          }
+          wally_->Log("For Kin event %s:\n", event->name_.c_str());
+          wally_->Log("   p_theory = %g\n", value[i][j][k]);
+          wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
+          wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
+        }
+      }
+    }
   }
 }
 

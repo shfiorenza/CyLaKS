@@ -36,8 +36,9 @@ private:
 
 public:
   // Index scheme: [n_neighbs][x_dub][x]
+  // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
-  std::map<std::string, Vec<Vec<Vec<std::pair<int, int>>>>> p_actual_;
+  std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
 
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_{2};
@@ -126,6 +127,7 @@ private:
 public:
   AssociatedProteinManagement();
   void Initialize(system_parameters *parameters, system_properties *properties);
+  void ReportProbabilities();
 
   AssociatedProtein *GetFreeXlink();
 

@@ -21,7 +21,7 @@ private:
 
 public:
   double t_motors_[4];
-  double t_xlinks_[8];
+  double t_xlinks_[4];
   double t_MTs_[4];
 
   struct timespec pause_dur_;
@@ -47,20 +47,14 @@ private:
 
 public:
   Curator();
-  void InitializeSimulation(char *exe_name, char *param_file, char *sim_name,
-                            int argc, system_properties *properties,
+  void InitializeSimulation(char *argv[], system_properties *properties,
                             system_parameters *parameters);
   void ErrorExit(const char *function_name);
-  void UpdateTimestep(int i_step);
-  void PrintMicrotubules();
-  void PrintMicrotubules(double pause_duration);
-  void PauseSim(double duration);
-  void CleanUp();
   template <typename... Args> void Log(const char *msg, const Args... args) {
     // This is technically a horrendous vulnerability, but we don't care about
-    // hackers in our sim; also should never be linked to input
-    int chars_printed{printf(msg, args..., "no security error plz :)")};
-    int chars_written{fprintf(log_file_, msg, args..., "no error plz :)")};
+    // scary 'hackers' in our sim; also should never be linked to input
+    int chars_printed{printf(msg, args..., "MISSING STRING")};
+    int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
     if (chars_printed < 0 or chars_written < 0) {
       printf("Fatal error in Curator::Log()\n");
       printf(" *** EXITING ***\n");
@@ -69,5 +63,10 @@ public:
       exit(1);
     }
   }
+  void UpdateTimestep(int i_step);
+  void PrintMicrotubules();
+  void PrintMicrotubules(double pause_duration);
+  void PauseSim(double duration);
+  void CleanUp();
 };
 #endif

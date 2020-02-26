@@ -41,7 +41,7 @@ void MicrotubuleManagement::SetParameters() {
 void MicrotubuleManagement::GenerateMicrotubules() {
 
   mt_list_.resize(parameters_->microtubules.count);
-  for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
   }
 }
@@ -106,7 +106,8 @@ void MicrotubuleManagement::RunDiffusion() {
   double current_time{current_step * delta_t};
   // Check that at least one microtubule is active (not immobilized)
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-    if (current_step % mt_list_[i_mt].steps_per_iteration_ == 0 and
+    if (
+        // current_step % mt_list_[i_mt].steps_per_iteration_ == 0 and
         current_time >= parameters_->microtubules.immobile_until[i_mt]) {
       mts_inactive = false;
     }
@@ -130,22 +131,39 @@ void MicrotubuleManagement::RunDiffusion() {
   double tolerance{0.0001};
   if (delta > tolerance) {
     printf("Error in RunMTDiffusion\n");
+    printf(" *** EXITING *** \n");
     exit(1);
   }
   // Calculate the displacement of each microtubule (in n_sites)
   int displacement[n_mts];
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
     // If microtubule is still immobilized, set displacement to 0 and continue
-    if (current_time < parameters_->microtubules.immobile_until[i_mt] or
-        current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
+    if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
+      //  or current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
       displacement[i_mt] = 0;
       continue;
     }
-    double delta_t_eff{delta_t * mt_list_[i_mt].steps_per_iteration_};
     // Calculate instanteous velocity due to forces using drag coefficient
     double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
-    double dx_mean{velocity * delta_t_eff};
+    double dx_mean{velocity * delta_t};
+    // if (current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
+    double n_sites{dx_mean / site_size};
+    int n_sites_whole{(int)n_sites};
+    displacement[i_mt] = n_sites_whole;
+    double leftover{fabs(n_sites - n_sites_whole)};
+    double ran{properties_->gsl.GetRanProb()};
+    if (ran < leftover) {
+      if (n_sites > 0) {
+        displacement[i_mt]++;
+      } else {
+        displacement[i_mt]--;
+      }
+    }
+    continue;
+    // }
+    /*
     // Add gaussan noise, meant to represent thermal motion
+    double delta_t_eff{delta_t * mt_list_[i_mt].steps_per_iteration_};
     double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
     // Convert mean and sigma from nm to n_sites
     dx_mean /= site_size;
@@ -173,6 +191,7 @@ void MicrotubuleManagement::RunDiffusion() {
         break;
       }
     }
+    */
   }
   /*  Run through MT list and update displacementsi */
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {

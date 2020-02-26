@@ -137,12 +137,12 @@ int Tubulin::GetPRC1NeighborCount() {
     return 0;
   }
   int n_neighbs{0};
-  int mt_end{mt_->n_sites_ - 1};
   for (int delta{-1}; delta <= 1; delta += 2) {
     int i_scan = index_ + delta;
-    if (i_scan < 0 or i_scan > mt_end) {
+    if (i_scan < 0 or i_scan > (mt_->n_sites_ - 1)) {
       continue;
-    } else if (mt_->lattice_[i_scan].xlink_head_ != nullptr) {
+    }
+    if (mt_->lattice_[i_scan].xlink_head_ != nullptr) {
       n_neighbs++;
     }
   }

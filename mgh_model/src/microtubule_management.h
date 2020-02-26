@@ -22,7 +22,6 @@ public:
   Vec<Vec<int>> n_unocc_motor_;
   Vec<Vec<ENTRY_T>> unocc_xlink_;
   Vec<Vec<Vec<ENTRY_T>>> unocc_motor_;
-
   Vec<Microtubule> mt_list_;
 
 private:

@@ -5,7 +5,7 @@ max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
 %simName = "2019_12_04_slideScan/slide_scan_2.0_525_5";
-simName = "test_slide_weakerXL";
+simName = "test_slide_hybridStep_lowKoff";
 dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 60000000;

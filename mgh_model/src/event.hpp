@@ -16,6 +16,8 @@ private:
   std::function<void(int *, int, int)> set_ran_indices_;
 
 public:
+  unsigned long n_executed_tot_{0};
+  unsigned long n_opportunities_tot_{0};
   // Targets that this event will act on this timestep
   std::vector<ENTRY_T> targets_;
   // Expected number of events to occur for current given timestep
@@ -25,7 +27,7 @@ public:
   // Probability that this event will occur each timestep
   double p_occur_{0.0};
   // Name of this event, e.g., "Bind_II_Teth"
-  std::string name_ = "bruh";
+  std::string name_{"bruh"};
 
 private:
   void SetTargets() {
@@ -49,6 +51,7 @@ public:
         target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
         set_ran_indices_{get_ran_indices} {}
   int SampleStatistics() {
+    n_opportunities_tot_ += *n_avail_;
     n_expected_ = prob_dist_(p_occur_, *n_avail_);
     SetTargets();
     return n_expected_;
@@ -65,6 +68,7 @@ public:
   void Execute() {
     exe_(targets_[n_expected_ - 1]);
     n_expected_--;
+    n_executed_tot_++;
   }
 };
 #endif

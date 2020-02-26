@@ -43,7 +43,6 @@ void AssociatedProteinManagement::CalculateCutoffs() {
       break;
     }
   }
-  dist_cutoff_ = 9;
   /*
   if (dist_cutoff_ > 9) {
     printf("As of now, x_dist must be less than 10");
@@ -262,9 +261,6 @@ void AssociatedProteinManagement::SetParameters() {
   double k_on = parameters_->xlinks.k_on;
   double c_xlink = parameters_->xlinks.c_bulk;
   double c_eff_teth = parameters_->motors.c_eff_tether;
-  if (!parameters_->motors.tethers_active) {
-    c_eff_teth = 0;
-  }
   p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
   double c_eff_bind = parameters_->xlinks.c_eff_bind;
   p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
@@ -287,7 +283,7 @@ void AssociatedProteinManagement::SetParameters() {
     double weight_neighb_bind{1.0};
     // dE has units of kbT, so dividing by its numerical value isn't necessary
     double weight_neighb_unbind{exp(-lambda_neighb * dE)};
-    p_bind_i_[n_neighbs] = k_on * c_xlink * delta_t;
+    p_bind_i_[n_neighbs] = weight_neighb_bind * k_on * c_xlink * delta_t;
     p_unbind_i_[n_neighbs] = weight_neighb_unbind * k_off_i * delta_t;
     p_unbind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
     weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
@@ -386,66 +382,64 @@ void AssociatedProteinManagement::SetParameters() {
   double k_untether = parameters_->motors.k_untether;
   p_untether_free_ = k_untether * delta_t;
   // Add these johnnys to our p_theory_ map; need to pad so all are 3-D
-  p_theory_["p_diffuse_i_fwd"] = {{p_diffuse_i_fwd_}};
-  p_theory_["p_diffuse_i_bck"] = {{p_diffuse_i_bck_}};
-  p_theory_["p_diffuse_ii_to_rest"] = {p_diffuse_ii_to_rest_};
-  p_theory_["p_diffuse_ii_fr_rest"] = {p_diffuse_ii_fr_rest_};
-  p_theory_["p_diffuse_i_to_teth_rest"] = {p_diffuse_i_to_teth_rest_};
-  p_theory_["p_diffuse_i_fr_teth_rest"] = {p_diffuse_i_fr_teth_rest_};
-  p_theory_["p_diffuse_ii_to_both"] = p_diffuse_ii_to_both_;
-  p_theory_["p_diffuse_ii_fr_both"] = p_diffuse_ii_fr_both_;
-  p_theory_["p_diffuse_ii_to_self_fr_teth"] = p_diffuse_ii_to_self_fr_teth_;
-  p_theory_["p_diffuse_ii_fr_self_to_teth"] = p_diffuse_ii_fr_self_to_teth_;
-  p_theory_["p_bind_i"] = {{p_bind_i_}};
-  p_theory_["p_avg_bind_i_teth"] = {{{p_avg_bind_i_teth_}}};
-  p_theory_["p_avg_bind_ii"] = {{{p_avg_bind_ii_}}};
-  p_theory_["p_unbind_i"] = {{p_unbind_i_}};
-  p_theory_["p_unbind_i_teth"] = {p_unbind_i_teth_};
-  p_theory_["p_unbind_ii"] = {{p_unbind_ii_}};
-  p_theory_["p_unbind_ii_to_teth"] = p_unbind_ii_to_teth_;
-  p_theory_["p_unbind_ii_fr_teth"] = p_unbind_ii_fr_teth_;
-  p_theory_["p_tether_free"] = {{{p_tether_free_}}};
-  p_theory_["p_untether_free"] = {{{p_untether_free_}}};
+  p_theory_["diffuse_i_fwd"] = {{p_diffuse_i_fwd_}};
+  p_theory_["diffuse_i_bck"] = {{p_diffuse_i_bck_}};
+  if (crosslinking_active_) {
+    p_theory_["diffuse_ii_to_rest"] = {p_diffuse_ii_to_rest_};
+    p_theory_["diffuse_ii_fr_rest"] = {p_diffuse_ii_fr_rest_};
+  }
+  if (tethering_active_) {
+    p_theory_["diffuse_i_to_teth_rest"] = {p_diffuse_i_to_teth_rest_};
+    p_theory_["diffuse_i_fr_teth_rest"] = {p_diffuse_i_fr_teth_rest_};
+    if (crosslinking_active_) {
+      p_theory_["diffuse_ii_to_both"] = p_diffuse_ii_to_both_;
+      p_theory_["diffuse_ii_fr_both"] = p_diffuse_ii_fr_both_;
+      p_theory_["diffuse_ii_to_self_fr_teth"] = p_diffuse_ii_to_self_fr_teth_;
+      p_theory_["diffuse_ii_fr_self_to_teth"] = p_diffuse_ii_fr_self_to_teth_;
+    }
+  }
+  p_theory_["bind_i"] = {{p_bind_i_}};
+  p_theory_["unbind_i"] = {{p_unbind_i_}};
+  if (crosslinking_active_) {
+    p_theory_["bind_ii"] = {{{p_avg_bind_ii_}}};
+    p_theory_["unbind_ii"] = {{p_unbind_ii_}};
+  }
+  if (tethering_active_) {
+    p_theory_["bind_i_teth"] = {{{p_avg_bind_i_teth_}}};
+    p_theory_["unbind_i_teth"] = {p_unbind_i_teth_};
+    if (crosslinking_active_) {
+      p_theory_["bind_ii_teth"] = {{{p_avg_bind_ii_}}};
+      p_theory_["unbind_ii_to_teth"] = p_unbind_ii_to_teth_;
+      p_theory_["unbind_ii_fr_teth"] = p_unbind_ii_fr_teth_;
+    }
+    p_theory_["tether_free"] = {{{p_tether_free_}}};
+    p_theory_["untether_free"] = {{{p_untether_free_}}};
+  }
+  /*
   // Manually construct probabilities used in Poisson processes using weights
-  Vec<Vec<Vec<double>>> p_bind_ii;
-  Vec<Vec<Vec<double>>> p_bind_i_teth;
-  Vec<Vec<Vec<double>>> p_bind_ii_to_teth;
-  Vec<Vec<Vec<double>>> p_bind_ii_fr_teth;
-  // Gotta pad the first two so that they're 3-D vectors
-  p_bind_ii.resize(1);
-  p_bind_i_teth.resize(1);
-  for (int i_scratch{0}; i_scratch < 1; i_scratch++) {
-    p_bind_ii[i_scratch].resize(max_neighbs_ + 1);
-    p_bind_i_teth[i_scratch].resize(max_neighbs_ + 1);
-    p_bind_ii_to_teth.resize(max_neighbs_ + 1);
-    p_bind_ii_fr_teth.resize(max_neighbs_ + 1);
-    for (int n_neighbs{0}; n_neighbs <= 2; n_neighbs++) {
-      p_bind_ii[i_scratch][n_neighbs].resize(dist_cutoff_ + 1);
+  Vec<Vec<Vec<double>>> p_bind_ii = {weight_bind_ii_};
+  Vec<Vec<Vec<double>>> p_bind_i_teth = {weight_bind_i_teth_};
+  Vec<Vec<Vec<double>>> p_bind_ii_to_teth = weight_bind_ii_to_teth_;
+  Vec<Vec<Vec<double>>> p_bind_ii_fr_teth = weight_bind_ii_fr_teth_;
+  for (int n_neighbs{0}; n_neighbs <= 2; n_neighbs++) {
+    for (int x{0}; x <= dist_cutoff_; x++) {
+      p_bind_ii[0][n_neighbs][x] *= p_avg_bind_ii_;
+    }
+    for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
+      p_bind_i_teth[0][n_neighbs][x_dub] *= p_avg_bind_i_teth_;
       for (int x{0}; x <= dist_cutoff_; x++) {
-        p_bind_ii[i_scratch][n_neighbs][x] =
-            weight_bind_ii_[n_neighbs][x] * p_avg_bind_ii_;
-      }
-      p_bind_i_teth[i_scratch][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      p_bind_ii_to_teth[n_neighbs].resize(2 * teth_cutoff_ + 1);
-      p_bind_ii_fr_teth[n_neighbs].resize(2 * teth_cutoff_ + 1);
-      for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-        p_bind_i_teth[i_scratch][n_neighbs][x_dub] =
-            weight_bind_i_teth_[n_neighbs][x_dub] * p_avg_bind_i_teth_;
-        p_bind_ii_to_teth[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-        p_bind_ii_fr_teth[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-        for (int x{0}; x <= dist_cutoff_; x++) {
-          p_bind_ii_to_teth[n_neighbs][x_dub][x] =
-              weight_bind_ii_to_teth_[n_neighbs][x_dub][x] * p_avg_bind_ii_;
-          p_bind_ii_fr_teth[n_neighbs][x_dub][x] =
-              weight_bind_ii_fr_teth_[n_neighbs][x_dub][x] * p_avg_bind_ii_;
-        }
+        p_bind_ii_to_teth[n_neighbs][x_dub][x] *= p_avg_bind_ii_;
+        p_bind_ii_fr_teth[n_neighbs][x_dub][x] *= p_avg_bind_ii_;
       }
     }
   }
-  p_theory_["p_bind_ii"] = p_bind_ii;
-  p_theory_["p_bind_i_teth"] = p_bind_i_teth;
-  p_theory_["p_bind_ii_to_teth"] = p_bind_ii_to_teth;
-  p_theory_["p_bind_ii_fr_teth"] = p_bind_ii_fr_teth;
+  // p_theory_["bind_ii"] = p_bind_ii;
+  if (tethering_active_) {
+    p_theory_["bind_i_teth"] = p_bind_i_teth;
+    p_theory_["bind_ii_to_teth"] = p_bind_ii_to_teth;
+    p_theory_["bind_ii_fr_teth"] = p_bind_ii_fr_teth;
+  }
+  */
   // READ EM OUT
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
@@ -453,7 +447,7 @@ void AssociatedProteinManagement::SetParameters() {
     for (int i{0}; i < value.size(); i++) {
       for (int j{0}; j < value[i].size(); j++) {
         for (int k{0}; k < value[i][j].size(); k++) {
-          std::string name{label + "_"};
+          std::string name{"p_" + label + "_"};
           if (value.size() > 1) {
             name += "[" + std::to_string(i) + "]";
           }
@@ -571,19 +565,19 @@ void AssociatedProteinManagement::InitializeEvents() {
   std::string event_name; // scratch space to construct each event name
   // Diffuse: steps head one site to the left or right
   auto exe_diffuse_fwd = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    Diffuse(head, 1);
+    Diffuse(std::get<POP_T *>(target), 1);
   };
   auto exe_diffuse_bck = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    Diffuse(head, -1);
+    Diffuse(std::get<POP_T *>(target), -1);
   };
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
+    // Diffuse_i_fwd
     event_name = "diffuse_i_fwd" + N_NEIGHBS;
     events_.emplace_back(event_name, p_diffuse_i_fwd_[n_neighbs],
                          &n_bound_i_[n_neighbs], &bound_i_[n_neighbs],
                          exe_diffuse_fwd, binomial, set_ran_indices);
+    // Diffuse_i_bck
     event_name = "diffuse_i_bck" + N_NEIGHBS;
     events_.emplace_back(event_name, p_diffuse_i_bck_[n_neighbs],
                          &n_bound_i_[n_neighbs], &bound_i_[n_neighbs],
@@ -593,10 +587,12 @@ void AssociatedProteinManagement::InitializeEvents() {
     }
     for (int x{0}; x <= dist_cutoff_; x++) {
       std::string X_DIST{"_" + std::to_string(x)};
+      // Diffuse_ii_to_rest
       event_name = "diffuse_ii_to_rest" + N_NEIGHBS + X_DIST;
       events_.emplace_back(event_name, p_diffuse_ii_to_rest_[n_neighbs][x],
                            &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
                            exe_diffuse_fwd, binomial, set_ran_indices);
+      // Diffuse_ii_fr_rest
       event_name = "diffuse_ii_fr_rest" + N_NEIGHBS + X_DIST;
       events_.emplace_back(event_name, p_diffuse_ii_fr_rest_[n_neighbs][x],
                            &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
@@ -605,17 +601,19 @@ void AssociatedProteinManagement::InitializeEvents() {
   }
   // Diffuse_teth: same as above but for tethered populations
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
     if (!tethering_active_) {
       continue;
     }
-    std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
       std::string X_DUB{"_" + std::to_string(x_dub)};
+      // Diffuse_i_to_teth rest
       event_name = "diffuse_i_to_teth_rest" + N_NEIGHBS + X_DUB;
       events_.emplace_back(
           event_name, p_diffuse_i_to_teth_rest_[n_neighbs][x_dub],
           &n_bound_i_teth_[n_neighbs][x_dub], &bound_i_teth_[n_neighbs][x_dub],
           exe_diffuse_fwd, binomial, set_ran_indices);
+      // Diffuse_i_fr_teth_rest
       event_name = "diffuse_i_fr_teth_rest" + N_NEIGHBS + X_DUB;
       events_.emplace_back(
           event_name, p_diffuse_i_fr_teth_rest_[n_neighbs][x_dub],
@@ -626,24 +624,28 @@ void AssociatedProteinManagement::InitializeEvents() {
       }
       for (int x{0}; x <= dist_cutoff_; x++) {
         std::string X_DIST{"_" + std::to_string(x)};
+        // Diffuse_ii_to_both_rests
         event_name = "diffuse_ii_to_both" + N_NEIGHBS + X_DUB + X_DIST;
         events_.emplace_back(event_name,
                              p_diffuse_ii_to_both_[n_neighbs][x_dub][x],
                              &n_bound_ii_teth_same_[n_neighbs][x_dub][x],
                              &bound_ii_teth_same_[n_neighbs][x_dub][x],
                              exe_diffuse_fwd, binomial, set_ran_indices);
+        // Diffuse_ii_fr_both_rests
         event_name = "diffuse_ii_fr_both" + N_NEIGHBS + X_DUB + X_DIST;
         events_.emplace_back(event_name,
                              p_diffuse_ii_fr_both_[n_neighbs][x_dub][x],
                              &n_bound_ii_teth_same_[n_neighbs][x_dub][x],
                              &bound_ii_teth_same_[n_neighbs][x_dub][x],
                              exe_diffuse_bck, binomial, set_ran_indices);
+        // Diffuse_ii_to_self_fr_teth_rest
         event_name = "diffuse_ii_to_self_fr_teth" + N_NEIGHBS + X_DUB + X_DIST;
         events_.emplace_back(event_name,
                              p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub][x],
                              &n_bound_ii_teth_oppo_[n_neighbs][x_dub][x],
                              &bound_ii_teth_oppo_[n_neighbs][x_dub][x],
                              exe_diffuse_fwd, binomial, set_ran_indices);
+        // Diffuse_ii_fr_self_to_teth_rest
         event_name = "diffuse_ii_fr_self_to_teth" + N_NEIGHBS + X_DUB + X_DIST;
         events_.emplace_back(event_name,
                              p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub][x],
@@ -830,6 +832,51 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_untether_free_, &n_free_teth_,
                          &free_teth_, exe_untether_sat, binomial,
                          set_ran_indices);
+  }
+}
+
+void AssociatedProteinManagement::ReportProbabilities() {
+
+  for (const auto &entry : p_theory_) {
+    auto label = entry.first;
+    auto value = entry.second;
+    for (int i{0}; i < value.size(); i++) {
+      for (int j{0}; j < value[i].size(); j++) {
+        for (int k{0}; k < value[i][j].size(); k++) {
+          std::string name{label};
+          if (value.size() > 1) {
+            name += "_" + std::to_string(i);
+          }
+          if (value[i].size() > 1) {
+            name += "_" + std::to_string(j);
+          }
+          if (value[i][j].size() > 1) {
+            name += "_" + std::to_string(k);
+          }
+          auto event = std::find_if(
+              events_.begin(), events_.end(),
+              [&name](EVENT_T const &event) { return event.name_ == name; });
+          if (event->name_ != name) {
+            printf("Couldn't find %s\n", name.c_str());
+            continue;
+          }
+          if (event->n_opportunities_tot_ == 0) {
+            printf("No statistics for %s\n", name.c_str());
+            continue;
+          }
+          double n_exe_tot{(double)event->n_executed_tot_};
+          double n_opp_tot{(double)event->n_opportunities_tot_};
+          if (n_opp_tot < 0.0) {
+            printf("WHAT?? n_opp = %g\n", n_opp_tot);
+            exit(1);
+          }
+          wally_->Log("For AP event %s:\n", event->name_.c_str());
+          wally_->Log("   p_theory = %g\n", value[i][j][k]);
+          wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
+          wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
+        }
+      }
+    }
   }
 }
 
@@ -1302,7 +1349,8 @@ void AssociatedProteinManagement::SampleEventStatistics() {
       }
     }
   }
-  // Scan through all active events to ensure that no two target the same xlink
+  // Scan through all active events to ensure that no two target the same
+  // xlink
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
     EVENT_T *event_i = active_events[i_entry].first;
     AssociatedProtein *xlink_i{nullptr};

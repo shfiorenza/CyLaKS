@@ -13,7 +13,7 @@ OBJDIR = obj
 BINDIR = bin
 SRCEXT = cpp
 
-COMPILE_FLAGS = -std=c++17 
+COMPILE_FLAGS = -std=c++17
 RCOMPILE_FLAGS = -D NDEBUG -O2 -march=native
 DCOMPILE_FLAGS = -D DEBUG -O0 -g
 LINK_FLAGS =
@@ -30,7 +30,7 @@ else
     GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
     LINK_FLAGS += -static
 endif
-INCLUDES = $(GSLINCS) $(YAMLINCS)
+INCLUDES = $(GSLINCS) $(YAMLINCS) 
 LIBS = $(GSLLIBS) $(YAMLLIBS)
 
 # Combine compiler and linker flags

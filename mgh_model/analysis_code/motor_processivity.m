@@ -1,12 +1,12 @@
 
 clear all;
 % Often-changed variables
-n_sites = 25000;
-simName = 'kinesin4_proc';
+n_sites = 1250;
+simName = 'test_proc';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 60000000;
+n_steps = 40000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -173,7 +173,8 @@ dim3 = [0.55 0.55 0.2 0.2];
 str3 = sprintf('Mean velocity: %#.1f +/- %#d nm/s', mean_vel, sigma_vel);
 annotation('textbox',dim3,'String',str3,'FitBoxToText','on');
 % Cosmetic stuff
-title(sprintf('Run length histogram for %i micron MT', int32(n_sites * 0.008)));
+title({sprintf('Run length histogram for %i micron MT with 20 pM Kif4A', int32(n_sites * 0.008))}); %, ...
+   % sprintf('k on = 0.000242 nM^{-1}s^{-1} | c eff bind = 800,000 nM | k hydro = 100 s^{-1} | k off i = 0.45 s^{-1}')});
 xlabel('Run length (um)');
 ylabel('Counts');
 fig2 = figure();

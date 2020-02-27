@@ -1,20 +1,16 @@
 clear all
-
+simName = 'test';
 % Parameters from sim
-n_datapoints = 100000;
-motor_ID = 2;
-mt_length = 1000;
-n_mts = 2;
+n_datapoints = 10000;
 motor_cutoff = 18;
 motor_r_0 = 14.5;
-xlink_cutoff = 7;
+xlink_cutoff = 5;
 xlink_r_0 = 0;
 
-n_steps = 10000000;
-delta_t = 0.000005;
+n_steps = 400000000;
+delta_t = 0.0000025;
 
 % File info
-simName = 'testlong';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 motorExtFileName = '%s_motor_extension.file';
 xlinkExtFileName = '%s_xlink_extension.file';
@@ -29,7 +25,7 @@ xlink_data = fread(xlink_data_file, [xlink_cutoff + 1, n_datapoints], 'int');
 fclose(xlink_data_file);
 
 % Figure parameters (i.e., how they appear)
-n_frames = 100000;
+n_frames = 10000;
 frames_per_plot = 100;
 start_frame = 0001;
 
@@ -46,7 +42,7 @@ set(fig1, 'Position', [0 100 1600 400])
 time_per_frame = delta_t * (n_steps / n_frames);
 
 % Run through all datapoints; each one is a frame in our movie
-for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
+for i_data=start_frame:frames_per_plot:n_frames
     
     % Clear figure so that it only displays figures from current datapoint
     clf;      
@@ -55,7 +51,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
     bar(motor_data(:, i_data), 'XData', 0:1:2*motor_cutoff);
     line([2*motor_r_0 2*motor_r_0], [0 50], 'LineStyle', '--', 'Color', 'red');
     title('Extension histogram for motors');
-    ylim([0 20]);
+   % ylim([0 20]);
     ylabel('Occupancy');
     xlabel('Horziontal distance doubled (sites)');
    
@@ -63,7 +59,7 @@ for i_data=start_frame:frames_per_plot:(start_frame + n_frames - 1)
     bar(xlink_data(:, i_data), 'XData', 0:1:xlink_cutoff)
     line([xlink_r_0 xlink_r_0], [0 50], 'LineStyle', '--', 'Color', 'red');
     title('Extension histogram for crosslinks');
-    ylim([0 50]);
+   % ylim([0 50]);
     ylabel('Occupancy');
     xlabel('Horizontal distance (sites)');
         

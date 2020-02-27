@@ -16,6 +16,9 @@ xlink_speciesID = 1;
 n_datapoints = 100000;
 starting_point = 5000;
 active_datapoints = n_datapoints - starting_point;
+
+%fileDirectory = '/media/shane/Shane''s External HDD (1 TB)/Parameter Scan 1/%s';
+%fileDirectory = '/home/shane/Desktop/pseudo_crackpot/%s';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 legendLabel = {'Motors', 'Crosslinkers', 'Combined'};

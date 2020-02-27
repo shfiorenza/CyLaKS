@@ -1,11 +1,12 @@
-seed: 329954433
-n_steps: 400000000
-n_datapoints: 100000
+seed: 198261346419
+n_steps: 40000000 # 0
+n_datapoints: 10000 # 0
 data_threshold: 0
-delta_t: 2.5e-5
+delta_t: 2.5e-05
 kbT: 4.114
 eta: 0.001 
 microtubules:
+  steps_per_iteration: 10
   count: 1
   length: 
   - 1250
@@ -23,6 +24,7 @@ microtubules:
   immobile_until:
   - 9500
   - 500
+  applied_force: 0.0
   printout_on: false
   diffusion_on: false
 motors:
@@ -51,11 +53,13 @@ motors:
   tethers_active: false
   endpausing_active: true
 xlinks:
-  k_on: 0.00022
-  c_bulk: 0.0
-  c_eff_bind: 500
-  k_off: 0.132
+  k_on: 0.000238
+  c_bulk: 0.0 # 0.05
+  c_eff_bind: 2500
+  k_off_i: 0.143
+  k_off_ii: 0.0143
   r_0: 32
-  k_spring: 0.207
-  diffusion_coeff: 0.1
-  interaction_energy: 2.75
+  k_spring: 0.453
+  diffu_coeff_i: 0.131
+  diffu_coeff_ii: 0.0655
+  interaction_energy: 2.25

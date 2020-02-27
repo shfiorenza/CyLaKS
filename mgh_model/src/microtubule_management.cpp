@@ -17,80 +17,36 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 
 void MicrotubuleManagement::SetParameters() {
 
-  int n_mts = parameters_->microtubules.count;
-  n_sites_tot_ = 0;
-  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     n_sites_tot_ += parameters_->microtubules.length[i_mt];
   }
-  // int n_sites_bulk = n_sites_tot_ - 2*n_mts;
-  unoccupied_list_.resize(n_sites_tot_);
-  // xl neighbor stuff
-  n_unoccupied_xl_.resize(3);
-  unoccupied_list_xl_.resize(3);
-  for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-    n_unoccupied_xl_[n_neighbs] = 0;
-    unoccupied_list_xl_[n_neighbs].resize(n_sites_tot_);
+  n_unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+  unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
+    n_unocc_xlink_[n_neighbs] = 0;
+    unocc_xlink_[n_neighbs].resize(n_sites_tot_);
   }
-  // motor cooperativity stuff
-  n_affs_ = properties_->kinesin4.n_affinities_;
-  n_unoccupied_mot_.resize(n_affs_);
-  unoccupied_list_mot_.resize(n_affs_);
-  for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
-    n_unoccupied_mot_[i_aff].resize(3);
-    unoccupied_list_mot_[i_aff].resize(3);
-    for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-      n_unoccupied_mot_[i_aff][n_neighbs] = 0;
-      unoccupied_list_mot_[i_aff][n_neighbs].resize(n_sites_tot_);
+  n_unocc_motor_.resize(n_affinities_);
+  unocc_motor_.resize(n_affinities_);
+  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+    n_unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
+    unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
+      n_unocc_motor_[i_aff][n_neighbs] = 0;
+      unocc_motor_[i_aff][n_neighbs].resize(n_sites_tot_);
     }
   }
 }
 
 void MicrotubuleManagement::GenerateMicrotubules() {
 
-  int n_mts = parameters_->microtubules.count;
-  mt_list_.resize(n_mts);
-  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+  mt_list_.resize(parameters_->microtubules.count);
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
   }
 }
 
-void MicrotubuleManagement::FlagForUpdate() { up_to_date_ = false; }
-
-void MicrotubuleManagement::UnoccupiedCheck(Tubulin *site) {
-
-  if (site->motor_head_ != nullptr || site->xlink_head_ != nullptr) {
-    printf("Error @ site %i_%i: should be unoccupied\n", site->mt_->index_,
-           site->index_);
-    exit(1);
-  }
-}
-
-void MicrotubuleManagement::UnoccupiedCheck(int i_mt, int i_site) {
-
-  if (mt_list_[i_mt].lattice_[i_site].motor_head_ != nullptr ||
-      mt_list_[i_mt].lattice_[i_site].xlink_head_ != nullptr) {
-    printf("Error @ site %i_%i: should be unoccupied\n", i_mt, i_site);
-    exit(1);
-  }
-}
-
-void MicrotubuleManagement::OccupiedCheck(Tubulin *site) {
-
-  if (site->motor_head_ == nullptr && site->xlink_head_ == nullptr) {
-    printf("Error @ site %i_%i: should be occupied\n", site->mt_->index_,
-           site->index_);
-    exit(1);
-  }
-}
-
-void MicrotubuleManagement::OccupiedCheck(int i_mt, int i_site) {
-
-  if (mt_list_[i_mt].lattice_[i_site].motor_head_->motor_ == nullptr &&
-      mt_list_[i_mt].lattice_[i_site].xlink_head_ == nullptr) {
-    printf("Error @ site %i_%i: should be occupied\n", i_mt, i_site);
-    exit(1);
-  }
-}
+void MicrotubuleManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void MicrotubuleManagement::UpdateNeighbors() {
 
@@ -108,163 +64,142 @@ void MicrotubuleManagement::UpdateNeighbors() {
 
 void MicrotubuleManagement::UpdateUnoccupied() {
 
-  if (up_to_date_) {
+  if (lists_up_to_date_) {
     return;
   }
-  n_unoccupied_ = 0;
-  for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-    n_unoccupied_xl_[n_neighbs] = 0;
+  lists_up_to_date_ = true;
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
+    n_unocc_xlink_[n_neighbs] = 0;
   }
-  for (int i_aff{0}; i_aff < n_affs_; i_aff++) {
-    for (int n_neighbs(0); n_neighbs < 3; n_neighbs++) {
-      n_unoccupied_mot_[i_aff][n_neighbs] = 0;
+  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
+      n_unocc_motor_[i_aff][n_neighbs] = 0;
     }
   }
-  for (int i_mt = 0; i_mt < parameters_->microtubules.count; i_mt++) {
-    int n_sites = parameters_->microtubules.length[i_mt];
-    for (int i_site = 0; i_site < n_sites; i_site++) {
-      Tubulin *site = &mt_list_[i_mt].lattice_[i_site];
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
+    for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
+      Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
       site->UpdateAffinity();
-      if (site->occupied_ == false) {
-        unoccupied_list_[n_unoccupied_] = site;
-        n_unoccupied_++;
-        int prc1_neighbs{site->GetPRC1NeighborCount()};
-        int prc1_index{n_unoccupied_xl_[prc1_neighbs]++};
-        unoccupied_list_xl_[prc1_neighbs][prc1_index] = site;
-        int kif4a_neighbs{site->GetKIF4ANeighborCount()};
-        int kif4a_aff{site->affinity_};
-        int kif4a_index{n_unoccupied_mot_[kif4a_aff][kif4a_neighbs]++};
-        unoccupied_list_mot_[kif4a_aff][kif4a_neighbs][kif4a_index] = site;
+      if (site->occupied_) {
+        continue;
       }
+      int n_neighbs_xl{site->GetPRC1NeighborCount()};
+      unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
+      int n_neighbs_mot{site->GetKif4ANeighborCount()};
+      int tub_aff{site->affinity_};
+      int index{n_unocc_motor_[tub_aff][n_neighbs_mot]++};
+      unocc_motor_[tub_aff][n_neighbs_mot][index] = site;
     }
-  }
-  up_to_date_ = true;
-}
-
-Tubulin *MicrotubuleManagement::GetUnoccupiedSite() {
-
-  UpdateUnoccupied();
-  int n_unoccupied = n_unoccupied_;
-  // Make sure an unoccupied site exists
-  if (n_unoccupied > 0) {
-    int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
-    Tubulin *site = std::get<Tubulin *>(unoccupied_list_[i_entry]);
-    UnoccupiedCheck(site);
-    return site;
-  } else {
-    printf("Error: GetUnoccupiedSite called, but no unoccupied sites\n");
-    exit(1);
-  }
-}
-
-Tubulin *MicrotubuleManagement::GetUnoccupiedSite(int n_neighbs) {
-
-  UpdateUnoccupied();
-  int n_unoccupied = n_unoccupied_xl_[n_neighbs];
-  if (n_unoccupied > 0) {
-    int i_entry = properties_->gsl.GetRanInt(n_unoccupied);
-    Tubulin *site =
-        std::get<Tubulin *>(unoccupied_list_xl_[n_neighbs][i_entry]);
-    UnoccupiedCheck(site);
-    return site;
-  } else {
-    printf("Error: GetUnoccupiedSiteNEIGHB called, but no sites\n");
-    exit(1);
   }
 }
 
 void MicrotubuleManagement::RunDiffusion() {
 
-  double delta_t = parameters_->delta_t;
-  int n_mts = parameters_->microtubules.count;
-  int current_step = properties_->current_step_;
-  bool MTs_active = false;
-  long unpin_step[n_mts];
-  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-    double unpin_time = parameters_->microtubules.immobile_until[i_mt];
-    unpin_step[i_mt] = unpin_time / delta_t;
-    if (current_step >= unpin_step[i_mt])
-      MTs_active = true;
+  // If diffusion is disabled for this simulation, immediately return
+  if (!parameters_->microtubules.diffusion_on) {
+    return;
   }
-  if (parameters_->microtubules.diffusion_on && MTs_active) {
-    int n_iterations = 1;
-    double delta_t_eff = delta_t / n_iterations;
-    double site_size = parameters_->microtubules.site_size;
-    double kbT = parameters_->kbT;
-    double gamma = mt_list_[0].gamma_;
-    double sigma = sqrt(2 * kbT * delta_t_eff / gamma);
-    for (int i_it = 0; i_it < n_iterations; i_it++) {
-      sys_time start1 = sys_clock::now();
-      /*	Sum up all forces exerted on the MTs 	*/
-      double forces_summed[n_mts];
-      for (int i_mt = 0; i_mt < n_mts; i_mt++)
-        forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
-      // Check for symmetry
-      double tolerance = 0.000001;
-      for (int i_mt = 0; i_mt < n_mts; i_mt += 2) {
-        double delta = fabs(forces_summed[i_mt] + forces_summed[i_mt + 1]);
-        if (delta > tolerance) {
-          printf("aw man in MT diffusion\n");
-          printf("for mt %i: %g, for mt %i: %g\n", i_mt, forces_summed[i_mt],
-                 i_mt + 1, -forces_summed[i_mt + 1]);
-          exit(1);
-        }
-      }
-      sys_time finish = sys_clock::now();
-      auto elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
-      properties_->wallace.t_MTs_[1] += elapsed.count();
-      sys_time start2 = sys_clock::now();
-      elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-      /*	Calculate MT displacements for this timestep */
-      int displacement[n_mts];
-      for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-        if (current_step >= unpin_step[i_mt]) {
-          double velocity = forces_summed[i_mt] / gamma;
-          // gaussian noise is added
-          double noise = properties_->gsl.GetGaussianNoise(sigma);
-          double raw_displacement = velocity * delta_t_eff + noise;
-          double site_displacement = (raw_displacement) / site_size;
-          // Get number of sites MT is expected to move
-          int n_steps = (int)site_displacement;
-          // Use leftover as a prob. to roll for another step
-          double leftover = fabs(site_displacement - n_steps);
-          double ran = properties_->gsl.GetRanProb();
-          if (ran < leftover && site_displacement > 0)
-            n_steps++;
-          else if (ran < leftover && site_displacement < 0)
-            n_steps--;
-          // Store value in array
-          displacement[i_mt] = n_steps;
-        } else
-          displacement[i_mt] = 0;
-      }
-      finish = sys_clock::now();
-      elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-      properties_->wallace.t_MTs_[2] += elapsed.count();
-      start2 = sys_clock::now();
-      /*  Run through MT list and update displacementsi */
-      for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-        Microtubule *mt = &mt_list_[i_mt];
-        Microtubule *neighb = mt->neighbor_;
-        int n_steps = displacement[i_mt];
-        int dx = 0;
-        if (n_steps > 0)
-          dx = 1;
-        else if (n_steps < 0) {
-          dx = -1;
-          n_steps = abs(n_steps);
-        }
-        for (int i_step = 0; i_step < n_steps; i_step++) {
-          mt->coord_ += dx;
-        }
-        mt->UpdateExtensions();
-        neighb->UpdateExtensions();
-      }
-      finish = sys_clock::now();
-      elapsed = std::chrono::duration_cast<t_unit>(finish - start2);
-      properties_->wallace.t_MTs_[3] += elapsed.count();
-      elapsed = std::chrono::duration_cast<t_unit>(finish - start1);
-      properties_->wallace.t_MTs_[0] += elapsed.count();
+  int n_mts{parameters_->microtubules.count};
+  bool mts_inactive{true};
+  int current_step{properties_->current_step_};
+  double delta_t{parameters_->delta_t};
+  double current_time{current_step * delta_t};
+  // Check that at least one microtubule is active (not immobilized)
+  for (int i_mt{0}; i_mt < n_mts; i_mt++) {
+    if (
+        // current_step % mt_list_[i_mt].steps_per_iteration_ == 0 and
+        current_time >= parameters_->microtubules.immobile_until[i_mt]) {
+      mts_inactive = false;
     }
+  }
+  // If no microtubules are active, return
+  if (mts_inactive) {
+    return;
+  }
+  double kbT{parameters_->kbT};
+  double site_size{parameters_->microtubules.site_size};
+  // Sum up all forces exerted on each microtubule
+  double forces_summed[n_mts];
+  properties_->prc1.Update_Extensions();
+  properties_->kinesin4.Update_Extensions();
+  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+    forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
+    forces_summed[i_mt] += parameters_->microtubules.applied_force;
+  }
+  // Check for symmetry
+  double delta{forces_summed[0] + forces_summed[1]};
+  double tolerance{0.0001};
+  if (delta > tolerance) {
+    printf("Error in RunMTDiffusion\n");
+    printf(" *** EXITING *** \n");
+    exit(1);
+  }
+  // Calculate the displacement of each microtubule (in n_sites)
+  int displacement[n_mts];
+  for (int i_mt{0}; i_mt < n_mts; i_mt++) {
+    // If microtubule is still immobilized, set displacement to 0 and continue
+    if (current_time < parameters_->microtubules.immobile_until[i_mt]) {
+      //  or current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
+      displacement[i_mt] = 0;
+      continue;
+    }
+    // Calculate instanteous velocity due to forces using drag coefficient
+    double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
+    double dx_mean{velocity * delta_t};
+    // if (current_step % mt_list_[i_mt].steps_per_iteration_ != 0) {
+    double n_sites{dx_mean / site_size};
+    int n_sites_whole{(int)n_sites};
+    displacement[i_mt] = n_sites_whole;
+    double leftover{fabs(n_sites - n_sites_whole)};
+    double ran{properties_->gsl.GetRanProb()};
+    if (ran < leftover) {
+      if (n_sites > 0) {
+        displacement[i_mt]++;
+      } else {
+        displacement[i_mt]--;
+      }
+    }
+    continue;
+    // }
+    /*
+    // Add gaussan noise, meant to represent thermal motion
+    double delta_t_eff{delta_t * mt_list_[i_mt].steps_per_iteration_};
+    double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
+    // Convert mean and sigma from nm to n_sites
+    dx_mean /= site_size;
+    dx_sigma /= site_size;
+    int sigma_cutoff{3};
+    // Construct a discrete gaussian cumulative distribution table
+    int range{(int)ceil(fabs(dx_mean) + dx_sigma * sigma_cutoff)};
+    double discrete_cdf[2 * range + 1];
+    double p_cum{0.0};
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      // dx goes from -range to +range
+      int dx{i_bin - range};
+      p_cum += properties_->gsl.GetGaussianPDF(dx - dx_mean, dx_sigma);
+      discrete_cdf[i_bin] = p_cum;
+    }
+    // Normalize table so that last entry is 1.0
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      discrete_cdf[i_bin] /= discrete_cdf[2 * range];
+    }
+    // Roll a random number to determine which dx to choose
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
+      if (ran < discrete_cdf[i_bin]) {
+        displacement[i_mt] = i_bin - range;
+        break;
+      }
+    }
+    */
+  }
+  /*  Run through MT list and update displacementsi */
+  for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+    if (displacement[i_mt] == 0) {
+      continue;
+    }
+    mt_list_[i_mt].coord_ += displacement[i_mt];
+    properties_->prc1.FlagForUpdate();
+    properties_->kinesin4.FlagForUpdate();
   }
 }

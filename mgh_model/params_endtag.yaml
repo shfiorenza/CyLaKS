@@ -8,7 +8,7 @@ eta: 0.001
 microtubules:
   count: 1
   length:
-  - 250
+  - 1250
   - 250
   y_dist: 32
   site_size: 8
@@ -41,21 +41,23 @@ motors:
   k_off_ii: 260
   interaction_energy: 0.0 # 2.1
   k_tether: 0.1
-  c_eff_tether: 5000
+  c_eff_tether: 500 # 5000
   k_untether: 0.05
   r_0: 120
   k_spring: 0.1325
   k_slack: 0.0265
   stall_force: 6
   applied_force: 0
-  tethers_active: false
+  tethers_active: true
   endpausing_active: true
 xlinks:
-  k_on: 0.00022
-  c_bulk: 0.0
-  c_eff_bind: 500
-  k_off: 0.132
+  k_on: 0.000238
+  c_bulk: 0.0 # 0.1
+  c_eff_bind: 2500
+  k_off_i: 0.143
+  k_off_ii: 0.0143
   r_0: 32
-  k_spring: 0.207
-  diffusion_coeff: 0.1
-  interaction_energy: 2.75
+  k_spring: 0.453
+  diffu_coeff_i: 0.131
+  diffu_coeff_ii: 0.0655
+  interaction_energy: 2.25

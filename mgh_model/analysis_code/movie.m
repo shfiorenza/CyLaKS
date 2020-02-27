@@ -1,10 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = [500];
+mt_lengths = [1250];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'EndtagC_500';
+simName = 'test_proc';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
@@ -61,7 +61,7 @@ fig1 = figure;
 set(fig1, 'Position', [0 100 1600 400]);
 
 mt_data_file = fopen(mtFile);
-mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
+mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
@@ -107,7 +107,7 @@ for i_data=start_frame:frames_per_plot:end_frame
     for i_mt=1:1:n_mts
         n_sites = mt_lengths(i_mt);
         
-        mt_pos = mt_data(i_mt, i_data)*site_width;
+        mt_pos = double(mt_data(i_mt, i_data)*site_width);
         first_pos = mt_data(1, i_data)*site_width;
         mt_height = 8*(i_mt - 1)*site_height;
         if(n_mts > 1)
@@ -120,9 +120,11 @@ for i_data=start_frame:frames_per_plot:end_frame
             %}
             
             if(first_pos < second_pos)
-                ax.XLim = [(first_pos-1) (second_pos + max_sites + 1)];
+                ax.XLim = [(first_pos-1) (second_pos + 550 + 1)];
+                %ax.XLim = [(first_pos-1) (second_pos + max_sites + 1)];
             else
-                ax.XLim = [(second_pos-1) (first_pos + max_sites + 1)];
+                ax.XLim = [(second_pos-1) (first_pos + 550 + 1)];
+              %  ax.XLim = [(second_pos-1) (first_pos + max_sites + 1)];
             end
               
         else
@@ -279,7 +281,7 @@ for i_data=start_frame:frames_per_plot:end_frame
                             % To ensure spring is only plotted once per
                             % xlink, only plot on odd-numbered MTs
                             xa = xlink_center_x; ya = xlink_height + site_height;
-                            xb = neighb_center_x; yb = neighb_height - site_height;
+                            xb = double(neighb_center_x); yb = neighb_height - site_height;
                             ne = 6; a = 6; ro = 1;
                             [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
                             plot(xs,ys,'LineWidth', 1, 'Color', purple);

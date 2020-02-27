@@ -1,19 +1,19 @@
 clear all;
 % Often-changed variables
-simName = 'diffu_test';
-n_sites = 1000;
-n_mts = 2;
-starting_tau = 0.2;
+simName = 'diffu_double_2_3';
+n_sites = [5000, 5000];
+max_sites = max(n_sites);
+n_mts = length(n_sites);
+starting_point = 001;
 max_tau = 1.5;  % in seconds
 % Pseudo-constant variables
-delta_t = 0.00001;
-n_steps = 20000000;
+delta_t = 0.000025;
+n_steps = 40000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
-starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
 site_size = 0.008; % in um
-xlink_cutoff = 7;
+xlink_cutoff = 8;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 xlinkFileStruct = '%s_xlinkID.file';
@@ -23,17 +23,18 @@ xlinkFileName = sprintf(fileDirectory, sprintf(xlinkFileStruct, simName));
 mtFileName = sprintf(fileDirectory, sprintf(mtFileStruct, simName));
 
 xlink_data_file = fopen(xlinkFileName);
-xlink_raw_data = fread(xlink_data_file, [n_mts * n_sites * n_datapoints], '*int');
+xlink_raw_data = fread(xlink_data_file, n_mts * max_sites * n_datapoints, '*int');
 fclose(xlink_data_file);
-xlink_data = reshape(xlink_raw_data, n_sites, n_mts, n_datapoints);
+xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
 
 mt_data_file = fopen(mtFileName);
-mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
+mt_raw_data = fread(mt_data_file, n_mts * n_datapoints, '*double');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
-n_taus = 20;
-tau_increment = max_tau / n_taus;
+starting_tau = time_per_datapoint;
+tau_increment = time_per_datapoint;
+n_taus = max_tau/ tau_increment;
 
 n_entries = zeros([n_taus 1]);
 CSD = zeros([n_taus 1]);
@@ -41,117 +42,108 @@ MSD = zeros([n_taus 1]);
 
 for i_tau = 1:1:n_taus
     
-    tau = starting_tau + (i_tau-1) * tau_increment;
+    tau = starting_tau + (i_tau - 1) * tau_increment;
     tau_step = int32(tau / time_per_datapoint);
     
-    for i_data = starting_point:tau_step:n_datapoints
-        % Ensure enough time has passed to have 2 data points
-        if(i_data > tau_step)
-            % Import data for current timestep
-            cur_IDs_mtOne = xlink_data(:, 1, i_data);
-            cur_mtOne_coord = mt_data(1, i_data);
-            if n_mts == 2
-                cur_IDs_mtTwo = xlink_data(:, 2, i_data);
-                cur_mtTwo_coord = mt_data(2, i_data);
-            end
-            % Import data for previous timestep (dictated by tau)
-            prev_IDs_mtOne = xlink_data(:, 1, i_data - tau_step);
-            prev_mtOne_coord = mt_data(1, i_data - tau_step);
-            if n_mts == 2
-                prev_IDs_mtTwo = xlink_data(:, 2, i_data - tau_step);
-                prev_mtTwo_coord = mt_data(2, i_data - tau_step);
-            end
-            % Scan through ID data at current timestep
-            for i_site = 1:1:n_sites
-                xlink_ID = cur_IDs_mtOne(i_site);
-                % Make sure an xlink occupies this site
-                if(xlink_ID ~= -1)
-                    if n_mts == 2
-                        % Make sure xlink is doubly-bound
-                        site_coord = i_site + cur_mtOne_coord;
-                        neighb_index = site_coord - cur_mtTwo_coord;
-                        double_bound = false;
-                        cur_anchor_pos = 0;
-                        for i_scan = -xlink_cutoff:1:xlink_cutoff
-                            scan_index = neighb_index + i_scan;
-                            if(scan_index > 0 && scan_index < n_sites)
-                                neighb_ID = cur_IDs_mtTwo(neighb_index + i_scan);
-                            else
-                                neighb_ID = -1;
-                            end
-                            % If doubly-bound, find current anchor coordinate
-                            if(neighb_ID == xlink_ID)
-                                double_bound = true;
-                                neighb_coord = neighb_index + i_scan + cur_mtTwo_coord;
-                                cur_anchor_pos = (site_coord + neighb_coord)/2;
-                                break;
-                            end
+    for i_data = (tau_step + starting_point):tau_step:n_datapoints
+        % Data from current timestep
+        cur_IDs = zeros(n_mts, max_sites);
+        cur_coords = zeros(n_mts, 1);
+        % Data for previous timestep (dictated by tau)
+        prev_IDs = zeros(n_mts, max_sites);
+        prev_coords = zeros(n_mts, 1);
+        for i_mt=1:n_mts
+            cur_IDs(i_mt, :) = xlink_data(:, i_mt, i_data);
+            prev_IDs(i_mt, :) = xlink_data(:, i_mt, i_data - tau_step);
+            cur_coords(i_mt) = mt_data(i_mt, i_data);
+            prev_coords(i_mt) = mt_data(i_mt, i_data - tau_step);
+        end
+        % Scan through ID data at current timestep
+        for i_site = 1:1:max_sites
+            if cur_IDs(1, i_site) ~= -1
+                site_coord = i_site + cur_coords(1);
+                % If one MT, just search over single MT in prev. timestep
+                if n_mts == 1
+                    prev_index = find(prev_IDs(1, :) == cur_IDs(1, i_site));
+                    if(~isempty(prev_index))
+                        prev_site_coord = prev_index + prev_coords(1);
+                        delta = site_coord - prev_site_coord;
+                        distance = delta * site_size;
+                        dist_sq = distance * distance;
+                        n_entries(i_tau) = n_entries(i_tau) + 1;
+                        CSD(i_tau) = CSD(i_tau) + dist_sq;
+                    end
+                    % Otherwise if two MTs, check to see if doubly-bound
+                elseif n_mts == 2
+                    i_neighb = site_coord - cur_coords(2);
+                    doubly_bound = false;
+                    for i_scan = -xlink_cutoff:xlink_cutoff
+                        i_neighb = site_coord - cur_coords(2) + i_scan;
+                        if i_neighb > 0 && i_neighb < max_sites
+                            neighb_ID = cur_IDs(2, i_neighb);
+                        else
+                            neighb_ID = -1;
                         end
-                        % If xlink was doubly-bound, search for xlink ID at previous timestep
-                        if(double_bound == true)
-                            prev_index = find(prev_IDs_mtOne == xlink_ID);
-                            % If found, repeat above process
-                            if(~isempty(prev_index))
-                                site_coord = prev_index + prev_mtOne_coord;
-                                neighb_index = site_coord - prev_mtTwo_coord;
-                                double_bound = false;
-                                prev_anchor_pos = 0;
-                                for i_scan = -xlink_cutoff:1:xlink_cutoff
-                                    scan_index = neighb_index + i_scan;
-                                    if(scan_index > 0 && scan_index < n_sites)
-                                        neighb_ID = prev_IDs_mtTwo(neighb_index + i_scan);
-                                    else
-                                        neighb_ID = -1;
-                                    end
-                                    % If doubly-bound, find prev anchor coord
-                                    if(neighb_ID == xlink_ID)
-                                        double_bound = true;
-                                        neighb_coord = neighb_index + i_scan + prev_mtTwo_coord;
-                                        prev_anchor_pos = (site_coord + neighb_coord)/2;
-                                        break;
-                                    end
-                                end
-                                if(double_bound == true)
-                                    delta = cur_anchor_pos - prev_anchor_pos;
-                                    distance = delta * site_size;
-                                    dist_sq = distance * distance;
-                                    n_entries(i_tau) = n_entries(i_tau) + 1;
-                                    CSD(i_tau) = CSD(i_tau) + dist_sq;
-                                end
-                            end
-                        end
-                    else
-                        cur_site_coord = i_site + cur_mtOne_coord;  
-                        prev_index = find(prev_IDs_mtOne == xlink_ID);
-                        if(~isempty(prev_index))
-                            prev_site_coord = prev_index + prev_mtOne_coord;
-                            delta = cur_site_coord - prev_site_coord;
-                            distance = delta * site_size;
-                            dist_sq = distance * distance;
-                            n_entries(i_tau) = n_entries(i_tau) + 1;
-                            CSD(i_tau) = CSD(i_tau) + dist_sq;
+                        if neighb_ID == cur_IDs(1, i_site)
+                            doubly_bound = true;
+                            neighb_coord = i_neighb + cur_coords(2);
+                            anchor_coord = (site_coord + neighb_coord)/2;
+                            break;
                         end
                     end
+                    if doubly_bound
+                        prev_index = find(prev_IDs(1, :) == cur_IDs(1, i_site));
+                        if(~isempty(prev_index))
+                            prev_site_coord = prev_index + prev_coords(1);
+                            i_neighb = prev_site_coord - prev_coords(2);
+                            doubly_bound = false;
+                            for i_scan = -xlink_cutoff:xlink_cutoff
+                                i_neighb = prev_site_coord - prev_coords(2) + i_scan;
+                                if i_neighb > 0 && i_neighb < max_sites
+                                    neighb_ID = prev_IDs(2, i_neighb);
+                                else
+                                    neighb_ID = -1;
+                                end
+                                if neighb_ID == prev_IDs(1, i_site)
+                                    doubly_bound = true;
+                                    prev_neighb_coord = i_neighb + prev_coords(2);
+                                    prev_anchor_coord = (prev_site_coord + prev_neighb_coord)/2;
+                                    break;
+                                end
+                            end
+                            if doubly_bound
+                                delta = anchor_coord - prev_anchor_coord;
+                                %msg = sprintf('delta is %f for xlink %i | tau_step %i | i_data %i', ...
+                                %    delta, cur_IDs(1, i_site), tau_step, i_data);
+                                %disp(msg);
+                                distance = delta * site_size;
+                                dist_sq = distance * distance;
+                                n_entries(i_tau) = n_entries(i_tau) + 1;
+                                CSD(i_tau) = CSD(i_tau) + dist_sq;
+                            end
+                            
+                        end
+                    end
+                else
+                    disp('Greater than 2 MTs not implemented yet.');
                 end
             end
         end
     end
-    loc_entries = n_entries(i_tau);
-    loc_CSD = CSD(i_tau);
+    %loc_entries = n_entries(i_tau);
+    %loc_CSD = CSD(i_tau);
     MSD(i_tau) = CSD(i_tau) / n_entries(i_tau);
 end
 
 % Use basic linear regression to find slope
-y = MSD(1:n_taus);
-x = zeros([length(y) 1]);
-
-for i_tau = starting_tau:1:n_taus
-    x(i_tau-starting_tau + 1) = i_tau * tau_increment;
+y = MSD;
+x = zeros(length(MSD), 1);
+for i_tau = 1:1:n_taus
+    x(i_tau) = starting_tau + (i_tau - 1) * tau_increment;
 end
 
 X = [ones(length(x), 1) x];
 m = X\y;
-
 D = m(2) / 2
 
 %d_consts(i_eff) = D;
@@ -160,16 +152,17 @@ fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600])
 
 y2 = X*m;
-plot(x, y2, 'LineWidth', 2)
+plot(x, y2, '--', 'LineWidth',  2)
 hold on
 plot(x, y, '*', 'LineWidth', 2)
-title('c = 0.05 nM;  eff\_bind\_conc = 750 nM;  D\_i = 0.036 um^2/;  D\_ii = 0.018 um^2/s');
-ylabel('MSD (um^2)');
+title({'Two Anti-Parallel Microtubules','c_{bulk} = 0.05 nM  |  L_{MTs} = 400 \mum  |  D_{ii} = 0.0437 \mum^2s^{-1}'});
+ylabel('MSD (\mum^2)');
 xlabel('Tau (s)');
+xlim([0.0 (max_tau + starting_tau)]);
 legend('Fit', 'Data', 'location', 'northeastoutside');
 
-dim = [0.21 0.75 .1 .1];
-str = sprintf('D_{eff} = %#.3g um^2/s', D);
+dim = [0.18 0.75 .1 .1];
+str = sprintf('D_{obs} = %#.3g um^2s^{-1}', D);
 annotation('textbox',dim,'String',str,'FitBoxToText','on');
 
 %end

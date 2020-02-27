@@ -1,45 +1,47 @@
 #ifndef _KINESIN_MANAGEMENT
 #define _KINESIN_MANAGEMENT
-#include "entry.h"
+#include "entry.hpp"
 #include "event.hpp"
-class Curator;
+#include <map>
 struct system_parameters;
 struct system_properties;
+class Curator;
 
 class KinesinManagement {
 private:
-  using POP_T = Kinesin::head;
+  // Use a template for 'Vec' rather than std::vector (aesthetic only)
+  template <class DATA_T> using Vec = std::vector<DATA_T>;
+  // Define data types
+  using POP_T = Kinesin::Monomer;
   using ALT_T = AssociatedProtein::Monomer;
   using SITE_T = Tubulin;
-  using MGMT_T = KinesinManagement;
   // ENTRY_T is defined in entry.h header
-  using EVENT_T = Event<MGMT_T *, ENTRY_T>;
-  // Use a template for 'Vec' rather than std::vector (aesthetic)
-  template <class DATA_T> using Vec = std::vector<DATA_T>;
-  using Str = std::string;
+  using EVENT_T = Event<ENTRY_T>;
   // All possible KMC event objects; arbitrary sequential order
   Vec<EVENT_T> events_;
-  // Evets segregated by target pop. (for stat correction)
-  Vec<Vec<EVENT_T *>> events_by_pop_;
-  // List of event to execute any given timestep; dynamic
+  // Number of events to execute at any given timestep
+  int n_events_to_exe_{0};
+  // List of events to execute any given timestep; dynamically updated
   Vec<EVENT_T *> events_to_exe_;
-  // Temporarily holds entries after KMC events
-  int n_scratched_ = 0;
-  Vec<POP_T *> scratch_;
-
+  int verbosity_{0};
+  double t_active_{0.0};
+  bool population_active_{false};
+  bool tethering_active_{false};
   bool lists_up_to_date_{false};
-
   // Pointers to global system params & props; same for all classes
-  system_parameters *parameters_ = nullptr;
-  system_properties *properties_ = nullptr;
+  system_parameters *parameters_{nullptr};
+  system_properties *properties_{nullptr};
   // WALLACE, MISTA
-  Curator *wally_;
+  Curator *wally_{nullptr};
 
 public:
-  bool verbose_{false};
+  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
+  // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
+  std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
+  std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
 
   // coop stuff
-  int n_affinities_{1}; // {11};
+  int n_affinities_{11};
   int max_neighbs_{2};
 
   // See kinesin header for meaningful description of below
@@ -48,119 +50,142 @@ public:
   double rest_dist_;
 
   // Populations are untethered/mixed unless otherwise specified
-  int n_motors_ = 0; // Total number of motors in system
-  int n_active_ = 0; // Motors actively bound to some MT/xlink
-  int n_free_tethered_ = 0;
-  int n_bound_NULL_ = 0;
-  int n_bound_ATP_ = 0;
-  int n_bound_ATP_stalled_ = 0;
-  int n_bound_untethered_ = 0;
-  // Below population sizes are indexed by [tubulin_affinity][n_neighbs]
+  int n_motors_{0}; // Total number of motors in system
+  int n_active_{0}; // Motors actively bound to some MT/xlink
+  int n_bound_ATP_{0};
+  int n_bound_ATP_st_{0};
+  int n_bound_unteth_{0};
+  int n_satellites_{0};
+  // Candidates for poisson-based events
+  int n_bind_i_teth_candidates_{0};
+  int n_tether_bound_candidates_{0};
+  // Index scheme: [x_dub]
+  Vec<int> n_bound_teth_;
+  // Index scheme: [n_neighbs]
+  Vec<int> n_bound_NULL_;
+  // Index scheme: [n_neighbs (behind only)][x_dub]
+  Vec<Vec<int>> n_bound_NULL_to_teth_;
+  Vec<Vec<int>> n_bound_NULL_fr_teth_;
+  // Index scheme: [tubulin_affinity][n_neighbs]
   Vec<Vec<int>> n_docked_;
-  Vec<Vec<int>> n_bound_ADPP_i_;
-  Vec<Vec<int>> n_bound_ADPP_i_stalled_;
   Vec<Vec<int>> n_bound_ADPP_ii_;
-  // Below population sizes are indexed by x_dub
-  Vec<int> n_docked_tethered_;
-  Vec<int> n_bound_NULL_tethered_;
-  Vec<int> n_bound_ADPP_i_tethered_;
-  Vec<int> n_bound_ADPP_i_teth_st_;
-  Vec<int> n_bound_tethered_;
+  Vec<Vec<int>> n_bound_ADPP_i_;
+  Vec<Vec<int>> n_bound_ADPP_i_st_;
+  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
+  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_;
+  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_st_;
 
   // Event probabilities
-  double p_bind_i_tethered_;
-  double p_bind_ATP_;
   double p_hydrolyze_;
-  double p_hydrolyze_stalled_;
+  double p_hydrolyze_st_;
   double p_tether_free_;
-  double p_tether_bound_;
-  double p_untether_free_;
-  // Below event probabilities are indexed by [tubulin_affinity][n_neighbs]
+  double p_untether_satellite_;
+  // Avg probabilities used for poisson-based events
+  double p_avg_bind_i_teth_;
+  double p_avg_tether_bound_;
+  // Index scheme: [x_dub]
+  Vec<double> p_untether_bound_;    // curent x_dub
+  Vec<double> weight_tether_bound_; // proposed x_dub
+  // Index scheme: [n_neighbs (behind only)]
+  Vec<double> p_bind_ATP_;
+  // Index scheme: [n_neighbs (behind only)][x_dub]
+  Vec<Vec<double>> p_bind_ATP_to_teth_;
+  Vec<Vec<double>> p_bind_ATP_fr_teth_;
+  // Index scheme: [tubulin_affinity][n_neighbs]
   Vec<Vec<double>> p_bind_i_;
   Vec<Vec<double>> p_bind_ii_;
   Vec<Vec<double>> p_unbind_ii_;
   Vec<Vec<double>> p_unbind_i_;
-  Vec<Vec<double>> p_unbind_i_stalled_;
-  // Below event probabilities are indexed by x_dub
-  Vec<double> p_bind_ATP_tethered_;
-  Vec<double> p_bind_ii_tethered_;
-  Vec<double> p_unbind_i_tethered_;
-  Vec<double> p_unbind_i_teth_st_;
-  Vec<double> p_untether_bound_;
+  Vec<Vec<double>> p_unbind_i_st_;
+  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
+  Vec<Vec<Vec<double>>> p_unbind_i_teth_;    // current x_dub
+  Vec<Vec<Vec<double>>> p_unbind_i_teth_st_; // current x_dub
+  Vec<Vec<Vec<double>>> weight_bind_i_teth_; // proposed x_dub
 
   // 1-D vectors, index is simply motor entry
   Vec<Kinesin> motors_;
   Vec<Kinesin *> active_;
-  Vec<ENTRY_T> free_tethered_;
-  Vec<ENTRY_T> bound_untethered_;
-  Vec<ENTRY_T> bound_NULL_;
   Vec<ENTRY_T> bound_ATP_;
-  Vec<ENTRY_T> bound_ATP_stalled_;
-  // 3-D vectors, inidices are [tubulin_affinity][n_neighbs][motor_entry]
+  Vec<ENTRY_T> bound_ATP_st_;
+  Vec<ENTRY_T> bound_unteth_;
+  Vec<ENTRY_T> satellites_;
+  // Candidates for poisson-based events
+  Vec<ENTRY_T> bind_i_teth_candidates_;
+  Vec<ENTRY_T> tether_bound_candidates_;
+  // Index scheme: [x_dub][motor_entry]
+  Vec<Vec<ENTRY_T>> bound_teth_;
+  // Index scheme: [n_neighbs (behind only)][motor_entry]
+  Vec<Vec<ENTRY_T>> bound_NULL_;
+  // Index scheme: [n_neighbs (behind only)][x_dub][motor_entry]
+  Vec<Vec<Vec<ENTRY_T>>> bound_NULL_to_teth_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_NULL_fr_teth_;
+  // Index scheme: [tubulin_affinity][n_neighbs][motor_entry]
   Vec<Vec<Vec<ENTRY_T>>> docked_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_stalled_;
   Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_ii_;
-  // 2-D vectors, indices are simply [x_dub][motor_entry]
-  Vec<Vec<ENTRY_T>> docked_tethered_;
-  Vec<Vec<ENTRY_T>> bound_NULL_tethered_;
-  Vec<Vec<ENTRY_T>> bound_ADPP_i_tethered_;
-  Vec<Vec<ENTRY_T>> bound_ADPP_i_teth_st_;
-  Vec<Vec<ENTRY_T>> bound_tethered_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_;
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_st_;
+  // Index scheme: [tubulin_affinity][n_neighbs][x_dub][motor_entry]
+  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_;
+  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_st_;
 
 private:
-  void GenerateMotors();
+  void CalculateCutoffs();
   void SetParameters();
+  void GenerateMotors();
   void InitializeLists();
   void InitializeEvents();
 
 public:
   KinesinManagement();
   void Initialize(system_parameters *parameters, system_properties *properties);
+  void ReportProbabilities();
 
   Kinesin *GetFreeMotor();
 
-  void Update_All_Lists();
-  void Update_Free_Teth();
+  void AddToActive(Kinesin *motor);
+  void RemoveFromActive(Kinesin *motor);
+
+  void ReportExecutionOf(std::string event_name);
+  void ReportFailureOf(std::string event_name);
+
+  void FlagForUpdate();
+
+  void Update_Extensions();
   void Update_Docked();
-  void Update_Docked_Teth();
-  void Update_Bound_Teth();
-  void Update_Bound_Unteth();
   void Update_Bound_NULL();
   void Update_Bound_NULL_Teth();
   void Update_Bound_ATP();
   void Update_Bound_ATP_Stalled();
   void Update_Bound_ADPP_I();
   void Update_Bound_ADPP_I_Stalled();
-  void Update_Bound_ADPP_I_Tethered();
-  void Update_Bound_ADPP_I_Tethered_Stalled();
+  void Update_Bound_ADPP_I_Teth();
+  void Update_Bound_ADPP_I_Teth_Stalled();
   void Update_Bound_ADPP_II();
+  void Update_Bound_Unteth();
+  void Update_Bound_Teth();
+  void Update_Free_Teth();
 
-  void Run_KMC();
-  void Generate_Execution_Sequence();
-  int Sample_Event_Statistics();
+  double GetWeight_Bind_I_Teth();
+  double GetWeight_Tether_Bound();
 
-  double GetWeight_TetherBound();
-  double GetWeight_BindTethered();
+  void Set_Bind_I_Teth_Candidates(int n_to_set);
+  void Set_Tether_Bound_Candidates(int n_to_set);
 
-  void ReportExecutionOf(std::string event_name);
-  void ReportFailureOf(std::string event_name);
+  void RunKMC();
+  void UpdateLists();
+  void SampleEventStatistics();
+  void GenerateExecutionSequence();
+  void ExecuteEvents();
 
-  // void Execution_Relay(ENTRY_T target, int code);
-  void KMC_Bind_I(SITE_T *unnoc_site);   // Bind free ADP head; convert to NULL
-  void KMC_Bind_ATP(POP_T *bound_head);  // Bind ATP to NULL-bound heads
-  void KMC_Hydrolyze(POP_T *bound_head); // Convert ATP to ADPP on a bound head
-  void KMC_Bind_II(POP_T *docked_head);  // Bind docked head
-  void KMC_Unbind_II(POP_T *bound_head); // Unbind ADPP heads; converts to ADP
-  void KMC_Unbind_I(POP_T *bound_head);
-  //  void KMC_Bind_ATP_Tethered(int x_dub);
-  //  void KMC_Bind_I_Tethered();
-  // void KMC_Bind_II_Tethered(int x_dub);
-  //  void KMC_Unbind_I_Tethered(int x_dub);
-  // void KMC_Unbind_I_Tethered_Stalled(int x_dub); // XXX
-  //  void KMC_Tether_Free();
-  //  void KMC_Tether_Bound();
-  //  void KMC_Untether_Free();
-  //  void KMC_Untether_Bound(int x_dub);
+  void Bind_I(SITE_T *unnoc_site);
+  void Bind_I_Teth(POP_T *satellite_head);
+  void Bind_ATP(POP_T *bound_head);
+  void Hydrolyze(POP_T *bound_head);
+  void Bind_II(POP_T *docked_head);
+  void Unbind_II(POP_T *bound_head);
+  void Unbind_I(POP_T *bound_head);
+  void Tether_Free(ALT_T *untethered_head);
+  void Tether_Bound(POP_T *bound_head);
+  void Untether(POP_T *head);
 };
 #endif

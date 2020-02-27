@@ -2,69 +2,52 @@
 
 # === List of SBATCH arguments ===
 #SBATCH --account=ucb-summit-smr	# allocations account
-#SBATCH --nodes=4				# number of cluster nodes, abbreviated by -N
-#SBATCH --ntasks=96				# number of parallel process
-#SBATCH --time=15:00:00			# walltime, abbreviated by -t
+#SBATCH --partition=shas			# Type of node to run on
 #SBATCH --qos=normal        	# quality of service/queue
-#SBATCH --job-name=et_scan			# name of job
-#SBATCH --output=et_scan-%j.out    # name of the stdout redirection file
-#SBATCH --error=et_scan-%j.err		# name of the stderr redirection file
+#SBATCH --nodes=1				# number of cluster nodes, abbreviated by -N
+#SBATCH --ntasks=18				# number of parallel process
+#SBATCH --time=24:00:00			# walltime, abbreviated by -t
+#SBATCH --job-name=endtag			# name of job
+#SBATCH --output=endtagScan_%j.out    # name of the stdout redirection file
+#SBATCH --error=endtagScan_%j.err		# name of the stderr redirection file
 
 # === Purge all modules and load needed ones ===
 module purge
-module load intel
-module load gsl
+module load gcc/8.2.0
 module list
 echo "Current variables CC=${CC} and CXX=${CXX}"
 
 # === Run the program ===
 echo "Running on $(hostname --fqdn)"
+echo "Start of endtag scan"
 
-#for K_HYDRO in {75,90,105,120,135}; do
-K_HYDRO=60;
-	for JAM_RATIO in {100,200,300,400,500,600,700,800}; do
-		for MT_LENGTH in {250,500,750,1000,1250,1750}; do
-			PARAM_FILE="params_endtag_"
-			PARAM_FILE+=$K_HYDRO
-			PARAM_FILE+="_"
-			PARAM_FILE+=$JAM_RATIO
-			PARAM_FILE+="_"
-			PARAM_FILE+=$MT_LENGTH
-			PARAM_FILE+=".yaml"
-			echo PARAM FILE is $PARAM_FILE
-			SIM_NAME="endtag_"
-			SIM_NAME+=$K_HYDRO
-			SIM_NAME+="_"
-			SIM_NAME+=$JAM_RATIO
+PARAM_FILE="params_endtag.yaml"
+echo "Base parameter file is $PARAM_FILE"
+
+for SEED in 1 2 3 4
+do
+	for XLINK_CONC_SCALE in 0 1 4
+	do
+		XLINK_CONC=$(echo "scale=3; $XLINK_CONC_SCALE * 0.1" | bc)
+		for MT_LENGTH in 250 500 750 1000 1250 1750
+		do
+			SIM_NAME="endtag_scan_"
+			SIM_NAME+=$XLINK_CONC_SCALE
 			SIM_NAME+="_"
 			SIM_NAME+=$MT_LENGTH
-			echo SIM NAME is $SIM_NAME
-#			srun -N 1 -n 1 ./sim $PARAM_FILE $SIM_NAME &
-			./sim $PARAM_FILE $SIM_NAME
+			SIM_NAME+="_"
+			SIM_NAME+=$SEED
+			TEMP_PARAMS="params_temp_"
+			TEMP_PARAMS+=$SIM_NAME
+			TEMP_PARAMS+=".yaml"
+			cp $PARAM_FILE $TEMP_PARAMS
+			yq w -i $TEMP_PARAMS seed $SEED
+			yq w -i $TEMP_PARAMS xlinks.c_bulk $XLINK_CONC
+			yq w -i $TEMP_PARAMS microtubules.length[0] $MT_LENGTH
+			echo "Running new simulation; name is $SIM_NAME"
+			srun -N 1 -n 1 ./sim $TEMP_PARAMS $SIM_NAME &
 		done
 	done
-#done
+done
 wait
-
-mkdir scan_output
-#for K_HYDRO in {75,90,105,120,135}; do
-K_HYDRO=60;
-	mkdir k_hydrolyze_$K_HYDRO
-	for JAM_RATIO in {100,200,300,400,500,600,700,800}; do
-		mkdir jam_ratio_$JAM_RATIO
-		for MT_LENGTH in {250,500,750,1000,1250,1750}; do
-			SIM_NAME="endtag_"
-			SIM_NAME+=$K_HYDRO
-			SIM_NAME+="_"
-			SIM_NAME+=$JAM_RATIO
-			SIM_NAME+="_"
-			SIM_NAME+=$MT_LENGTH
-			echo moved $SIM_NAME to jam_ratio_$JAM_RATIO
-			mv $SIM_NAME* jam_ratio_$JAM_RATIO
-		done
-		echo moved jam_ratio_$JAM_RATIO to k_hydrolyze_$K_HYDRO
-		mv jam_ratio_$JAM_RATIO k_hydrolyze_$K_HYDRO
-	done
-	echo moved k_hydrolyze_$K_HYDRO to scan_output
-	mv k_hydrolyze_$K_HYDRO scan_output
-#done
+rm params_temp_endtag_scan_*

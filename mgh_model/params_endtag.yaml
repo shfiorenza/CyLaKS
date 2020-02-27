@@ -34,9 +34,9 @@ motors:
   c_eff_bind: 800000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 150 # 60
+  k_hydrolyze: 220 # 60
   k_hydrolyze_stalled: 12.5
-  k_off_i: 1.75 # 45
+  k_off_i: 2 # 45
   k_off_i_stalled: 0.0389
   k_off_ii: 260
   interaction_energy: 0.0 # 2.1

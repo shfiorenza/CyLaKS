@@ -1,13 +1,13 @@
 clear;
 close all;
-simName = 'Endtag_1750';
+simName = 'EndtagC_1750';
 n_sites = 1750;
 n_mts = 1;
 n_datapoints = 10000;
 n_steps = 60000000;
 delta_t = 0.000025; % seconds
 movie_name = "test_mov";
-movie_frames_per_plot = 50;
+movie_frames_per_plot = 40;
 movie_duration = 30; % real life seconds
 movie_dwell_time = 5; % in sim-seconds; time between each 'image'
 movie_start = 01; % datapoint to start at

@@ -2,7 +2,7 @@
 clear variables;
 xlink_concs = 0;%, 1];%, 4]; 
 %name_structs = ["endtag_new_0_%i"];%, "Endtag_%i_02", "Endtag_%i"];
-name_structs = ["EndtagB_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
+name_structs = ["EndtagC_%i", "Endtag_newParams_b_0_%i", "Endtag_MAYBE_4_%i"];
 mt_lengths = [2, 4, 6, 8, 10, 14];     % in microns
 %mt_lengths = [4, 8, 14];
 % experimental parameters

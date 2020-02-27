@@ -4,7 +4,7 @@ n_datapoints: 100000
 data_threshold: 0
 delta_t: 2.5e-5
 kbT: 4.114
-eta: 0.001
+eta: 0.001 
 microtubules:
   count: 1
   length: 
@@ -31,12 +31,12 @@ motors:
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.420
-  c_eff_bind: 800000 # 16000000
+  c_eff_bind: 800000 
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 130 # 100
+  k_hydrolyze: 130
   k_hydrolyze_stalled: 130
-  k_off_i: 2.5 # 5 
+  k_off_i: 2.5
   k_off_i_stalled: 2.5
   k_off_ii: 260
   interaction_energy: 1.1

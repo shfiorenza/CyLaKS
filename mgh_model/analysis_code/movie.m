@@ -1,10 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1750];
+mt_lengths = [500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'Endtag_1750';
+simName = 'EndtagC_500';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));

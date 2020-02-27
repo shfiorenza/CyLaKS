@@ -1,13 +1,13 @@
 
 clear all;
 % Often-changed variables
-n_sites = 50000;
-simName = 'k1_proc_10x';
+n_sites = 25000;
+simName = 'kinesin4_proc';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
 n_steps = 60000000;
-n_datapoints = 100000;
+n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;

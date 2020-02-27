@@ -1,9 +1,14 @@
 clear;
 close all;
-simName = 'Endtag_1000';
-n_sites = 1000;
-n_datapoints = 10000;
+simName = 'EndtagC_500';
 n_mts = 1;
+n_sites = 500;
+delta_t = 0.000025;
+n_steps = 60000000;
+n_datapoints = 10000;
+time_per_datapoint = delta_t * n_steps / n_datapoints;
+dwell_time = 6; % in sections
+dwell_points = dwell_time / time_per_datapoint; 
 
 motor_ID = 2;
 xlink_ID = 1;
@@ -52,7 +57,7 @@ occupancy(occupancy == motor_ID) = 1;
 matrix = occupancy;
 
 % motors in overlap
-dataMatrix = sum(matrix(:, :, 9800:10000), 3)';
+dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points):n_datapoints), 3)';
 
 imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
     gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);

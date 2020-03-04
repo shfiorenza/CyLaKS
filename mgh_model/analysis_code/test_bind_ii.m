@@ -8,6 +8,16 @@ speciesID = 1;
 max_length = max(mt_lengths);
 n_mts = length(mt_lengths);
 
+k_on = 0.000238; % 1/(nM*s)
+c_bind = 4500;  % nM
+k_off_ii = 14.3; % 1/s
+k_d = k_off_ii / k_on;
+avg_occu = c_bind / (c_bind + k_d);
+
+kbT = 4.114; % pN * nm
+f_occu = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
+
+
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 data_file = fopen(sprintf(fileDirectory, sprintf(fileStruct, baseName)));
@@ -56,33 +66,24 @@ for i_mt=1:n_mts
         end
     end
 end
-inside_occu_report = sprintf('\nAverage occupancy inside overlap: %g', avg_occu_inside);
-%disp(inside_occu_report);
-outside_occu_report = sprintf('Average occupancy outside overlap: %g', avg_occu_outside);
-%disp(outside_occu_report);
-bias = avg_occu_inside / avg_occu_outside;
-bias_report = sprintf('Overlap binding bias: %g\n', bias);
-%disp(bias_report);
 
 %%plot fig%%
 fig1 = figure();
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
 plot(linspace(0, sys_size, sys_size), final_data(2, :), 'LineWidth', 2);
 hold on
-%plot([0 sys_size], [avg_occu_inside avg_occu_inside], '--r', 'Linewidth', 1.5);
-%plot([0 sys_size], [avg_occu_outside avg_occu_outside], '--m', 'Linewidth', 1.5);
+%plot([0 sys_size], [avg_occu avg_occu]);
+fplot(@(x) f_occu(x - 50.5));
 
-dim = [0.14 0.78 .1 .1];
-str = {sprintf('Average overlap occupancy = %#.3g', avg_occu_inside), ...
-       sprintf('Average non-overlap occupancy = %#.3g', avg_occu_outside), ...
-       sprintf('Overlap binding bias = %#.3g', bias)};
-annotation('textbox',dim,'String',str,'FitBoxToText','on');
 
 %%style stuff%%
-ylim([0 1]);
+ylim([0 avg_occu]);
 xlim([0 sys_size]);
-title('c_{bulk} = 0.5 nM; k_{on} = 0.005 nM^{-1}s^{-1}; c_{eff} = 10 nM; L_{MT} = 2 microns; L_{overlap} = 1 micron');
 xlabel('Site coordinate (8 nm each)');
-ylabel('Fraction of the time occupied');
-legend({'First MT occupancy', 'Second MT occupancy', 'Avg. overlap occupancy', 'Avg. non-overlap occupancy'}, ...
-    'Location', 'northeastoutside');
+
+function u = delta_u(x)
+    k_spring = 0.453; % pN / nm
+    site_size = 8; % nm
+    dr = sqrt(32^2 + (x*site_size)^2) - 32;
+    u = 0.5*k_spring*dr*dr;
+end

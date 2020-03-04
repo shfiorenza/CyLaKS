@@ -1,6 +1,6 @@
 clear all;
 % Input parameters
-baseName = "test_slide_hybridStep_lowKoff";
+baseName = "test_overlap4";
 seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in microns

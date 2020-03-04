@@ -1,15 +1,13 @@
 #ifndef _CURATOR_
 #define _CURATOR_
 #include <chrono>
+#include <string.h>
 #include <yaml-cpp/yaml.h>
 struct system_parameters;
 struct system_properties;
 
 using sys_clock = std::chrono::steady_clock;
 using sys_timepoint = sys_clock::time_point;
-// FIXME; depricate this (used in kinesin & mt MGMT)
-using t_unit = std::chrono::duration<double, std::nano>;
-
 class Curator {
 private:
   FILE *log_file_{nullptr};
@@ -19,18 +17,19 @@ private:
   int equil_milestone_{0};
   int data_milestone_{0};
 
+  system_parameters *parameters_;
+  system_properties *properties_;
+
 public:
   double t_motors_[4];
   double t_xlinks_[4];
   double t_MTs_[4];
+  char *test_mode_{nullptr};
 
   struct timespec pause_dur_;
 
   sys_timepoint start_;
   sys_timepoint finish_;
-
-  system_parameters *parameters_;
-  system_properties *properties_;
 
 private:
   FILE *OpenFile(const char *file_name, const char *type);
@@ -38,7 +37,7 @@ private:
   void CheckArgs(char *exe_name, int argc);
   void GenerateLogFile(char *sim_name);
   void GenerateDataFiles(char *sim_name);
-  void ParseParameters(system_parameters *params, char *param_file);
+  void ParseParameters(char *param_file);
   void SetLocalParameters();
   void InitializeSimObjects();
   void OutputData();

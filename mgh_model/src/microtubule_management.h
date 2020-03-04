@@ -3,6 +3,7 @@
 #include "entry.hpp"
 #include "microtubule.h" // Includes <vector> lib as well
 class Tubulin;
+class Curator;
 struct system_parameters;
 struct system_properties;
 
@@ -14,6 +15,7 @@ private:
   int max_neighbs_motor_{0}; // {2};
   int n_affinities_{1};      // {11};
   bool lists_up_to_date_{false};
+  Curator *wally_{nullptr};
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
 
@@ -27,6 +29,7 @@ public:
 private:
   void SetParameters();
   void GenerateMicrotubules();
+  void SetTestEnvironment();
 
 public:
   MicrotubuleManagement();

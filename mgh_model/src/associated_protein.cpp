@@ -207,6 +207,7 @@ void AssociatedProtein::UpdateExtension() {
 
 void AssociatedProtein::ForceUnbind() {
 
+  printf("Forced unbind of xlink %i!\n", id_);
   // Check to see if xlink has a satellite motor (tethered but not bound)
   bool has_satellite{false};
   if (tethered_) {
@@ -560,13 +561,21 @@ double AssociatedProtein::GetTotalWeight_Bind_II_Teth() {
 
 Tubulin *AssociatedProtein::GetWeightedSite_Bind_II() {
 
+  // GetTotalWeight also updates relevant neighbor list
   double weight_tot{GetTotalWeight_Bind_II()};
+  // printf("Total weight is %g\n", weight_tot);
   double ran{properties_->gsl.GetRanProb()};
+  // printf("Rolled %g\n", ran);
   double p_cum{0.0};
+  int indices[n_neighbors_bind_ii_];
+  properties_->gsl.SetRanIndices(indices, n_neighbors_bind_ii_,
+                                 n_neighbors_bind_ii_);
   for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
-    Tubulin *neighb{neighbors_bind_ii_[i_neighb]};
+    Tubulin *neighb{neighbors_bind_ii_[indices[i_neighb]]};
     p_cum += GetWeight_Bind_II(neighb) / weight_tot;
+    // printf("p_cum is %g after entry #%i\n", p_cum, i_neighb);
     if (ran < p_cum) {
+      // printf("Chose entry #%i\n", i_neighb);
       return neighb;
     }
   }

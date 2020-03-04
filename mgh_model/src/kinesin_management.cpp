@@ -83,14 +83,15 @@ void KinesinManagement::CalculateCutoffs() {
       break;
     }
   }
-  if (parameters_->motors.tethers_active and parameters_->xlinks.c_bulk > 0.0) {
+  if (parameters_->xlinks.c_bulk > 0.0 and parameters_->motors.c_bulk > 0.0 and
+      parameters_->motors.tethers_active) {
     tethering_active_ = true;
     wally_->Log("\nFor motors:\n");
     wally_->Log("  rest_dist is %g\n", rest_dist_);
     wally_->Log("  comp_cutoff is %i\n", comp_cutoff_);
     wally_->Log("  dist_cutoff is %i\n", teth_cutoff_);
   } else {
-    wally_->Log("Tethering is disabled for motors.\n");
+    wally_->Log("\nTethering is disabled for motors.\n");
   }
 }
 

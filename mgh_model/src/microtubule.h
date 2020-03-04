@@ -25,7 +25,8 @@ public:
   int coord_;   // Absolute coordinate of left-most edge of MT
 
   int steps_per_iteration_{0};
-  double gamma_; // in units of (pN*s) / nm
+  double gamma_{0.0}; // in units of (pN*s) / nm
+  double tau_{0.0};
 
   Microtubule *neighbor_ = nullptr; // FIXME for 1+ neighbors
 

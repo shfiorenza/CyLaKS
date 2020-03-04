@@ -30,7 +30,7 @@ else
     GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
     LINK_FLAGS += -static
 endif
-INCLUDES = $(GSLINCS) $(YAMLINCS) 
+INCLUDES = $(GSLINCS) $(YAMLINCS)
 LIBS = $(GSLLIBS) $(YAMLLIBS)
 
 # Combine compiler and linker flags

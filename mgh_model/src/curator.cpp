@@ -9,7 +9,8 @@ void Curator::InitializeSimulation(char *argv[], system_properties *properties,
   char *exe_name{argv[0]};
   char *param_file{argv[1]};
   char *sim_name{argv[2]};
-  char *test_mode{argv[3]};
+  test_mode_ = argv[3];
+  printf("test mode is %s\n", test_mode_);
   int argc{0};
   while (true) {
     if (argv[argc] == nullptr) {
@@ -18,6 +19,7 @@ void Curator::InitializeSimulation(char *argv[], system_properties *properties,
     argc++;
   }
   properties_ = properties;
+  parameters_ = parameters;
   // User input must have correct number of arguments
   CheckArgs(exe_name, argc);
   // Log file saves all sim outputs to terminal
@@ -25,7 +27,7 @@ void Curator::InitializeSimulation(char *argv[], system_properties *properties,
   // Data files save all pertinent info: occupancy, coords, extensions, etc.
   GenerateDataFiles(sim_name);
   // Parameters from YAML file are transferred to local parameter structs
-  ParseParameters(parameters, param_file);
+  ParseParameters(param_file);
   // Once parameters are parsed, the Curator's own parameters can be set
   SetLocalParameters();
   // Microtubules, motors, and crosslinkers are all initialized at once
@@ -143,162 +145,174 @@ void Curator::GenerateDataFiles(char *sim_name) {
   properties_->total_force_file_ = OpenFile(total_force_file, "w");
   // bool; simply says if motor head is trailing or not
   properties_->motor_head_status_file_ = OpenFile(motor_head_status_file, "w");
+
+  if (test_mode_ != nullptr) {
+    printf("hello\n");
+    printf("test mode is %s\n", test_mode_);
+    if (strcmp(test_mode_, "bind_ii") == 0) {
+      char bind_ii_test_file[256];
+      sprintf(bind_ii_test_file, "%s_bind_ii_test_data.file", sim_name);
+      properties_->bind_ii_test_file_ = OpenFile(bind_ii_test_file, "w");
+    } else if (test_mode_ == "xlink_bind_i_teth") {
+
+    } else {
+      Log("Error; valid test choices are: 'bind_ii' & 'xlink_bind_i_teth'\n");
+    }
+  }
 }
 
-void Curator::ParseParameters(system_parameters *params, char *param_file) {
+void Curator::ParseParameters(char *param_file) {
 
   // Check to make sure param file actually exists
   if (!FileExists(param_file)) {
     Log("  Error: parameter file does not exist; aborting\n");
     exit(1);
   }
+
   // Parse parameter file into a YAML node
   YAML::Node input = YAML::LoadFile(param_file);
   // Transfer values from input param node to system_parameters structure
   try {
-    params->seed = input["seed"].as<long>();
+    parameters_->seed = input["seed"].as<long>();
   } catch (const YAML::BadConversion error) {
-    params->seed = (long)(input["seed"].as<double>());
+    parameters_->seed = (long)(input["seed"].as<double>());
   }
-  params->n_steps = input["n_steps"].as<int>();
-  params->n_datapoints = input["n_datapoints"].as<int>();
-  params->data_threshold = input["data_threshold"].as<int>();
-  params->delta_t = input["delta_t"].as<double>();
-  params->kbT = input["kbT"].as<double>();
-  params->eta = input["eta"].as<double>();
+  parameters_->n_steps = input["n_steps"].as<int>();
+  parameters_->n_datapoints = input["n_datapoints"].as<int>();
+  parameters_->data_threshold = input["data_threshold"].as<int>();
+  parameters_->delta_t = input["delta_t"].as<double>();
+  parameters_->kbT = input["kbT"].as<double>();
+  parameters_->eta = input["eta"].as<double>();
   /* Microtubule parameters below */
   YAML::Node mts = input["microtubules"];
-  params->microtubules.count = mts["count"].as<int>();
-  params->microtubules.length = mts["length"].as<std::vector<int>>();
-  params->microtubules.y_dist = mts["y_dist"].as<double>();
-  params->microtubules.site_size = mts["site_size"].as<double>();
-  params->microtubules.radius = mts["radius"].as<double>();
-  params->microtubules.elevation = mts["elevation"].as<double>();
-  params->microtubules.start_coord =
+  parameters_->microtubules.count = mts["count"].as<int>();
+  parameters_->microtubules.length = mts["length"].as<std::vector<int>>();
+  parameters_->microtubules.y_dist = mts["y_dist"].as<double>();
+  parameters_->microtubules.site_size = mts["site_size"].as<double>();
+  parameters_->microtubules.radius = mts["radius"].as<double>();
+  parameters_->microtubules.elevation = mts["elevation"].as<double>();
+  parameters_->microtubules.start_coord =
       mts["start_coord"].as<std::vector<double>>();
-  params->microtubules.immobile_until =
+  parameters_->microtubules.immobile_until =
       mts["immobile_until"].as<std::vector<double>>();
-  // Check to make sure there are enough vector entries for given MT count
-  int n_lengths = mts["length"].size();
-  int n_start_coords = mts["start_coord"].size();
-  int n_immo = mts["immobile_until"].size();
-  if (params->microtubules.count > n_lengths ||
-      params->microtubules.count > n_start_coords ||
-      params->microtubules.count > n_immo) {
-    Log("\nError! More MTs than given parameters; ");
-    Log("check vector entries in parameter file!\n\n");
-    exit(1);
-  }
-  params->microtubules.applied_force = mts["applied_force"].as<double>();
-  params->microtubules.printout_on = mts["printout_on"].as<bool>();
-  params->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
+  parameters_->microtubules.applied_force = mts["applied_force"].as<double>();
+  parameters_->microtubules.printout_on = mts["printout_on"].as<bool>();
+  parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
-  params->motors.t_active = motors["t_active"].as<double>();
-  params->motors.k_on = motors["k_on"].as<double>();
-  params->motors.c_bulk = motors["c_bulk"].as<double>();
-  params->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
-  params->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
-  params->motors.c_ATP = motors["c_ATP"].as<double>();
-  params->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
-  params->motors.k_hydrolyze_stalled =
+  parameters_->motors.t_active = motors["t_active"].as<double>();
+  parameters_->motors.k_on = motors["k_on"].as<double>();
+  parameters_->motors.c_bulk = motors["c_bulk"].as<double>();
+  parameters_->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
+  parameters_->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
+  parameters_->motors.c_ATP = motors["c_ATP"].as<double>();
+  parameters_->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
+  parameters_->motors.k_hydrolyze_stalled =
       motors["k_hydrolyze_stalled"].as<double>();
-  params->motors.k_off_i = motors["k_off_i"].as<double>();
-  params->motors.k_off_i_stalled = motors["k_off_i_stalled"].as<double>();
-  params->motors.k_off_ii = motors["k_off_ii"].as<double>();
-  params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
-  params->motors.tethers_active = motors["tethers_active"].as<bool>();
-  params->motors.k_tether = motors["k_tether"].as<double>();
-  params->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
-  params->motors.k_untether = motors["k_untether"].as<double>();
-  params->motors.r_0 = motors["r_0"].as<double>();
-  params->motors.k_spring = motors["k_spring"].as<double>();
-  params->motors.k_slack = motors["k_slack"].as<double>();
-  params->motors.stall_force = motors["stall_force"].as<double>();
-  params->motors.applied_force = motors["applied_force"].as<double>();
+  parameters_->motors.k_off_i = motors["k_off_i"].as<double>();
+  parameters_->motors.k_off_i_stalled = motors["k_off_i_stalled"].as<double>();
+  parameters_->motors.k_off_ii = motors["k_off_ii"].as<double>();
+  parameters_->motors.endpausing_active =
+      motors["endpausing_active"].as<bool>();
+  parameters_->motors.tethers_active = motors["tethers_active"].as<bool>();
+  parameters_->motors.k_tether = motors["k_tether"].as<double>();
+  parameters_->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
+  parameters_->motors.k_untether = motors["k_untether"].as<double>();
+  parameters_->motors.r_0 = motors["r_0"].as<double>();
+  parameters_->motors.k_spring = motors["k_spring"].as<double>();
+  parameters_->motors.k_slack = motors["k_slack"].as<double>();
+  parameters_->motors.stall_force = motors["stall_force"].as<double>();
+  parameters_->motors.applied_force = motors["applied_force"].as<double>();
   /* Xlink parameters below */
   YAML::Node xlinks = input["xlinks"];
-  params->xlinks.k_on = xlinks["k_on"].as<double>();
-  params->xlinks.c_bulk = xlinks["c_bulk"].as<double>();
-  params->xlinks.c_eff_bind = xlinks["c_eff_bind"].as<double>();
-  params->xlinks.k_off_i = xlinks["k_off_i"].as<double>();
-  params->xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
-  params->xlinks.r_0 = xlinks["r_0"].as<double>();
-  params->xlinks.k_spring = xlinks["k_spring"].as<double>();
-  params->xlinks.diffu_coeff_i = xlinks["diffu_coeff_i"].as<double>();
-  params->xlinks.diffu_coeff_ii = xlinks["diffu_coeff_ii"].as<double>();
-  params->xlinks.interaction_energy = xlinks["interaction_energy"].as<double>();
+  parameters_->xlinks.k_on = xlinks["k_on"].as<double>();
+  parameters_->xlinks.c_bulk = xlinks["c_bulk"].as<double>();
+  parameters_->xlinks.c_eff_bind = xlinks["c_eff_bind"].as<double>();
+  parameters_->xlinks.k_off_i = xlinks["k_off_i"].as<double>();
+  parameters_->xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
+  parameters_->xlinks.r_0 = xlinks["r_0"].as<double>();
+  parameters_->xlinks.k_spring = xlinks["k_spring"].as<double>();
+  parameters_->xlinks.diffu_coeff_i = xlinks["diffu_coeff_i"].as<double>();
+  parameters_->xlinks.diffu_coeff_ii = xlinks["diffu_coeff_ii"].as<double>();
+  parameters_->xlinks.interaction_energy =
+      xlinks["interaction_energy"].as<double>();
   // Store params pointer as parameters_ in Curator
-  parameters_ = params;
   int n_steps = parameters_->n_steps;
   double delta_t = parameters_->delta_t;
   Log("Reading params from %s:\n\n", param_file);
   Log("  General simulation parameters:\n");
-  Log("    seed = %li\n", params->seed);
-  Log("    n_steps = %i\n", params->n_steps);
-  Log("    n_datapoints = %i\n", params->n_datapoints);
-  Log("    data_threshold = %i steps\n", params->data_threshold);
-  Log("    delta_t = %g s\n", params->delta_t);
-  Log("    kbT = %g pN*nm\n", params->kbT);
-  Log("    eta = %g (pN*s)/um^2\n", params->eta);
+  Log("    seed = %li\n", parameters_->seed);
+  Log("    n_steps = %i\n", parameters_->n_steps);
+  Log("    n_datapoints = %i\n", parameters_->n_datapoints);
+  Log("    data_threshold = %i steps\n", parameters_->data_threshold);
+  Log("    delta_t = %g s\n", parameters_->delta_t);
+  Log("    kbT = %g pN*nm\n", parameters_->kbT);
+  Log("    eta = %g (pN*s)/um^2\n", parameters_->eta);
   Log("\n  Microtubule (mt) parameters:\n");
-  Log("    count = %i\n", params->microtubules.count);
+  Log("    count = %i\n", parameters_->microtubules.count);
+  int n_lengths = input["microtubules"]["length"].size();
   for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
-    Log("    length = %i sites for mt %i\n", params->microtubules.length[i_mt],
-        i_mt);
+    Log("    length = %i sites for mt %i\n",
+        parameters_->microtubules.length[i_mt], i_mt);
   }
-  Log("    y_dist = %g nm between MTs\n", params->microtubules.y_dist);
-  Log("    site_size = %g nm\n", params->microtubules.site_size);
-  Log("    radius = %g nm\n", params->microtubules.radius);
-  Log("    elevation = %g nm above surface\n", params->microtubules.elevation);
+  Log("    y_dist = %g nm between MTs\n", parameters_->microtubules.y_dist);
+  Log("    site_size = %g nm\n", parameters_->microtubules.site_size);
+  Log("    radius = %g nm\n", parameters_->microtubules.radius);
+  Log("    elevation = %g nm above surface\n",
+      parameters_->microtubules.elevation);
+  // Check to make sure there are enough vector entries for given MT count
+  int n_start_coords = input["microtubules"]["start_coord"].size();
   for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
-    double start_coord = params->microtubules.start_coord[i_mt];
+    double start_coord = parameters_->microtubules.start_coord[i_mt];
     Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
   }
+  int n_immo = input["microtubules"]["immobile_until"].size();
   for (int i_mt = 0; i_mt < n_immo; i_mt++) {
-    double immo = params->microtubules.immobile_until[i_mt];
+    double immo = parameters_->microtubules.immobile_until[i_mt];
     Log("    immobile until = %g s for mt %i\n", immo, i_mt);
   }
-  Log("    applied_force = %g pN\n", params->microtubules.applied_force);
+  Log("    applied_force = %g pN\n", parameters_->microtubules.applied_force);
   Log("    printout_on = %s\n",
-      params->microtubules.printout_on ? "true" : "false");
+      parameters_->microtubules.printout_on ? "true" : "false");
   Log("    diffusion_on = %s\n",
-      params->microtubules.diffusion_on ? "true" : "false");
+      parameters_->microtubules.diffusion_on ? "true" : "false");
   Log("\n  Kinesin (motor) parameters:\n");
-  Log("    t_active = %g seconds\n", params->motors.t_active);
-  Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
-  Log("    c_bulk = %g nM\n", params->motors.c_bulk);
-  Log("    c_eff_bind = %g nM\n", params->motors.c_eff_bind);
-  Log("    k_on_ATP = %g /(mM*s)\n", params->motors.k_on_ATP);
-  Log("    c_ATP = %g mM\n", params->motors.c_ATP);
-  Log("    k_hydrolyze = %g /s\n", params->motors.k_hydrolyze);
-  Log("    k_hydrolyze_stalled = %g /s\n", params->motors.k_hydrolyze_stalled);
-  Log("    k_off_i = %g /s\n", params->motors.k_off_i);
-  Log("    k_off_i_stalled = %g /s\n", params->motors.k_off_i_stalled);
-  Log("    k_off_ii = %g /s\n", params->motors.k_off_ii);
-  Log("    k_tether = %g /(nM*s)\n", params->motors.k_tether);
-  Log("    c_eff_tether = %g nM\n", params->motors.c_eff_tether);
-  Log("    k_untether = %g /s\n", params->motors.k_untether);
-  Log("    r_0 = %g nm\n", params->motors.r_0);
-  Log("    k_spring = %g pN/nm\n", params->motors.k_spring);
-  Log("    k_slack = %g pN/nm\n", params->motors.k_slack);
-  Log("    stall_force = %g pN\n", params->motors.stall_force);
-  Log("    applied_force = %g pN\n", params->motors.applied_force);
+  Log("    t_active = %g seconds\n", parameters_->motors.t_active);
+  Log("    k_on = %g /(nM*s)\n", parameters_->motors.k_on);
+  Log("    c_bulk = %g nM\n", parameters_->motors.c_bulk);
+  Log("    c_eff_bind = %g nM\n", parameters_->motors.c_eff_bind);
+  Log("    k_on_ATP = %g /(mM*s)\n", parameters_->motors.k_on_ATP);
+  Log("    c_ATP = %g mM\n", parameters_->motors.c_ATP);
+  Log("    k_hydrolyze = %g /s\n", parameters_->motors.k_hydrolyze);
+  Log("    k_hydrolyze_stalled = %g /s\n",
+      parameters_->motors.k_hydrolyze_stalled);
+  Log("    k_off_i = %g /s\n", parameters_->motors.k_off_i);
+  Log("    k_off_i_stalled = %g /s\n", parameters_->motors.k_off_i_stalled);
+  Log("    k_off_ii = %g /s\n", parameters_->motors.k_off_ii);
+  Log("    k_tether = %g /(nM*s)\n", parameters_->motors.k_tether);
+  Log("    c_eff_tether = %g nM\n", parameters_->motors.c_eff_tether);
+  Log("    k_untether = %g /s\n", parameters_->motors.k_untether);
+  Log("    r_0 = %g nm\n", parameters_->motors.r_0);
+  Log("    k_spring = %g pN/nm\n", parameters_->motors.k_spring);
+  Log("    k_slack = %g pN/nm\n", parameters_->motors.k_slack);
+  Log("    stall_force = %g pN\n", parameters_->motors.stall_force);
+  Log("    applied_force = %g pN\n", parameters_->motors.applied_force);
   Log("    tethers_active = %s\n",
-      params->motors.tethers_active ? "true" : "false");
+      parameters_->motors.tethers_active ? "true" : "false");
   Log("    endpausing_active = %s\n",
-      params->motors.endpausing_active ? "true" : "false");
+      parameters_->motors.endpausing_active ? "true" : "false");
   Log("\n  Crosslinker (xlink) parameters:\n");
-  Log("    k_on = %g /(nM*s)\n", params->xlinks.k_on);
-  Log("    c_bulk = %g nM\n", params->xlinks.c_bulk);
-  Log("    c_eff_bind = %g nM\n", params->xlinks.c_eff_bind);
-  Log("    k_off_i = %g /s\n", params->xlinks.k_off_i);
-  Log("    k_off_ii = %g /s\n", params->xlinks.k_off_ii);
-  Log("    r_0 = %g nm\n", params->xlinks.r_0);
-  Log("    k_spring = %g pN/nm\n", params->xlinks.k_spring);
-  Log("    diffu_coeff_i = %g um^2/s\n", params->xlinks.diffu_coeff_i);
-  Log("    diffu_coeff_ii = %g um^2/s\n", params->xlinks.diffu_coeff_ii);
-  Log("    interaction_energy = %g kbT\n", params->xlinks.interaction_energy);
+  Log("    k_on = %g /(nM*s)\n", parameters_->xlinks.k_on);
+  Log("    c_bulk = %g nM\n", parameters_->xlinks.c_bulk);
+  Log("    c_eff_bind = %g nM\n", parameters_->xlinks.c_eff_bind);
+  Log("    k_off_i = %g /s\n", parameters_->xlinks.k_off_i);
+  Log("    k_off_ii = %g /s\n", parameters_->xlinks.k_off_ii);
+  Log("    r_0 = %g nm\n", parameters_->xlinks.r_0);
+  Log("    k_spring = %g pN/nm\n", parameters_->xlinks.k_spring);
+  Log("    diffu_coeff_i = %g um^2/s\n", parameters_->xlinks.diffu_coeff_i);
+  Log("    diffu_coeff_ii = %g um^2/s\n", parameters_->xlinks.diffu_coeff_ii);
+  Log("    interaction_energy = %g kbT\n",
+      parameters_->xlinks.interaction_energy);
   Log("\nTotal simulation duration: %g seconds\n", delta_t * n_steps);
 }
 
@@ -311,7 +325,6 @@ void Curator::SetLocalParameters() {
   n_steps_per_output_ = n_steps_recorded_ / n_datapoints;
   equil_milestone_ = data_threshold_ / 10;
   data_milestone_ = n_steps_recorded_ / 10;
-
   for (int i = 0; i < 4; i++) {
     t_motors_[i] = 0;
     t_xlinks_[i] = 0;
@@ -321,14 +334,14 @@ void Curator::SetLocalParameters() {
 
 void Curator::InitializeSimObjects() {
 
+  // Gsl: wrapper class for GSL library; manages random number generation
+  properties_->gsl.Initialize(parameters_);
   // Microtubules: discretized 1-D lattice that proteins bind to
   properties_->microtubules.Initialize(parameters_, properties_);
   // Kinesin4: active motors that step towards plus-end of MTs
   properties_->kinesin4.Initialize(parameters_, properties_);
   // PRC1: passive crosslinkers that can doubly-bind to overlapping MTs
   properties_->prc1.Initialize(parameters_, properties_);
-  // Gsl: wrapper class for GSL library; manages random number generation
-  properties_->gsl.Initialize(parameters_);
 }
 
 void Curator::OutputData() {
@@ -457,7 +470,8 @@ void Curator::OutputData() {
     // xlink_extension_array[i_ext] = prc1->n_bound_ii_[max + 1][i_ext];
   }
   // Write the data to respective files one timestep at a time
-  fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
+  // fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
+  fwrite(mt_coord_array, sizeof(int), n_mts, mt_coord_file);
   fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
   fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
   fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
@@ -512,6 +526,7 @@ void Curator::CloseDataFiles() {
 void Curator::ErrorExit(const char *function_name) {
 
   Log("Fatal error in %s\n", function_name);
+  Log("Step no: #%i\n", properties_->current_step_);
   Log(" *** EXITING ***\n");
   exit(1);
 }

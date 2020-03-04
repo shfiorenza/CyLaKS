@@ -1,11 +1,11 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000,500];
+mt_lengths = [101,101];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
 %simName = "2019_12_04_slideScan/slide_scan_2.0_525_5";
-simName = "test_slide_hybridStep_lowKoff";
+simName = "test_overlap4b";
 dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 60000000;
@@ -14,7 +14,7 @@ start_frame = 01;
 end_frame = n_datapoints;
 frames_per_plot = 100;
 delta_t = 0.000025; 
-xlink_cutoff = 5;
+xlink_cutoff = 12;
 cutoff = 19;
 % Colors
 blue = [30 144 255] / 255;

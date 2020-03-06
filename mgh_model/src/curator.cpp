@@ -194,6 +194,9 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
+  params->motors.lattice_coop_amp = motors["lattice_coop_amp"].as<double>();
+  params->motors.lattice_coop_range = motors["lattice_coop_range"].as<double>();
+  params->motors.interaction_energy = motors["interaction_energy"].as<double>();
   params->motors.t_active = motors["t_active"].as<double>();
   params->motors.k_on = motors["k_on"].as<double>();
   params->motors.c_bulk = motors["c_bulk"].as<double>();
@@ -206,8 +209,6 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->motors.k_off_i = motors["k_off_i"].as<double>();
   params->motors.k_off_i_stalled = motors["k_off_i_stalled"].as<double>();
   params->motors.k_off_ii = motors["k_off_ii"].as<double>();
-  params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
-  params->motors.tethers_active = motors["tethers_active"].as<bool>();
   params->motors.k_tether = motors["k_tether"].as<double>();
   params->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
   params->motors.k_untether = motors["k_untether"].as<double>();
@@ -216,6 +217,8 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   params->motors.k_slack = motors["k_slack"].as<double>();
   params->motors.stall_force = motors["stall_force"].as<double>();
   params->motors.applied_force = motors["applied_force"].as<double>();
+  params->motors.tethers_active = motors["tethers_active"].as<bool>();
+  params->motors.endpausing_active = motors["endpausing_active"].as<bool>();
   /* Xlink parameters below */
   YAML::Node xlinks = input["xlinks"];
   params->xlinks.k_on = xlinks["k_on"].as<double>();
@@ -265,6 +268,9 @@ void Curator::ParseParameters(system_parameters *params, char *param_file) {
   Log("    diffusion_on = %s\n",
       params->microtubules.diffusion_on ? "true" : "false");
   Log("\n  Kinesin (motor) parameters:\n");
+  Log("    lattice_coop_amp = %g\n", params->motors.lattice_coop_amp);
+  Log("    lattice_coop_range = %g sites\n", params->motors.lattice_coop_range);
+  Log("    interaction energy = %g kbT\n", params->motors.interaction_energy);
   Log("    t_active = %g seconds\n", params->motors.t_active);
   Log("    k_on = %g /(nM*s)\n", params->motors.k_on);
   Log("    c_bulk = %g nM\n", params->motors.c_bulk);

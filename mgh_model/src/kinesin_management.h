@@ -41,7 +41,9 @@ public:
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
 
   // coop stuff
-  int n_affinities_{11};
+  int n_affinities_{10};
+  int n_stacks_{5};
+  int n_affinities_tot_{n_affinities_ * n_stacks_ + 1};
   int max_neighbs_{2};
 
   // See kinesin header for meaningful description of below

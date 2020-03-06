@@ -5,6 +5,7 @@ struct kinesin_parameters {
 
   double lattice_coop_amp;
   double lattice_coop_range;
+  double interaction_energy;  // absolute value of interaction energy
   double t_active;            // Time at which motors/ATP is flowed in
   double k_on;                // Binding rate of ADP heads to MT; 1/(nM*s)
   double c_bulk;              // Bulk concentration of motors; nM
@@ -16,7 +17,6 @@ struct kinesin_parameters {
   double k_off_i;             // Unbinding rate for ADPP-bound heads; 1/s
   double k_off_i_stalled;     // '' but for stalled motors
   double k_off_ii;            // Unbinding rate for ADPP-bound heads; 1/s
-  double interaction_energy;  // absolute value of interaction energy
   double k_tether;            // Tethering rate; 1/(nM*s)
   double c_eff_tether;        // Effective concentration of free_teth motors
   double k_untether;          // Untethering rate when bound; 1/s

@@ -67,55 +67,66 @@ bool Tubulin::EquilibriumInSameDirection() {
 
 void Tubulin::UpdateAffinity() {
 
-  if (motor_head_ != nullptr) {
-    affinity_ = 0;
-    return;
-  }
-  int n_affs{properties_->kinesin4.n_affinities_};
+  int n_affs{properties_->kinesin4.n_affinities_tot_};
   if (n_affs <= 1) {
     affinity_ = 0;
     return;
   }
+  int n_affs_solo{properties_->kinesin4.n_affinities_};
   int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / (n_affs - 1)};
-
+  int bin_size{range / n_affs_solo};
+  if (motor_head_ != nullptr) {
+    int n_stacks{motor_head_->GetCometSize() - 1};
+    int i_aff{n_affs_solo};
+    affinity_ = n_stacks * n_affs_solo + i_aff;
+  }
   for (int delta{1}; delta <= range; delta++) {
     int i_fwd{index_ + delta};
     if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
       if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
+        int n_stacks{mt_->lattice_[i_fwd].motor_head_->GetCometSize() - 1};
+        int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+        affinity_ = n_stacks * n_affs_solo + i_aff;
         return;
       }
     }
     int i_bck{index_ - delta};
     if (i_bck > 0 and i_bck < mt_->n_sites_) {
       if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
+        int n_stacks{mt_->lattice_[i_bck].motor_head_->GetCometSize() - 1};
+        int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+        affinity_ = n_stacks * n_affs_solo + i_aff;
         return;
       }
     }
   }
-  affinity_ = n_affs - 1;
+  affinity_ = 0;
 }
 
 int Tubulin::GetAffinityExcluding(Kinesin *motor) {
 
-  int n_affs{properties_->kinesin4.n_affinities_};
+  int n_affs{properties_->kinesin4.n_affinities_tot_};
   if (n_affs <= 1) {
     return 0;
   }
+  int n_affs_solo{properties_->kinesin4.n_affinities_};
   int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{0};
-  if (n_affs > 1) {
-    bin_size = range / (n_affs - 1);
+  int bin_size{range / n_affs_solo};
+  if (motor_head_ != nullptr) {
+    if (motor_head_->motor_ != motor) {
+      int n_stacks{motor_head_->GetCometSize() - 1};
+      int i_aff{n_affs_solo};
+      return n_stacks * n_affs_solo + i_aff;
+    }
   }
-
   for (int delta{1}; delta <= range; delta++) {
     int i_fwd{index_ + delta};
     if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
       if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
         if (mt_->lattice_[i_fwd].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
+          int n_stacks{mt_->lattice_[i_fwd].motor_head_->GetCometSize() - 1};
+          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+          return n_stacks * n_affs_solo + i_aff;
         }
       }
     }
@@ -123,12 +134,14 @@ int Tubulin::GetAffinityExcluding(Kinesin *motor) {
     if (i_bck > 0 and i_bck < mt_->n_sites_) {
       if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
         if (mt_->lattice_[i_bck].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
+          int n_stacks{mt_->lattice_[i_bck].motor_head_->GetCometSize() - 1};
+          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+          return n_stacks * n_affs_solo + i_aff;
         }
       }
     }
   }
-  return (n_affs - 1);
+  return 0;
 }
 
 int Tubulin::GetPRC1NeighborCount() {

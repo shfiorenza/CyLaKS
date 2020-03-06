@@ -26,9 +26,9 @@ void MicrotubuleManagement::SetParameters() {
     n_unocc_xlink_[n_neighbs] = 0;
     unocc_xlink_[n_neighbs].resize(n_sites_tot_);
   }
-  n_unocc_motor_.resize(n_affinities_);
-  unocc_motor_.resize(n_affinities_);
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  n_unocc_motor_.resize(n_affinities_tot_);
+  unocc_motor_.resize(n_affinities_tot_);
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     n_unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
     unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
@@ -71,7 +71,7 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
     n_unocc_xlink_[n_neighbs] = 0;
   }
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
       n_unocc_motor_[i_aff][n_neighbs] = 0;
     }

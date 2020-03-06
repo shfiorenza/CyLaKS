@@ -3,32 +3,39 @@
 
 int Kinesin::Monomer::GetAffinity() {
 
-  int n_affs{motor_->properties_->kinesin4.n_affinities_};
+  int n_affs{motor_->properties_->kinesin4.n_affinities_tot_};
   if (n_affs <= 1) {
     return 0;
   }
+  int n_affs_solo{motor_->properties_->kinesin4.n_affinities_};
   int range{(int)motor_->parameters_->motors.lattice_coop_range};
-  int bin_size{bin_size = range / (n_affs - 1)};
+  int bin_size{range / n_affs_solo};
 
   for (int delta{1}; delta <= range; delta++) {
     int i_fwd{site_->index_ + delta};
     if (i_fwd > 0 and i_fwd < site_->mt_->n_sites_) {
-      if (site_->mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        if (site_->mt_->lattice_[i_fwd].motor_head_->motor_ != motor_) {
-          return ((delta - 1) / bin_size);
+      Monomer *head_fwd{site_->mt_->lattice_[i_fwd].motor_head_};
+      if (head_fwd != nullptr) {
+        if (head_fwd->motor_ != motor_) {
+          int n_stacks{head_fwd->GetCometSize() - 1};
+          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+          return n_stacks * n_affs_solo + i_aff;
         }
       }
     }
     int i_bck{site_->index_ - delta};
     if (i_bck > 0 and i_bck < site_->mt_->n_sites_) {
-      if (site_->mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        if (site_->mt_->lattice_[i_bck].motor_head_->motor_ != motor_) {
-          return ((delta - 1) / bin_size);
+      Monomer *head_bck{site_->mt_->lattice_[i_bck].motor_head_};
+      if (head_bck != nullptr) {
+        if (head_bck->motor_ != motor_) {
+          int n_stacks{head_bck->GetCometSize() - 1};
+          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
+          return n_stacks * n_affs_solo + i_aff;
         }
       }
     }
   }
-  return (n_affs - 1);
+  return 0;
 }
 
 int Kinesin::Monomer::GetKif4ANeighborCount() {
@@ -106,7 +113,7 @@ void Kinesin::InitializeLookupTables() {
     weight_tether_bound_[x_dub] =
         properties_->kinesin4.weight_tether_bound_[x_dub];
   }
-  int n_affs{properties_->kinesin4.n_affinities_};
+  int n_affs{properties_->kinesin4.n_affinities_tot_};
   int max_neighbs{properties_->kinesin4.max_neighbs_};
   weight_bind_i_teth_.resize(n_affs);
   for (int i_aff{0}; i_aff < n_affs; i_aff++) {
@@ -181,6 +188,46 @@ double Kinesin::GetDockedCoordinate() {
   } else {
     return site_coord - site->mt_->delta_x_;
   }
+}
+
+int Kinesin::GetCometSize(Monomer *head) {
+
+  int n_stacks_max{properties_->kinesin4.n_stacks_};
+  if (n_stacks_max <= 1) {
+    return 1;
+  }
+  int comet_size{1};
+  for (int delta{1}; delta <= 2 * n_stacks_max; delta++) {
+    int i_fwd{head->site_->index_ + delta};
+    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
+      Monomer *head_fwd{mt_->lattice_[i_fwd].motor_head_};
+      if (head_fwd != nullptr) {
+        if (head_fwd->motor_->heads_active_ == 1) {
+          comet_size++;
+        } else if (head_fwd->motor_ != this and head_fwd->trailing_) {
+          comet_size++;
+        }
+        if (comet_size >= n_stacks_max) {
+          return comet_size;
+        }
+      }
+    }
+    int i_bck{head->site_->index_ - delta};
+    if (i_bck > 0 and i_bck < mt_->n_sites_) {
+      Monomer *head_bck{mt_->lattice_[i_bck].motor_head_};
+      if (head_bck != nullptr) {
+        if (head_bck->motor_->heads_active_ == 1) {
+          comet_size++;
+        } else if (head_bck->motor_ != this and head_bck->trailing_) {
+          comet_size++;
+        }
+        if (comet_size >= n_stacks_max) {
+          return comet_size;
+        }
+      }
+    }
+  }
+  return comet_size;
 }
 
 void Kinesin::ChangeConformation() {

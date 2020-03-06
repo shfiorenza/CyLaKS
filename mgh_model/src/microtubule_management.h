@@ -12,7 +12,9 @@ private:
   int n_sites_tot_{0};
   int max_neighbs_xlink_{2};
   int max_neighbs_motor_{2};
-  int n_affinities_{11};
+  int n_affinities_{10};
+  int n_stacks_{5};
+  int n_affinities_tot_{n_affinities_ * n_stacks_ + 1};
   bool lists_up_to_date_{false};
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};

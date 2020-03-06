@@ -56,6 +56,7 @@ public:
         }
       }
     }
+    int GetCometSize() { return motor_->GetCometSize(this); }
     int GetAffinity();
     int GetKif4ANeighborCount();
     int GetKif4ANeighborCount_Step();
@@ -98,6 +99,7 @@ public:
   Monomer *GetDockedHead();
   Tubulin *GetDockSite();
   double GetDockedCoordinate();
+  int GetCometSize(Monomer *head);
   void ChangeConformation();
   bool IsStalled();
   // Functions related to tethering

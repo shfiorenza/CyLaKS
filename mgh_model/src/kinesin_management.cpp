@@ -125,29 +125,43 @@ void KinesinManagement::SetParameters() {
   double lambda_teth{0.5}; // Lambda for tethering mechanisms
   // Get lattice cooperativity jawn - preliminary
   int range{(int)parameters_->motors.lattice_coop_range}; // in n_sites
+  printf("lattice coop range: %i\n", range);
   double amp{parameters_->motors.lattice_coop_amp}; // amplitude of Gaussian
+  printf("lattice coop amp: %g\n", amp);
   // Set the range of our gaussian to correspond to +/- 3 sigma
   double sigma{double(range) / 3};
   double sites_per_bin{0};
-  if (n_affinities_ > 1) {
-    sites_per_bin = (double)range / (n_affinities_ - 1);
+  if (n_affinities_ > 0) {
+    sites_per_bin = (double)range / n_affinities_;
   }
+  printf("sites_per_bin = %g\n", sites_per_bin);
   // Check the no. of sites per bin is an integer
   if (sites_per_bin != (int)sites_per_bin) {
     printf("fix your stupid lattice coop ya dingus\n");
     exit(1);
   }
   // Array of affinity weights (unitless) due to lattice deformations
-  std::vector<double> wt_lattice_bind(n_affinities_, 0.0);
-  std::vector<double> wt_lattice_unbind(n_affinities_, 0.0);
-  for (int i_aff{0}; i_aff < n_affinities_ - 1; i_aff++) {
-    double dist{sites_per_bin * i_aff};
-    double gauss{amp * exp(-1 * dist * dist / (2 * sigma * sigma))};
-    wt_lattice_bind[i_aff] = 1.0 + gauss;
-    wt_lattice_unbind[i_aff] = 1.0 / (1.0 + gauss);
+  std::vector<double> wt_lattice_bind(n_affinities_tot_, 0.0);
+  std::vector<double> wt_lattice_unbind(n_affinities_tot_, 0.0);
+  wt_lattice_bind[0] = 1.0;
+  // printf("wt_lattice_bind[0] = %g\n", wt_lattice_bind[0]);
+  wt_lattice_unbind[0] = 1.0;
+  // printf("wt_lattice_unbind[0] = %g\n", wt_lattice_unbind[0]);
+  for (int i_stack{0}; i_stack < n_stacks_; i_stack++) {
+    for (int i_aff{1}; i_aff <= n_affinities_; i_aff++) {
+      int index = i_stack * n_affinities_ + i_aff;
+      // Affinity is 1 when weakest, n_affinites when strongest
+      double dist{sites_per_bin * (n_affinities_ - i_aff)};
+      double gauss{exp(-1 * dist * dist / (2 * sigma * sigma))};
+      gauss *= amp * (i_stack + 1);
+      wt_lattice_bind[index] = 1.0 + gauss;
+      wt_lattice_unbind[index] = 1.0 / (1.0 + gauss);
+      // printf("wt_lattice_bind[%i] = %g\n", index, wt_lattice_bind[index]);
+      // printf("wt_lattice_unbind[%i] = %g\n", index,
+      // wt_lattice_unbind[index]);
+    }
   }
-  wt_lattice_bind[n_affinities_ - 1] = 1.0;
-  wt_lattice_unbind[n_affinities_ - 1] = 1.0;
+
   // Array of interaction energies (in kbT) due to neighbor cooperativity
   double int_energy{-1 * parameters_->motors.interaction_energy}; // kbT
   std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
@@ -240,6 +254,8 @@ void KinesinManagement::SetParameters() {
   double k_off_i{parameters_->motors.k_off_i};
   double k_off_i_st{parameters_->motors.k_off_i_stalled};
   double p_bind_i{k_on * c_motor * delta_t};
+  printf("p_bind_i = %g\n", p_bind_i);
+  printf("k_on = %g | c = %g | delta_t = %g\n", k_on, c_motor, delta_t);
   double p_bind_ii{k_on * c_eff * delta_t};
   double p_unbind_ii{k_off_ii * delta_t};
   double p_unbind_i{k_off_i * delta_t};
@@ -256,15 +272,15 @@ void KinesinManagement::SetParameters() {
     p_unbind_i = k_off_i * weight * delta_t;
     printf("p_unbind_i scaled from %g to %g \n", old_prob, p_unbind_i);
   }
-  p_bind_i_.resize(n_affinities_);
-  p_bind_ii_.resize(n_affinities_);
-  p_unbind_ii_.resize(n_affinities_);
-  p_unbind_i_.resize(n_affinities_);
-  p_unbind_i_st_.resize(n_affinities_);
-  p_unbind_i_teth_.resize(n_affinities_);
-  p_unbind_i_teth_st_.resize(n_affinities_);
-  weight_bind_i_teth_.resize(n_affinities_);
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  p_bind_i_.resize(n_affinities_tot_);
+  p_bind_ii_.resize(n_affinities_tot_);
+  p_unbind_ii_.resize(n_affinities_tot_);
+  p_unbind_i_.resize(n_affinities_tot_);
+  p_unbind_i_st_.resize(n_affinities_tot_);
+  p_unbind_i_teth_.resize(n_affinities_tot_);
+  p_unbind_i_teth_st_.resize(n_affinities_tot_);
+  weight_bind_i_teth_.resize(n_affinities_tot_);
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     p_bind_i_[i_aff].resize(max_neighbs_ + 1);
     p_bind_ii_[i_aff].resize(max_neighbs_ + 1);
     p_unbind_ii_[i_aff].resize(max_neighbs_ + 1);
@@ -284,6 +300,9 @@ void KinesinManagement::SetParameters() {
       double wt_tot_bind{wt_neighb_bind * wt_lattice_bind[i_aff]};
       double wt_tot_unbind{wt_neighb_unbind * wt_lattice_unbind[i_aff]};
       p_bind_i_[i_aff][n_neighbs] = p_bind_i * wt_tot_bind;
+      printf("wt_lattice = %g\n", wt_lattice_unbind[i_aff]);
+      printf("wt_neighb = %g\n", wt_neighb_unbind);
+      printf("wt_tot = %g\n\n", wt_tot_unbind);
       p_bind_ii_[i_aff][n_neighbs] = p_bind_ii * wt_tot_bind;
       p_unbind_ii_[i_aff][n_neighbs] = p_unbind_ii * wt_tot_unbind;
       p_unbind_i_[i_aff][n_neighbs] = p_unbind_i * wt_tot_unbind;
@@ -347,9 +366,9 @@ void KinesinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          if (verbosity_ >= 3) {
-            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          }
+          // if (verbosity_ >= 3) {
+          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          // }
           if (value[i][j][k] > 0.5) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             wally_->ErrorExit("Kin_MGMT:SetParameters()");
@@ -416,15 +435,15 @@ void KinesinManagement::InitializeLists() {
     }
   }
   // 3-D stuff -- indexed by tubulin_affinity, n_neighbs, & i_motor
-  n_docked_.resize(n_affinities_);
-  n_bound_ADPP_ii_.resize(n_affinities_);
-  n_bound_ADPP_i_.resize(n_affinities_);
-  n_bound_ADPP_i_st_.resize(n_affinities_);
-  docked_.resize(n_affinities_);
-  bound_ADPP_ii_.resize(n_affinities_);
-  bound_ADPP_i_.resize(n_affinities_);
-  bound_ADPP_i_st_.resize(n_affinities_);
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  n_docked_.resize(n_affinities_tot_);
+  n_bound_ADPP_ii_.resize(n_affinities_tot_);
+  n_bound_ADPP_i_.resize(n_affinities_tot_);
+  n_bound_ADPP_i_st_.resize(n_affinities_tot_);
+  docked_.resize(n_affinities_tot_);
+  bound_ADPP_ii_.resize(n_affinities_tot_);
+  bound_ADPP_i_.resize(n_affinities_tot_);
+  bound_ADPP_i_st_.resize(n_affinities_tot_);
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     n_docked_[i_aff].resize(max_neighbs_ + 1);
     n_bound_ADPP_ii_[i_aff].resize(max_neighbs_ + 1);
     n_bound_ADPP_i_[i_aff].resize(max_neighbs_ + 1);
@@ -445,11 +464,11 @@ void KinesinManagement::InitializeLists() {
     }
   }
   // 4-D stuff -- indexed by tubulin_affinity, n_neighbs, x_dub, & i_motor
-  n_bound_ADPP_i_teth_.resize(n_affinities_);
-  n_bound_ADPP_i_teth_st_.resize(n_affinities_);
-  bound_ADPP_i_teth_.resize(n_affinities_);
-  bound_ADPP_i_teth_st_.resize(n_affinities_);
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  n_bound_ADPP_i_teth_.resize(n_affinities_tot_);
+  n_bound_ADPP_i_teth_st_.resize(n_affinities_tot_);
+  bound_ADPP_i_teth_.resize(n_affinities_tot_);
+  bound_ADPP_i_teth_st_.resize(n_affinities_tot_);
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     n_bound_ADPP_i_teth_[i_aff].resize(max_neighbs_ + 1);
     n_bound_ADPP_i_teth_st_[i_aff].resize(max_neighbs_ + 1);
     bound_ADPP_i_teth_[i_aff].resize(max_neighbs_ + 1);
@@ -499,12 +518,12 @@ void KinesinManagement::InitializeEvents() {
       ReportFailureOf("bind_i");
     }
   };
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
       event_name = "bind_i";
-      if (n_affinities_ > 1) {
+      if (n_affinities_tot_ > 1) {
         event_name += AFFINITY;
       }
       if (max_neighbs_ > 0) {
@@ -607,12 +626,12 @@ void KinesinManagement::InitializeEvents() {
       ReportFailureOf("bind_ii");
     }
   };
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
       event_name = "bind_ii";
-      if (n_affinities_ > 1) {
+      if (n_affinities_tot_ > 1) {
         event_name += AFFINITY;
       }
       if (max_neighbs_ > 0) {
@@ -636,12 +655,12 @@ void KinesinManagement::InitializeEvents() {
       exit(1);
     }
   };
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
       event_name = "unbind_ii";
-      if (n_affinities_ > 1) {
+      if (n_affinities_tot_ > 1) {
         event_name += AFFINITY;
       }
       if (max_neighbs_ > 0) {
@@ -663,12 +682,12 @@ void KinesinManagement::InitializeEvents() {
       ReportFailureOf("unbind_i");
     }
   };
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     std::string AFFINITY{"_" + std::to_string(i_aff)};
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
       event_name = "unbind_i";
-      if (n_affinities_ > 1) {
+      if (n_affinities_tot_ > 1) {
         event_name += AFFINITY;
       }
       if (max_neighbs_ > 0) {
@@ -680,7 +699,7 @@ void KinesinManagement::InitializeEvents() {
                            binomial, set_ran_indices);
       // Unbind_I_Stalled: Same as unbind_I but only targets stalled motors
       event_name = "unbind_i_st";
-      if (n_affinities_ > 1) {
+      if (n_affinities_tot_ > 1) {
         event_name += AFFINITY;
       }
       if (max_neighbs_ > 0) {
@@ -882,7 +901,7 @@ void KinesinManagement::Update_Docked() {
   if (verbosity_ >= 1) {
     printf("starting UPDATE DOCKED\n");
   }
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       n_docked_[i_aff][n_neighbs] = 0;
     }
@@ -1002,7 +1021,7 @@ void KinesinManagement::Update_Bound_ADPP_I() {
   if (verbosity_ >= 1) {
     printf("starting UPDATE ADPP_I\n");
   }
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
       n_bound_ADPP_i_[i_aff][i_neighb] = 0;
     }
@@ -1029,7 +1048,7 @@ void KinesinManagement::Update_Bound_ADPP_I_Stalled() {
   if (verbosity_ >= 1) {
     printf("starting UPDATE ADPP_I_ST\n");
   }
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       n_bound_ADPP_i_st_[i_aff][n_neighbs] = 0;
     }
@@ -1053,7 +1072,7 @@ void KinesinManagement::Update_Bound_ADPP_I_Stalled() {
 
 void KinesinManagement::Update_Bound_ADPP_I_Teth() {
 
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
         n_bound_ADPP_i_teth_[i_aff][n_neighbs][x_dub] = 0;
@@ -1080,7 +1099,7 @@ void KinesinManagement::Update_Bound_ADPP_I_Teth() {
 
 void KinesinManagement::Update_Bound_ADPP_I_Teth_Stalled() {
 
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
         n_bound_ADPP_i_teth_st_[i_aff][n_neighbs][x_dub] = 0;
@@ -1110,7 +1129,7 @@ void KinesinManagement::Update_Bound_ADPP_II() {
   if (verbosity_ >= 1) {
     printf("starting UPDATE ADPP_II\n");
   }
-  for (int i_aff{0}; i_aff < n_affinities_; i_aff++) {
+  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
       n_bound_ADPP_ii_[i_aff][i_neighb] = 0;
     }

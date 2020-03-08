@@ -39,6 +39,10 @@ public:
   // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
+  Vec<std::pair<int, int>> bind_ii_stats_;
+  Vec<std::pair<int, int>> bind_i_teth_stats_;
+  Vec<Vec<std::pair<int, int>>> bind_ii_to_teth_stats_;
+  Vec<Vec<std::pair<int, int>>> bind_ii_fr_teth_stats_;
 
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_{2};
@@ -123,6 +127,8 @@ private:
   void GenerateXLinks();
   void InitializeLists();
   void InitializeEvents();
+  void InitializeTestEvents();
+  void InitializeTestEnvironment();
 
 public:
   AssociatedProteinManagement();
@@ -148,9 +154,9 @@ public:
   double GetWeight_Bind_I_Teth();
   double GetWeight_Bind_II_Teth();
 
-  void Set_Bind_II_Candidates(int n_to_set);
-  void Set_Bind_I_Teth_Candidates(int n_to_set);
-  void Set_Bind_II_Teth_Candidates(int n_to_set);
+  int Set_Bind_II_Candidates(int n_to_set);
+  int Set_Bind_I_Teth_Candidates(int n_to_set);
+  int Set_Bind_II_Teth_Candidates(int n_to_set);
 
   void RunKMC();
   void UpdateLists();

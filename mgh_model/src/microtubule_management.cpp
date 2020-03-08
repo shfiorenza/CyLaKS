@@ -120,7 +120,7 @@ void MicrotubuleManagement::RunDiffusion() {
   }
   int n_mts{parameters_->microtubules.count};
   bool mts_inactive{true};
-  int current_step{properties_->current_step_};
+  unsigned long current_step{properties_->current_step_};
   double delta_t{parameters_->delta_t};
   double current_time{current_step * delta_t};
   // Check that at least one microtubule is active (not immobilized)

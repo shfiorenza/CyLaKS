@@ -633,7 +633,7 @@ void KinesinManagement::InitializeEvents() {
       Unbind_II(head);
     } else {
       ReportFailureOf("unbind_ii");
-      printf("step #%i!!\n", properties_->current_step_);
+      printf("step #%lu!!\n", properties_->current_step_);
       exit(1);
     }
   };

@@ -173,11 +173,11 @@ void Curator::ParseParameters(char *param_file) {
   YAML::Node input = YAML::LoadFile(param_file);
   // Transfer values from input param node to system_parameters structure
   try {
-    parameters_->seed = input["seed"].as<long>();
+    parameters_->seed = input["seed"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
     parameters_->seed = (long)(input["seed"].as<double>());
   }
-  parameters_->n_steps = input["n_steps"].as<int>();
+  parameters_->n_steps = input["n_steps"].as<unsigned long>();
   parameters_->n_datapoints = input["n_datapoints"].as<int>();
   parameters_->data_threshold = input["data_threshold"].as<int>();
   parameters_->delta_t = input["delta_t"].as<double>();
@@ -241,8 +241,8 @@ void Curator::ParseParameters(char *param_file) {
   double delta_t = parameters_->delta_t;
   Log("Reading params from %s:\n\n", param_file);
   Log("  General simulation parameters:\n");
-  Log("    seed = %li\n", parameters_->seed);
-  Log("    n_steps = %i\n", parameters_->n_steps);
+  Log("    seed = %lu\n", parameters_->seed);
+  Log("    n_steps = %lu\n", parameters_->n_steps);
   Log("    n_datapoints = %i\n", parameters_->n_datapoints);
   Log("    data_threshold = %i steps\n", parameters_->data_threshold);
   Log("    delta_t = %g s\n", parameters_->delta_t);
@@ -318,7 +318,7 @@ void Curator::ParseParameters(char *param_file) {
 
 void Curator::SetLocalParameters() {
 
-  int n_steps{parameters_->n_steps};
+  unsigned long n_steps{parameters_->n_steps};
   int n_datapoints{parameters_->n_datapoints};
   data_threshold_ = parameters_->data_threshold;
   n_steps_recorded_ = n_steps - data_threshold_;
@@ -531,7 +531,7 @@ void Curator::ErrorExit(const char *function_name) {
   exit(1);
 }
 
-void Curator::UpdateTimestep(int i_step) {
+void Curator::UpdateTimestep(unsigned long i_step) {
 
   properties_->current_step_ = i_step;
   if (i_step == 0) {
@@ -544,15 +544,15 @@ void Curator::UpdateTimestep(int i_step) {
   }
   // Start data collection at appropriate step threshold
   else if (i_step >= data_threshold_) {
-    int steps_past_threshold = i_step - data_threshold_;
+    unsigned long steps_past_threshold{i_step - data_threshold_};
     // Collect data every n_pickup timesteps
     if (steps_past_threshold % n_steps_per_output_ == 0) {
       OutputData();
     }
     // Give updates on status of data collection (every 10 percent)
     if (steps_past_threshold % data_milestone_ == 0) {
-      int p = (int)(steps_past_threshold / data_milestone_) * 10;
-      Log("Data collection is %i percent complete (step # %i)\n", p, i_step);
+      unsigned long p{(steps_past_threshold / data_milestone_) * 10};
+      Log("Data collection is %u percent complete (step # %lu)\n", p, i_step);
     }
     // Announce when simulation is done
     else if (steps_past_threshold == n_steps_recorded_ - 1) {

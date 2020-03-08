@@ -32,7 +32,7 @@ struct system_properties {
   KinesinManagement kinesin4;
   AssociatedProteinManagement prc1;
 
-  int current_step_;
+  unsigned long current_step_;
 
   std::unordered_map<std::string, system_file> files_;
 

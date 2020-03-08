@@ -1,23 +1,29 @@
 clear all;
-baseName = 'test_overlap4b';
+baseName = 'test_overlapB';
 mt_lengths = [101,101];
 mt_coords = [0, 0];
-mt_endpoints = mt_coords + mt_lengths;
-n_datapoints = 100000;
+head_pos = 50;
+dist_cutoff = 4;
+n_datapoints = 1000000;
 speciesID = 1;
-max_length = max(mt_lengths);
-n_mts = length(mt_lengths);
 
+p_bind_measured = [0.000269, 0.000258, 0.000183, 0.0000464, 0.00000207];
+p_unbind_measured = [0.000358, 0.000369, 0.000537, 0.00207, 0.0339];
+avg_occu_measured = zeros(5, 1);
+for i = 1 : 5
+    avg_occu_measured(i) = p_bind_measured(i) / (p_bind_measured(i) + p_unbind_measured(i));
+end
+
+kbT = 4.114; % pN * nm
 k_on = 0.000238; % 1/(nM*s)
 c_bind = 4500;  % nM
-k_off_ii = 14.3; % 1/s
+k_off_ii = 0.143; % 1/s
 k_d = k_off_ii / k_on;
 avg_occu = c_bind / (c_bind + k_d);
 
-kbT = 4.114; % pN * nm
-f_occu = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
-
-
+n_mts = length(mt_lengths);
+max_length = max(mt_lengths);
+mt_endpoints = mt_coords + mt_lengths;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
 data_file = fopen(sprintf(fileDirectory, sprintf(fileStruct, baseName)));
@@ -70,17 +76,19 @@ end
 %%plot fig%%
 fig1 = figure();
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
-plot(linspace(0, sys_size, sys_size), final_data(2, :), 'LineWidth', 2);
+plot(linspace(0, sys_size-1, sys_size), final_data(2, :), 'o--', 'LineWidth', 2);
 hold on
-%plot([0 sys_size], [avg_occu avg_occu]);
-fplot(@(x) f_occu(x - 50.5));
+f_occu = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
+fplot(@(x) f_occu(x - 50));
+for dx = 0 : dist_cutoff
+    plot([head_pos + dx head_pos + dx], [0 2*avg_occu], ':k');
+    plot(head_pos + dx, avg_occu_measured(1 + dx), 'or', 'MarkerSize', 12, 'LineWidth', 2);
+    plot([head_pos - dx head_pos - dx], [0 2*avg_occu], ':k');
+end
 
-
-%%style stuff%%
-ylim([0 avg_occu]);
-xlim([0 sys_size]);
+ylim([0 1.25*avg_occu]);
+xlim([head_pos - (dist_cutoff + 1) head_pos + dist_cutoff + 1]);
 xlabel('Site coordinate (8 nm each)');
-
 function u = delta_u(x)
     k_spring = 0.453; % pN / nm
     site_size = 8; % nm

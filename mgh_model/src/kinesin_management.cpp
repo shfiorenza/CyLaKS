@@ -741,8 +741,8 @@ void KinesinManagement::InitializeEvents() {
     int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
     if (n_expected > 0) {
       if (n_expected > n) {
-        wally_->Log("Rescaled n_bind_ii from %i to %i\n", n_expected, n);
-        wally_->Log("p = %g | wt = %g\n", p, weight);
+        // wally_->Log("Rescaled n_bind_ii from %i to %i\n", n_expected, n);
+        // wally_->Log("p = %g | wt = %g\n", p, weight);
         n_expected = n;
       }
       int n_removed{SetCandidates_Bind_II(n_expected)};
@@ -767,8 +767,8 @@ void KinesinManagement::InitializeEvents() {
     int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
     if (n_expected > 0) {
       if (n_expected > n) {
-        wally_->Log("Rescaled n_unbind_ii from %i to %i\n", n_expected, n);
-        wally_->Log("p = %g | wt = %g\n", p, weight);
+        // wally_->Log("Rescaled n_unbind_ii from %i to %i\n", n_expected, n);
+        // wally_->Log("p = %g | wt = %g\n", p, weight);
         n_expected = n;
       }
       int n_removed{SetCandidates_Unbind_II(n_expected)};

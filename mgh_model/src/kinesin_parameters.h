@@ -3,8 +3,9 @@
 
 struct kinesin_parameters {
 
-  double lattice_coop_amp;
-  double lattice_coop_range;
+  double lattice_coop_alpha;
+  double lattice_coop_Emax_solo;
+  double lattice_coop_Emax_bulk;
   double interaction_energy;  // absolute value of interaction energy
   double t_active;            // Time at which motors/ATP is flowed in
   double k_on;                // Binding rate of ADP heads to MT; 1/(nM*s)

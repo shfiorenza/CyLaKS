@@ -40,9 +40,9 @@ public:
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
   Vec<std::pair<int, int>> bind_ii_stats_;
-  Vec<std::pair<int, int>> bind_i_teth_stats_;
   Vec<Vec<std::pair<int, int>>> bind_ii_to_teth_stats_;
   Vec<Vec<std::pair<int, int>>> bind_ii_fr_teth_stats_;
+  Vec<std::pair<int, int>> bind_i_teth_stats_;
 
   // Neighbor coop stuff; still kinda preliminary
   int max_neighbs_{2};

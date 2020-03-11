@@ -10,7 +10,6 @@ void Tubulin::Initialize(system_parameters *parameters,
   parameters_ = parameters;
   properties_ = properties;
   index_ = i_site;
-  coord_ = i_site;
   mt_ = mt;
 }
 
@@ -65,6 +64,7 @@ bool Tubulin::EquilibriumInSameDirection() {
   }
 }
 
+/*
 void Tubulin::UpdateAffinity() {
 
   int n_affs{properties_->kinesin4.n_affinities_tot_};
@@ -143,6 +143,7 @@ int Tubulin::GetAffinityExcluding(Kinesin *motor) {
   }
   return 0;
 }
+*/
 
 int Tubulin::GetPRC1NeighborCount() {
 
@@ -178,4 +179,66 @@ int Tubulin::GetKif4ANeighborCount() {
     }
   }
   return n_neighbs;
+}
+
+void Tubulin::UpdateWeights_Kinesin() {
+
+  // Get weight from neighbor interactions
+  int n_neighbs{GetKif4ANeighborCount()};
+  // long step_threshold{270860};
+  long step_threshold{std::numeric_limits<long>::max()};
+  if (properties_->current_step_ > step_threshold) {
+    printf(" -- start site %i -- \n", index_);
+  }
+  weight_bind_ = properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
+  weight_unbind_ = properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+  if (properties_->current_step_ > step_threshold) {
+    printf("weight_bind: 1 -> %g -> ", weight_bind_);
+    // printf("weight_unbind: 1 -> %g -> ", weight_unbind_);
+  }
+  // Get weight from lattice deformation
+  int cutoff{properties_->kinesin4.lattice_cutoff_};
+  double wt_max{weight_bind_ * properties_->kinesin4.weight_lattice_bind_max_};
+  for (int delta{0}; delta <= cutoff; delta++) {
+    int i_fwd{index_ + delta};
+    if (i_fwd >= 0 and i_fwd < mt_->n_sites_) {
+      Kinesin::Monomer *head_fwd{mt_->lattice_[i_fwd].motor_head_};
+      if (head_fwd != nullptr) {
+        if (head_fwd->motor_->heads_active_ == 1) {
+          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
+          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
+        } else if (head_fwd->trailing_) {
+          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
+          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
+        }
+        if (weight_bind_ >= wt_max) {
+          return;
+        }
+      }
+    }
+    if (delta == 0) {
+      continue;
+    }
+    int i_bck{index_ - delta};
+    if (i_bck >= 0 and i_bck < mt_->n_sites_) {
+      Kinesin::Monomer *head_bck{mt_->lattice_[i_bck].motor_head_};
+      if (head_bck != nullptr) {
+        if (head_bck->motor_->heads_active_ == 1) {
+          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
+          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
+        } else if (head_bck->trailing_) {
+          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
+          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
+        }
+        if (weight_bind_ >= wt_max) {
+          break;
+        }
+      }
+    }
+  }
+  if (properties_->current_step_ > step_threshold) {
+    printf("%g\n", weight_bind_);
+    // printf("%g\n", weight_unbind_);
+    printf(" -- finish site %i -- \n", index_);
+  }
 }

@@ -12,14 +12,15 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization_quattro"
+sim_name_base = "kif4a_coop_optimization_new"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
-param_label = ["lattice_coop_amp", "lattice_coop_range"]
-param_initialVal = np.array([7.1337, 580])
-param_bounds = ([1, 10], [25, 750])
-step_size = [0.5, 10]
+param_label = ["interaction_energy", "lattice_coop_alpha",
+               "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
+param_initialVal = [2.25, 2.0e-8, 1.25, 2.5]
+param_bounds = ([0.5, 1.25e-8, 0.5, 1.8], [3.0, 5.0e-5, 1.75, 3.0])
+step_size = [0.5, 1.0e-9, 0.1, 0.1]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
@@ -59,12 +60,6 @@ def kif4a_coop_scaling(params):
     log.info("Parameters: {}".format(params))
     # Delete all output files that weren't saved (not enough mem to keep them all)
     call("make clean-output", shell=True)
-    # We must ensure that the coop range is divisible by 10
-    rounded_range = round(params[1], -1)
-    if rounded_range != params[1]:
-        log.info(
-            " **** Coop range ROUNDED from {} to {} ****".format(params[1], rounded_range))
-        params[1] = rounded_range
     # Make names, param files, and execution commands for sims with different kif4a concentrations
     sim_names = []
     param_files = []

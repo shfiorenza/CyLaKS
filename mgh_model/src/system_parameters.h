@@ -7,11 +7,11 @@
 struct system_parameters {
 
   // Simulation stuff
-  long seed;          /* Random number seed */
-  int n_steps;        /* Number of timesteps in simulation */
-  int n_datapoints;   /* No. data points to sample during sim run */
-  int data_threshold; /* Step after which to begin data recording */
-  double delta_t;     /* How much time passes in one time step (s) */
+  unsigned long seed;    /* Random number seed */
+  unsigned long n_steps; /* Number of timesteps in simulation */
+  int n_datapoints;      /* No. data points to sample during sim run */
+  int data_threshold;    /* Step after which to begin data recording */
+  double delta_t;        /* How much time passes in one time step (s) */
 
   // Physical constants
   double kbT; /* boltzmann constant * temp, in pN * nm */

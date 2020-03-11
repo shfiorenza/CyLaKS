@@ -7,7 +7,7 @@ XLINK_CONC=0.0
 for CONC_SCALE in 20 80 120 220 420 
 do
 	MOT_CONC=$(echo "scale=4; $CONC_SCALE * 0.001" | bc)
-	FILE_NAME="processivityC_${CONC_SCALE}pM"
+	FILE_NAME="processivity_${CONC_SCALE}pM"
 	echo RUNNING NEW SIM: filename is $FILE_NAME
 	TEMP_PARAMS="params_temp_${FILE_NAME}.yaml"
 	cp $PARAM_FILE $TEMP_PARAMS

@@ -273,7 +273,6 @@ void AssociatedProtein::ForceUnbind() {
     motor_->UpdateExtension();
   }
   properties_->prc1.FlagForUpdate();
-  properties_->kinesin4.FlagForUpdate();
 }
 
 void AssociatedProtein::UntetherSatellite() {
@@ -282,7 +281,6 @@ void AssociatedProtein::UntetherSatellite() {
     return;
   }
   properties_->kinesin4.RemoveFromActive(motor_);
-  properties_->kinesin4.FlagForUpdate();
   // Update motor details
   motor_->tethered_ = false;
   motor_->xlink_ = nullptr;

@@ -3,6 +3,7 @@
 
 int Kinesin::Monomer::GetAffinity() {
 
+  /*
   int n_affs{motor_->properties_->kinesin4.n_affinities_tot_};
   if (n_affs <= 1) {
     return 0;
@@ -36,6 +37,7 @@ int Kinesin::Monomer::GetAffinity() {
     }
   }
   return 0;
+  */
 }
 
 int Kinesin::Monomer::GetKif4ANeighborCount() {
@@ -121,8 +123,8 @@ void Kinesin::InitializeLookupTables() {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs; n_neighbs++) {
       weight_bind_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
       for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-        weight_bind_i_teth_[i_aff][n_neighbs][x_dub] =
-            properties_->kinesin4.weight_bind_i_teth_[i_aff][n_neighbs][x_dub];
+        // weight_bind_i_teth_[i_aff][n_neighbs][x_dub] =
+        //     properties_->kinesin4.weight_bind_i_teth_[i_aff][n_neighbs][x_dub];
       }
     }
   }
@@ -175,6 +177,8 @@ Tubulin *Kinesin::GetDockSite() {
   int i_dock{site->index_ + dir * site->mt_->delta_x_};
   if (i_dock >= 0 and i_dock <= site->mt_->n_sites_ - 1) {
     return &site->mt_->lattice_[i_dock];
+  } else {
+    return nullptr;
   }
 }
 
@@ -262,6 +266,9 @@ bool Kinesin::IsStalled() {
       } else {
         site = head_one_.site_;
       }
+    }
+    if (site == nullptr) {
+      wally_->ErrorExit("Kinesin::IsStalled()");
     }
     if (site->index_ == site->mt_->plus_end_) {
       return true;
@@ -395,7 +402,6 @@ void Kinesin::ForceUntether() {
   xlink_->motor_ = nullptr;
   xlink_->tethered_ = false;
   xlink_ = nullptr;
-  properties_->kinesin4.FlagForUpdate();
   properties_->prc1.FlagForUpdate();
 }
 
@@ -525,7 +531,7 @@ double Kinesin::GetWeight_Bind_I_Teth(Tubulin *site) {
   double x_dist = fabs(anchor_coord - site_coord);
   // Multiply by 2 to guarentee an integer
   int x_dub = x_dist * 2;
-  int aff = site->affinity_;
+  int aff = 0; // site->affinity_; FIXME
   int n_neighbs = site->GetKif4ANeighborCount();
   // Get binding weight that corresponds to this adj. x-dist
   return weight_bind_i_teth_[aff][n_neighbs][x_dub];
@@ -550,6 +556,55 @@ double Kinesin::GetTotalWeight_Bind_I_Teth() {
     tot_weight += GetWeight_Bind_I_Teth(neighbors_bind_i_teth_[i_neighb]);
   }
   return tot_weight;
+}
+
+double Kinesin::GetWeight_Bind_II() {
+
+  // Raw weight includes coop from bound head of this motor
+  Tubulin *dock_site{GetDockSite()};
+  if (dock_site->occupied_) {
+    return 0.0;
+  }
+  double raw_weight{dock_site->weight_bind_};
+  double corrected_weight{raw_weight};
+  // To prevent self-cooperativity, divide by self weights;
+  corrected_weight /= properties_->kinesin4.weight_neighbs_bind_[1];
+  corrected_weight /= properties_->kinesin4.weight_lattice_bind_[1];
+  if (corrected_weight < 1.0) {
+    printf("raw weight: %g\n", raw_weight);
+    printf("corrected weight: %g\n", corrected_weight);
+    printf("motor site: %i\n", GetActiveHead()->site_->index_);
+    printf("dock site: %i\n", dock_site->index_);
+    printf("step no: %i\n", properties_->current_step_);
+    printf(" ** EXITING **\n");
+    exit(1);
+  }
+  return corrected_weight;
+}
+
+double Kinesin::GetWeight_Unbind_II() {
+
+  Monomer *chosen_head{nullptr};
+  if (head_one_.ligand_ == "ADPP" and head_two_.ligand_ == "ADPP") {
+    if (head_one_.trailing_) {
+      chosen_head = &head_one_;
+    } else {
+      chosen_head = &head_two_;
+    }
+  } else if (head_one_.ligand_ == "ADPP") {
+    chosen_head = &head_one_;
+  } else if (head_two_.ligand_ == "ADPP") {
+    chosen_head = &head_two_;
+  }
+  if (chosen_head == nullptr) {
+    wally_->ErrorExit("Kinesin::GetWeight_Unbind_II()");
+  }
+  double raw_weight{chosen_head->site_->weight_unbind_};
+  double corrected_weight{raw_weight};
+  // To prevent self-cooperativity, divide by self weights;
+  corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
+  corrected_weight /= properties_->kinesin4.weight_lattice_unbind_[1];
+  return corrected_weight;
 }
 
 double Kinesin::GetTotalWeight_Tether_Bound() {

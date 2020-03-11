@@ -121,7 +121,7 @@ void AssociatedProteinManagement::SetParameters() {
     double dr{r - r_0};
     // Spring energies are positive by definition
     spring_energy[x] = 0.5 * k_spring * dr * dr; //! in pN*nm
-    printf("spring_energy[%i] = %g\n", x, spring_energy[x]);
+    // printf("spring_energy[%i] = %g\n", x, spring_energy[x]);
   }
   // Calculate tether extension energies
   double k_teth{parameters_->motors.k_spring};
@@ -311,8 +311,8 @@ void AssociatedProteinManagement::SetParameters() {
       double dU_unbind{0.0 - spring_energy[x]};
       double weight_bind{exp(-(1.0 - lambda_spring) * dU_bind / kbT)};
       weight_bind_ii_[n_neighbs][x] = weight_neighb_bind * weight_bind;
-      printf("weight_bind_ii_[%i][%i] = %g\n", n_neighbs, x,
-             weight_bind_ii_[n_neighbs][x]);
+      // printf("weight_bind_ii_[%i][%i] = %g\n", n_neighbs, x,
+      //        weight_bind_ii_[n_neighbs][x]);
       double weight_unbind{exp(-lambda_spring * dU_unbind / kbT)};
       p_unbind_ii_[n_neighbs][x] =
           weight_neighb_unbind * weight_unbind * k_off_ii * delta_t;
@@ -863,7 +863,7 @@ void AssociatedProteinManagement::InitializeEvents() {
 
 void AssociatedProteinManagement::InitializeTestEvents() {
 
-  printf("Initializing test_%s\n", wally_->test_mode_);
+  printf("Initializing test_%s in AP_MGMT\n", wally_->test_mode_);
   std::string event_name;
   /* * Function that sets n random indices from the range [0, m) * */
   auto set_ran_indices = [&](int *indices, int n, int m) {
@@ -1902,7 +1902,6 @@ void AssociatedProteinManagement::Tether_Free(ALT_T *untethered_head) {
   motor->xlink_ = xlink;
   motor->tethered_ = true;
   AddToActive(xlink);
-  properties_->kinesin4.FlagForUpdate();
 }
 
 void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
@@ -1917,5 +1916,4 @@ void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
   motor->xlink_ = nullptr;
   motor->tethered_ = false;
   RemoveFromActive(xlink);
-  properties_->kinesin4.FlagForUpdate();
 }

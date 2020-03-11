@@ -14,7 +14,12 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   SetParameters();
   GenerateMotors();
   InitializeLists();
-  InitializeEvents();
+  if (wally_->test_mode_ == nullptr) {
+    InitializeEvents();
+  } else {
+    InitializeTestEnvironment();
+    InitializeTestEvents();
+  }
 }
 
 void KinesinManagement::CalculateCutoffs() {
@@ -25,7 +30,27 @@ void KinesinManagement::CalculateCutoffs() {
   double k_spring{parameters_->motors.k_spring};
   double k_slack{parameters_->motors.k_slack};
   double site_size{parameters_->microtubules.site_size};
-  // First, calculate rest_dist_ in number of sites
+  // Calculate cutoff of lattice deformation
+  int n_sites_max{0};
+  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
+    if (parameters_->microtubules.length[i_mt] > n_sites_max) {
+      n_sites_max = parameters_->microtubules.length[i_mt];
+    }
+  }
+  lattice_alpha_ = parameters_->motors.lattice_coop_alpha;
+  lattice_E_0_solo_ = -1 * parameters_->motors.lattice_coop_Emax_solo;
+  double max_energy{0.0}; // max deformation energy for a single motor (kbT)
+  for (int n_sites{0}; n_sites < n_sites_max; n_sites++) {
+    double dx{n_sites * site_size};
+    double energy{lattice_alpha_ * dx * dx + lattice_E_0_solo_}; // in kbT
+    double boltzmann_factor{exp(-energy)};
+    // printf("energy[%i] = %g | wt = %g\n", n_sites, energy, boltzmann_factor);
+    if (energy > max_energy) {
+      break;
+    }
+    lattice_cutoff_ = n_sites;
+  }
+  // Calculate rest_dist_ in number of sites
   int approx_rest{int(sqrt(r_0 * r_0 - r_y * r_y) / site_size)};
   double rest_scan[3];
   double scan_force[3];
@@ -83,14 +108,20 @@ void KinesinManagement::CalculateCutoffs() {
       break;
     }
   }
+  wally_->Log("\nFor motors:\n");
   if (parameters_->motors.tethers_active and parameters_->xlinks.c_bulk > 0.0) {
     tethering_active_ = true;
-    wally_->Log("\nFor motors:\n");
     wally_->Log("  rest_dist is %g\n", rest_dist_);
     wally_->Log("  comp_cutoff is %i\n", comp_cutoff_);
     wally_->Log("  dist_cutoff is %i\n", teth_cutoff_);
   } else {
-    wally_->Log("Tethering is disabled for motors.\n");
+    wally_->Log("  Tethering is disabled.\n");
+  }
+  if (lattice_E_0_solo_ != 0.0 and lattice_alpha_ > 0.0) {
+    lattice_coop_active_ = true;
+    wally_->Log("  lattice_cutoff_ is %i\n", lattice_cutoff_);
+  } else {
+    wally_->Log("  Lattice cooperativity is disabled.\n");
   }
 }
 
@@ -123,6 +154,8 @@ void KinesinManagement::SetParameters() {
   double lambda_neighb{1.0}; // Lambda for neighbor cooperativity
   // Lambda = 0.5 means energy dependence is equal for binding and unbinding
   double lambda_teth{0.5}; // Lambda for tethering mechanisms
+
+  /*
   // Get lattice cooperativity jawn - preliminary
   int range{(int)parameters_->motors.lattice_coop_range}; // in n_sites
   printf("lattice coop range: %i\n", range);
@@ -161,15 +194,40 @@ void KinesinManagement::SetParameters() {
       // wt_lattice_unbind[index]);
     }
   }
+  */
 
   // Array of interaction energies (in kbT) due to neighbor cooperativity
   double int_energy{-1 * parameters_->motors.interaction_energy}; // kbT
   std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
+  weight_neighbs_bind_.resize(max_neighbs_ + 1);
+  weight_neighbs_unbind_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     neighb_energy[n_neighbs] = n_neighbs * int_energy; // ! in kbT
+    // printf("E_neighbs[%i] = %g\n", n_neighbs, neighb_energy[n_neighbs]);
+    weight_neighbs_bind_[n_neighbs] =
+        exp(-(1 - lambda_neighb) * neighb_energy[n_neighbs]);
+    // printf("wt_b[%i] = %g\n", n_neighbs, weight_neighbs_bind_[n_neighbs]);
+    weight_neighbs_unbind_[n_neighbs] =
+        exp(lambda_neighb * neighb_energy[n_neighbs]);
+    // printf("wt_ub[%i] = %g\n", n_neighbs, weight_neighbs_unbind_[n_neighbs]);
+  }
+  // Array of binding/unbinding weights due to lattice deformation from a SINGLE
+  // motor; multiplied together to get total weight for any arrangement
+  double site_size{parameters_->microtubules.site_size};
+  double lattice_E_max_tot{-1 * parameters_->motors.lattice_coop_Emax_bulk};
+  weight_lattice_bind_max_ = exp(-(1 - lambda_lattice) * lattice_E_max_tot);
+  // printf("wt_lt_b_max = %g\n", weight_lattice_bind_max_);
+  weight_lattice_bind_.resize(lattice_cutoff_ + 1);
+  weight_lattice_unbind_.resize(lattice_cutoff_ + 1);
+  for (int delta{0}; delta <= lattice_cutoff_; delta++) {
+    double dx{delta * site_size};
+    double energy{lattice_alpha_ * dx * dx + lattice_E_0_solo_}; // in kbT
+    weight_lattice_bind_[delta] = exp(-(1 - lambda_lattice) * energy);
+    // printf("wt_b[%i] = %g\n", delta, weight_lattice_bind_[delta]);
+    weight_lattice_unbind_[delta] = exp(lambda_lattice * energy);
+    // printf("wt_ub[%i] = %g\n", delta, weight_lattice_unbind_[delta]);
   }
   // Array of tether energies (in kbT) for any given extension
-  double site_size{parameters_->microtubules.site_size};
   double k_slack{parameters_->motors.k_slack};
   double k_teth{parameters_->motors.k_spring};
   double r_y{parameters_->microtubules.y_dist / 2};
@@ -194,17 +252,24 @@ void KinesinManagement::SetParameters() {
   }
   double delta_t{parameters_->delta_t};
   double k_on{parameters_->motors.k_on};
-  double c_motor{parameters_->motors.c_bulk};
+  double c_bulk{parameters_->motors.c_bulk};
+  double c_eff_bind{parameters_->motors.c_eff_bind};
   double k_hydrolyze{parameters_->motors.k_hydrolyze};
   double k_hydrolyze_stalled{parameters_->motors.k_hydrolyze_stalled};
+  double k_off_ii{parameters_->motors.k_off_ii};
+  double k_off_i{parameters_->motors.k_off_i};
+  double c_eff_teth{parameters_->motors.c_eff_tether};
   double k_tether{parameters_->motors.k_tether};
   double k_untether{parameters_->motors.k_untether};
-  double c_eff_teth{parameters_->motors.c_eff_tether};
   p_hydrolyze_ = k_hydrolyze * delta_t;
   p_hydrolyze_st_ = k_hydrolyze_stalled * delta_t;
-  p_tether_free_ = k_tether * c_motor * delta_t;
+  p_tether_free_ = k_tether * c_bulk * delta_t;
   p_untether_satellite_ = k_untether * delta_t;
+  p_avg_bind_i_ = k_on * c_bulk * delta_t;
   p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
+  p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
+  p_avg_unbind_ii_ = k_off_ii * delta_t;
+  p_avg_unbind_i_ = k_off_i * delta_t;
   p_avg_tether_bound_ = k_tether * c_eff_teth * delta_t;
   p_untether_bound_.resize(2 * teth_cutoff_ + 1);
   weight_tether_bound_.resize(2 * teth_cutoff_ + 1);
@@ -249,29 +314,32 @@ void KinesinManagement::SetParameters() {
       p_bind_ATP_fr_teth_[n_neighbs][x_dub] = p_bind_ATP_[n_neighbs] * wt_fr;
     }
   }
-  double c_eff{parameters_->motors.c_eff_bind};
+  // Force perpetually applied to motors, e.g., by optical trapping
+  if (parameters_->motors.applied_force > 0.0) {
+    wally_->Log("FIX APPLIED MOT FORCE\n");
+    exit(1);
+    double old_prob{p_avg_unbind_i_};
+    double sigma_off = 1.2;
+    double app_force = parameters_->motors.applied_force;
+    double weight = exp(app_force * sigma_off / kbT);
+    p_avg_unbind_i_ = k_off_i * weight * delta_t;
+    wally_->Log("p_unbind_i scaled from %g to %g \n", old_prob,
+                p_avg_unbind_i_);
+  }
+  /*
+
   double k_off_ii{parameters_->motors.k_off_ii};
   double k_off_i{parameters_->motors.k_off_i};
   double k_off_i_st{parameters_->motors.k_off_i_stalled};
-  double p_bind_i{k_on * c_motor * delta_t};
+  double p_bind_i{k_on * c_bulk * delta_t};
   printf("p_bind_i = %g\n", p_bind_i);
-  printf("k_on = %g | c = %g | delta_t = %g\n", k_on, c_motor, delta_t);
-  double p_bind_ii{k_on * c_eff * delta_t};
+  printf("k_on = %g | c = %g | delta_t = %g\n", k_on, c_bulk, delta_t);
+  double p_bind_ii{k_on * c_eff_bind * delta_t};
   double p_unbind_ii{k_off_ii * delta_t};
   double p_unbind_i{k_off_i * delta_t};
   double p_unbind_i_st{k_off_i_st * delta_t};
   double sigma_off{1.5};
-  // Force perpetually applied to motors, e.g., by optical trapping
-  if (parameters_->motors.applied_force > 0.0) {
-    printf("FIX APPLIED MOT FORCE\n");
-    exit(1);
-    double old_prob{p_unbind_i};
-    double sigma_off = 1.2;
-    double app_force = parameters_->motors.applied_force;
-    double weight = exp(app_force * sigma_off / kbT);
-    p_unbind_i = k_off_i * weight * delta_t;
-    printf("p_unbind_i scaled from %g to %g \n", old_prob, p_unbind_i);
-  }
+
   p_bind_i_.resize(n_affinities_tot_);
   p_bind_ii_.resize(n_affinities_tot_);
   p_unbind_ii_.resize(n_affinities_tot_);
@@ -326,6 +394,7 @@ void KinesinManagement::SetParameters() {
       }
     }
   }
+  */
   p_theory_["hydrolyze"] = {{{p_hydrolyze_}}};
   p_theory_["hydrolyze_st"] = {{{p_hydrolyze_st_}}};
   if (tethering_active_) {
@@ -340,6 +409,11 @@ void KinesinManagement::SetParameters() {
     p_theory_["bind_ATP_to_teth"] = {p_bind_ATP_to_teth_};
     p_theory_["bind_ATP_fr_teth"] = {p_bind_ATP_fr_teth_};
   }
+  p_theory_["bind_i"] = {{{p_avg_bind_i_}}};
+  p_theory_["bind_ii"] = {{{p_avg_bind_ii_}}};
+  p_theory_["unbind_ii"] = {{{p_avg_unbind_ii_}}};
+  p_theory_["unbind_i"] = {{{p_avg_unbind_i_}}};
+  /*
   p_theory_["bind_i"] = {p_bind_i_};
   p_theory_["bind_ii"] = {p_bind_ii_};
   p_theory_["unbind_ii"] = {p_unbind_ii_};
@@ -349,6 +423,7 @@ void KinesinManagement::SetParameters() {
     p_theory_["unbind_i_teth"] = p_unbind_i_teth_;
     p_theory_["unbind_i_teth_st"] = p_unbind_i_teth_st_;
   }
+  */
   // READ EM OUT
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
@@ -402,6 +477,9 @@ void KinesinManagement::InitializeLists() {
   bound_unteth_.resize(n_motors_);
   satellites_.resize(n_motors_);
   bind_i_teth_candidates_.resize(n_motors_);
+  bind_ii_candidates_.resize(n_motors_);
+  unbind_ii_candidates_.resize(n_motors_);
+  unbind_i_candidates_.resize(n_motors_);
   tether_bound_candidates_.resize(n_motors_);
   // 2-D stuff -- indexed by x_dub & i_motor
   n_bound_teth_.resize(2 * teth_cutoff_ + 1);
@@ -434,6 +512,8 @@ void KinesinManagement::InitializeLists() {
       bound_NULL_fr_teth_[n_neighbs][x_dub].resize(n_motors_);
     }
   }
+
+  /*
   // 3-D stuff -- indexed by tubulin_affinity, n_neighbs, & i_motor
   n_docked_.resize(n_affinities_tot_);
   n_bound_ADPP_ii_.resize(n_affinities_tot_);
@@ -486,11 +566,12 @@ void KinesinManagement::InitializeLists() {
       }
     }
   }
+  */
 }
 
 void KinesinManagement::InitializeEvents() {
 
-  /* * Function that sets n random indices from the range [0, m) * */
+  //  Function that sets n random indices from the range [0, m)
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
@@ -498,7 +579,7 @@ void KinesinManagement::InitializeEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  //  Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n > 0) {
       return properties_->gsl.SampleBinomialDist(p, n);
@@ -506,8 +587,33 @@ void KinesinManagement::InitializeEvents() {
       return 0;
     }
   };
-  /* * Event entries * */
+  //  Event entries
   std::string event_name; // scratch space to construct each event name
+  // Bind_I: bind first motor head to MT and release ADP
+  event_name = "bind_i";
+  auto exe_bind_i = [&](ENTRY_T target) { Bind_I(std::get<SITE_T *>(target)); };
+  auto poisson_bind_i = [&](double p, int n) {
+    double weight{properties_->microtubules.GetWeight_Bind_I_Kinesin()};
+    if (weight == 0.0) {
+      return 0;
+    }
+    int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
+    if (n_expected > 0) {
+      if (n_expected > n) {
+        wally_->Log("Rescaled n_bind_i from %i to %i\n", n_expected, n);
+        n_expected = n;
+      }
+      int n_removed{
+          properties_->microtubules.SetCandidates_Bind_I_Kinesin(n_expected)};
+      n_expected -= n_removed;
+    }
+    return n_expected;
+  };
+  events_.emplace_back(event_name, p_avg_bind_i_,
+                       &properties_->microtubules.n_unocc_motor_,
+                       &properties_->microtubules.unocc_motor_, exe_bind_i,
+                       poisson_bind_i, set_ran_indices);
+  /*
   // Bind_I: bind first motor head to MT and release ADP
   auto exe_bind_i = [&](ENTRY_T target) {
     SITE_T *site = std::get<SITE_T *>(target);
@@ -536,6 +642,7 @@ void KinesinManagement::InitializeEvents() {
           binomial, set_ran_indices);
     }
   }
+  */
   // Bind_I_Teth: same as bind_i but for tethered populations
   if (tethering_active_) {
     event_name = "bind_i_teth";
@@ -550,12 +657,17 @@ void KinesinManagement::InitializeEvents() {
       int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
       if (n_expected > 0) {
         if (n_expected > n) {
+          wally_->Log("Rescaled n_bind_i_teth from %i to %i\n", n_expected, n);
           n_expected = n;
         }
-        Set_Bind_I_Teth_Candidates(n_expected);
+        int n_removed{SetCandidates_Bind_I_Teth(n_expected)};
+        n_expected -= n_removed;
       }
       return n_expected;
     };
+    events_.emplace_back(event_name, p_avg_bind_i_teth_,
+                         &n_bind_i_teth_candidates_, &bind_i_teth_candidates_,
+                         exe_bind_i_teth, poisson_i_teth, set_ran_indices);
   }
   // Bind_ATP: bind ATP to motor heads that have released their ADP
   auto exe_bind_ATP = [&](ENTRY_T target) {
@@ -616,6 +728,82 @@ void KinesinManagement::InitializeEvents() {
   events_.emplace_back(event_name, p_hydrolyze_st_, &n_bound_ATP_st_,
                        &bound_ATP_st_, exe_hydrolyze, binomial,
                        set_ran_indices);
+  // Bind_II: binds docked motor head to MT and releases its ADP
+  event_name = "bind_ii";
+  auto exe_bind_ii = [&](ENTRY_T target) {
+    Bind_II(std::get<POP_T *>(target));
+  };
+  auto poisson_bind_ii = [&](double p, int n) {
+    double weight{GetWeight_Bind_II()};
+    if (weight == 0.0) {
+      return 0;
+    }
+    int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
+    if (n_expected > 0) {
+      if (n_expected > n) {
+        wally_->Log("Rescaled n_bind_ii from %i to %i\n", n_expected, n);
+        wally_->Log("p = %g | wt = %g\n", p, weight);
+        n_expected = n;
+      }
+      int n_removed{SetCandidates_Bind_II(n_expected)};
+      n_expected -= n_removed;
+    }
+    return n_expected;
+  };
+  events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
+                       &bind_ii_candidates_, exe_bind_ii, poisson_bind_ii,
+                       set_ran_indices);
+
+  // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
+  event_name = "unbind_ii";
+  auto exe_unbind_ii = [&](ENTRY_T target) {
+    Unbind_II(std::get<POP_T *>(target));
+  };
+  auto poisson_unbind_ii = [&](double p, int n) {
+    double weight{GetWeight_Unbind_II()};
+    if (weight == 0.0) {
+      return 0;
+    }
+    int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
+    if (n_expected > 0) {
+      if (n_expected > n) {
+        wally_->Log("Rescaled n_unbind_ii from %i to %i\n", n_expected, n);
+        wally_->Log("p = %g | wt = %g\n", p, weight);
+        n_expected = n;
+      }
+      int n_removed{SetCandidates_Unbind_II(n_expected)};
+      n_expected -= n_removed;
+    }
+    return n_expected;
+  };
+  events_.emplace_back(event_name, p_avg_unbind_ii_, &n_unbind_ii_candidates_,
+                       &unbind_ii_candidates_, exe_unbind_ii, poisson_unbind_ii,
+                       set_ran_indices);
+  // Unbind_I: Converts ADPP to ADP and unbinds a singly-bound head
+  event_name = "unbind_i";
+  auto exe_unbind_i = [&](ENTRY_T target) {
+    Unbind_I(std::get<POP_T *>(target));
+  };
+  auto poisson_unbind_i = [&](double p, int n) {
+    double weight{GetWeight_Unbind_I()};
+    if (weight == 0.0) {
+      return 0;
+    }
+    int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
+    if (n_expected > 0) {
+      if (n_expected > n) {
+        wally_->Log("Rescaled n_unbind_i from %i to %i\n", n_expected, n);
+        n_expected = n;
+      }
+      int n_removed{SetCandidates_Unbind_I(n_expected)};
+      n_expected -= n_removed;
+    }
+    return n_expected;
+  };
+  events_.emplace_back(event_name, p_avg_unbind_i_, &n_unbind_i_candidates_,
+                       &unbind_i_candidates_, exe_unbind_i, poisson_unbind_i,
+                       set_ran_indices);
+  /*
   // Bind_II: binds docked motor head to MT and releases its ADP
   auto exe_bind_ii = [&](ENTRY_T target) {
     POP_T *head = std::get<POP_T *>(target);
@@ -731,6 +919,7 @@ void KinesinManagement::InitializeEvents() {
       }
     }
   }
+  */
   if (tethering_active_) {
     // Tether_bound
     auto exe_tether_bound = [&](ENTRY_T target) {
@@ -746,7 +935,7 @@ void KinesinManagement::InitializeEvents() {
         if (n_expected > n) {
           n_expected = n;
         }
-        Set_Tether_Bound_Candidates(n_expected);
+        SetCandidates_Tether_Bound(n_expected);
       }
       return n_expected;
     };
@@ -788,6 +977,106 @@ void KinesinManagement::InitializeEvents() {
   }
 }
 
+void KinesinManagement::InitializeTestEvents() {
+
+  printf("Initializing test_%s in K_MGMT\n", wally_->test_mode_);
+  std::string event_name;
+  /* * Function that sets n random indices from the range [0, m) * */
+  auto set_ran_indices = [&](int *indices, int n, int m) {
+    if (m > 1) {
+      properties_->gsl.SetRanIndices(indices, n, m);
+    } else {
+      indices[0] = 0;
+    }
+  };
+  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  auto binomial = [&](double p, int n) {
+    if (n == 0) {
+      return 0;
+    }
+    return properties_->gsl.SampleBinomialDist(p, n);
+  };
+  if (strcmp(wally_->test_mode_, "motor_lattice_coop") == 0) {
+    // Bind_I: bind first motor head to MT and release ADP
+    event_name = "bind_i";
+    auto exe_bind_i = [&](ENTRY_T target) {
+      Tubulin *site{std::get<SITE_T *>(target)};
+      int i_site{site->index_};
+      // printf("i_site: %i\n", i_site);
+      // 'main' kinesin motor will always be at index_ = lattice_cutoff_
+      int delta{abs(i_site - lattice_cutoff_)};
+      // Just count the event; do not actually bind a motor to this site
+      // printf("delta of %i += 1\n", delta);
+      lattice_coop_stats_[delta].first++;
+      properties_->microtubules.FlagForUpdate();
+    };
+    auto poisson_bind_i = [&](double p, int n) {
+      // Each delta distance has 2 sites available to it each timestep
+      // Do not count delta = 0, where 'main' motor is permanently bound to
+      for (int delta{1}; delta <= lattice_cutoff_; delta++) {
+        lattice_coop_stats_[delta].second += 2;
+      }
+      double weight{properties_->microtubules.GetWeight_Bind_I_Kinesin()};
+      if (weight == 0.0) {
+        return 0;
+      }
+      int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
+      if (n_expected > 0) {
+        if (n_expected > n) {
+          wally_->Log("Rescaled n_bind_i from %i to %i\n", n_expected, n);
+          n_expected = n;
+        }
+        int n_removed{
+            properties_->microtubules.SetCandidates_Bind_I_Kinesin(n_expected)};
+        n_expected -= n_removed;
+      }
+      return n_expected;
+    };
+    events_.emplace_back(event_name, p_avg_bind_i_,
+                         &properties_->microtubules.n_unocc_motor_,
+                         &properties_->microtubules.unocc_motor_, exe_bind_i,
+                         poisson_bind_i, set_ran_indices);
+  }
+}
+
+void KinesinManagement::InitializeTestEnvironment() {
+
+  if (strcmp(wally_->test_mode_, "motor_lattice_coop") == 0) {
+    properties_->microtubules.InitializeTestEnvironment();
+    // Disable neighbor interactions
+    parameters_->motors.interaction_energy = 0.0;
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+      weight_neighbs_bind_[n_neighbs] = 1.0;
+      weight_neighbs_unbind_[n_neighbs] = 1.0;
+    }
+    // Set p_avg_bind_i_ to a large value for better statistics
+    double c_bulk{10.0};
+    double k_on{1.0};
+    p_avg_bind_i_ = k_on * c_bulk * parameters_->delta_t;
+    lattice_coop_stats_.resize(lattice_cutoff_ + 1);
+    for (int delta{0}; delta <= lattice_cutoff_; delta++) {
+      lattice_coop_stats_[delta].first = 0;
+      lattice_coop_stats_[delta].second = 0;
+    }
+    int i_site{lattice_cutoff_};
+    Tubulin *site{&properties_->microtubules.mt_list_[0].lattice_[i_site]};
+    Kinesin *motor{GetFreeMotor()};
+    // Update site details
+    site->motor_head_ = &motor->head_one_;
+    site->occupied_ = true;
+    // Update motor details
+    motor->mt_ = site->mt_;
+    motor->head_one_.site_ = site;
+    motor->head_one_.ligand_ = "NULL";
+    motor->head_one_.trailing_ = false;
+    motor->head_two_.trailing_ = true;
+    motor->heads_active_++;
+    // Update active_ list
+    AddToActive(motor);
+    properties_->microtubules.FlagForUpdate();
+  }
+}
+
 void KinesinManagement::ReportProbabilities() {
 
   for (const auto &entry : p_theory_) {
@@ -810,17 +1099,17 @@ void KinesinManagement::ReportProbabilities() {
               events_.begin(), events_.end(),
               [&name](EVENT_T const &event) { return event.name_ == name; });
           if (event->name_ != name) {
-            printf("Couldn't find %s\n", name.c_str());
+            wally_->Log("Couldn't find %s\n", name.c_str());
             continue;
           }
           if (event->n_opportunities_tot_ == 0) {
-            printf("No statistics for %s\n", name.c_str());
+            wally_->Log("No statistics for %s\n", name.c_str());
             continue;
           }
           double n_exe_tot{(double)event->n_executed_tot_};
           double n_opp_tot{(double)event->n_opportunities_tot_};
           if (n_opp_tot < 0.0) {
-            printf("WHAT?? n_opp = %g\n", n_opp_tot);
+            wally_->Log("WHAT?? n_opp = %g\n", n_opp_tot);
             exit(1);
           }
           wally_->Log("For Kin event %s:\n", event->name_.c_str());
@@ -828,6 +1117,20 @@ void KinesinManagement::ReportProbabilities() {
           wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
           wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
         }
+      }
+    }
+  }
+  if (wally_->test_mode_ != nullptr) {
+    if (strcmp(wally_->test_mode_, "motor_lattice_coop") == 0) {
+      printf("For motor_lattice coop:\n");
+      for (int delta{0}; delta <= lattice_cutoff_; delta++) {
+        int n_exe{lattice_coop_stats_[delta].first};
+        int n_opp{lattice_coop_stats_[delta].second};
+        double p{double(n_exe) / n_opp};
+        printf("p_theory_[%i] = %g\n", delta,
+               p_avg_bind_i_ * weight_lattice_bind_[delta]);
+        printf("p_actual_[%i] = %g (n_exe = %i)\n", delta, p,
+               lattice_coop_stats_[delta].first);
       }
     }
   }
@@ -874,17 +1177,15 @@ void KinesinManagement::ReportExecutionOf(std::string event_name) {
   if (verbosity_ < 1) {
     return;
   }
-  printf("Executing ");
+  wally_->Log("Executing ");
   std::cout << event_name << std::endl;
 }
 
 void KinesinManagement::ReportFailureOf(std::string event_name) {
 
-  printf("yo we failed to execute ");
+  wally_->Log("yo we failed to execute ");
   std::cout << event_name << std::endl;
 }
-
-void KinesinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void KinesinManagement::Update_Extensions() {
 
@@ -899,21 +1200,27 @@ void KinesinManagement::Update_Extensions() {
 void KinesinManagement::Update_Docked() {
 
   if (verbosity_ >= 1) {
-    printf("starting UPDATE DOCKED\n");
+    wally_->Log("Starting K_MGMT::Update_Docked()");
   }
+  /*
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       n_docked_[i_aff][n_neighbs] = 0;
     }
   }
+  */
+  n_bind_ii_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     Kinesin *motor = active_[i_entry];
     if (motor->heads_active_ != 1) {
       continue;
     }
-    if (motor->GetActiveHead()->ligand_ == "ADPP") {
+    POP_T *head{motor->GetActiveHead()};
+    if (head->ligand_ == "ADPP") {
       Tubulin *dock_site{motor->GetDockSite()};
       if (!dock_site->occupied_) {
+        bind_ii_candidates_[n_bind_ii_candidates_++] = motor->GetDockedHead();
+        /*
         int aff{dock_site->GetAffinityExcluding(motor)};
         int n_neighbs_eff{0};
         if (max_neighbs_ > 0) {
@@ -921,13 +1228,20 @@ void KinesinManagement::Update_Docked() {
         }
         int index{n_docked_[aff][n_neighbs_eff]++};
         docked_[aff][n_neighbs_eff][index] = motor->GetDockedHead();
+        */
       }
     }
+  }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
   }
 }
 
 void KinesinManagement::Update_Bound_NULL() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_NULL()");
+  }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     n_bound_NULL_[n_neighbs] = 0;
   }
@@ -946,10 +1260,16 @@ void KinesinManagement::Update_Bound_NULL() {
       }
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Bound_NULL_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_NULL_Teth()");
+  }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
       n_bound_NULL_to_teth_[n_neighbs][x_dub] = 0;
@@ -982,10 +1302,16 @@ void KinesinManagement::Update_Bound_NULL_Teth() {
       }
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Bound_ATP() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_ATP() ");
+  }
   n_bound_ATP_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
@@ -998,10 +1324,16 @@ void KinesinManagement::Update_Bound_ATP() {
       }
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log("-- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Bound_ATP_Stalled() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_ATP_Stalled() ");
+  }
   n_bound_ATP_st_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
@@ -1014,39 +1346,52 @@ void KinesinManagement::Update_Bound_ATP_Stalled() {
       }
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log("-- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Bound_ADPP_I() {
 
   if (verbosity_ >= 1) {
-    printf("starting UPDATE ADPP_I\n");
+    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_I()");
   }
+  /*
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
       n_bound_ADPP_i_[i_aff][i_neighb] = 0;
     }
   }
+  */
+  n_unbind_i_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     Kinesin *motor = active_[i_entry];
-    if (motor->heads_active_ != 1 or motor->IsStalled()) {
+    if (motor->heads_active_ != 1) { // or motor->IsStalled()) {
       continue;
     }
-    if (!motor->tethered_ or motor->HasSatellite()) {
-      POP_T *active_head = motor->GetActiveHead();
-      if (active_head->ligand_ == "ADPP") {
-        int aff = active_head->GetAffinity();
-        int neighbs = active_head->GetKif4ANeighborCount();
-        int index = n_bound_ADPP_i_[aff][neighbs]++;
-        bound_ADPP_i_[aff][neighbs][index] = active_head;
-      }
+    // if (!motor->tethered_ or motor->HasSatellite()) {
+    POP_T *head = motor->GetActiveHead();
+    if (head->ligand_ == "ADPP") {
+      unbind_i_candidates_[n_unbind_i_candidates_++] = head;
+      /*
+      int aff = head->GetAffinity();
+      int neighbs = head->GetKif4ANeighborCount();
+      int index = n_bound_ADPP_i_[aff][neighbs]++;
+      bound_ADPP_i_[aff][neighbs][index] = head;
+      */
     }
+    // }
+  }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
   }
 }
 
+/*
 void KinesinManagement::Update_Bound_ADPP_I_Stalled() {
 
   if (verbosity_ >= 1) {
-    printf("starting UPDATE ADPP_I_ST\n");
+    wally_->Log("starting UPDATE ADPP_I_ST\n");
   }
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -1069,7 +1414,8 @@ void KinesinManagement::Update_Bound_ADPP_I_Stalled() {
     }
   }
 }
-
+*/
+/*
 void KinesinManagement::Update_Bound_ADPP_I_Teth() {
 
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
@@ -1096,7 +1442,8 @@ void KinesinManagement::Update_Bound_ADPP_I_Teth() {
     }
   }
 }
-
+*/
+/*
 void KinesinManagement::Update_Bound_ADPP_I_Teth_Stalled() {
 
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
@@ -1123,47 +1470,62 @@ void KinesinManagement::Update_Bound_ADPP_I_Teth_Stalled() {
     }
   }
 }
-
+*/
 void KinesinManagement::Update_Bound_ADPP_II() {
 
   if (verbosity_ >= 1) {
-    printf("starting UPDATE ADPP_II\n");
+    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_II()");
   }
+  /*
   for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
     for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
       n_bound_ADPP_ii_[i_aff][i_neighb] = 0;
     }
   }
+  */
+  n_unbind_ii_candidates_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
-    if (motor->heads_active_ == 2) {
-      Kinesin::Monomer *chosen_head{nullptr};
-      // If both heads are ADPP-bound, pick rear head to unbind
-      // FIXME when attempting to incorporate back-stepping cycle
-      if (motor->head_one_.ligand_ == "ADPP" and
-          motor->head_two_.ligand_ == "ADPP") {
-        if (motor->head_one_.trailing_) {
-          chosen_head = &motor->head_one_;
-        } else {
-          chosen_head = &motor->head_two_;
-        }
-      } else if (motor->head_one_.ligand_ == "ADPP") {
+    if (motor->heads_active_ != 2) {
+      continue;
+    }
+    POP_T *chosen_head{nullptr};
+    // If both heads are ADPP-bound, pick rear head to unbind
+    // FIXME when attempting to incorporate back-stepping cycle
+    if (motor->head_one_.ligand_ == "ADPP" and
+        motor->head_two_.ligand_ == "ADPP") {
+      if (motor->head_one_.trailing_) {
         chosen_head = &motor->head_one_;
-      } else if (motor->head_two_.ligand_ == "ADPP") {
+      } else {
         chosen_head = &motor->head_two_;
       }
-      if (chosen_head != nullptr) {
-        int aff{chosen_head->GetAffinity()};
-        int neighbs{chosen_head->GetKif4ANeighborCount()};
-        int i_entry{n_bound_ADPP_ii_[aff][neighbs]++};
-        bound_ADPP_ii_[aff][neighbs][i_entry] = chosen_head;
-      }
+    } else if (motor->head_one_.ligand_ == "ADPP") {
+      chosen_head = &motor->head_one_;
+    } else if (motor->head_two_.ligand_ == "ADPP") {
+      chosen_head = &motor->head_two_;
     }
+    if (chosen_head != nullptr) {
+      unbind_ii_candidates_[n_unbind_ii_candidates_++] = chosen_head;
+      /*
+      int aff{chosen_head->GetAffinity()};
+      int neighbs{chosen_head->GetKif4ANeighborCount()};
+      int i_entry{n_bound_ADPP_ii_[aff][neighbs]++};
+      bound_ADPP_ii_[aff][neighbs][i_entry] = chosen_head;
+      */
+    } else {
+      wally_->ErrorExit("KinMGMT::Update_Bound_ADPP_II");
+    }
+  }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
   }
 }
 
 void KinesinManagement::Update_Bound_Unteth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_Unteth()");
+  }
   n_bound_unteth_ = 0;
   n_tether_bound_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
@@ -1181,10 +1543,16 @@ void KinesinManagement::Update_Bound_Unteth() {
           &motor->head_one_;
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Bound_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_Teth()");
+  }
   for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
     n_bound_teth_[x_dub] = 0;
   }
@@ -1202,10 +1570,16 @@ void KinesinManagement::Update_Bound_Teth() {
       }
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
+  }
 }
 
 void KinesinManagement::Update_Free_Teth() {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Update_Bound_Unteth()");
+  }
   n_satellites_ = 0;
   n_bind_i_teth_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
@@ -1215,9 +1589,13 @@ void KinesinManagement::Update_Free_Teth() {
       bind_i_teth_candidates_[n_bind_i_teth_candidates_++] = &motor->head_one_;
     }
   }
+  if (verbosity_ > 1) {
+    wally_->Log(" -- finished\n");
+  }
 }
 
 double KinesinManagement::GetWeight_Bind_I_Teth() {
+
   double weight = 0;
   for (int i_entry = 0; i_entry < n_satellites_; i_entry++) {
     POP_T *head = std::get<POP_T *>(satellites_[i_entry]);
@@ -1226,7 +1604,38 @@ double KinesinManagement::GetWeight_Bind_I_Teth() {
   return weight;
 }
 
+double KinesinManagement::GetWeight_Bind_II() {
+
+  double weight{0.0};
+  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
+    POP_T *head = std::get<POP_T *>(bind_ii_candidates_[i_entry]);
+    weight += head->motor_->GetWeight_Bind_II();
+  }
+  return weight;
+}
+
+double KinesinManagement::GetWeight_Unbind_II() {
+
+  double weight{0.0};
+  for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
+    POP_T *head = std::get<POP_T *>(unbind_ii_candidates_[i_entry]);
+    weight += head->motor_->GetWeight_Unbind_II();
+  }
+  return weight;
+}
+
+double KinesinManagement::GetWeight_Unbind_I() {
+
+  double weight{0.0};
+  for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
+    POP_T *head = std::get<POP_T *>(unbind_i_candidates_[i_entry]);
+    weight += head->site_->weight_unbind_;
+  }
+  return weight;
+}
+
 double KinesinManagement::GetWeight_Tether_Bound() {
+
   double weight = 0;
   for (int i_entry = 0; i_entry < n_bound_unteth_; i_entry++) {
     POP_T *head = std::get<POP_T *>(bound_unteth_[i_entry]);
@@ -1235,7 +1644,8 @@ double KinesinManagement::GetWeight_Tether_Bound() {
   return weight;
 }
 
-void KinesinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
+int KinesinManagement::SetCandidates_Bind_I_Teth(int n_to_set) {
+
   double weight[n_bind_i_teth_candidates_];
   double weight_total{0.0};
   for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
@@ -1267,7 +1677,160 @@ void KinesinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
   }
 }
 
-void KinesinManagement::Set_Tether_Bound_Candidates(int n_to_set) {
+int KinesinManagement::SetCandidates_Bind_II(int n_to_set) {
+
+  double weight[n_bind_ii_candidates_];
+  double weight_total{0.0};
+  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(bind_ii_candidates_[i_entry])};
+    double weight_entry{head->motor_->GetWeight_Bind_II()};
+    // If entry has a weight of 0.0, remove it from candidates
+    if (weight_entry == 0.0) {
+      int i_last{--n_bind_ii_candidates_};
+      bind_ii_candidates_[i_entry--] = bind_ii_candidates_[i_last];
+      // If we have zero valid candidates, set n_expected to 0 in SampleStats
+      if (n_bind_ii_candidates_ == 0) {
+        return n_to_set;
+      }
+      continue;
+    }
+    weight[i_entry] = weight_entry;
+    weight_total += weight[i_entry];
+  }
+  if (weight_total == 0.0) {
+    properties_->wallace.ErrorExit("MT_MGMT::SetCandidates_Bind_I_Kinesin()");
+  }
+  int n_removed{0};
+  if (n_to_set > n_bind_ii_candidates_) {
+    n_removed = n_to_set - n_bind_ii_candidates_;
+    n_to_set = n_bind_ii_candidates_;
+  }
+  ENTRY_T selected_candidates[n_to_set];
+  for (int i_set{0}; i_set < n_to_set; i_set++) {
+    double p_cum{0.0};
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
+      p_cum += (weight[i_entry] / weight_total);
+      if (ran < p_cum) {
+        selected_candidates[i_set] = bind_ii_candidates_[i_entry];
+        weight_total -= weight[i_entry];
+        int i_last{--n_bind_ii_candidates_};
+        bind_ii_candidates_[i_entry] = bind_ii_candidates_[i_last];
+        weight[i_entry] = weight[i_last];
+        break;
+      }
+    }
+  }
+  n_bind_ii_candidates_ = n_to_set;
+  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
+    bind_ii_candidates_[i_entry] = selected_candidates[i_entry];
+  }
+  return n_removed;
+}
+
+int KinesinManagement::SetCandidates_Unbind_II(int n_to_set) {
+
+  double weight[n_unbind_ii_candidates_];
+  double weight_total{0.0};
+  for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(unbind_ii_candidates_[i_entry])};
+    double weight_entry{head->motor_->GetWeight_Unbind_II()};
+    // If entry has a weight of 0.0, remove it from candidates
+    if (weight_entry == 0.0) {
+      int i_last{--n_unbind_ii_candidates_};
+      unbind_ii_candidates_[i_entry--] = unbind_ii_candidates_[i_last];
+      // If we have zero valid candidates, set n_expected to 0 in SampleStats
+      if (n_unbind_ii_candidates_ == 0) {
+        return n_to_set;
+      }
+      continue;
+    }
+    weight[i_entry] = weight_entry;
+    weight_total += weight[i_entry];
+  }
+  if (weight_total == 0.0) {
+    properties_->wallace.ErrorExit("MT_MGMT::SetCandidates_Bind_I_Kinesin()");
+  }
+  int n_removed{0};
+  if (n_to_set > n_unbind_ii_candidates_) {
+    n_removed = n_to_set - n_unbind_ii_candidates_;
+    n_to_set = n_unbind_ii_candidates_;
+  }
+  ENTRY_T selected_candidates[n_to_set];
+  for (int i_set{0}; i_set < n_to_set; i_set++) {
+    double p_cum{0.0};
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
+      p_cum += (weight[i_entry] / weight_total);
+      if (ran < p_cum) {
+        selected_candidates[i_set] = unbind_ii_candidates_[i_entry];
+        weight_total -= weight[i_entry];
+        int i_last{--n_unbind_ii_candidates_};
+        unbind_ii_candidates_[i_entry] = unbind_ii_candidates_[i_last];
+        weight[i_entry] = weight[i_last];
+        break;
+      }
+    }
+  }
+  n_unbind_ii_candidates_ = n_to_set;
+  for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
+    unbind_ii_candidates_[i_entry] = selected_candidates[i_entry];
+  }
+  return n_removed;
+}
+
+int KinesinManagement::SetCandidates_Unbind_I(int n_to_set) {
+
+  double weight[n_unbind_i_candidates_];
+  double weight_total{0.0};
+  for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(unbind_i_candidates_[i_entry])};
+    double weight_entry{head->site_->weight_unbind_};
+    // If entry has a weight of 0.0, remove it from candidates
+    if (weight_entry == 0.0) {
+      int i_last{--n_unbind_i_candidates_};
+      unbind_i_candidates_[i_entry--] = unbind_i_candidates_[i_last];
+      // If we have zero valid candidates, set n_expected to 0 in SampleStats
+      if (n_unbind_i_candidates_ == 0) {
+        return n_to_set;
+      }
+      continue;
+    }
+    weight[i_entry] = weight_entry;
+    weight_total += weight[i_entry];
+  }
+  if (weight_total == 0.0) {
+    properties_->wallace.ErrorExit("MT_MGMT::SetCandidates_Bind_I_Kinesin()");
+  }
+  int n_removed{0};
+  if (n_to_set > n_unbind_i_candidates_) {
+    n_removed = n_to_set - n_unbind_i_candidates_;
+    n_to_set = n_unbind_i_candidates_;
+  }
+  ENTRY_T selected_candidates[n_to_set];
+  for (int i_set{0}; i_set < n_to_set; i_set++) {
+    double p_cum{0.0};
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
+      p_cum += (weight[i_entry] / weight_total);
+      if (ran < p_cum) {
+        selected_candidates[i_set] = unbind_i_candidates_[i_entry];
+        weight_total -= weight[i_entry];
+        int i_last{--n_unbind_i_candidates_};
+        unbind_i_candidates_[i_entry] = unbind_i_candidates_[i_last];
+        weight[i_entry] = weight[i_last];
+        break;
+      }
+    }
+  }
+  n_unbind_i_candidates_ = n_to_set;
+  for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
+    unbind_i_candidates_[i_entry] = selected_candidates[i_entry];
+  }
+  return n_removed;
+}
+
+int KinesinManagement::SetCandidates_Tether_Bound(int n_to_set) {
 
   double weight[n_tether_bound_candidates_];
   double weight_total{0.0};
@@ -1277,7 +1840,7 @@ void KinesinManagement::Set_Tether_Bound_Candidates(int n_to_set) {
     weight_total += weight[i_entry];
   }
   if (weight_total == 0.0) {
-    wally_->ErrorExit("Kin_MGMT::Set_Tether_Bound_Candidates()");
+    wally_->ErrorExit("Kin_MGMT::SetCandidates_Tether_Bound()");
   }
   ENTRY_T selected_candidates[n_to_set];
   for (int i_set{0}; i_set < n_to_set; i_set++) {
@@ -1302,6 +1865,10 @@ void KinesinManagement::Set_Tether_Bound_Candidates(int n_to_set) {
 
 void KinesinManagement::RunKMC() {
 
+  // if (properties_->current_step_ == 270860) {
+  //   verbosity_ = 3;
+  // }
+
   if (properties_->current_step_ * parameters_->delta_t >= t_active_) {
     population_active_ = true;
   }
@@ -1316,13 +1883,6 @@ void KinesinManagement::RunKMC() {
 
 void KinesinManagement::UpdateLists() {
 
-  /*
-  if (lists_up_to_date_) {
-    return;
-  }
-  lists_up_to_date_ = true;
-  */
-
   Update_Extensions();
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
@@ -1330,13 +1890,13 @@ void KinesinManagement::UpdateLists() {
   Update_Bound_ATP();
   Update_Bound_ATP_Stalled();
   Update_Bound_ADPP_I();
-  Update_Bound_ADPP_I_Stalled();
+  // Update_Bound_ADPP_I_Stalled();
   Update_Bound_ADPP_II();
   if (parameters_->motors.tethers_active) {
     Update_Free_Teth();
     Update_Bound_NULL_Teth();
-    Update_Bound_ADPP_I_Teth();
-    Update_Bound_ADPP_I_Teth_Stalled();
+    // Update_Bound_ADPP_I_Teth();
+    // Update_Bound_ADPP_I_Teth_Stalled();
     Update_Bound_Teth();
     Update_Bound_Unteth();
     properties_->prc1.Update_Bound_Unteth();
@@ -1351,8 +1911,8 @@ void KinesinManagement::SampleEventStatistics() {
     n_events_to_exe_ += event.SampleStatistics();
     // Ensure no funny business occurs with statistics
     if (event.n_expected_ > *event.n_avail_) {
-      printf("Error; %i events expected but only %i available for %s\n",
-             event.n_expected_, *event.n_avail_, event.name_.c_str());
+      wally_->Log("Error; %i events expected but only %i available for %s\n",
+                  event.n_expected_, *event.n_avail_, event.name_.c_str());
       wally_->ErrorExit("Kin_MGMT::SampleEventStatistics()");
     }
   }
@@ -1449,12 +2009,14 @@ void KinesinManagement::ExecuteEvents() {
 
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     events_to_exe_[i_event]->Execute();
-    FlagForUpdate();
   }
 }
 
 void KinesinManagement::Bind_I(SITE_T *site) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Bind_I");
+  }
   // Get random free motor
   Kinesin *motor{GetFreeMotor()};
   // Update site details
@@ -1470,14 +2032,20 @@ void KinesinManagement::Bind_I(SITE_T *site) {
   // Update active_ list
   AddToActive(motor);
   properties_->microtubules.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
 void KinesinManagement::Bind_I_Teth(POP_T *satellite_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Bind_I_Teth");
+  }
   Kinesin *motor{satellite_head->motor_};
   Tubulin *site{motor->GetWeightedSite_Bind_I_Teth()};
   if (site == nullptr) {
-    printf("failed to Bind_I_Free_Teth (MOTOR)\n");
+    wally_->Log("failed to Bind_I_Free_Teth (MOTOR)\n");
     return;
   }
   // Update site details
@@ -1491,26 +2059,47 @@ void KinesinManagement::Bind_I_Teth(POP_T *satellite_head) {
   motor->head_two_.trailing_ = true;
   motor->heads_active_++;
   properties_->microtubules.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
 void KinesinManagement::Bind_ATP(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Bind_ATP");
+  }
   // Update motor head
   head->ligand_ = "ATP";
   // If head is leading, change conformation
   if (!head->trailing_) {
     head->motor_->ChangeConformation();
   }
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
-void KinesinManagement::Hydrolyze(POP_T *head) { head->ligand_ = "ADPP"; }
+void KinesinManagement::Hydrolyze(POP_T *head) {
+
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Hydrolyze");
+  }
+  head->ligand_ = "ADPP";
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
+}
 
 void KinesinManagement::Bind_II(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Bind_II()\n");
+  }
   // Verify that proposed site is unoccupied
   Kinesin *motor{head->motor_};
   Tubulin *dock_site{motor->GetDockSite()};
-  if (dock_site == nullptr) {
+  if (dock_site->occupied_) {
     printf("woah.\n");
     return;
   }
@@ -1522,26 +2111,41 @@ void KinesinManagement::Bind_II(POP_T *head) {
   head->ligand_ = "NULL";
   motor->heads_active_++;
   properties_->microtubules.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" -- finished --\n");
+  }
 }
 
 void KinesinManagement::Unbind_II(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Unbind_II\n");
+  }
   if (head->motor_->heads_active_ != 2) {
     wally_->ErrorExit("Kin_MGMT::Unbind_II()");
   }
   // Update site
   head->site_->occupied_ = false;
   head->site_->motor_head_ = nullptr;
+  if (verbosity_ >= 2) {
+    printf("Unbound site #%i\n", head->site_->index_);
+  }
   // Update motor
   head->site_ = nullptr;
   head->ligand_ = "ADP";
   head->motor_->heads_active_--;
   head->RelieveFrustration();
   properties_->microtubules.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" -- finished --\n");
+  }
 }
 
 void KinesinManagement::Unbind_I(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Unbind_I");
+  }
   Kinesin *motor{head->motor_};
   if (motor->heads_active_ != 1) {
     wally_->ErrorExit("Kin_MGMT::Unbind_I()");
@@ -1559,10 +2163,16 @@ void KinesinManagement::Unbind_I(POP_T *head) {
     RemoveFromActive(motor);
   }
   properties_->microtubules.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
 void KinesinManagement::Tether_Free(ALT_T *untethered_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Tether_Free");
+  }
   Kinesin *motor{GetFreeMotor()};
   AssociatedProtein *xlink{untethered_head->xlink_};
   motor->xlink_ = xlink;
@@ -1571,10 +2181,16 @@ void KinesinManagement::Tether_Free(ALT_T *untethered_head) {
   xlink->motor_ = motor;
   AddToActive(motor);
   properties_->prc1.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
 void KinesinManagement::Tether_Bound(POP_T *bound_head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Tether_Bound");
+  }
   Kinesin *motor{bound_head->motor_};
   AssociatedProtein *xlink{motor->GetWeightedXlink_Tether_Bound()};
   // Update motor and xlink details
@@ -1586,10 +2202,16 @@ void KinesinManagement::Tether_Bound(POP_T *bound_head) {
     wally_->ErrorExit("Kin_MGMT::Tether_Bound()");
   }
   properties_->prc1.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }
 
 void KinesinManagement::Untether(POP_T *head) {
 
+  if (verbosity_ >= 1) {
+    wally_->Log("Starting K_MGMT::Untether");
+  }
   Kinesin *motor{head->motor_};
   AssociatedProtein *xlink{motor->xlink_};
   // Update motor and xlink details
@@ -1601,4 +2223,7 @@ void KinesinManagement::Untether(POP_T *head) {
     RemoveFromActive(motor);
   }
   properties_->prc1.FlagForUpdate();
+  if (verbosity_ >= 1) {
+    wally_->Log(" - finished\n");
+  }
 }

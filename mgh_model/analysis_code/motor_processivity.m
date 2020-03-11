@@ -1,13 +1,13 @@
 
 clear all;
 % Often-changed variables
-n_sites = 1250;
-simName = 'processivityC_420pM';
+n_sites = 5000;
+simName = 'lattice_coop_2.5_1.25';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 20000000;
-n_datapoints = 5000;
+n_steps = 4000000; %0;
+n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
@@ -95,7 +95,7 @@ for i_data = starting_point:1:n_datapoints - 1
                 run_time = delta_t * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if run_time > time_cutoff && end_site(1) > endtag_boundary
+                if run_time > time_cutoff  && end_site(1) > endtag_boundary
 
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;

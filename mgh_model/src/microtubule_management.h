@@ -3,6 +3,7 @@
 #include "entry.hpp"
 #include "microtubule.h" // Includes <vector> lib as well
 class Tubulin;
+class Curator;
 struct system_parameters;
 struct system_properties;
 
@@ -11,19 +12,17 @@ private:
   template <class DATA_T> using Vec = std::vector<DATA_T>;
   int n_sites_tot_{0};
   int max_neighbs_xlink_{2};
-  int max_neighbs_motor_{2};
-  int n_affinities_{10};
-  int n_stacks_{5};
-  int n_affinities_tot_{n_affinities_ * n_stacks_ + 1};
   bool lists_up_to_date_{false};
+  Curator *wally_{nullptr};
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
 
 public:
+  int n_unocc_motor_{0};
   Vec<int> n_unocc_xlink_;
-  Vec<Vec<int>> n_unocc_motor_;
+  Vec<ENTRY_T> unocc_motor_;
   Vec<Vec<ENTRY_T>> unocc_xlink_;
-  Vec<Vec<Vec<ENTRY_T>>> unocc_motor_;
+
   Vec<Microtubule> mt_list_;
 
 private:
@@ -33,6 +32,10 @@ private:
 public:
   MicrotubuleManagement();
   void Initialize(system_parameters *parameters, system_properties *properties);
+  void InitializeTestEnvironment();
+
+  double GetWeight_Bind_I_Kinesin();
+  int SetCandidates_Bind_I_Kinesin(int n_to_set);
 
   void FlagForUpdate();
   void UpdateNeighbors();

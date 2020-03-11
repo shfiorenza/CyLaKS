@@ -6,13 +6,40 @@ MicrotubuleManagement::MicrotubuleManagement() {}
 void MicrotubuleManagement::Initialize(system_parameters *parameters,
                                        system_properties *properties) {
 
+  wally_ = &properties->wallace;
   parameters_ = parameters;
   properties_ = properties;
 
+  // K_ or AP_MGMT will initialize the MT environment for each specific test
+  if (wally_->test_mode_ != nullptr) {
+    return;
+  }
   SetParameters();
   GenerateMicrotubules();
   UpdateNeighbors();
-  UpdateUnoccupied();
+  // UpdateUnoccupied();
+}
+
+void MicrotubuleManagement::InitializeTestEnvironment() {
+
+  if (strcmp(properties_->wallace.test_mode_, "motor_lattice_coop") == 0) {
+    // Set parameters
+    n_sites_tot_ = 2 * properties_->kinesin4.lattice_cutoff_ + 1;
+    unocc_motor_.resize(n_sites_tot_);
+    n_unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+    unocc_xlink_.resize(max_neighbs_xlink_ + 1);
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
+      n_unocc_xlink_[n_neighbs] = 0;
+      unocc_xlink_[n_neighbs].resize(n_sites_tot_);
+    }
+    // Generate microtubules
+    parameters_->microtubules.count = 1;
+    parameters_->microtubules.diffusion_on = false;
+    parameters_->microtubules.length[0] = n_sites_tot_;
+    GenerateMicrotubules();
+    mt_list_[0].neighbor_ = nullptr;
+    UpdateUnoccupied();
+  }
 }
 
 void MicrotubuleManagement::SetParameters() {
@@ -20,21 +47,12 @@ void MicrotubuleManagement::SetParameters() {
   for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     n_sites_tot_ += parameters_->microtubules.length[i_mt];
   }
+  unocc_motor_.resize(n_sites_tot_);
   n_unocc_xlink_.resize(max_neighbs_xlink_ + 1);
   unocc_xlink_.resize(max_neighbs_xlink_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
     n_unocc_xlink_[n_neighbs] = 0;
     unocc_xlink_[n_neighbs].resize(n_sites_tot_);
-  }
-  n_unocc_motor_.resize(n_affinities_tot_);
-  unocc_motor_.resize(n_affinities_tot_);
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    n_unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
-    unocc_motor_[i_aff].resize(max_neighbs_motor_ + 1);
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
-      n_unocc_motor_[i_aff][n_neighbs] = 0;
-      unocc_motor_[i_aff][n_neighbs].resize(n_sites_tot_);
-    }
   }
 }
 
@@ -44,6 +62,68 @@ void MicrotubuleManagement::GenerateMicrotubules() {
   for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     mt_list_[i_mt].Initialize(parameters_, properties_, i_mt);
   }
+}
+
+double MicrotubuleManagement::GetWeight_Bind_I_Kinesin() {
+
+  double weight_total{0.0};
+  for (int i_entry{0}; i_entry < n_unocc_motor_; i_entry++) {
+    Tubulin *site{std::get<Tubulin *>(unocc_motor_[i_entry])};
+    weight_total += site->weight_bind_;
+  }
+  return weight_total;
+}
+
+int MicrotubuleManagement::SetCandidates_Bind_I_Kinesin(int n_to_set) {
+
+  double weight[n_unocc_motor_];
+  double weight_total{0.0};
+  for (int i_entry{0}; i_entry < n_unocc_motor_; i_entry++) {
+    Tubulin *site{std::get<Tubulin *>(unocc_motor_[i_entry])};
+    double weight_site{site->weight_bind_};
+    // If entry has a weight of 0.0, remove it from candidates
+    if (weight_site == 0.0) {
+      int i_last{--n_unocc_motor_};
+      unocc_motor_[i_entry] = unocc_motor_[i_last];
+      i_entry--;
+      // If we have zero valid candidates, set n_expected to 0 in SampleStats
+      if (n_unocc_motor_ == 0) {
+        return n_to_set;
+      }
+      continue;
+    }
+    weight[i_entry] = weight_site;
+    weight_total += weight[i_entry];
+  }
+  if (weight_total == 0.0) {
+    properties_->wallace.ErrorExit("MT_MGMT::SetCandidates_Bind_I_Kinesin()");
+  }
+  int n_removed{0};
+  if (n_to_set > n_unocc_motor_) {
+    n_removed = n_to_set - n_unocc_motor_;
+    n_to_set = n_unocc_motor_;
+  }
+  ENTRY_T selected_candidates[n_to_set];
+  for (int i_set{0}; i_set < n_to_set; i_set++) {
+    double p_cum{0.0};
+    double ran{properties_->gsl.GetRanProb()};
+    for (int i_entry{0}; i_entry < n_unocc_motor_; i_entry++) {
+      p_cum += (weight[i_entry] / weight_total);
+      if (ran < p_cum) {
+        selected_candidates[i_set] = unocc_motor_[i_entry];
+        weight_total -= weight[i_entry];
+        int i_last{--n_unocc_motor_};
+        unocc_motor_[i_entry] = unocc_motor_[i_last];
+        weight[i_entry] = weight[i_last];
+        break;
+      }
+    }
+  }
+  n_unocc_motor_ = n_to_set;
+  for (int i_entry{0}; i_entry < n_unocc_motor_; i_entry++) {
+    unocc_motor_[i_entry] = selected_candidates[i_entry];
+  }
+  return n_removed;
 }
 
 void MicrotubuleManagement::FlagForUpdate() { lists_up_to_date_ = false; }
@@ -68,27 +148,22 @@ void MicrotubuleManagement::UpdateUnoccupied() {
     return;
   }
   lists_up_to_date_ = true;
+  n_unocc_motor_ = 0;
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
     n_unocc_xlink_[n_neighbs] = 0;
-  }
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
-      n_unocc_motor_[i_aff][n_neighbs] = 0;
-    }
   }
   for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
-      site->UpdateAffinity();
+      if (wally_->test_mode_ == nullptr or properties_->current_step_ == 0) {
+        site->UpdateWeights_Kinesin();
+      }
       if (site->occupied_) {
         continue;
       }
+      unocc_motor_[n_unocc_motor_++] = site;
       int n_neighbs_xl{site->GetPRC1NeighborCount()};
       unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
-      int n_neighbs_mot{site->GetKif4ANeighborCount()};
-      int tub_aff{site->affinity_};
-      int index{n_unocc_motor_[tub_aff][n_neighbs_mot]++};
-      unocc_motor_[tub_aff][n_neighbs_mot][index] = site;
     }
   }
 }
@@ -199,7 +274,5 @@ void MicrotubuleManagement::RunDiffusion() {
       continue;
     }
     mt_list_[i_mt].coord_ += displacement[i_mt];
-    properties_->prc1.FlagForUpdate();
-    properties_->kinesin4.FlagForUpdate();
   }
 }

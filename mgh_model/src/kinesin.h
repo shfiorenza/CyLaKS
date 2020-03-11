@@ -116,6 +116,8 @@ public:
   void UpdateNeighbors_Bind_I_Teth();
   void UpdateNeighbors_Tether_Bound();
   double GetWeight_Bind_I_Teth(Tubulin *site);
+  double GetWeight_Bind_II();
+  double GetWeight_Unbind_II();
   double GetWeight_Tether_Bound(AssociatedProtein *xlink);
   double GetTotalWeight_Bind_I_Teth();
   double GetTotalWeight_Tether_Bound();

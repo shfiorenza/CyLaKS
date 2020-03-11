@@ -1,12 +1,10 @@
-function mot_stats = get_motor_stats(sim_name)
+function mot_stats = get_motor_stats(simName, n_steps)
 
 % Often-changed variables
 n_sites = 5000;
-simName = sim_name;
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 40000000;
 n_datapoints = 100000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;

@@ -171,9 +171,13 @@ void Curator::ParseParameters() {
   try {
     parameters_->seed = input["seed"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
-    parameters_->seed = (long)(input["seed"].as<double>());
+    parameters_->seed = (unsigned long)(input["seed"].as<double>());
   }
-  parameters_->n_steps = input["n_steps"].as<unsigned long>();
+  try {
+    parameters_->n_steps = input["n_steps"].as<unsigned long>();
+  } catch (const YAML::BadConversion error) {
+    parameters_->n_steps = (unsigned long)input["n_steps"].as<double>();
+  }
   parameters_->n_datapoints = input["n_datapoints"].as<int>();
   parameters_->data_threshold = input["data_threshold"].as<int>();
   parameters_->delta_t = input["delta_t"].as<double>();

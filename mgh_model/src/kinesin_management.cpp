@@ -14,7 +14,9 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   SetParameters();
   GenerateMotors();
   InitializeLists();
-  InitializeEvents();
+  if (wally_->test_mode_ == nullptr) {
+    InitializeEvents();
+  }
 }
 
 void KinesinManagement::CalculateCutoffs() {
@@ -353,7 +355,7 @@ void KinesinManagement::SetParameters() {
           }
           if (value[i][j][k] > 0.5) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
-            wally_->ErrorExit("Kin_MGMT:SetParameters()");
+            // wally_->ErrorExit("Kin_MGMT:SetParameters()");
           }
         }
       }

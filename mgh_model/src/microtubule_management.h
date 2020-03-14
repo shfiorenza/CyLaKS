@@ -29,11 +29,16 @@ public:
 private:
   void SetParameters();
   void GenerateMicrotubules();
+  void InitializeLists();
   void SetTestEnvironment();
 
 public:
   MicrotubuleManagement();
   void Initialize(system_parameters *parameters, system_properties *properties);
+  void InitializeTestEnvironment();
+
+  double GetWeight_Bind_I_Kinesin();
+  int SetCandidates_Bind_I_Kinesin(int n_to_set);
 
   void FlagForUpdate();
   void UpdateNeighbors();

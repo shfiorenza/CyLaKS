@@ -40,6 +40,9 @@ public:
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
 
+  // placeholder
+  int lattice_cutoff_{0};
+
   // coop stuff
   int n_affinities_{1}; //{11};
   int max_neighbs_{0};  //{2};

@@ -1,94 +1,98 @@
 clear all;
-baseName = 'test_overlapB';
-mt_lengths = [101,101];
+sim_name = 'xlink_bind_ii_test';
+kbT = 4.114;                    % pN * nm
+k_on = 0.000238;                % 1/(nM*s)
+c_bind = 4500;                  % nM
+k_off_ii = 14.3;                % 1/s
+dist_cutoff = 4;                % no. sites
 mt_coords = [0, 0];
-head_pos = 50;
-dist_cutoff = 4;
 n_datapoints = 1000000;
+% 'reported' probabilities are from sim's built-in probability tracker
+p_bind_reported = [2.69e-05, 2.61e-05, 1.81e-05, 4.61e-06, 2.16e-07];
+p_unbind_reported = [0.000357, 0.000369, 0.000529, 0.00208, 0.0450];
+
 speciesID = 1;
-
-p_bind_measured = [0.000269, 0.000258, 0.000183, 0.0000464, 0.00000207];
-p_unbind_measured = [0.000358, 0.000369, 0.000537, 0.00207, 0.0339];
-avg_occu_measured = zeros(5, 1);
-for i = 1 : 5
-    avg_occu_measured(i) = p_bind_measured(i) / (p_bind_measured(i) + p_unbind_measured(i));
-end
-
-kbT = 4.114; % pN * nm
-k_on = 0.000238; % 1/(nM*s)
-c_bind = 4500;  % nM
-k_off_ii = 0.143; % 1/s
-k_d = k_off_ii / k_on;
-avg_occu = c_bind / (c_bind + k_d);
-
+static_head_pos = dist_cutoff;
+mt_lengths = [2*dist_cutoff + 1, 2*dist_cutoff + 1];
 n_mts = length(mt_lengths);
 max_length = max(mt_lengths);
-mt_endpoints = mt_coords + mt_lengths;
+
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 fileStruct = '%s_occupancy.file';
-data_file = fopen(sprintf(fileDirectory, sprintf(fileStruct, baseName)));
-raw_data = fread(data_file, [max_length n_mts*n_datapoints], '*int');
+data_file = fopen(sprintf(fileDirectory, sprintf(fileStruct, sim_name)));
+raw_data = fread(data_file, max_length * n_mts * n_datapoints, '*int');
+occu_data = reshape(raw_data, max_length, n_mts, n_datapoints);
 fclose(data_file);
-raw_data(raw_data ~= speciesID) = 0;
-raw_data(raw_data == speciesID) = 1;
 
-mt_one = zeros(1, mt_lengths(1));
-mt_two = zeros(1, mt_lengths(2));
+occu_data(occu_data ~= speciesID) = 0;
+occu_data(occu_data == speciesID) = 1;
 
-% Avg occupancy data for each MT over all datapoints
-for i_data=1:2:((2*n_datapoints)-1)
-    mt_one = mt_one + double(raw_data(1:mt_lengths(1), i_data)')./n_datapoints;
-    mt_two = mt_two + double(raw_data(1:mt_lengths(2), i_data + 1)')./n_datapoints;
+% Determine the number of datapoints that each occupancy should be averaged
+% over in order to take into account that the head cannot occupy more than
+% one site at a time
+n_points_applicable = zeros(2 *dist_cutoff + 1, 1);
+for i_data = 1 : n_datapoints
+   dynamic_head_pos = find(occu_data(:, 2, i_data));
+   % If second head isn't bound, datapoint is applicable for all datapoints
+   if isempty(dynamic_head_pos)
+       n_points_applicable = n_points_applicable + 1;
+   else
+       % Get x_dist for this configuration (-dist_cutoff to +dist_cutoff)
+       x_dist = dynamic_head_pos - static_head_pos;
+       % Convert to an index between 1 and 2*dist_cutoff + 1
+       index = x_dist + dist_cutoff;
+       % All x_dists but this one should not factor this step into avg_occu
+       n_points_applicable(index) = n_points_applicable(index) + 1;
+   end
 end
 
-% To account for MTs that are offset by some amount, create a larger
-% 'system' that can hold all the data
-sys_start = min(mt_coords);
-sys_end = max(mt_endpoints);
-sys_size = sys_end - sys_start;
-final_data = zeros(n_mts, sys_size);
-
-adjusted_coords = mt_coords - sys_start + 1;
-adjusted_endpoints = mt_endpoints - sys_start;
-
-final_data(1, adjusted_coords(1):adjusted_endpoints(1)) = mt_one;
-final_data(2, adjusted_coords(2):adjusted_endpoints(2)) = mt_two;
-
-% Find overlap region to calculate average occupances inside & outside it
-overlap_start = max(adjusted_coords);
-overlap_end = min(adjusted_endpoints);
-overlap_length = overlap_end - overlap_start;
-
-avg_occu_inside = 0.0;
-avg_occu_outside = 0.0;
-for i_mt=1:n_mts
-    leftover_length = mt_lengths(i_mt) - overlap_length;
-    for i_site=1:sys_size
-        % If inside overlap, add it to overlap avg
-        if i_site >= overlap_start && i_site <= overlap_end
-            avg_occu_inside = avg_occu_inside + final_data(i_mt, i_site)/(2*overlap_length);
-        elseif leftover_length ~= 0
-            avg_occu_outside = avg_occu_outside + final_data(i_mt, i_site)/(2*leftover_length);
-        end
-    end
+avg_occu = zeros(2 * dist_cutoff + 1, 1);
+% Calculate the average occupancy for each x_dist
+for i_data = 1 : n_datapoints
+   dynamic_head_pos = find(occu_data(:, 2, i_data));
+   if ~isempty(dynamic_head_pos)
+       % Get x_dist for this configuration (-dist_cutoff to +dist_cutoff)
+       x_dist = dynamic_head_pos - static_head_pos;
+       % Convert to an index between 1 and 2*dist_cutoff + 1
+       index = x_dist + dist_cutoff;
+       % All x_dists but this one should not factor this step into avg_occu
+       avg_occu(index) = avg_occu(index) + double(1) / n_points_applicable(index);
+   end
 end
 
-%%plot fig%%
+% Generate figure
 fig1 = figure();
 set(fig1,'Position', [50, 50, 2.5*480, 2.5*300])
-plot(linspace(0, sys_size-1, sys_size), final_data(2, :), 'o--', 'LineWidth', 2);
+% Plot avg_occu data
+plot(linspace(-dist_cutoff, dist_cutoff, 2*dist_cutoff + 1), ... 
+    avg_occu, '*', 'MarkerSize', 14, 'LineWidth', 3);
 hold on
-f_occu = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
-fplot(@(x) f_occu(x - 50));
-for dx = 0 : dist_cutoff
-    plot([head_pos + dx head_pos + dx], [0 2*avg_occu], ':k');
-    plot(head_pos + dx, avg_occu_measured(1 + dx), 'or', 'MarkerSize', 12, 'LineWidth', 2);
-    plot([head_pos - dx head_pos - dx], [0 2*avg_occu], ':k');
-end
+% Plot theoretical avg_occu curve for continuous space using raw params
+%   (note: uses delta_u function defined at the end of this script)
+k_d = k_off_ii / k_on;
+avg_occu_theory = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
+fplot(@(x) avg_occu_theory(x), 'LineWidth', 2);
 
-ylim([0 1.25*avg_occu]);
-xlim([head_pos - (dist_cutoff + 1) head_pos + dist_cutoff + 1]);
-xlabel('Site coordinate (8 nm each)');
+%{
+% Plot theoretical avg_occu at each point using p values reported by sim
+for x_dist = 0 : dist_cutoff
+    p_bind = p_bind_reported(x_dist + 1);
+    p_unbind = p_unbind_reported(x_dist + 1);
+    avg_occu_reported = p_bind / (p_bind + p_unbind);
+    plot(x_dist, avg_occu_reported, 'or', 'MarkerSize', 20, 'LineWidth', 2);
+    plot(-x_dist, avg_occu_reported, 'or', 'MarkerSize', 20, 'LineWidth', 2);
+end
+%}
+% Label them axes
+xlabel('Crosslinker extension (n\_sites)');
+ylabel('Average occupancy');
+% Generate legend
+legend(["Simulation data", "Analytic theory"]);
+% Force avg_occu plot on top of avg_occu_theory plot
+h = get(gca,'Children');
+set(gca,'Children',[h(2) h(1)])
+
+% delta_u function used to get spring energy for avg_occu_theory
 function u = delta_u(x)
     k_spring = 0.453; % pN / nm
     site_size = 8; % nm

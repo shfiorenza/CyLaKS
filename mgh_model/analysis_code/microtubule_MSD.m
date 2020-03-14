@@ -1,9 +1,11 @@
 
 clear all;
-simNameBase = "mt_diffusion";
+simNameBase = "test_throwback";
+%mt_lengths = [25, 125, 500, 2000, 4000]; % in n_sites
+%D_expected = [6.80771, 2.41534, 0.83076, 0.264421, 0.146393];
 mt_lengths = [125, 500, 2000]; % in n_sites
-D_expected = [1.36, 0.340, 0.0851];
-seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+D_expected = [1.36154, 0.340386, 0.0850965];
+seeds = [0]; % , 1, 2, 3, 4, 5, 6, 7, 8, 9];
 n_mts = length(mt_lengths);
 n_seeds = length(seeds);
 max_tau = 48.015;
@@ -17,18 +19,17 @@ time_per_datapoint = delta_t * n_steps / n_datapoints;
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileStruct = '%s_mt_coord.file';
 
-min_tau = time_per_datapoint;
-tau_increment = 200*time_per_datapoint;
-n_taus = (max_tau - min_tau) / tau_increment;
-max_tau_step = max_tau / time_per_datapoint;
-
+datapoints_per_tau = 200;
+min_tau = time_per_datapoint; % * datapoints_per_tau; 
+tau_increment = time_per_datapoint * datapoints_per_tau;
+n_taus = (max_tau - min_tau) / tau_increment + 1;
 
 squared_displacements = zeros(n_mts, n_taus, n_datapoints * n_seeds);
 n_entries = zeros(n_mts, n_taus);
 for i_seed = 1 : n_seeds
     simName = simNameBase;
-    if length(seeds) > 1
-        simName = sprintf("%s_%i", simNameBase, i_seed - 1);
+    if n_seeds > 1
+        simName = sprintf("%s_%i", simNameBase, seeds(i_seed));
     end
     mtFileName = sprintf(fileDirectory, sprintf(mtFileStruct, simName));
     mt_data_file = fopen(mtFileName);
@@ -38,8 +39,13 @@ for i_seed = 1 : n_seeds
     for i_mt = 1 : n_mts
         for i_tau = 1 : n_taus
             tau = min_tau + (i_tau - 1) * tau_increment;
-            tau_step = int32(tau / time_per_datapoint);  
-            for i_data = 1 : (n_datapoints - tau_step)
+            %tau_step = tau / time_per_datapoint;
+            tau_step = i_tau * datapoints_per_tau;
+            if tau_step ~= int32(tau_step)
+               disp("Error; tau_step must be an integer");
+               return;
+            end
+            for i_data = 1 : 1 : (n_datapoints - tau_step)
                 cur_pos = mt_data(i_mt, i_data);
                 next_pos = mt_data(i_mt, i_data + tau_step);
                 dx = double(next_pos - cur_pos) * site_size;
@@ -54,15 +60,14 @@ MSD = zeros(n_mts, n_taus);
 MSD_err = zeros(n_mts, n_taus);
 for i_mt = 1 : n_mts
     for i_tau = 1 : n_taus
-        active_range = 1:n_entries(i_mt, i_tau);
+        active_range = 1 : 1 : n_entries(i_mt, i_tau);
         MSD(i_mt, i_tau) = mean(squared_displacements(i_mt, i_tau, active_range));
         variance = 0.0;
         for i_entry = active_range
             diff_sq = (MSD(i_mt, i_tau) - squared_displacements(i_mt, i_tau, i_entry))^2;
-            variance = variance + diff_sq;
+            variance = variance + diff_sq / double(n_entries(i_mt, i_tau) - 1);
         end
-        variance = variance/double(n_entries(i_mt, i_tau) - 1);
-        MSD_err(i_mt, i_tau) = sqrt(variance);
+        MSD_err(i_mt, i_tau) = sqrt(variance / double(n_entries(i_mt, i_tau)));
     end
 end
 
@@ -96,9 +101,9 @@ for i_mt = 1 : n_mts
     ylabel("Mean squared displacement (um^2)");
     xlabel("Tau (s)");
     if mt_lengths(i_mt) * site_size == 1
-        title(sprintf("Microtubule length = %g micron", mt_lengths(i_mt) * site_size));
+        title(sprintf("L = %g micron", mt_lengths(i_mt) * site_size));
     else
-        title(sprintf("Microtubule length = %g microns", mt_lengths(i_mt) * site_size));
+        title(sprintf("L = %g microns", mt_lengths(i_mt) * site_size));
     end
-    legend(["Simulation data", "Theory"], 'location', 'northwest');
+    legend(["Sim Data", "Theory"], 'location', 'northwest');
 end

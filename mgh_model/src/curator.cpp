@@ -6,28 +6,16 @@ Curator::Curator() {}
 void Curator::InitializeSimulation(char *argv[], system_properties *properties,
                                    system_parameters *parameters) {
 
-  char *exe_name{argv[0]};
-  char *param_file{argv[1]};
-  char *sim_name{argv[2]};
-  test_mode_ = argv[3];
-  printf("test mode is %s\n", test_mode_);
-  int argc{0};
-  while (true) {
-    if (argv[argc] == nullptr) {
-      break;
-    }
-    argc++;
-  }
   properties_ = properties;
   parameters_ = parameters;
-  // User input must have correct number of arguments
-  CheckArgs(exe_name, argc);
+  // Check that user-input arguments are valid and parse them if they are
+  CheckArgs(argv);
   // Log file saves all sim outputs to terminal
-  GenerateLogFile(sim_name);
+  GenerateLogFile();
   // Data files save all pertinent info: occupancy, coords, extensions, etc.
-  GenerateDataFiles(sim_name);
+  GenerateDataFiles();
   // Parameters from YAML file are transferred to local parameter structs
-  ParseParameters(param_file);
+  ParseParameters();
   // Once parameters are parsed, the Curator's own parameters can be set
   SetLocalParameters();
   // Microtubules, motors, and crosslinkers are all initialized at once
@@ -50,21 +38,33 @@ bool Curator::FileExists(std::string file_name) {
   return (stat(file_name.c_str(), &buffer) != -1);
 }
 
-void Curator::CheckArgs(char *exe_name, int argc) {
+void Curator::CheckArgs(char *argv[]) {
 
-  if (argc > 2 and argc < 5) {
-    return;
+  param_file_ = argv[1];
+  sim_name_ = argv[2];
+  test_mode_ = argv[3];
+  int argc{0};
+  while (true) {
+    if (argv[argc] == nullptr) {
+      break;
+    }
+    argc++;
   }
-  printf("\nWrong number of command-line arguments in main\nUsage: ");
-  printf("%s parameters.yaml sim_name (required) test_mode (optional)\n\n",
-         exe_name);
-  exit(1);
+  if (argc <= 2 or argc >= 5) {
+    printf("\nError! Incorrect number of command-line arguments\n");
+    printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
+    printf("test_mode (optional)\n");
+    printf("Currently-implemented test modes are:\n");
+    printf("    motor_lattice_coop\n");
+    printf("    xlink_bind_ii\n");
+    exit(1);
+  }
 }
 
-void Curator::GenerateLogFile(char *sim_name) {
+void Curator::GenerateLogFile() {
 
   char log_file[256];
-  sprintf(log_file, "%s.log", sim_name);
+  sprintf(log_file, "%s.log", sim_name_);
   // Check to see if sim files already exist
   if (FileExists(log_file)) {
     printf("Simulation log file with this name already exists!\n");
@@ -78,8 +78,8 @@ void Curator::GenerateLogFile(char *sim_name) {
         printf("Simulation terminated.\n");
         exit(1);
       } else if (response == "y" or response == "Y") {
-        printf("Very well.");
-        printf(" Overwriting data for sim '%s'\n\n", sim_name);
+        printf("Very well. ");
+        printf("Overwriting data for sim '%s'\n\n", sim_name_);
         response_unacceptable = false;
       } else {
         printf("ayo I said y or n. try again plz\n");
@@ -95,24 +95,24 @@ void Curator::GenerateLogFile(char *sim_name) {
   log_file_ = OpenFile(log_file, "w");
 }
 
-void Curator::GenerateDataFiles(char *sim_name) {
+void Curator::GenerateDataFiles() {
 
   char occupancy_file[256], motor_ID_file[256], xlink_ID_file[256],
       tether_coord_file[256], mt_coord_file[256], motor_extension_file[256],
       xlink_extension_file[256], motor_force_file[256], xlink_force_file[256],
       total_force_file[256], motor_head_status_file[256];
   // Generate names of output files based on the input simulation name
-  sprintf(occupancy_file, "%s_occupancy.file", sim_name);
-  sprintf(motor_ID_file, "%s_motorID.file", sim_name);
-  sprintf(xlink_ID_file, "%s_xlinkID.file", sim_name);
-  sprintf(tether_coord_file, "%s_tether_coord.file", sim_name);
-  sprintf(mt_coord_file, "%s_mt_coord.file", sim_name);
-  sprintf(motor_extension_file, "%s_motor_extension.file", sim_name);
-  sprintf(xlink_extension_file, "%s_xlink_extension.file", sim_name);
-  sprintf(motor_force_file, "%s_motor_force.file", sim_name);
-  sprintf(xlink_force_file, "%s_xlink_force.file", sim_name);
-  sprintf(total_force_file, "%s_total_force.file", sim_name);
-  sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name);
+  sprintf(occupancy_file, "%s_occupancy.file", sim_name_);
+  sprintf(motor_ID_file, "%s_motorID.file", sim_name_);
+  sprintf(xlink_ID_file, "%s_xlinkID.file", sim_name_);
+  sprintf(tether_coord_file, "%s_tether_coord.file", sim_name_);
+  sprintf(mt_coord_file, "%s_mt_coord.file", sim_name_);
+  sprintf(motor_extension_file, "%s_motor_extension.file", sim_name_);
+  sprintf(xlink_extension_file, "%s_xlink_extension.file", sim_name_);
+  sprintf(motor_force_file, "%s_motor_force.file", sim_name_);
+  sprintf(xlink_force_file, "%s_xlink_force.file", sim_name_);
+  sprintf(total_force_file, "%s_total_force.file", sim_name_);
+  sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name_);
   // Open occupancy file, which stores the species ID of each occupant
   // (or -1 for none) for all MT sites during data collection (DC)
   properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
@@ -151,33 +151,33 @@ void Curator::GenerateDataFiles(char *sim_name) {
     printf("test mode is %s\n", test_mode_);
     if (strcmp(test_mode_, "bind_ii") == 0) {
       char bind_ii_test_file[256];
-      sprintf(bind_ii_test_file, "%s_bind_ii_test_data.file", sim_name);
+      sprintf(bind_ii_test_file, "%s_bind_ii_test_data.file", sim_name_);
       properties_->bind_ii_test_file_ = OpenFile(bind_ii_test_file, "w");
-    } else if (test_mode_ == "xlink_bind_i_teth") {
-
-    } else {
-      Log("Error; valid test choices are: 'bind_ii' & 'xlink_bind_i_teth'\n");
     }
   }
 }
 
-void Curator::ParseParameters(char *param_file) {
+void Curator::ParseParameters() {
 
   // Check to make sure param file actually exists
-  if (!FileExists(param_file)) {
+  if (!FileExists(param_file_)) {
     Log("  Error: parameter file does not exist; aborting\n");
     exit(1);
   }
 
   // Parse parameter file into a YAML node
-  YAML::Node input = YAML::LoadFile(param_file);
+  YAML::Node input = YAML::LoadFile(param_file_);
   // Transfer values from input param node to system_parameters structure
   try {
     parameters_->seed = input["seed"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
-    parameters_->seed = (long)(input["seed"].as<double>());
+    parameters_->seed = (unsigned long)(input["seed"].as<double>());
   }
-  parameters_->n_steps = input["n_steps"].as<unsigned long>();
+  try {
+    parameters_->n_steps = input["n_steps"].as<unsigned long>();
+  } catch (const YAML::BadConversion error) {
+    parameters_->n_steps = (unsigned long)input["n_steps"].as<double>();
+  }
   parameters_->n_datapoints = input["n_datapoints"].as<int>();
   parameters_->data_threshold = input["data_threshold"].as<int>();
   parameters_->delta_t = input["delta_t"].as<double>();
@@ -237,9 +237,9 @@ void Curator::ParseParameters(char *param_file) {
   parameters_->xlinks.interaction_energy =
       xlinks["interaction_energy"].as<double>();
   // Store params pointer as parameters_ in Curator
-  int n_steps = parameters_->n_steps;
-  double delta_t = parameters_->delta_t;
-  Log("Reading params from %s:\n\n", param_file);
+  unsigned long n_steps{parameters_->n_steps};
+  double delta_t{parameters_->delta_t};
+  Log("Reading params from %s:\n\n", param_file_);
   Log("  General simulation parameters:\n");
   Log("    seed = %lu\n", parameters_->seed);
   Log("    n_steps = %lu\n", parameters_->n_steps);
@@ -250,7 +250,16 @@ void Curator::ParseParameters(char *param_file) {
   Log("    eta = %g (pN*s)/um^2\n", parameters_->eta);
   Log("\n  Microtubule (mt) parameters:\n");
   Log("    count = %i\n", parameters_->microtubules.count);
+  // Check to make sure there are enough vector entries for given MT count
   int n_lengths = input["microtubules"]["length"].size();
+  int n_start_coords = input["microtubules"]["start_coord"].size();
+  int n_immo = input["microtubules"]["immobile_until"].size();
+  if (parameters_->microtubules.count > n_lengths or
+      parameters_->microtubules.count > n_start_coords or
+      parameters_->microtubules.count > n_immo) {
+    Log("\nToo few parameters input for microtubules\n");
+    ErrorExit("Curator::ParseParameters()");
+  }
   for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
     Log("    length = %i sites for mt %i\n",
         parameters_->microtubules.length[i_mt], i_mt);
@@ -260,13 +269,10 @@ void Curator::ParseParameters(char *param_file) {
   Log("    radius = %g nm\n", parameters_->microtubules.radius);
   Log("    elevation = %g nm above surface\n",
       parameters_->microtubules.elevation);
-  // Check to make sure there are enough vector entries for given MT count
-  int n_start_coords = input["microtubules"]["start_coord"].size();
   for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
     double start_coord = parameters_->microtubules.start_coord[i_mt];
     Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
   }
-  int n_immo = input["microtubules"]["immobile_until"].size();
   for (int i_mt = 0; i_mt < n_immo; i_mt++) {
     double immo = parameters_->microtubules.immobile_until[i_mt];
     Log("    immobile until = %g s for mt %i\n", immo, i_mt);

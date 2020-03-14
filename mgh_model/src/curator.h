@@ -24,6 +24,8 @@ public:
   double t_motors_[4];
   double t_xlinks_[4];
   double t_MTs_[4];
+  char *param_file_{nullptr};
+  char *sim_name_{nullptr};
   char *test_mode_{nullptr};
 
   struct timespec pause_dur_;
@@ -34,10 +36,10 @@ public:
 private:
   FILE *OpenFile(const char *file_name, const char *type);
   bool FileExists(std::string file_name);
-  void CheckArgs(char *exe_name, int argc);
-  void GenerateLogFile(char *sim_name);
-  void GenerateDataFiles(char *sim_name);
-  void ParseParameters(char *param_file);
+  void CheckArgs(char *agrv[]);
+  void GenerateLogFile();
+  void GenerateDataFiles();
+  void ParseParameters();
   void SetLocalParameters();
   void InitializeSimObjects();
   void OutputData();

@@ -1,13 +1,13 @@
 clear all;
 % Input parameters
-baseName = "test_overlap4";
+baseName = "mt_diffusion_100_0";
 seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in microns
 % Set file directory
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
-log_file = sprintf(fileDirectory, sprintf('%s.log', sprintf(baseName, seeds(1))));
+log_file = sprintf(fileDirectory, sprintf('%s.log', baseName)) %, seeds(1)));
 % Open log file and parse it into param labels & their values
 log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
 params = log{1,1};
@@ -15,10 +15,10 @@ values = log{1,2};
 % Read in number of MTs
 n_mts = str2double(values{contains(params, "count")});
 % Read in length of each MTs
-[length_one, length_two] = values{contains(params, "length")};
+[length_one, length_two, length_three] = values{contains(params, "length")};
 mt_lengths(1) = sscanf(length_one, '%i');
 mt_lengths(2) = sscanf(length_two, '%i');
-% mt_lengths(3) = sscanf(length_three, '%i');
+ mt_lengths(3) = sscanf(length_three, '%i');
 % Read in system parameters
 n_steps = str2double(values{contains(params, "n_steps")});
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');

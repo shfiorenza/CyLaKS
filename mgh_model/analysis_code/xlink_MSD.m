@@ -1,4 +1,4 @@
-%{
+
 clear all;
 % Often-changed variables
 simName = 'xlink_diffusion_double';
@@ -6,7 +6,7 @@ n_sites = [5000, 5000];
 max_sites = max(n_sites);
 n_mts = length(n_sites);
 starting_point = 001;
-max_tau = 3;  % in seconds
+max_tau = 3.6;  % in seconds
 % Pseudo-constant variables
 delta_t = 0.000025;
 n_steps = 60000000;
@@ -34,13 +34,14 @@ mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
 min_tau = time_per_datapoint;
 tau_increment = time_per_datapoint;
-n_taus = (max_tau - min_tau) / tau_increment + 1;
-max_tau_step = max_tau / time_per_datapoint;
+
+taus = min_tau : tau_increment : max_tau;
+n_taus = length(taus);
 
 squared_displacements = zeros(n_taus, n_datapoints);
 n_entries = zeros(n_taus, 1);
 for i_tau = 1 : n_taus
-    tau = min_tau + (i_tau - 1) * tau_increment;
+    tau = taus(i_tau); % min_tau + (i_tau - 1) * tau_increment;
     tau_step = int32(tau / time_per_datapoint);
     for i_data = (tau_step + starting_point) : n_datapoints
         % Data from current time point
@@ -122,17 +123,19 @@ D = fit(2) / 2
 
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600])
-
-% Plot fit
-plot(taus, taus_padded * fit, '--', 'LineWidth',  2)
-hold on
 % Plot data
 errorbar(taus, MSD, MSD_err, 'o', 'MarkerSize', 10, 'LineWidth', 2);
-ylabel('MSD (\mum^2)');
-xlabel('Tau (s)');
-%xlim([0.0 (max_tau + starting_tau)]);
-legend('Fit', 'Data', 'location', 'northeastoutside');
-
-dim = [0.18 0.75 .1 .1];
-str = sprintf('D_{obs} = %#.3g um^2s^{-1}', D);
-annotation('textbox',dim,'String',str,'FitBoxToText','on');
+hold on
+% Plot fit
+plot(taus, taus_padded * fit, '--', 'LineWidth',  2)
+ylabel('Mean squared displacement (\mum^2)', 'FontSize', 14);
+xlabel('Tau (s)', 'FontSize', 14);
+title('Doubly-bound crosslinkers', 'FontSize', 16);
+legend('Sim data', 'Linear fit', 'location', 'northwest', 'FontSize', 14);
+xlim([0.0 (max_tau + tau_increment)]);
+ax = gca;
+ax.FontSize = 14;
+% Plot D_observed obtained via linear regression
+dim = [0.142 0.7 .5 .1];
+str = sprintf("D_{obs} = %#.3g",D) + " \mum^2s^{-1}";
+annotation('textbox',dim,'String',str,'FitBoxToText','on', 'FontSize', 14);

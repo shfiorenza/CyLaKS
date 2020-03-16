@@ -1,18 +1,16 @@
 clear all;
 % Parameters from sim
-mt_lengths = [125,500];
+mt_lengths = [1000, 500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-%simName = "2019_11_14_endtagScan/endtag_scan_0_250_1";
-%simName = "2019_12_04_slideScan/slide_scan_2.0_525_5";
-simName = "mt_diffusion_1_1";
+simName = "test";
 dur_sec = 60;
 % Pseudo-constant variables
-n_steps = 60000000;
+n_steps = 6000000;
 n_datapoints = 10000;
-start_frame = 4501;
+start_frame = 01;
 end_frame = n_datapoints;
-frames_per_plot = 100;
+frames_per_plot = 1000;
 delta_t = 0.000025; 
 xlink_cutoff = 12;
 cutoff = 19;

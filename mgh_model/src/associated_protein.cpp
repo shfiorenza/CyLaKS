@@ -207,7 +207,7 @@ void AssociatedProtein::UpdateExtension() {
 
 void AssociatedProtein::ForceUnbind() {
 
-  printf("Forced unbind of xlink %i!\n", id_);
+  // printf("Forced unbind of xlink %i!\n", id_);
   // Check to see if xlink has a satellite motor (tethered but not bound)
   bool has_satellite{false};
   if (tethered_) {

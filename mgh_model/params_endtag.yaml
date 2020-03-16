@@ -8,7 +8,7 @@ eta: 0.001
 microtubules:
   count: 1
   length:
-  - 1250
+  - 500
   - 250
   y_dist: 32
   site_size: 8
@@ -23,12 +23,13 @@ microtubules:
   immobile_until:
   - 10000
   - 100
+  applied_force: 0.0
   printout_on: false
   diffusion_on: false
 motors:
   t_active: 0
   k_on: 0.000242
-  c_bulk: 1.5
+  c_bulk: 0.0 # 1.5
   c_eff_bind: 800000
   k_on_ATP: 2500
   c_ATP: 2
@@ -49,12 +50,12 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238
-  c_bulk: 0.0 # 0.1
-  c_eff_bind: 2500
+  c_bulk: 0.0 # 0.9056
+  c_eff_bind: 4500
   k_off_i: 0.143
   k_off_ii: 0.0143
   r_0: 32
   k_spring: 0.453
   diffu_coeff_i: 0.131
   diffu_coeff_ii: 0.0655
-  interaction_energy: 2.25
+  interaction_energy: 2.5 

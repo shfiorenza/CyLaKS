@@ -42,13 +42,12 @@ void Microtubule::SetParameters() {
     }
   }
   double site_size{parameters_->microtubules.site_size};
-  /*
   double length{n_sites_ * site_size};                   // in nm
   double diameter{2 * parameters_->microtubules.radius}; // in nm
   double eta{parameters_->eta * 1e-06}; // in (pN*s)/nm^2 after conversion
   // From The Theory of Polymer Dynamics by Doi & Edwards, pg. 296 eq 8.20
   gamma_ = (2 * M_PI * eta * length) / log(length / diameter);
-  */
+  /*
   double big_l = n_sites_ * site_size;   // in nm
   double eta = parameters_->eta * 1e-06; // in (pN*s)/nm^2 after conversion
   double radius = parameters_->microtubules.radius;    // in nm
@@ -57,13 +56,10 @@ void Microtubule::SetParameters() {
   double numerator = (2 * 3.14159 * big_l * eta);
   double denom = log(2 * height / radius);
   gamma_ = (numerator / denom);
+  */
   double diffusion_const{parameters_->kbT / gamma_};
   tau_ = site_size * site_size / (2 * diffusion_const);
-  if (tau_ > parameters_->delta_t) {
-    steps_per_iteration_ = (int)ceil(tau_ / parameters_->delta_t);
-  } else {
-    steps_per_iteration_ = 1;
-  }
+  steps_per_iteration_ = (int)ceil(tau_ / parameters_->delta_t);
   wally_->Log("\nFor microtubule #%i:\n", index_);
   wally_->Log("    Length = %i sites\n", n_sites_);
   wally_->Log("    Gamma = %g (pN*s)/nm\n", gamma_);

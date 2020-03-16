@@ -216,8 +216,7 @@ void MicrotubuleManagement::RunDiffusion() {
   double kbT{parameters_->kbT};
   double site_size{parameters_->microtubules.site_size};
   // Sum up all forces exerted on each microtubule
-  double forces_summed[n_mts] = {0.0, 0.0};
-  /*
+  double forces_summed[n_mts];
   properties_->prc1.Update_Extensions();
   properties_->kinesin4.Update_Extensions();
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
@@ -230,7 +229,6 @@ void MicrotubuleManagement::RunDiffusion() {
   if (delta > tolerance) {
     properties_->wallace.ErrorExit("MT_MGMT::RunDiffusion() [1]");
   }
-  */
   // Calculate the displacement of each microtubule (in n_sites)
   int displacement[n_mts];
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {

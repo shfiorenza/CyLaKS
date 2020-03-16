@@ -6,10 +6,9 @@ delta_t: 2.5e-05
 kbT: 4.114
 eta: 0.001
 microtubules:
-  steps_per_iteration: 10
   count: 1
   length: 
-  - 50000
+  - 5000
   - 5000
   y_dist: 32
   site_size: 8
@@ -24,6 +23,7 @@ microtubules:
   immobile_until:
   - 9500
   - 500
+  applied_force: 0.0
   printout_on: false
   diffusion_on: false
 motors:
@@ -31,7 +31,7 @@ motors:
   lattice_coop_range: 750
   t_active: 0
   k_on: 0.000358
-  c_bulk: 0.420
+  c_bulk: 0.0 # 0.420
   c_eff_bind: 800000 # 16000000
   k_on_ATP: 2500
   c_ATP: 2

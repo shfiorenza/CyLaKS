@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
     properties.prc1.RunKMC();
     properties.microtubules.RunDiffusion();
   }
-  // properties.kinesin4.ReportProbabilities();
+  properties.kinesin4.ReportProbabilities();
   properties.prc1.ReportProbabilities();
   // Clean up simulation before exiting
   properties.wallace.CleanUp();

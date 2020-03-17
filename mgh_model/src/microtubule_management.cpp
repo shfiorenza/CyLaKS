@@ -246,7 +246,23 @@ void MicrotubuleManagement::RunDiffusion() {
     // this velocity as the mean of a gaussian distribution. The width of this
     // gaussian represents thermal motion, i.e., diffusion of the MTs
     double dx_mean{velocity * delta_t_eff};
-    double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
+    // double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
+    double dx_sigma{0.0};
+    if (dx_sigma == 0.0) {
+      double dx_sites{dx_mean / site_size};
+      int dx_sites_whole{(int)dx_sites};
+      double dx_sites_leftover{fabs(dx_sites - dx_sites_whole)};
+      double ran{properties_->gsl.GetRanProb()};
+      if (ran < dx_sites_leftover) {
+        if (dx_sites > 0) {
+          dx_sites_whole++;
+        } else {
+          dx_sites_whole++;
+        }
+      }
+      displacement[i_mt] = dx_sites_whole;
+      continue;
+    }
     // Convert mean and sigma from nm to n_sites
     dx_mean /= site_size;
     dx_sigma /= site_size;
@@ -276,6 +292,8 @@ void MicrotubuleManagement::RunDiffusion() {
   }
   // Run through MT list and update displacements
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
+    // printf("dx = %i for mt #%i\n", displacement[i_mt], i_mt);
     mt_list_[i_mt].coord_ += displacement[i_mt];
   }
+  // wally_->PauseSim(2);
 }

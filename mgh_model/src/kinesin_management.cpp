@@ -774,6 +774,10 @@ void KinesinManagement::InitializeEvents() {
 
 void KinesinManagement::ReportProbabilities() {
 
+  if (!population_active_) {
+    return;
+  }
+
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
     auto value = entry.second;

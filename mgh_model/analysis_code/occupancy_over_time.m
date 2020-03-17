@@ -6,7 +6,7 @@ mt_lengths = [1000, 500];
 n_steps = 40000000;
 n_datapoints = 10000;
 delta_t = 0.000025; 
-species_ids = [1, 2];
+species_ids = 1; % [1, 2];
 species_labels = ["xlink", "motor"];
 % Calculated quantities
 n_mts = length(mt_lengths);
@@ -34,7 +34,7 @@ for i_data = 1 : n_datapoints
                 continue;
             end
             fractional_occupancy(i_mt, i_data, species_id) = ...
-                fractional_occupancy(i_mt, i_data, species_id) + 1.0 / n_sites;
+                fractional_occupancy(i_mt, i_data, species_id) + 1.0 / double(n_sites);
         end
     end
 end
@@ -45,6 +45,10 @@ for i_mt = 1 : n_mts
    end
 end
 
+fig1 = figure();
+hold all;
+
 for i_mt = 1 : n_mts
     plot(linspace(0, delta_t * n_steps, n_datapoints), squeeze(fractional_occupancy(i_mt, :, :)));
 end
+legend(["static mt", "dynamic mt"]);

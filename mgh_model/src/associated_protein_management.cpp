@@ -997,6 +997,10 @@ void AssociatedProteinManagement::InitializeTestEvents() {
 
 void AssociatedProteinManagement::ReportProbabilities() {
 
+  if (!population_active_) {
+    return;
+  }
+
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
     auto value = entry.second;
@@ -1581,8 +1585,8 @@ int AssociatedProteinManagement::Set_Bind_II_Teth_Candidates(int n_to_set) {
 
 void AssociatedProteinManagement::RunKMC() {
 
-  // if (properties_->current_step_ > 4997810) {
-  //   verbosity_ = 2;
+  // if (properties_->current_step_ > 926140) {
+  //   verbosity_ = 3;
   // }
   if (!population_active_) {
     return;
@@ -1839,8 +1843,10 @@ void AssociatedProteinManagement::Bind_II(POP_T *bound_head) {
   } else {
     site = bound_head->xlink_->GetWeightedSite_Bind_II_Teth();
   }
+  // In case another crosslinker binds and takes up the only available neighbor
   if (site == nullptr) {
-    wally_->ErrorExit("AP_MGMT::Bind_II()");
+    return;
+    // wally_->ErrorExit("AP_MGMT::Bind_II()");
   }
   site->xlink_head_ = unbound_head;
   site->occupied_ = true;

@@ -7,7 +7,7 @@ site_size = 0.008; % in microns
 % Set file directory
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
-log_file = sprintf(fileDirectory, sprintf('%s.log', baseName)) %, seeds(1)));
+log_file = sprintf(fileDirectory, sprintf('%s.log', baseName)); %, seeds(1)));
 % Open log file and parse it into param labels & their values
 log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
 params = log{1,1};

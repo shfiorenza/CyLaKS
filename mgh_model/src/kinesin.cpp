@@ -607,6 +607,16 @@ double Kinesin::GetWeight_Unbind_II() {
   return corrected_weight;
 }
 
+double Kinesin::GetWeight_Unbind_I() {
+
+  Monomer *bound_head{GetActiveHead()};
+  double raw_weight{bound_head->site_->weight_unbind_};
+  double corrected_weight{raw_weight};
+  // To prevent self-cooperativity, divide by self weights
+  corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[0];
+  return corrected_weight;
+}
+
 double Kinesin::GetTotalWeight_Tether_Bound() {
 
   double tot_weight{0.0};

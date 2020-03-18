@@ -1629,7 +1629,7 @@ double KinesinManagement::GetWeight_Unbind_I() {
   double weight{0.0};
   for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
     POP_T *head = std::get<POP_T *>(unbind_i_candidates_[i_entry]);
-    weight += head->site_->weight_unbind_;
+    weight += head->motor_->GetWeight_Unbind_I();
   }
   return weight;
 }
@@ -1785,7 +1785,7 @@ int KinesinManagement::SetCandidates_Unbind_I(int n_to_set) {
   double weight_total{0.0};
   for (int i_entry{0}; i_entry < n_unbind_i_candidates_; i_entry++) {
     POP_T *head{std::get<POP_T *>(unbind_i_candidates_[i_entry])};
-    double weight_entry{head->site_->weight_unbind_};
+    double weight_entry{head->motor_->GetWeight_Unbind_I()};
     // If entry has a weight of 0.0, remove it from candidates
     if (weight_entry == 0.0) {
       int i_last{--n_unbind_i_candidates_};

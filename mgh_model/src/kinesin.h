@@ -118,6 +118,7 @@ public:
   double GetWeight_Bind_I_Teth(Tubulin *site);
   double GetWeight_Bind_II();
   double GetWeight_Unbind_II();
+  double GetWeight_Unbind_I();
   double GetWeight_Tether_Bound(AssociatedProtein *xlink);
   double GetTotalWeight_Bind_I_Teth();
   double GetTotalWeight_Tether_Bound();

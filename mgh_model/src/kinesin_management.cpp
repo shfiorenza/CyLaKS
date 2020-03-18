@@ -1883,6 +1883,10 @@ void KinesinManagement::RunKMC() {
 
 void KinesinManagement::UpdateLists() {
 
+  if (lists_up_to_date_) {
+    return;
+  }
+
   Update_Extensions();
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
@@ -2009,6 +2013,7 @@ void KinesinManagement::ExecuteEvents() {
 
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     events_to_exe_[i_event]->Execute();
+    lists_up_to_date_ = false;
   }
 }
 

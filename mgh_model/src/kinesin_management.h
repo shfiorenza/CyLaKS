@@ -28,6 +28,7 @@ private:
   bool population_active_{false};
   bool lattice_coop_active_{false};
   bool tethering_active_{false};
+  bool lists_up_to_date_{false};
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};

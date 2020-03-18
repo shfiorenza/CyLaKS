@@ -1,13 +1,14 @@
 
 clear all;
 % Often-changed variables
+conc = 20;
 n_sites = 5000;
-simName = 'lattice_coop_2.5_1.25';
+simName = sprintf("test_%i", conc); %'test_220';
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 4000000; %0;
-n_datapoints = 10000;
+n_steps = 420 * 8000000 / conc;%4000000;
+n_datapoints = 100000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
@@ -91,8 +92,8 @@ for i_data = starting_point:1:n_datapoints - 1
                 run_length = delta * site_size;
                 % Calculate time bound
                 start_datapoint = starting_datapoint(motor_ID);
-                delta_t = abs(i_data - start_datapoint);
-                run_time = delta_t * time_per_datapoint;
+                delta_time = abs(i_data - start_datapoint);
+                run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
                 if run_time > time_cutoff  && end_site(1) > endtag_boundary

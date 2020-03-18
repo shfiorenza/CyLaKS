@@ -150,14 +150,6 @@ public:
   void Update_Bound_Unteth();
   void Update_Free_Teth();
 
-  double GetWeight_Bind_II();
-  double GetWeight_Bind_I_Teth();
-  double GetWeight_Bind_II_Teth();
-
-  int Set_Bind_II_Candidates(int n_to_set);
-  int Set_Bind_I_Teth_Candidates(int n_to_set);
-  int Set_Bind_II_Teth_Candidates(int n_to_set);
-
   void RunKMC();
   void UpdateLists();
   void SampleEventStatistics();

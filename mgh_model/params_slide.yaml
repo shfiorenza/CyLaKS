@@ -1,5 +1,5 @@
 seed: 198261346419
-n_steps: 6000000 # 0
+n_steps: 60000000
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 2.5e-05
@@ -49,11 +49,11 @@ motors:
   tethers_active: true
   endpausing_active: true
 xlinks:
-  k_on: 0.0238 # 0.000238
+  k_on: 0.000238 
   c_bulk: 0.54
-  c_eff_bind: 4500
+  c_eff_bind: 45000
   k_off_i: 0.143
-  k_off_ii: 143
+  k_off_ii: 143 # 0.143
   r_0: 32
   k_spring: 0.453
   diffu_coeff_i: 0.131

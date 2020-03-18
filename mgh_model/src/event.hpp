@@ -6,6 +6,13 @@
 
 template <typename ENTRY_T> class Event {
 private:
+  // Whether or not this event uses poisson-based statistics
+  bool poisson_based_{false};
+  // Poisson based jawns
+  double poisson_weight_total_;
+  std::vector<double> poisson_weights_;
+  std::function<double(ENTRY_T)> get_weight_;
+  std::function<double(void)> get_ran_prob_;
   // Pointer to list of available targets to act on; dynamically updated
   std::vector<ENTRY_T> *target_pool_;
   // Function that actually executes this event
@@ -18,8 +25,6 @@ private:
 public:
   unsigned long n_executed_tot_{0};
   unsigned long n_opportunities_tot_{0};
-  // Targets that this event will act on this timestep
-  std::vector<ENTRY_T> targets_;
   // Expected number of events to occur for current given timestep
   int n_expected_{0};
   // Pointer to no. of specific targets this event can act on; dynamic
@@ -28,6 +33,8 @@ public:
   double p_occur_{0.0};
   // Name of this event, e.g., "Bind_II_Teth"
   std::string name_{"bruh"};
+  // Targets that this event will act on this timestep
+  std::vector<ENTRY_T> targets_;
 
 private:
   void SetTargets() {
@@ -40,19 +47,38 @@ private:
       targets_[i_entry] = target_pool_->at(indices[i_entry]);
     }
   }
+  void SampleStatistics_Poisson();
+  void SetTargets_Poisson();
 
 public:
   Event(std::string name, double p_occur, int *n_avail,
         std::vector<ENTRY_T> *target_pool,
         std::function<void(ENTRY_T)> exe_funct,
         std::function<int(double, int)> prob_dist,
-        std::function<void(int *, int, int)> get_ran_indices)
+        std::function<void(int *, int, int)> set_ran_indices)
       : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
         target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
-        set_ran_indices_{get_ran_indices} {}
+        set_ran_indices_{set_ran_indices} {}
+  Event(std::string name, double p_occur, int *n_avail,
+        std::vector<ENTRY_T> *target_pool,
+        std::function<void(ENTRY_T)> exe_funct,
+        std::function<double(ENTRY_T)> get_weight,
+        std::function<int(double, int)> prob_dist,
+        std::function<double(void)> get_ran_prob,
+        std::function<void(int *, int, int)> set_ran_indices)
+      : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
+        target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
+        get_weight_{get_weight}, get_ran_prob_{get_ran_prob},
+        set_ran_indices_{set_ran_indices} {
+    poisson_based_ = true;
+  }
   int SampleStatistics() {
     n_opportunities_tot_ += *n_avail_;
-    n_expected_ = prob_dist_(p_occur_, *n_avail_);
+    if (poisson_based_) {
+      SampleStatistics_Poisson();
+    } else {
+      n_expected_ = prob_dist_(p_occur_, *n_avail_);
+    }
     SetTargets();
     return n_expected_;
   }

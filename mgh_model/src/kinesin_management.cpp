@@ -16,6 +16,8 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   InitializeLists();
   if (wally_->test_mode_ == nullptr) {
     InitializeEvents();
+  } else {
+    t_active_ = std::numeric_limits<double>::max();
   }
 }
 
@@ -777,7 +779,6 @@ void KinesinManagement::ReportProbabilities() {
   if (!population_active_) {
     return;
   }
-
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
     auto value = entry.second;

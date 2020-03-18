@@ -556,6 +556,8 @@ void AssociatedProteinManagement::InitializeLists() {
 
 void AssociatedProteinManagement::InitializeEvents() {
 
+  /* * Function that gets a random probability in [0, 1) * */
+  auto get_ran_prob = [&]() { return properties_->gsl.GetRanProb(); };
   /* * Function that sets n random indices from the range [0, m) * */
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
@@ -564,12 +566,19 @@ void AssociatedProteinManagement::InitializeEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  /* * Binomial distribution; sampled to predict most events * */
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
     }
     return properties_->gsl.SampleBinomialDist(p, n);
+  };
+  /* * Poisson distribution; sampled to predict variable-rate events * */
+  auto poisson = [&](double p, int n) {
+    if (p == 0.0) {
+      return 0;
+    }
+    return properties_->gsl.SamplePoissonDist(p);
   };
   /* * Event entries * */
   std::string event_name; // scratch space to construct each event name
@@ -677,6 +686,7 @@ void AssociatedProteinManagement::InitializeEvents() {
   }
   // Bind_I_Teth: same as above but for tethered unbound xlinks (satellites)
   if (tethering_active_) {
+    /*
     event_name = "bind_i_teth";
     auto exe_bind_i_teth = [&](ENTRY_T target) {
       Bind_I_Teth(std::get<POP_T *>(target));
@@ -699,6 +709,7 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_avg_bind_i_teth_,
                          &n_bind_i_teth_candidates_, &bind_i_teth_candidates_,
                          exe_bind_i_teth, poisson_i_teth, set_ran_indices);
+    */
   }
   // Bind II: binds the second crosslinker head to adjacent microtubule
   if (crosslinking_active_) {
@@ -710,29 +721,20 @@ void AssociatedProteinManagement::InitializeEvents() {
         wally_->ErrorExit("AP_MGMT::Bind_II()");
       }
     };
-    // Poisson dist. is used w/ partition function for E-dependent binding
-    auto poisson_ii = [&](double p, int n) {
-      double weight{GetWeight_Bind_II()};
-      if (weight == 0.0) {
-        return 0;
+    auto weight_bind_ii = [&](ENTRY_T target) {
+      try {
+        return std::get<POP_T *>(target)->xlink_->GetTotalWeight_Bind_II();
+      } catch (...) {
+        wally_->ErrorExit("AP_MGMT::Weight_Bind_II()");
       }
-      int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
-      if (n_expected > 0) {
-        if (n_expected > n) {
-          wally_->Log("Rescaled n_bind_ii from %i to %i\n", n_expected, n);
-          n_expected = n;
-        }
-        int n_removed{Set_Bind_II_Candidates(n_expected)};
-        n_expected -= n_removed;
-      }
-      return n_expected;
     };
     events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
-                         &bind_ii_candidates_, exe_bind_ii, poisson_ii,
-                         set_ran_indices);
+                         &bind_ii_candidates_, exe_bind_ii, weight_bind_ii,
+                         poisson, get_ran_prob, set_ran_indices);
   }
   // Bind_II_Teth: same as above but for tethered population
   if (tethering_active_ and crosslinking_active_) {
+    /*
     event_name = "bind_ii_teth";
     auto exe_bind_ii_teth = [&](ENTRY_T target) {
       Bind_II(std::get<POP_T *>(target));
@@ -755,6 +757,7 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_avg_bind_ii_,
                          &n_bind_ii_teth_candidates_, &bind_ii_teth_candidates_,
                          exe_bind_ii_teth, poisson_ii_teth, set_ran_indices);
+    */
   }
   // Unbind II: unbinds a head of doubly-bound crosslinkers
   auto exe_unbind_ii = [&](ENTRY_T target) {
@@ -905,8 +908,16 @@ void AssociatedProteinManagement::InitializeTestEvents() {
       head->xlink_->UpdateExtension();
       bind_ii_stats_[head->xlink_->x_dist_].first++;
     };
+    auto weight_bind_ii = [&](ENTRY_T target) {
+      try {
+        return std::get<POP_T *>(target)->xlink_->GetTotalWeight_Bind_II();
+      } catch (...) {
+        wally_->ErrorExit("AP_MGMT::Weight_Bind_II()");
+      }
+    };
+    auto get_ran_prob = [&]() { return properties_->gsl.GetRanProb(); };
     // Poisson dist. is used w/ partition function for E-dependent binding
-    auto poisson_ii = [&](double p, int n) {
+    auto poisson = [&](double p, int n) {
       for (int x{0}; x <= dist_cutoff_; x++) {
         if (x == 0) {
           // Only one site (directly above) can be bound to for this config
@@ -917,24 +928,14 @@ void AssociatedProteinManagement::InitializeTestEvents() {
           bind_ii_stats_[x].second += 2 * n_bind_ii_candidates_;
         }
       }
-      double weight{GetWeight_Bind_II()};
-      if (weight == 0.0) {
+      if (p == 0.0) {
         return 0;
       }
-      int n_expected{properties_->gsl.SamplePoissonDist(p * weight)};
-      if (n_expected > 0) {
-        if (n_expected > n) {
-          wally_->Log("Rescaled Bind_II exp from %i to %i\n", n_expected, n);
-          n_expected = n;
-        }
-        int n_removed{Set_Bind_II_Candidates(n_expected)};
-        n_expected -= n_removed;
-      }
-      return n_expected;
+      return properties_->gsl.SamplePoissonDist(p);
     };
     events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
-                         &bind_ii_candidates_, exe_bind_ii, poisson_ii,
-                         set_ran_indices);
+                         &bind_ii_candidates_, exe_bind_ii, weight_bind_ii,
+                         poisson, get_ran_prob, set_ran_indices);
 
     // Unbind II: unbinds a head of doubly-bound crosslinkers
     auto exe_unbind_ii = [&](ENTRY_T target) {
@@ -952,6 +953,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
     }
   }
   if (strcmp(wally_->test_mode_, "xlink_bind_i_teth") == 0) {
+    /*
     // Bind_I_Teth: same as above but for tethered unbound xlinks (satellites)
     event_name = "bind_i_teth";
     auto exe_bind_i_teth = [&](ENTRY_T target) {
@@ -992,6 +994,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
                              exe_unbind_i_teth, binomial, set_ran_indices);
       }
     }
+    */
   }
 }
 
@@ -1357,51 +1360,7 @@ void AssociatedProteinManagement::Update_Free_Teth() {
   }
 }
 
-double AssociatedProteinManagement::GetWeight_Bind_II() {
-
-  if (verbosity_ >= 1) {
-    wally_->Log(" Starting AP_MGMT::GetWeight_Bind_II()\n");
-  }
-  double weight{0.0};
-  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
-    POP_T *head{std::get<POP_T *>(bind_ii_candidates_[i_entry])};
-    weight += head->xlink_->GetTotalWeight_Bind_II();
-  }
-  return weight;
-}
-
-double AssociatedProteinManagement::GetWeight_Bind_I_Teth() {
-
-  if (verbosity_ >= 1) {
-    wally_->Log("Starting AP_MGMT::GetWeight_Bind_I_Teth()\n");
-  }
-  double weight{0.0};
-  for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
-    POP_T *head{std::get<POP_T *>(bind_i_teth_candidates_[i_entry])};
-    weight += head->xlink_->GetTotalWeight_Bind_I_Teth();
-  }
-  return weight;
-}
-
-double AssociatedProteinManagement::GetWeight_Bind_II_Teth() {
-
-  if (verbosity_ >= 1) {
-    wally_->Log("Starting AP_MGMT::GetWeight_Bind_II_Teth()\n");
-  }
-  if (verbosity_ >= 2) {
-    wally_->Log("   %i candidates\n", n_bind_ii_teth_candidates_);
-  }
-  double weight{0.0};
-  for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
-    if (verbosity_ >= 2) {
-      wally_->Log("   accessing entry #%i\n", i_entry);
-    }
-    POP_T *head{std::get<POP_T *>(bind_ii_teth_candidates_[i_entry])};
-    weight += head->xlink_->GetTotalWeight_Bind_II_Teth();
-  }
-  return weight;
-}
-
+/*
 int AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
 
   if (verbosity_ >= 1) {
@@ -1474,114 +1433,7 @@ int AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
   }
   return n_removed;
 }
-
-int AssociatedProteinManagement::Set_Bind_I_Teth_Candidates(int n_to_set) {
-
-  if (verbosity_ >= 1) {
-    wally_->Log(" Starting AP_MGMT::Set_Bind_I_Teth_Candidates()\n");
-  }
-  double weight[n_bind_i_teth_candidates_];
-  double weight_total{0.0};
-  for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
-    POP_T *head = std::get<POP_T *>(bind_i_teth_candidates_[i_entry]);
-    double weight_xlink{head->xlink_->GetTotalWeight_Bind_I_Teth()};
-    // If entry has a weight of 0.0, remove it from candidates
-    if (weight_xlink == 0.0) {
-      int i_last{--n_bind_i_teth_candidates_};
-      bind_i_teth_candidates_[i_entry] = bind_i_teth_candidates_[i_last];
-      i_entry--;
-      // If we have zero valid candidates, set n_expected to 0 in SampleStats
-      if (n_bind_i_teth_candidates_ == 0) {
-        return n_to_set;
-      }
-      continue;
-    }
-    weight[i_entry] = weight_xlink;
-    weight_total += weight[i_entry];
-  }
-  if (weight_total == 0.0) {
-    wally_->ErrorExit(" AP_MGMT::Set_Bind_I_Teth_Candidates()");
-  }
-  int n_removed{0};
-  if (n_to_set > n_bind_i_teth_candidates_) {
-    n_removed = n_to_set - n_bind_i_teth_candidates_;
-    n_to_set = n_bind_i_teth_candidates_;
-  }
-  ENTRY_T selected_candidates[n_to_set];
-  for (int i_set{0}; i_set < n_to_set; i_set++) {
-    double p_cum{0.0};
-    double ran{properties_->gsl.GetRanProb()};
-    for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
-      p_cum += (weight[i_entry] / weight_total);
-      if (ran < p_cum) {
-        selected_candidates[i_set] = bind_i_teth_candidates_[i_entry];
-        weight_total -= weight[i_entry];
-        weight[i_entry] = weight[n_bind_i_teth_candidates_ - 1];
-        n_bind_i_teth_candidates_--;
-        break;
-      }
-    }
-  }
-  n_bind_i_teth_candidates_ = n_to_set;
-  for (int i_entry{0}; i_entry < n_bind_i_teth_candidates_; i_entry++) {
-    bind_i_teth_candidates_[i_entry] = selected_candidates[i_entry];
-  }
-  return n_removed;
-}
-
-int AssociatedProteinManagement::Set_Bind_II_Teth_Candidates(int n_to_set) {
-
-  if (verbosity_ >= 1) {
-    wally_->Log(" Starting AP_MGMT::Set_Bind_II_Teth_Candidates()\n");
-  }
-  double weight[n_bind_ii_teth_candidates_];
-  double weight_total{0.0};
-  for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
-    POP_T *head = std::get<POP_T *>(bind_ii_teth_candidates_[i_entry]);
-    double weight_xlink{head->xlink_->GetTotalWeight_Bind_II_Teth()};
-    // If entry has a weight of 0.0, remove it from candidates
-    if (weight_xlink == 0.0) {
-      int i_last{--n_bind_ii_teth_candidates_};
-      bind_ii_teth_candidates_[i_entry] = bind_ii_teth_candidates_[i_last];
-      i_entry--;
-      // If we have zero valid candidates, set n_expected to 0 in SampleStats
-      if (n_bind_ii_teth_candidates_ == 0) {
-        return n_to_set;
-      }
-      continue;
-    }
-    weight[i_entry] = weight_xlink;
-    weight_total += weight[i_entry];
-  }
-  if (weight_total == 0.0) {
-    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Teth_Candidates()\n");
-  }
-  int n_removed{0};
-  if (n_to_set > n_bind_ii_teth_candidates_) {
-    n_removed = n_to_set - n_bind_ii_teth_candidates_;
-    n_to_set = n_bind_ii_teth_candidates_;
-  }
-  ENTRY_T selected_candidates[n_to_set];
-  for (int i_set{0}; i_set < n_to_set; i_set++) {
-    double p_cum{0.0};
-    double ran{properties_->gsl.GetRanProb()};
-    for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
-      p_cum += (weight[i_entry] / weight_total);
-      if (ran < p_cum) {
-        selected_candidates[i_set] = bind_ii_teth_candidates_[i_entry];
-        weight_total -= weight[i_entry];
-        weight[i_entry] = weight[n_bind_ii_teth_candidates_ - 1];
-        n_bind_ii_teth_candidates_--;
-        break;
-      }
-    }
-  }
-  n_bind_ii_teth_candidates_ = n_to_set;
-  for (int i_entry{0}; i_entry < n_bind_ii_teth_candidates_; i_entry++) {
-    bind_ii_teth_candidates_[i_entry] = selected_candidates[i_entry];
-  }
-  return n_removed;
-}
+*/
 
 void AssociatedProteinManagement::RunKMC() {
 

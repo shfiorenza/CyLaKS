@@ -53,16 +53,21 @@ public:
   int n_stacks_{0};
   int n_affinities_{0};
   int n_affinities_tot_{0};
-  // coop stuff
+  // coop stuff -- neighbs
   int max_neighbs_{2};
   Vec<double> weight_neighbs_bind_;
   Vec<double> weight_neighbs_unbind_;
+  // coop stuff -- lattice
+  bool weights_active_{true};
   int lattice_cutoff_{0};
   double lattice_alpha_{0.0};
   double lattice_E_0_solo_{0.0};
-  double weight_lattice_bind_max_{0.0};
+  // Index scheme: [delta], i.e., distance in n_sites
   Vec<double> weight_lattice_bind_;
   Vec<double> weight_lattice_unbind_;
+  // Index scheme: [n_neighbs], since each neighb weight has a unique max
+  Vec<double> weight_lattice_bind_max_;
+  Vec<double> weight_lattice_unbind_max_;
 
   // See kinesin header for meaningful description of below
   int teth_cutoff_{0};
@@ -189,7 +194,8 @@ public:
   void ReportExecutionOf(std::string event_name);
   void ReportFailureOf(std::string event_name);
 
-  void Update_Extensions();
+  void Update_Tether_Extensions();
+  void Update_Lattice_Weights();
   void Update_Docked();
   void Update_Bound_NULL();
   void Update_Bound_NULL_Teth();

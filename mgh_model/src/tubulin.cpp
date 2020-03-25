@@ -100,6 +100,7 @@ int Tubulin::GetKif4ANeighborCount() {
   return n_neighbs;
 }
 
+/*
 void Tubulin::UpdateWeights_Kinesin() {
 
   // Get weight from neighbor interactions
@@ -135,3 +136,4 @@ void Tubulin::UpdateWeights_Kinesin() {
     }
   }
 }
+*/

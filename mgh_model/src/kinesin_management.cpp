@@ -216,7 +216,16 @@ void KinesinManagement::SetParameters() {
   // motor; multiplied together to get total weight for any arrangement
   double site_size{parameters_->microtubules.site_size};
   double lattice_E_max_tot{-1 * parameters_->motors.lattice_coop_Emax_bulk};
-  weight_lattice_bind_max_ = exp(-(1 - lambda_lattice) * lattice_E_max_tot);
+  double wt_lattice_bind_max{exp(-(1 - lambda_lattice) * lattice_E_max_tot)};
+  double wt_lattice_unbind_max{exp(lambda_lattice * lattice_E_max_tot)};
+  weight_lattice_bind_max_.resize(max_neighbs_ + 1);
+  weight_lattice_unbind_max_.resize(max_neighbs_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    weight_lattice_bind_max_[n_neighbs] =
+        wt_lattice_bind_max * weight_neighbs_bind_[n_neighbs];
+    weight_lattice_unbind_max_[n_neighbs] =
+        wt_lattice_unbind_max * weight_neighbs_unbind_[n_neighbs];
+  }
   // printf("wt_lt_b_max = %g\n", weight_lattice_bind_max_);
   weight_lattice_bind_.resize(lattice_cutoff_ + 1);
   weight_lattice_unbind_.resize(lattice_cutoff_ + 1);
@@ -442,10 +451,10 @@ void KinesinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          if (verbosity_ >= 3) {
-            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          }
-          if (value[i][j][k] > 0.5) {
+          // if (verbosity_ >= 3) {
+          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          // }
+          if (value[i][j][k] > 1.0) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             wally_->ErrorExit("Kin_MGMT:SetParameters()");
           }
@@ -951,7 +960,7 @@ void KinesinManagement::InitializeTestEnvironment() {
   if (strcmp(wally_->test_mode_, "motor_lattice_bind") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
     // Disable automatic weight updates
-    properties_->microtubules.weights_active_ = false;
+    weights_active_ = false;
     // Disable neighbor interactions
     parameters_->motors.interaction_energy = 0.0;
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -973,19 +982,16 @@ void KinesinManagement::InitializeTestEnvironment() {
     Tubulin *site{&properties_->microtubules.mt_list_[0].lattice_[i_site]};
     Bind_I(site);
     // Update site weights
-    Microtubule *mt = &properties_->microtubules.mt_list_[0];
-    for (int i_site{0}; i_site < mt->n_sites_; i_site++) {
-      mt->lattice_[i_site].UpdateWeights_Kinesin();
-    }
+    Update_Lattice_Weights();
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
     Microtubule *mt = &properties_->microtubules.mt_list_[0];
     // If test_delta_ is left uninitialized, test checks against self-coop
-    // test_delta_ = 5;
+    test_delta_ = 5;
     if (test_delta_ > 0) {
       // Disable automatic weight updates
-      properties_->microtubules.weights_active_ = false;
+      weights_active_ = false;
       // Disable neighbor interactions
       parameters_->motors.interaction_energy = 0.0;
       for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -1017,6 +1023,9 @@ void KinesinManagement::InitializeTestEvents() {
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
+    }
+    if (p == 1.0) {
+      return n;
     }
     return properties_->gsl.SampleBinomialDist(p, n);
   };
@@ -1065,7 +1074,7 @@ void KinesinManagement::InitializeTestEvents() {
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
     // Bind_ATP: bind ATP to motor heads that have released their ADP
-    event_name = "bind_ATP";
+    event_name = "bind_ATP_0";
     auto exe_bind_ATP = [&](ENTRY_T target) {
       Bind_ATP(std::get<POP_T *>(target));
     };
@@ -1300,7 +1309,58 @@ void KinesinManagement::ReportFailureOf(std::string event_name) {
   std::cout << event_name << std::endl;
 }
 
-void KinesinManagement::Update_Extensions() {
+void KinesinManagement::Update_Lattice_Weights() {
+
+  if (!weights_active_) {
+    return;
+  }
+  MicrotubuleManagement *mts = &properties_->microtubules;
+  // 'Reset' all tubulin weights by setting them to neighbor weights only
+  for (int i_mt{0}; i_mt < mts->mt_list_.size(); i_mt++) {
+    for (int i_site{0}; i_site < mts->mt_list_[i_mt].n_sites_; i_site++) {
+      Tubulin *site{&mts->mt_list_[i_mt].lattice_[i_site]};
+      int n_neighbs{site->GetKif4ANeighborCount()};
+      site->weight_bind_ = weight_neighbs_bind_[n_neighbs];
+      site->weight_unbind_ = weight_neighbs_unbind_[n_neighbs];
+    }
+  }
+  // Add up all lattice deformation weights on top of baseline neighb weights
+  for (int i_entry{0}; i_entry < n_active_; i_entry++) {
+    Kinesin *motor{active_[i_entry]};
+    if (motor->heads_active_ == 0) {
+      continue;
+    }
+    Tubulin *epicenter{nullptr};
+    if (motor->heads_active_ == 1) {
+      epicenter = motor->GetActiveHead()->site_;
+    } else if (motor->head_one_.trailing_) {
+      epicenter = motor->head_one_.site_;
+    } else {
+      epicenter = motor->head_two_.site_;
+    }
+    int i_epicenter{epicenter->index_};
+    for (int delta{1}; delta <= lattice_cutoff_; delta++) {
+      for (int dir{-1}; dir <= 1; dir += 2) {
+        int i_scan{i_epicenter + dir * delta};
+        // Only access sites that exist
+        if (i_scan < 0 or i_scan >= epicenter->mt_->n_sites_) {
+          continue;
+        }
+        Tubulin *site{&epicenter->mt_->lattice_[i_scan]};
+        int n_neighbs{site->GetKif4ANeighborCount()};
+        if (site->weight_bind_ > weight_lattice_bind_max_[n_neighbs]) {
+          site->weight_bind_ = weight_lattice_bind_max_[n_neighbs];
+          site->weight_unbind_ = weight_lattice_unbind_max_[n_neighbs];
+          continue;
+        }
+        site->weight_bind_ *= weight_lattice_bind_[delta];
+        site->weight_unbind_ *= weight_lattice_unbind_[delta];
+      }
+    }
+  }
+}
+
+void KinesinManagement::Update_Tether_Extensions() {
 
   if (!tethering_active_) {
     return;
@@ -1735,8 +1795,7 @@ void KinesinManagement::UpdateLists() {
   if (lists_up_to_date_) {
     return;
   }
-
-  Update_Extensions();
+  Update_Lattice_Weights();
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
   Update_Bound_NULL();
@@ -1746,6 +1805,7 @@ void KinesinManagement::UpdateLists() {
   // Update_Bound_ADPP_I_Stalled();
   Update_Bound_ADPP_II();
   if (parameters_->motors.tethers_active) {
+    Update_Tether_Extensions();
     Update_Free_Teth();
     Update_Bound_NULL_Teth();
     // Update_Bound_ADPP_I_Teth();
@@ -1887,7 +1947,9 @@ void KinesinManagement::ExecuteEvents() {
       wally_->Log("Executing %s\n", events_to_exe_[i_event]->name_.c_str());
     }
     events_to_exe_[i_event]->Execute();
-    lists_up_to_date_ = false;
+    if (events_to_exe_[i_event]->name_ != "bind_ATP_0") {
+      lists_up_to_date_ = false;
+    }
     if (verbosity_ > 1) {
       wally_->Log(" -- Execution successful -- \n");
     }

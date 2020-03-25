@@ -39,6 +39,6 @@ public:
   int GetPRC1NeighborCount();
   int GetKif4ANeighborCount();
 
-  void UpdateWeights_Kinesin();
+  // void UpdateWeights_Kinesin();
 };
 #endif

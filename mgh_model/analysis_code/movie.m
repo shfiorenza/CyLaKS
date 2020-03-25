@@ -1,10 +1,10 @@
 clear all;
 % Parameters from sim
-mt_lengths = [5000];
+mt_lengths = [50000];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'test';
+simName = 'lattice_coop_4.5_2.5_20';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));

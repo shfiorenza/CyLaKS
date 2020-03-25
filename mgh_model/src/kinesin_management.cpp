@@ -988,7 +988,7 @@ void KinesinManagement::InitializeTestEnvironment() {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
     Microtubule *mt = &properties_->microtubules.mt_list_[0];
     // If test_delta_ is left uninitialized, test checks against self-coop
-    test_delta_ = 5;
+    // test_delta_ = 5;
     if (test_delta_ > 0) {
       // Disable automatic weight updates
       weights_active_ = false;

@@ -1,15 +1,14 @@
 
 clear all;
 % Often-changed variables
-conc = 220;
-n_sites = 5000;
-simName = sprintf("lattice_coop_3.0_2.0_%i", conc); %'test_220';
-simName = "test";
+conc = 20;
+n_sites = 50000;
+simName = sprintf("lattice_coop_4.5_2.5_%i", conc); %'test_220';
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.000025;
+delta_t = 0.0002; %0.000025;
 n_steps = 420 * 3600000 / conc;%4000000;
-n_steps = 4000000;
+n_steps = 5000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -43,17 +42,28 @@ for i_data = starting_point:1:n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
-        endtag_boundary = 2;
+        jammed_region = 0;
+        jam_start = -1;
+        n_jammed = 0;
+        %endtag_boundary = 2;
         % Determine end-tag region; ignore motors that terminate here
-        for i_site=1:n_sites
-           motor_ID = future_IDs(i_site);
-           if motor_ID ~= -1
-               endtag_boundary = i_site + 1;
-           else
-               break;    
+        for i_site = 1 : n_sites
+            motor_ID = future_IDs(i_site);
+            if motor_ID ~= -1
+                if jam_start == -1
+                    jam_start = i_site;
+                end
+                n_jammed = n_jammed + 1;
+                %endtag_boundary = i_site + 1;
+            else
+                if n_jammed > 5
+                    jammed_region = [jammed_region jam_start:i_site];
+                end
+                n_jammed = 0;
+                jam_start = -1;  
            end
         end
-        
+        %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -97,9 +107,10 @@ for i_data = starting_point:1:n_datapoints - 1
                 delta_time = abs(i_data - start_datapoint);
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
-                % If time bound is above time cutoff, add to data
-                if run_time > time_cutoff  && end_site(1) > endtag_boundary
-
+                
+                % If time bound is above time cutoff, add to data 
+                % Also ensure that 
+                if isempty(find(jammed_region == end_site, 1))%   run_time > time_cutoff  %&& end_site(1) > endtag_boundary
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;

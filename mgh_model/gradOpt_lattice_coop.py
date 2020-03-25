@@ -19,14 +19,16 @@ log_file = sim_name_base + ".scan"
 param_label = ["interaction_energy", "lattice_coop_alpha",
                "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
 param_initialVal = [2.25, 2.0e-8, 1.25, 2.5]
-param_bounds = ([0.5, 1.25e-8, 0.5, 1.8], [3.0, 5.0e-5, 1.75, 3.0])
+param_bounds = ([0.5, 1.25e-8, 0.5, 1.8], [3.0, 5.0e-5, 1.75, 4.5])
 step_size = [0.5, 1.0e-9, 0.1, 0.1]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
+# n_sites to be used for each conc run, respectively
+n_sites = [105000, 42000, 26250, 17500, 10000, 5000]
 # n_steps (in millions) to be used for each conc run, respectively
-n_steps_mil = [100, 40, 25, 17, 9, 5]
-n_steps = [i * 1000000 for i in n_steps_mil]
+#n_steps_mil = [100, 40, 25, 17, 9, 5]
+#n_steps = [i * 1000000 for i in n_steps_mil]
 # Experimental Kif4A run lengths at each concentration
 exp_runlengths = [0.9735, 1.310, 2.420, 1.659, 1.964, 2.855]
 exp_err_runlengths = [0.18, 0.32, 0.35, 0.94, 0.31, 0.72]
@@ -51,7 +53,6 @@ file_log_handler.setFormatter(format)
 log.addHandler(file_log_handler)
 
 call_no = 0
-
 
 def kif4a_coop_scaling(params):
     global call_no
@@ -81,7 +82,7 @@ def kif4a_coop_scaling(params):
         yaml_edit = "yq w -i " + param_file + " motors."
         call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
              shell=True)  # Convert conc from pM to nM
-        call("yq w -i " + param_file + " n_steps " + repr(n_steps[i_conc]), shell=True)
+        call("yq w -i " + param_file + " microtubules.length[0] " + repr(n_sites[i_conc]), shell=True)
         for i in range(len(params)):
             call(yaml_edit + param_label[i] +
                  " " + repr(params[i]), shell=True)
@@ -99,7 +100,7 @@ def kif4a_coop_scaling(params):
     # Calculate errors
     weighted_errors = []
     for i_conc in range(len(kif4a_conc)):
-        kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]), float(n_steps[i_conc]))
+        kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]), float(n_sites[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
         err_runlength = (

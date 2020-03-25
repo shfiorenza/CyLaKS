@@ -863,7 +863,6 @@ void AssociatedProteinManagement::InitializeEvents() {
 
 void AssociatedProteinManagement::InitializeTestEvents() {
 
-  printf("Initializing test_%s in AP_MGMT\n", wally_->test_mode_);
   std::string event_name;
   /* * Function that sets n random indices from the range [0, m) * */
   auto set_ran_indices = [&](int *indices, int n, int m) {
@@ -881,6 +880,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
     return properties_->gsl.SampleBinomialDist(p, n);
   };
   if (strcmp(wally_->test_mode_, "bind_ii") == 0) {
+    wally_->Log("Initializing test %s\n", wally_->test_mode_);
     // Bind II: binds the second crosslinker head to adjacent microtubule
     auto exe_bind_ii = [&](ENTRY_T target) {
       POP_T *head{nullptr};
@@ -941,6 +941,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
     }
   }
   if (strcmp(wally_->test_mode_, "bind_i_teth") == 0) {
+    wally_->Log("Initializing test %s\n", wally_->test_mode_);
     // Bind_I_Teth: same as above but for tethered unbound xlinks (satellites)
     event_name = "bind_i_teth";
     auto exe_bind_i_teth = [&](ENTRY_T target) {
@@ -1637,14 +1638,11 @@ void AssociatedProteinManagement::SampleEventStatistics() {
   }
   n_events_to_exe_ = 0;
   for (auto &&event : events_) {
-    if (verbosity_ >= 2) {
-      // wally_->Log("Sampling statistics for %s\n", event.name_.c_str());
-    }
     n_events_to_exe_ += event.SampleStatistics();
     // Ensure no funny business occurs with statistics
     if (event.n_expected_ > *event.n_avail_) {
-      printf("Error; %i events expected but only %i available for %s\n",
-             event.n_expected_, *event.n_avail_, event.name_.c_str());
+      wally_->Log("Error; %i events expected but only %i available for %s\n",
+                  event.n_expected_, *event.n_avail_, event.name_.c_str());
       wally_->ErrorExit("AP_MGMT::SampleEventStatistics()");
     }
     if (verbosity_ >= 2 and event.n_expected_ > 0) {

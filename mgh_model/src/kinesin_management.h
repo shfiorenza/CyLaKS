@@ -6,6 +6,7 @@
 struct system_parameters;
 struct system_properties;
 class Curator;
+class RandomNumberManagement;
 
 class KinesinManagement {
 private:
@@ -29,18 +30,24 @@ private:
   bool lattice_coop_active_{false};
   bool tethering_active_{false};
   bool lists_up_to_date_{false};
+  // WALLACE, MISTA
+  Curator *wally_{nullptr};
+  // Pointer to class that manages GSL functions (RNG, sampling, etc.)
+  RandomNumberManagement *gsl_{nullptr};
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
-  // WALLACE, MISTA
-  Curator *wally_{nullptr};
 
 public:
   // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
   // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
-  Vec<std::pair<int, int>> lattice_coop_stats_;
+  Vec<std::pair<int, int>> lattice_bind_stats_;
+  int test_delta_{-1};
+  std::pair<int, int> lattice_step_bind_ii_stats_;
+  std::pair<int, int> lattice_step_unbind_ii_stats_;
+  std::pair<int, int> lattice_step_unbind_i_stats_;
 
   // trash
   int n_stacks_{0};
@@ -166,8 +173,8 @@ private:
   void GenerateMotors();
   void InitializeLists();
   void InitializeEvents();
-  void InitializeTestEvents();
   void InitializeTestEnvironment();
+  void InitializeTestEvents();
 
 public:
   KinesinManagement();
@@ -198,18 +205,6 @@ public:
   void Update_Bound_Unteth();
   void Update_Bound_Teth();
   void Update_Free_Teth();
-
-  double GetWeight_Bind_I_Teth();
-  double GetWeight_Bind_II();
-  double GetWeight_Unbind_II();
-  double GetWeight_Unbind_I();
-  double GetWeight_Tether_Bound();
-
-  int SetCandidates_Bind_I_Teth(int n_to_set); // FIXME
-  int SetCandidates_Bind_II(int n_to_set);
-  int SetCandidates_Unbind_II(int n_to_set);
-  int SetCandidates_Unbind_I(int n_to_set);
-  int SetCandidates_Tether_Bound(int n_to_set); // FIXME
 
   void RunKMC();
   void UpdateLists();

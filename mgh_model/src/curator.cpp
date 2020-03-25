@@ -56,7 +56,8 @@ void Curator::CheckArgs(char *argv[]) {
     printf("test_mode (optional)\n");
     printf("Currently-implemented test modes are:\n");
     printf("    xlink_bind_ii\n");
-    printf("    motor_lattice_coop\n");
+    printf("    motor_lattice_bind\n");
+    printf("    motor_lattice_step\n");
     exit(1);
   }
 }
@@ -540,7 +541,8 @@ void Curator::CloseDataFiles() {
 
 void Curator::ErrorExit(const char *function_name) {
 
-  Log("\nFatal error in %s\n", function_name);
+  Log("\nFatal error in %s\n", sim_name_);
+  Log("Function name: %s\n", function_name);
   Log("Step no: #%i\n", properties_->current_step_);
   Log(" *** EXITING ***\n");
   exit(1);

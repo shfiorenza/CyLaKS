@@ -64,87 +64,6 @@ bool Tubulin::EquilibriumInSameDirection() {
   }
 }
 
-/*
-void Tubulin::UpdateAffinity() {
-
-  int n_affs{properties_->kinesin4.n_affinities_tot_};
-  if (n_affs <= 1) {
-    affinity_ = 0;
-    return;
-  }
-  int n_affs_solo{properties_->kinesin4.n_affinities_};
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / n_affs_solo};
-  if (motor_head_ != nullptr) {
-    int n_stacks{motor_head_->GetCometSize() - 1};
-    int i_aff{n_affs_solo};
-    affinity_ = n_stacks * n_affs_solo + i_aff;
-  }
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        int n_stacks{mt_->lattice_[i_fwd].motor_head_->GetCometSize() - 1};
-        int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
-        affinity_ = n_stacks * n_affs_solo + i_aff;
-        return;
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        int n_stacks{mt_->lattice_[i_bck].motor_head_->GetCometSize() - 1};
-        int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
-        affinity_ = n_stacks * n_affs_solo + i_aff;
-        return;
-      }
-    }
-  }
-  affinity_ = 0;
-}
-
-int Tubulin::GetAffinityExcluding(Kinesin *motor) {
-
-  int n_affs{properties_->kinesin4.n_affinities_tot_};
-  if (n_affs <= 1) {
-    return 0;
-  }
-  int n_affs_solo{properties_->kinesin4.n_affinities_};
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / n_affs_solo};
-  if (motor_head_ != nullptr) {
-    if (motor_head_->motor_ != motor) {
-      int n_stacks{motor_head_->GetCometSize() - 1};
-      int i_aff{n_affs_solo};
-      return n_stacks * n_affs_solo + i_aff;
-    }
-  }
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_fwd].motor_head_->motor_ != motor) {
-          int n_stacks{mt_->lattice_[i_fwd].motor_head_->GetCometSize() - 1};
-          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
-          return n_stacks * n_affs_solo + i_aff;
-        }
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_bck].motor_head_->motor_ != motor) {
-          int n_stacks{mt_->lattice_[i_bck].motor_head_->GetCometSize() - 1};
-          int i_aff{n_affs_solo - ((delta - 1) / bin_size)};
-          return n_stacks * n_affs_solo + i_aff;
-        }
-      }
-    }
-  }
-  return 0;
-}
-*/
-
 int Tubulin::GetPRC1NeighborCount() {
 
   if (properties_->prc1.max_neighbs_ == 0) {
@@ -190,42 +109,28 @@ void Tubulin::UpdateWeights_Kinesin() {
   // Get weight from lattice deformation
   int cutoff{properties_->kinesin4.lattice_cutoff_};
   double wt_max{weight_bind_ * properties_->kinesin4.weight_lattice_bind_max_};
-  for (int delta{0}; delta <= cutoff; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd >= 0 and i_fwd < mt_->n_sites_) {
-      Kinesin::Monomer *head_fwd{mt_->lattice_[i_fwd].motor_head_};
-      if (head_fwd != nullptr) {
-        if (head_fwd->motor_->heads_active_ == 1) {
-          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
-          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
-        }
-        // Forward head is most-recently bound head & thus has a larger effect
-        else if (!head_fwd->trailing_) {
-          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
-          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
-        }
-        if (weight_bind_ >= wt_max) {
-          return;
-        }
+  // Skip delta = 0 to avoid self-coop; will not affect unoccupied sites
+  for (int delta{1}; delta <= cutoff; delta++) {
+    for (int dir{-1}; dir <= 1; dir += 2) {
+      int i_scan{index_ + dir * delta};
+      // Only access sites that exist
+      if (i_scan < 0 or i_scan >= mt_->n_sites_) {
+        continue;
       }
-    }
-    if (delta == 0) {
-      continue;
-    }
-    int i_bck{index_ - delta};
-    if (i_bck >= 0 and i_bck < mt_->n_sites_) {
-      Kinesin::Monomer *head_bck{mt_->lattice_[i_bck].motor_head_};
-      if (head_bck != nullptr) {
-        if (head_bck->motor_->heads_active_ == 1) {
-          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
-          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
-        } else if (!head_bck->trailing_) {
-          weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
-          weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
-        }
-        if (weight_bind_ >= wt_max) {
-          break;
-        }
+      // Only count sites that are occupied by a kinesin motor head
+      Kinesin::Monomer *head{mt_->lattice_[i_scan].motor_head_};
+      if (head == nullptr) {
+        continue;
+      }
+      // Count all singly-bound motors; for doubly-bound motors, only count
+      // trailing head to avoid double-counting
+      if (head->motor_->heads_active_ == 1 or head->trailing_) {
+        weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
+        weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
+      }
+      if (weight_bind_ > wt_max) {
+        weight_bind_ = wt_max;
+        return;
       }
     }
   }

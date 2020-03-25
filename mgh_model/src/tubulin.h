@@ -36,9 +36,6 @@ public:
   // if both are in the same direction w.r.t. this site
   bool EquilibriumInSameDirection();
 
-  // void UpdateAffinity();
-  // int GetAffinityExcluding(Kinesin *motor);
-
   int GetPRC1NeighborCount();
   int GetKif4ANeighborCount();
 

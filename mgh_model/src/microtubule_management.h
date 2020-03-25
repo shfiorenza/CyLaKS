@@ -18,6 +18,8 @@ private:
   system_properties *properties_{nullptr};
 
 public:
+  bool weights_active_{true};
+
   int n_unocc_motor_{0};
   Vec<int> n_unocc_xlink_;
   Vec<ENTRY_T> unocc_motor_;
@@ -28,14 +30,13 @@ public:
 private:
   void SetParameters();
   void GenerateMicrotubules();
+  void InitializeLists();
+  void SetTestEnvironment();
 
 public:
   MicrotubuleManagement();
   void Initialize(system_parameters *parameters, system_properties *properties);
   void InitializeTestEnvironment();
-
-  double GetWeight_Bind_I_Kinesin();
-  int SetCandidates_Bind_I_Kinesin(int n_to_set);
 
   void FlagForUpdate();
   void UpdateNeighbors();

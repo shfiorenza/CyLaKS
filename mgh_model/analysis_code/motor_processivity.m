@@ -1,14 +1,16 @@
 
 clear all;
 % Often-changed variables
-conc = 20;
+conc = 220;
 n_sites = 5000;
-simName = sprintf("test_%i", conc); %'test_220';
+simName = sprintf("lattice_coop_3.0_2.0_%i", conc); %'test_220';
+simName = "test";
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.000025;
-n_steps = 420 * 8000000 / conc;%4000000;
-n_datapoints = 100000;
+n_steps = 420 * 3600000 / conc;%4000000;
+n_steps = 4000000;
+n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;

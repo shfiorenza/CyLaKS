@@ -560,26 +560,23 @@ double Kinesin::GetTotalWeight_Bind_I_Teth() {
 
 double Kinesin::GetWeight_Bind_II() {
 
-  // Raw weight includes coop from bound head of this motor
+  // Use n_neighbs weight from dock site, use lattice weight from bound site
   Tubulin *dock_site{GetDockSite()};
   if (dock_site->occupied_) {
     return 0.0;
   }
-  double raw_weight{dock_site->weight_bind_};
-  double corrected_weight{raw_weight};
-  // To prevent self-cooperativity, divide by self weights;
-  corrected_weight /= properties_->kinesin4.weight_neighbs_bind_[1];
-  corrected_weight /= properties_->kinesin4.weight_lattice_bind_[1];
-  if (corrected_weight < 1.0) {
-    printf("raw weight: %g\n", raw_weight);
-    printf("corrected weight: %g\n", corrected_weight);
-    printf("motor site: %i\n", GetActiveHead()->site_->index_);
-    printf("dock site: %i\n", dock_site->index_);
-    printf("step no: %i\n", properties_->current_step_);
-    printf(" ** EXITING **\n");
-    exit(1);
-  }
+  Monomer *bound_head{GetActiveHead()};
+  return bound_head->site_->weight_bind_;
+  // weight_neighb_bind is 1.0 for all entries as of now
+  /*
+  double raw_weight{bound_head->site_->weight_bind_};
   return corrected_weight;
+  int neighbs_dock{dock_site->GetKif4ANeighborCount() - 1};
+  int neighbs_bound{bound_head->site_->GetKif4ANeighborCount()};
+  double corrected_weight{raw_weight};
+  corrected_weight /= properties_->kinesin4.weight_neighbs_bind_[neighbs_bound];
+  corrected_weight *= properties_->kinesin4.weight_neighbs_bind_[neighbs_dock];
+  */
 }
 
 double Kinesin::GetWeight_Unbind_II() {
@@ -601,19 +598,8 @@ double Kinesin::GetWeight_Unbind_II() {
   }
   double raw_weight{chosen_head->site_->weight_unbind_};
   double corrected_weight{raw_weight};
-  // To prevent self-cooperativity, divide by self weights;
+  // To prevent self-cooperativity, divide by self neighb weight
   corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
-  corrected_weight /= properties_->kinesin4.weight_lattice_unbind_[1];
-  return corrected_weight;
-}
-
-double Kinesin::GetWeight_Unbind_I() {
-
-  Monomer *bound_head{GetActiveHead()};
-  double raw_weight{bound_head->site_->weight_unbind_};
-  double corrected_weight{raw_weight};
-  // To prevent self-cooperativity, divide by self weights
-  corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[0];
   return corrected_weight;
 }
 

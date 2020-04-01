@@ -15,7 +15,7 @@ public:
   double elevation;        // Distance above glass slide; nm
   std::vector<double> start_coord;    // Coords of each MT at sim start; nm
   std::vector<double> immobile_until; // MTs immobilzed until this time; s
-
+  int n_iterations;     // Number of iterations for each diffusion step
   double applied_force; // Perpetually applied force on each MT (pN)
   bool printout_on;     // Whether or not ASCII printout is enabled
   bool diffusion_on;    // Whether or not MT diffusion is enabled

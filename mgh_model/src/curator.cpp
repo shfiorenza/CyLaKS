@@ -9,7 +9,7 @@ void Curator::InitializeSimulation(char *argv[], system_properties *properties,
   properties_ = properties;
   parameters_ = parameters;
   // Check that user-input arguments are valid and parse them if they are
-  CheckArgs(argv);
+  ParseArgs(argv);
   // Log file saves all sim outputs to terminal
   GenerateLogFile();
   // Data files save all pertinent info: occupancy, coords, extensions, etc.
@@ -38,7 +38,7 @@ bool Curator::FileExists(std::string file_name) {
   return (stat(file_name.c_str(), &buffer) != -1);
 }
 
-void Curator::CheckArgs(char *argv[]) {
+void Curator::ParseArgs(char *argv[]) {
 
   param_file_ = argv[1];
   sim_name_ = argv[2];
@@ -70,8 +70,8 @@ void Curator::GenerateLogFile() {
     printf("Simulation log file with this name already exists!\n");
     printf("Do you wish to overwrite these data? y/n\n");
     std::string response;
-    bool response_unacceptable{true};
     int n_responses{0};
+    bool response_unacceptable{true};
     while (response_unacceptable) {
       std::getline(std::cin, response);
       if (response == "n" or response == "N") {
@@ -145,16 +145,6 @@ void Curator::GenerateDataFiles() {
   properties_->total_force_file_ = OpenFile(total_force_file, "w");
   // bool; simply says if motor head is trailing or not
   properties_->motor_head_status_file_ = OpenFile(motor_head_status_file, "w");
-
-  if (test_mode_ != nullptr) {
-    printf("hello\n");
-    printf("test mode is %s\n", test_mode_);
-    if (strcmp(test_mode_, "bind_ii") == 0) {
-      char bind_ii_test_file[256];
-      sprintf(bind_ii_test_file, "%s_bind_ii_test_data.file", sim_name_);
-      properties_->bind_ii_test_file_ = OpenFile(bind_ii_test_file, "w");
-    }
-  }
 }
 
 void Curator::ParseParameters() {
@@ -195,6 +185,7 @@ void Curator::ParseParameters() {
       mts["start_coord"].as<std::vector<double>>();
   parameters_->microtubules.immobile_until =
       mts["immobile_until"].as<std::vector<double>>();
+  parameters_->microtubules.n_iterations = mts["n_iterations"].as<int>();
   parameters_->microtubules.applied_force = mts["applied_force"].as<double>();
   parameters_->microtubules.printout_on = mts["printout_on"].as<bool>();
   parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
@@ -277,6 +268,7 @@ void Curator::ParseParameters() {
     double immo = parameters_->microtubules.immobile_until[i_mt];
     Log("    immobile until = %g s for mt %i\n", immo, i_mt);
   }
+  Log("    n_iteraitons = %i\n", parameters_->microtubules.n_iterations);
   Log("    applied_force = %g pN\n", parameters_->microtubules.applied_force);
   Log("    printout_on = %s\n",
       parameters_->microtubules.printout_on ? "true" : "false");
@@ -325,12 +317,11 @@ void Curator::ParseParameters() {
 void Curator::SetLocalParameters() {
 
   unsigned long n_steps{parameters_->n_steps};
-  int n_datapoints{parameters_->n_datapoints};
+  unsigned long data_range{n_steps - data_threshold_};
   data_threshold_ = parameters_->data_threshold;
-  n_steps_recorded_ = n_steps - data_threshold_;
-  n_steps_per_output_ = n_steps_recorded_ / n_datapoints;
+  n_steps_per_output_ = data_range / parameters_->n_datapoints;
   equil_milestone_ = data_threshold_ / 10;
-  data_milestone_ = n_steps_recorded_ / 10;
+  data_milestone_ = data_range / 10;
   for (int i = 0; i < 4; i++) {
     t_motors_[i] = 0;
     t_xlinks_[i] = 0;
@@ -371,8 +362,7 @@ void Curator::OutputData() {
   FILE *total_force_file = properties_->total_force_file_;
   FILE *motor_head_status_file = properties_->motor_head_status_file_;
   // Create arrays to store data; ptrs to write it to file
-  int mt_coord_array[n_mts];
-  int *mt_coord_ptr = mt_coord_array;
+  double mt_coord_array[n_mts];
   // For extension statistics, data is on a per-extension basis
   int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
   int motor_extension_array[2 * motor_ext_cutoff + 1];
@@ -468,7 +458,7 @@ void Curator::OutputData() {
   // Scan through kinesin4/prc1 statistics to get extension occupancies
   for (int i_ext = 0; i_ext <= 2 * motor_ext_cutoff; i_ext++) {
     KinesinManagement *kinesin4 = &properties_->kinesin4;
-    motor_extension_array[i_ext] = kinesin4->n_bound_teth_[i_ext];
+    // motor_extension_array[i_ext] = kinesin4->n_bound_teth_[i_ext];
   }
   for (int i_ext = 0; i_ext <= xlink_ext_cutoff; i_ext++) {
     AssociatedProteinManagement *prc1 = &properties_->prc1;
@@ -477,7 +467,7 @@ void Curator::OutputData() {
   }
   // Write the data to respective files one timestep at a time
   // fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
-  fwrite(mt_coord_array, sizeof(int), n_mts, mt_coord_file);
+  fwrite(mt_coord_array, sizeof(double), n_mts, mt_coord_file);
   fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
   fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
   fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
@@ -533,20 +523,23 @@ void Curator::ErrorExit(const char *function_name) {
 
   Log("Fatal error in %s\n", function_name);
   Log("Step no: #%i\n", properties_->current_step_);
+  Log("(%i datapoints written)\n",
+      properties_->current_step_ / n_steps_per_output_);
   Log(" *** EXITING ***\n");
   exit(1);
 }
 
 void Curator::UpdateTimestep(unsigned long i_step) {
 
-  properties_->current_step_ = i_step;
   if (i_step == 0) {
     start_ = sys_clock::now();
   }
+  properties_->current_step_ = i_step;
   // Give updates on equilibrium process (every 10 percent)
   if (i_step < data_threshold_ and i_step % equil_milestone_ == 0) {
     int p = (int)(i_step / equil_milestone_) * 10;
-    Log("Equilibration is %i percent complete (step # %i)\n", p, i_step);
+    Log("Equilibration is %i%% complete (step # %i) ", p, i_step);
+    Log("for simulation '%s'\n", sim_name_);
   }
   // Start data collection at appropriate step threshold
   else if (i_step >= data_threshold_) {
@@ -558,14 +551,15 @@ void Curator::UpdateTimestep(unsigned long i_step) {
     // Give updates on status of data collection (every 10 percent)
     if (steps_past_threshold % data_milestone_ == 0) {
       unsigned long p{(steps_past_threshold / data_milestone_) * 10};
-      Log("Data collection is %u percent complete (step # %lu)\n", p, i_step);
+      Log("Data collection is %u %% complete (step # %lu) ", p, i_step);
+      Log("for simulation '%s'\n", sim_name_);
     }
     // Announce when simulation is done
-    else if (steps_past_threshold == n_steps_recorded_ - 1) {
-      Log("Done!\n");
+    else if (i_step == parameters_->n_steps - 1) {
+      Log("Simulation '%s' finished.\n", sim_name_);
     }
   }
-  if (parameters_->microtubules.printout_on and i_step % 1000 == 0) {
+  if (parameters_->microtubules.printout_on) {
     PrintMicrotubules(0);
   }
 }
@@ -676,7 +670,6 @@ void Curator::PrintMicrotubules() {
         }
       }
     }
-    printf(" %i\n", mt->polarity_);
   }
   printf("\n");
 

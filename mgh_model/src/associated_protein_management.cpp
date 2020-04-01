@@ -7,6 +7,7 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
                                              system_properties *properties) {
 
   wally_ = &properties->wallace;
+  gsl_ = &properties->gsl;
   parameters_ = parameters;
   properties_ = properties;
   CalculateCutoffs();
@@ -23,52 +24,51 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
 
 void AssociatedProteinManagement::CalculateCutoffs() {
 
-  double kbT{parameters_->kbT};
-  double r_0{parameters_->xlinks.r_0};
-  double r_y{parameters_->microtubules.y_dist};
-  double k_spring{parameters_->xlinks.k_spring};
-  double site_size{parameters_->microtubules.site_size};
-  /* First, calculate rest_dist_ in number of sites */
-  // For now, it should always come out to zero
-  int approx_rest{(int)(sqrt(r_0 * r_0 - r_y * r_y) / site_size)};
-  if (approx_rest == 0) {
-    rest_dist_ = approx_rest;
-  } else {
-    wally_->ErrorExit("AP_MGMT::CalculateCutoffs()");
-  }
-  double force_cutoff{20}; // in pN
-  double f_spring{0.0};
-  /* next, calculate extension distance cutoff */
-  for (int x_dist{rest_dist_}; x_dist < 1000; x_dist++) {
-    int r_x = x_dist * site_size;
-    double r = sqrt(r_y * r_y + r_x * r_x);
-    double dr = r - r_0;
-    f_spring = fabs(dr * k_spring);
-    /*
-    if (f_spring >= force_cutoff) {
-      dist_cutoff_ = x_dist;
-      break;
-    }
-    */
-    double U = (k_spring / 2) * dr * dr;
-    double boltzmann_weight = exp(U / (2 * kbT));
-    if (boltzmann_weight > 1e2) {
-      dist_cutoff_ = x_dist;
-      break;
-    }
-  }
+  double site_size{parameters_->microtubules.site_size}; // in nm
+  r_0_ = parameters_->xlinks.r_0 / site_size;            // in n_sites
+  r_y_ = parameters_->microtubules.y_dist / site_size;   // in n_sites
   /*
-  if (dist_cutoff_ > 9) {
-    wally_->Log("As of now, x_dist must be less than 10");
-    wally_->Log(" (currenly %i with k_spring=%g)\n", dist_cutoff_, k_spring);
-    wally_->ErrorExit("AP_MGMT::CalculateCutoffs() [2]");
+      For events that result in a change in energy, we use Boltzmann factors to
+      scale rates appropriately. Detailed balance is satisfied with the factors:
+                    exp{-(1 - lambda)*(delta_E)/(kB*T)}, and
+                    exp{(lambda)*(delta_E)/(kB*T)}
+      for an event and its complement (e.g., binding and unbinding), where
+     lambda is a constant that ranges from 0 to 1, delta_E is the change in
+     energy that results from the event, kB is Boltzmann's constant, and T is
+     the temperature
+    */
+  // Lambda = 1.0 means all of the weight goes into unbinding
+  // Lambda = 0.5 means the weight is equally split between binding & unbinding
+  // Lambda = 0.0 means all of the weight goes into binding
+  lambda_neighb_ = 1.0; // Lambda for neighbor interaction energies
+  lambda_spring_ = 0.5; // Lambda for spring energies
+  lambda_teth_ = 0.5;   // lambda for tether spring energies
+  if (lambda_neighb_ != 1.0) {
+    wally_->Log("Lambda != 1.0 for neighb interactions not implemented yet!\n");
+    wally_->ErrorExit("AssociatedProteinManagement::SetParameters()\n");
   }
-  */
+  double kbT{parameters_->kbT};                           // in pN * nm
+  double k_spring{parameters_->xlinks.k_spring};          // in pN / nm
+  k_spring_eff_ = k_spring * site_size * site_size / kbT; // in 1 / (n_sites)^2
+  double f_cutoff{0.0};
+  for (int x_dist{0}; x_dist < 1000; x_dist++) {
+    double r_x{x_dist};
+    double r{sqrt(r_x * r_x + r_y_ * r_y_)};
+    double dr{r - r_0_};                                 // in n_sites
+    double energy_factor{0.5 * k_spring_eff_ * dr * dr}; // unitless energy
+    double boltzmann_weight = exp(lambda_spring_ * energy_factor);
+    if (boltzmann_weight > 1e3) {
+      f_cutoff = fabs(dr * site_size * k_spring);
+      dist_cutoff_ = x_dist;
+      break;
+    }
+  }
+
   if (parameters_->microtubules.count > 1) {
     crosslinking_active_ = true;
     wally_->Log("\nFor crosslinkers:\n");
-    wally_->Log("  rest_dist is %i\n", rest_dist_);
-    wally_->Log("  dist_cutoff is %i (f = %g pN)\n\n", dist_cutoff_, f_spring);
+    wally_->Log("  rest_dist is %i\n", 0);
+    wally_->Log("  dist_cutoff is %i (f = %g pN)\n\n", dist_cutoff_, f_cutoff);
   } else {
     wally_->Log("\nCrosslinker double-binding is inactive.\n\n");
   }
@@ -92,25 +92,31 @@ void AssociatedProteinManagement::SetParameters() {
     results from the event, kB is Boltzmann's constant, and T is the
     temperature
   */
-  // Lambda = 1.0 means all of the weight goes into unbinding
-  double lambda_neighb{1.0}; // Lambda for neighbor interaction energies
-  // Lambda = 0.0 means all of the weight goes into binding
-  double lambda_spring{0.5}; // Lambda for spring energies
-  // Lambda = 0.5 means the weight is equally split between binding & unbinding
-  double lambda_teth{0.5}; // lambda for tether spring energies
+  // Construct array of neighbor weights
+  weight_neighb_bind_.resize(max_neighbs_ + 1);
+  weight_neighb_unbind_.resize(max_neighbs_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    // energy is in units of kbT
+    double energy{-1 * n_neighbs * parameters_->xlinks.interaction_energy};
+    weight_neighb_bind_[n_neighbs] = exp(-(1 - lambda_neighb_) * energy);
+    weight_neighb_unbind_[n_neighbs] = exp(lambda_neighb_ * energy);
+  }
+  // Construct array of spring extensions and associated weights
+  possible_cosines_.resize(2 * dist_cutoff_ + 1);
+  possible_extensions_.resize(2 * dist_cutoff_ + 1);
+  Update_Extensions();
+  weight_spring_bind_.resize(2 * dist_cutoff_ + 1);
+  weight_spring_unbind_.resize(2 * dist_cutoff_ + 1);
+  Update_Weights();
+
+  /*
   // Calculate neighbor interaction energies
-  interaction_energy_ = -1 * parameters_->xlinks.interaction_energy;
   std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     // Neighbor energies are negative since its an attractive potential
-    neighb_energy[n_neighbs] = n_neighbs * interaction_energy_; //! in kBT
-  }
-  if (lambda_neighb != 1.0) {
-    wally_->Log("Lambda != 1.0 for neighb interactions not implemented yet!\n");
-    wally_->ErrorExit("AssociatedProteinManagement::SetParameters()\n");
+    neighb_energy[n_neighbs] = n_neighbs * interaction_energy; //! in kBT
   }
   // Calculate spring extension energies
-  double site_size{parameters_->microtubules.site_size};
   double k_spring{parameters_->xlinks.k_spring};
   double r_y{parameters_->microtubules.y_dist};
   double r_0{parameters_->xlinks.r_0};
@@ -145,38 +151,36 @@ void AssociatedProteinManagement::SetParameters() {
       teth_energy[x_dub] = 0.5 * k_slack * dr_teth * dr_teth; // in pN*nm
     }
   }
+  */
   // [DIFFUSION STATISTICS FOR CROSSLINKER W/O TETH BELOW] //
   double kbT{parameters_->kbT};
   double delta_t{parameters_->delta_t};
+  double site_size{parameters_->microtubules.site_size};
   double x_squared{(site_size / 1000) * (site_size / 1000)}; //! in um^2
   // Characteristic timescale for singly-bound xlink to diffuse 1 site
   double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
-  double p_diffu_i{parameters_->delta_t / tau_i};
+  double p_diffu_i{delta_t / tau_i};
   // Characteristic timescale for doubly-bound xlink to diffuse 1 site
   double tau_ii{x_squared / (2 * parameters_->xlinks.diffu_coeff_ii)};
-  double p_diffu_ii{parameters_->delta_t / tau_ii};
+  double p_diffu_ii{delta_t / tau_ii};
   // We consider diff_fwd and diff_bck as two separate events, which
   // effectively doubles the probability to diffuse. To counteract this, divide
   // p_diff by 2.
   p_diffu_i /= 2;
   p_diffu_ii /= 2;
+  p_avg_diffuse_ii_ = p_diffu_ii;
   p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
   p_diffuse_i_bck_.resize(max_neighbs_ + 1);
-  p_diffuse_ii_to_rest_.resize(max_neighbs_ + 1);
-  p_diffuse_ii_fr_rest_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    // For neighb. interactions, we only consider the energy penalty for
-    // diffusing away from neighbors (same as unbinding) since lambda = 1.0
-    //     dE = E_f - E_i
-    double dE = 0.0 - neighb_energy[n_neighbs];
-    // dE has units of kbT, so dividing by its numerical value isn't necessary
-    double weight_neighb{exp(-lambda_neighb * dE)};
+    // currently, diffusion is thought of as an unbinding event
+    double weight_neighb{weight_neighb_unbind_[n_neighbs]};
     // With two neighbors, the binding head is jammed and cannot diffuse
     if (n_neighbs == 2) {
       weight_neighb = 0.0;
     }
     p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_diffu_i;
     p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_diffu_i;
+    /*
     p_diffuse_ii_to_rest_[n_neighbs].resize(dist_cutoff_ + 1);
     p_diffuse_ii_fr_rest_[n_neighbs].resize(dist_cutoff_ + 1);
     for (int x{0}; x <= dist_cutoff_; x++) {
@@ -211,7 +215,9 @@ void AssociatedProteinManagement::SetParameters() {
       p_diffuse_ii_fr_rest_[n_neighbs][x] =
           weight_neighb * weight_fr * p_diffu_ii;
     }
+    */
   }
+  /*
   // [DIFFUSION STATISTICS INVOLVING TETHER BELOW] //
   p_diffuse_i_to_teth_rest_.resize(max_neighbs_ + 1);
   p_diffuse_i_fr_teth_rest_.resize(max_neighbs_ + 1);
@@ -275,48 +281,37 @@ void AssociatedProteinManagement::SetParameters() {
       }
     }
   }
+  */
   // KMC STATISTICS BELOW
   double k_on = parameters_->xlinks.k_on;
   double c_xlink = parameters_->xlinks.c_bulk;
+  double p_bind_i{k_on * c_xlink * delta_t};
   double c_eff_teth = parameters_->motors.c_eff_tether;
   p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
   double c_eff_bind = parameters_->xlinks.c_eff_bind;
   p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
   double k_off_i = parameters_->xlinks.k_off_i;
+  double p_unbind_i{k_off_i * delta_t};
   double k_off_ii = parameters_->xlinks.k_off_ii;
+  p_avg_unbind_ii_ = k_off_ii * delta_t;
   p_bind_i_.resize(max_neighbs_ + 1);
   p_unbind_i_.resize(max_neighbs_ + 1);
   p_unbind_ii_.resize(max_neighbs_ + 1);
+  weight_neighb_bind_.resize(max_neighbs_ + 1);
+  weight_neighb_unbind_.resize(max_neighbs_ + 1);
   p_unbind_i_teth_.resize(max_neighbs_ + 1);
-  p_unbind_ii_to_teth_.resize(max_neighbs_ + 1);
-  p_unbind_ii_fr_teth_.resize(max_neighbs_ + 1);
-  weight_bind_ii_.resize(max_neighbs_ + 1);
-  weight_bind_i_teth_.resize(max_neighbs_ + 1);
-  weight_bind_ii_to_teth_.resize(max_neighbs_ + 1);
-  weight_bind_ii_fr_teth_.resize(max_neighbs_ + 1);
+  /*
+    p_unbind_ii_to_teth_.resize(max_neighbs_ + 1);
+    p_unbind_ii_fr_teth_.resize(max_neighbs_ + 1);
+    weight_bind_ii_.resize(max_neighbs_ + 1);
+    weight_bind_i_teth_.resize(max_neighbs_ + 1);
+    weight_bind_ii_to_teth_.resize(max_neighbs_ + 1);
+    weight_bind_ii_fr_teth_.resize(max_neighbs_ + 1);
+    */
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    // dE = E_f - E_i;
-    double dE = 0.0 - neighb_energy[n_neighbs];
-    // We only consider the energy penalty for unbinding since lambda = 1.0
-    double weight_neighb_bind{1.0};
-    // dE has units of kbT, so dividing by its numerical value isn't necessary
-    double weight_neighb_unbind{exp(-lambda_neighb * dE)};
-    p_bind_i_[n_neighbs] = weight_neighb_bind * k_on * c_xlink * delta_t;
-    p_unbind_i_[n_neighbs] = weight_neighb_unbind * k_off_i * delta_t;
-    p_unbind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
-    weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
-    for (int x{0}; x <= dist_cutoff_; x++) {
-      // dU = U_f - U_i
-      double dU_bind{spring_energy[x] - 0.0};
-      double dU_unbind{0.0 - spring_energy[x]};
-      double weight_bind{exp(-(1.0 - lambda_spring) * dU_bind / kbT)};
-      weight_bind_ii_[n_neighbs][x] = weight_neighb_bind * weight_bind;
-      // wally_->Log("weight_bind_ii_[%i][%i] = %g\n", n_neighbs, x,
-      //             weight_bind_ii_[n_neighbs][x]);
-      double weight_unbind{exp(-lambda_spring * dU_unbind / kbT)};
-      p_unbind_ii_[n_neighbs][x] =
-          weight_neighb_unbind * weight_unbind * k_off_ii * delta_t;
-    }
+    p_bind_i_[n_neighbs] = weight_neighb_bind_[n_neighbs] * p_bind_i;
+    p_unbind_i_[n_neighbs] = weight_neighb_unbind_[n_neighbs] * p_unbind_i;
+    /*
     // Rates involving both xlink & tether spring
     p_unbind_i_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     p_unbind_ii_to_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
@@ -386,27 +381,34 @@ void AssociatedProteinManagement::SetParameters() {
             p_unbind_ii_[n_neighbs][x] * weight_fr_teth;
       }
     }
+    */
   }
+  /*
   double k_tether = parameters_->motors.k_tether;
   p_tether_free_ = k_tether * c_xlink * delta_t;
   double k_untether = parameters_->motors.k_untether;
   p_untether_free_ = k_untether * delta_t;
+  */
   // Add these johnnys to our p_theory_ map; need to pad so all are 3-D
   p_theory_["diffuse_i_fwd"] = {{p_diffuse_i_fwd_}};
   p_theory_["diffuse_i_bck"] = {{p_diffuse_i_bck_}};
+  /*
   if (crosslinking_active_) {
     p_theory_["diffuse_ii_to_rest"] = {p_diffuse_ii_to_rest_};
     p_theory_["diffuse_ii_fr_rest"] = {p_diffuse_ii_fr_rest_};
   }
+  */
   if (tethering_active_) {
     p_theory_["diffuse_i_to_teth_rest"] = {p_diffuse_i_to_teth_rest_};
     p_theory_["diffuse_i_fr_teth_rest"] = {p_diffuse_i_fr_teth_rest_};
+    /*
     if (crosslinking_active_) {
       p_theory_["diffuse_ii_to_both"] = p_diffuse_ii_to_both_;
       p_theory_["diffuse_ii_fr_both"] = p_diffuse_ii_fr_both_;
       p_theory_["diffuse_ii_to_self_fr_teth"] = p_diffuse_ii_to_self_fr_teth_;
       p_theory_["diffuse_ii_fr_self_to_teth"] = p_diffuse_ii_fr_self_to_teth_;
     }
+    */
   }
   p_theory_["bind_i"] = {{p_bind_i_}};
   p_theory_["unbind_i"] = {{p_unbind_i_}};
@@ -419,8 +421,10 @@ void AssociatedProteinManagement::SetParameters() {
     p_theory_["unbind_i_teth"] = {p_unbind_i_teth_};
     if (crosslinking_active_) {
       p_theory_["bind_ii_teth"] = {{{p_avg_bind_ii_}}};
+      /*
       p_theory_["unbind_ii_to_teth"] = p_unbind_ii_to_teth_;
       p_theory_["unbind_ii_fr_teth"] = p_unbind_ii_fr_teth_;
+      */
     }
     p_theory_["tether_free"] = {{{p_tether_free_}}};
     p_theory_["untether_free"] = {{{p_untether_free_}}};
@@ -489,8 +493,8 @@ void AssociatedProteinManagement::GenerateXLinks() {
     n_xlinks_ += parameters_->microtubules.length[i_mt];
   }
   xlinks_.resize(n_xlinks_);
-  for (int id{0}; id < n_xlinks_; id++) {
-    xlinks_[id].Initialize(parameters_, properties_, id);
+  for (int i_entry{0}; i_entry < n_xlinks_; i_entry++) {
+    xlinks_[i_entry].Initialize(parameters_, properties_, i_entry);
   }
 }
 
@@ -498,16 +502,11 @@ void AssociatedProteinManagement::InitializeLists() {
 
   // Stats (not a list ok bite me)
   n_bound_i_.resize(max_neighbs_ + 1);
-  n_bound_ii_.resize(max_neighbs_ + 1);
   n_bound_i_teth_.resize(max_neighbs_ + 1);
   n_bound_ii_teth_same_.resize(max_neighbs_ + 1);
   n_bound_ii_teth_oppo_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     n_bound_i_[n_neighbs] = 0;
-    n_bound_ii_[n_neighbs].resize(dist_cutoff_ + 1);
-    for (int x_dist{0}; x_dist <= dist_cutoff_; x_dist++) {
-      n_bound_ii_[n_neighbs][x_dist] = 0;
-    }
     n_bound_i_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     n_bound_ii_teth_same_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     n_bound_ii_teth_oppo_[n_neighbs].resize(2 * teth_cutoff_ + 1);
@@ -525,20 +524,18 @@ void AssociatedProteinManagement::InitializeLists() {
   active_.resize(n_xlinks_);
   bound_unteth_.resize(n_xlinks_);
   free_teth_.resize(n_xlinks_);
+  diffuse_ii_to_candidates_.resize(n_xlinks_);
+  diffuse_ii_fr_candidates_.resize(n_xlinks_);
   bind_ii_candidates_.resize(n_xlinks_);
+  unbind_ii_candidates_.resize(n_xlinks_);
   bind_i_teth_candidates_.resize(n_xlinks_);
   bind_ii_teth_candidates_.resize(n_xlinks_);
   bound_i_.resize(max_neighbs_ + 1);
-  bound_ii_.resize(max_neighbs_ + 1);
   bound_i_teth_.resize(max_neighbs_ + 1);
   bound_ii_teth_oppo_.resize(max_neighbs_ + 1);
   bound_ii_teth_same_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     bound_i_[n_neighbs].resize(n_xlinks_);
-    bound_ii_[n_neighbs].resize(dist_cutoff_ + 1);
-    for (int x{0}; x <= dist_cutoff_; x++) {
-      bound_ii_[n_neighbs][x].resize(n_xlinks_);
-    }
     bound_i_teth_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     bound_ii_teth_oppo_[n_neighbs].resize(2 * teth_cutoff_ + 1);
     bound_ii_teth_same_[n_neighbs].resize(2 * teth_cutoff_ + 1);
@@ -556,29 +553,27 @@ void AssociatedProteinManagement::InitializeLists() {
 
 void AssociatedProteinManagement::InitializeEvents() {
 
-  /* * Function that gets a random probability in [0, 1) * */
-  auto get_ran_prob = [&]() { return properties_->gsl.GetRanProb(); };
-  /* * Function that sets n random indices from the range [0, m) * */
-  auto set_ran_indices = [&](int *indices, int n, int m) {
-    if (m > 1) {
-      properties_->gsl.SetRanIndices(indices, n, m);
-    } else {
-      indices[0] = 0;
-    }
-  };
-  /* * Binomial distribution; sampled to predict most events * */
+  // Various GSL functions packaged in lambda expressions so that they
+  // are stand-alone and easily passable to event class by reference
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
     }
-    return properties_->gsl.SampleBinomialDist(p, n);
+    return gsl_->SampleBinomialDist(p, n);
   };
-  /* * Poisson distribution; sampled to predict variable-rate events * */
   auto poisson = [&](double p, int n) {
     if (p == 0.0) {
       return 0;
     }
-    return properties_->gsl.SamplePoissonDist(p);
+    return gsl_->SamplePoissonDist(p);
+  };
+  auto get_ran_prob = [&]() { return gsl_->GetRanProb(); };
+  auto set_ran_indices = [&](int *indices, int n, int m) {
+    if (m > 1) {
+      gsl_->SetRanIndices(indices, n, m);
+    } else {
+      indices[0] = 0;
+    }
   };
   /* * Event entries * */
   std::string event_name; // scratch space to construct each event name
@@ -601,23 +596,26 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_diffuse_i_bck_[n_neighbs],
                          &n_bound_i_[n_neighbs], &bound_i_[n_neighbs],
                          exe_diffuse_bck, binomial, set_ran_indices);
-    if (!crosslinking_active_) {
-      continue;
-    }
-    for (int x{0}; x <= dist_cutoff_; x++) {
-      std::string X_DIST{"_" + std::to_string(x)};
-      // Diffuse_ii_to_rest
-      event_name = "diffuse_ii_to_rest" + N_NEIGHBS + X_DIST;
-      events_.emplace_back(event_name, p_diffuse_ii_to_rest_[n_neighbs][x],
-                           &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
-                           exe_diffuse_fwd, binomial, set_ran_indices);
-      // Diffuse_ii_fr_rest
-      event_name = "diffuse_ii_fr_rest" + N_NEIGHBS + X_DIST;
-      events_.emplace_back(event_name, p_diffuse_ii_fr_rest_[n_neighbs][x],
-                           &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
-                           exe_diffuse_bck, binomial, set_ran_indices);
-    }
   }
+  if (crosslinking_active_) {
+    event_name = "diffuse_ii_to_rest";
+    auto weight_diffuse_to = [&](ENTRY_T target) {
+      return std::get<POP_T *>(target)->GetWeight_DiffuseToRest();
+    };
+    events_.emplace_back(
+        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_to_candidates_,
+        &diffuse_ii_to_candidates_, exe_diffuse_fwd, weight_diffuse_to, poisson,
+        get_ran_prob, set_ran_indices);
+    event_name = "diffuse_ii_fr_rest";
+    auto weight_diffuse_fr = [&](ENTRY_T target) {
+      return std::get<POP_T *>(target)->GetWeight_DiffuseFrRest();
+    };
+    events_.emplace_back(
+        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_fr_candidates_,
+        &diffuse_ii_fr_candidates_, exe_diffuse_bck, weight_diffuse_fr, poisson,
+        get_ran_prob, set_ran_indices);
+  }
+  /*
   // Diffuse_teth: same as above but for tethered populations
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
@@ -674,6 +672,7 @@ void AssociatedProteinManagement::InitializeEvents() {
       }
     }
   }
+  */
   // Bind_I: binds first crosslinker head to the microtubule
   auto exe_bind_i = [&](ENTRY_T target) { Bind_I(std::get<SITE_T *>(target)); };
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -760,22 +759,20 @@ void AssociatedProteinManagement::InitializeEvents() {
     */
   }
   // Unbind II: unbinds a head of doubly-bound crosslinkers
-  auto exe_unbind_ii = [&](ENTRY_T target) {
-    Unbind_II(std::get<POP_T *>(target));
-  };
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    if (!crosslinking_active_) {
-      continue;
-    }
-    std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-    for (int x{0}; x <= dist_cutoff_; x++) {
-      std::string X_DIST{"_" + std::to_string(x)};
-      event_name = "unbind_ii" + N_NEIGHBS + X_DIST;
-      events_.emplace_back(event_name, p_unbind_ii_[n_neighbs][x],
-                           &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
-                           exe_unbind_ii, binomial, set_ran_indices);
-    }
+  if (crosslinking_active_) {
+    event_name = "unbind_ii";
+    auto exe_unbind_ii = [&](ENTRY_T target) {
+      Unbind_II(std::get<POP_T *>(target));
+    };
+    auto weight_unbind_ii = [&](ENTRY_T target) {
+      return std::get<POP_T *>(target)->GetWeight_Unbind_II();
+    };
+    events_.emplace_back(event_name, p_avg_unbind_ii_, &n_unbind_ii_candidates_,
+                         &unbind_ii_candidates_, exe_unbind_ii,
+                         weight_unbind_ii, poisson, get_ran_prob,
+                         set_ran_indices);
   }
+  /*
   // Unbind_II_Teth: same as above but for tethered populations
   auto exe_unbind_ii_teth = [&](ENTRY_T target) {
     Unbind_II(std::get<POP_T *>(target));
@@ -804,6 +801,7 @@ void AssociatedProteinManagement::InitializeEvents() {
       }
     }
   }
+  */
   // Unbind_I: unbinds a head of singly-bound crosslinkres
   auto exe_unbind_i = [&](ENTRY_T target) {
     Unbind_I(std::get<POP_T *>(target));
@@ -815,6 +813,7 @@ void AssociatedProteinManagement::InitializeEvents() {
                          &n_bound_i_[n_neighbs], &bound_i_[n_neighbs],
                          exe_unbind_i, binomial, set_ran_indices);
   }
+  /*
   // Unbind_I_Teth: same as above but for tethered populations
   auto exe_unbind_i_teth = [&](ENTRY_T target) {
     Unbind_I(std::get<POP_T *>(target));
@@ -833,6 +832,8 @@ void AssociatedProteinManagement::InitializeEvents() {
                            binomial, set_ran_indices);
     }
   }
+  */
+  /*
   if (tethering_active_) {
     // Tether_free: tethers free xlinks to bound motors
     event_name = "tether_free";
@@ -852,6 +853,7 @@ void AssociatedProteinManagement::InitializeEvents() {
                          &free_teth_, exe_untether_sat, binomial,
                          set_ran_indices);
   }
+  */
 }
 
 void AssociatedProteinManagement::InitializeTestEnvironment() {
@@ -941,6 +943,8 @@ void AssociatedProteinManagement::InitializeTestEvents() {
     auto exe_unbind_ii = [&](ENTRY_T target) {
       Unbind_II(std::get<POP_T *>(target));
     };
+    wally_->ErrorExit("AP_MGMT:InitializeTestEvents()");
+    /*
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
       for (int x{0}; x <= dist_cutoff_; x++) {
@@ -951,6 +955,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
             &bound_ii_[n_neighbs][x], exe_unbind_ii, binomial, set_ran_indices);
       }
     }
+    */
   }
   if (strcmp(wally_->test_mode_, "xlink_bind_i_teth") == 0) {
     /*
@@ -1046,6 +1051,7 @@ void AssociatedProteinManagement::ReportProbabilities() {
     }
   }
   if (wally_->test_mode_ != nullptr) {
+    /*
     if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
       wally_->Log("For bind_ii:\n");
       for (int x{0}; x <= dist_cutoff_; x++) {
@@ -1056,6 +1062,8 @@ void AssociatedProteinManagement::ReportProbabilities() {
                     bind_ii_stats_[x].first);
       }
     }
+      */
+    /*
     if (strcmp(wally_->test_mode_, "xlink_bind_i_teth") == 0) {
       wally_->Log("For bind_i_teth:\n");
       for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
@@ -1091,23 +1099,26 @@ void AssociatedProteinManagement::ReportProbabilities() {
         }
       }
     }
+    */
   }
 }
+
 AssociatedProtein *AssociatedProteinManagement::GetFreeXlink() {
 
   // Randomly choose an unbound xlink
-  int i_xlink = properties_->gsl.GetRanInt(n_xlinks_);
+  int i_xlink = gsl_->GetRanInt(n_xlinks_);
   AssociatedProtein *xlink = &xlinks_[i_xlink];
-  int attempts = 0;
-  while (xlink->heads_active_ > 0 || xlink->tethered_) {
-    i_xlink++;
-    if (i_xlink == n_xlinks_)
-      i_xlink = 0;
-    xlink = &xlinks_[i_xlink];
+  int attempts{0};
+  while (xlink->heads_active_ > 0 or xlink->tethered_) {
     attempts++;
     if (attempts > n_xlinks_) {
       wally_->ErrorExit("AP_MGMT::GetFreeXlink()");
     }
+    i_xlink++;
+    if (i_xlink == n_xlinks_) {
+      i_xlink = 0;
+    }
+    xlink = &xlinks_[i_xlink];
   }
   return xlink;
 }
@@ -1121,8 +1132,8 @@ void AssociatedProteinManagement::AddToActive(AssociatedProtein *xlink) {
 
 void AssociatedProteinManagement::RemoveFromActive(AssociatedProtein *xlink) {
 
-  AssociatedProtein *last_entry = active_[n_active_ - 1];
-  int this_index = xlink->active_index_;
+  AssociatedProtein *last_entry{active_[n_active_ - 1]};
+  int this_index{xlink->active_index_};
   active_[this_index] = last_entry;
   last_entry->active_index_ = this_index;
   n_active_--;
@@ -1135,8 +1146,38 @@ void AssociatedProteinManagement::Update_Extensions() {
   if (!crosslinking_active_ and !tethering_active_) {
     return;
   }
+  // Offset ranges from 0 to 0.5; corresponds to the fractional misalignment
+  // of MTs in n_sites, e.g., offset = 0 means they are perfectly aligned and
+  // offset = 0.25 means all sites are misaligned by a 0.25*site_size
+  double offset{properties_->microtubules.GetSiteOffset()};
+  for (int x_dist{0}; x_dist <= 2 * dist_cutoff_; x_dist++) {
+    // printf("\nx_dist is %i\n", x_dist);
+    double r_x{x_dist + offset};
+    if (x_dist > dist_cutoff_) {
+      r_x = (x_dist - dist_cutoff_) - offset;
+    }
+    // printf("r_x is %g\n", r_x);
+    double r{sqrt(r_x * r_x + r_y_ * r_y_)};
+    possible_extensions_[x_dist] = r - r_0_;
+    // printf("extension is %g\n", possible_extensions_[x_dist]);
+    possible_cosines_[x_dist] = r_x / r;
+    // printf("cosine is %g\n", possible_cosines_[x_dist]);
+  }
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     active_[i_entry]->UpdateExtension();
+  }
+}
+
+void AssociatedProteinManagement::Update_Weights() {
+
+  if (!crosslinking_active_) {
+    return;
+  }
+  for (int x_dist{0}; x_dist <= 2 * dist_cutoff_; x_dist++) {
+    double dr{possible_extensions_[x_dist]};
+    double spring_energy{0.5 * k_spring_eff_ * dr * dr}; // unitless
+    weight_spring_bind_[x_dist] = exp(-(1 - lambda_spring_) * spring_energy);
+    weight_spring_unbind_[x_dist] = exp(lambda_spring_ * spring_energy);
   }
 }
 
@@ -1160,43 +1201,19 @@ void AssociatedProteinManagement::Update_Bound_I() {
       }
     }
   }
-  if (wally_->test_mode_ != nullptr) {
-    /*
-    if (strcmp(wally_->test_mode_, "bind_ii") == 0) {
-      // for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      //   for (int i_entry{0}; i_entry < n_bound_i_[n_neighbs]; i_entry++) {
-      //     POP_T *head{std::get<POP_T *>(bound_i_[n_neighbs][i_entry])};
-      //     if (head->site_->mt_ == 0) {
-      //       int i_last{--n_bound_i_[n_neighbs]};
-      //       bound_i_[n_neighbs][i_entry] = bound_i_[n_neighbs][i_last];
-      //     }
-      //   }
-      // }
-      for (int x{0}; x <= dist_cutoff_; x++) {
-        if (x == 0) {
-          // Only one site (directly above) can be bound to for this config
-          bind_ii_stats_[x].second += n_bind_ii_candidates_;
-        } else {
-          // Two sites (to the left or right of above) are eligible for these
-          // Include each as a separate opportunity
-          bind_ii_stats_[x].second += 2 * n_bind_ii_candidates_;
-        }
-      }
-    }
-    */
+  if (verbosity_ < 2) {
+    return;
   }
-  if (verbosity_ >= 1) {
-    wally_->Log(" n_bind_ii_candidates = %i\n", n_bind_ii_candidates_);
-    for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
-      POP_T *head{std::get<POP_T *>(bind_ii_candidates_[i_entry])};
+  wally_->Log(" n_bind_ii_candidates = %i\n", n_bind_ii_candidates_);
+  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(bind_ii_candidates_[i_entry])};
+    wally_->Log("   - xlink %i\n", head->xlink_->id_);
+  }
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    wally_->Log(" n_bound_i_[%i] = %i\n", n_neighbs, n_bound_i_[n_neighbs]);
+    for (int i_entry{0}; i_entry < n_bound_i_[n_neighbs]; i_entry++) {
+      POP_T *head{std::get<POP_T *>(bound_i_[n_neighbs][i_entry])};
       wally_->Log("   - xlink %i\n", head->xlink_->id_);
-    }
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      wally_->Log(" n_bound_i_[%i] = %i\n", n_neighbs, n_bound_i_[n_neighbs]);
-      for (int i_entry{0}; i_entry < n_bound_i_[n_neighbs]; i_entry++) {
-        POP_T *head{std::get<POP_T *>(bound_i_[n_neighbs][i_entry])};
-        wally_->Log("   - xlink %i\n", head->xlink_->id_);
-      }
     }
   }
 }
@@ -1233,29 +1250,46 @@ void AssociatedProteinManagement::Update_Bound_II() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting AP_MGMT::Update_Bound_II()\n");
   }
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    for (int x{0}; x <= dist_cutoff_; x++) {
-      n_bound_ii_[n_neighbs][x] = 0;
-    }
-  }
+  n_diffuse_ii_to_candidates_ = 0;
+  n_diffuse_ii_fr_candidates_ = 0;
+  n_unbind_ii_candidates_ = 0;
   for (int i_xlink{0}; i_xlink < n_active_; i_xlink++) {
     AssociatedProtein *xlink = active_[i_xlink];
     if (xlink->heads_active_ != 2) {
       continue;
     }
     if (!xlink->tethered_ or xlink->HasSatellite()) {
-      int x = xlink->x_dist_;
-      // Head one
+      // If we're testing bind_ii or bind_ii_teth, head one remains fixed
       if (wally_->test_mode_ == nullptr) {
-        int neighbs_one = xlink->head_one_.GetPRC1NeighborCount();
-        bound_ii_[neighbs_one][x][n_bound_ii_[neighbs_one][x]++] =
-            &xlink->head_one_;
+        POP_T *head_one{&xlink->head_one_};
+        diffuse_ii_to_candidates_[n_diffuse_ii_to_candidates_++] = head_one;
+        diffuse_ii_fr_candidates_[n_diffuse_ii_fr_candidates_++] = head_one;
+        unbind_ii_candidates_[n_unbind_ii_candidates_++] = head_one;
       }
-      // Head two
-      int neighbs_two = xlink->head_two_.GetPRC1NeighborCount();
-      bound_ii_[neighbs_two][x][n_bound_ii_[neighbs_two][x]++] =
-          &xlink->head_two_;
+      // Always add head two
+      POP_T *head_two{&xlink->head_two_};
+      diffuse_ii_to_candidates_[n_diffuse_ii_to_candidates_++] = head_two;
+      diffuse_ii_fr_candidates_[n_diffuse_ii_fr_candidates_++] = head_two;
+      unbind_ii_candidates_[n_unbind_ii_candidates_++] = head_two;
     }
+  }
+  if (verbosity_ < 2) {
+    return;
+  }
+  wally_->Log(" n_diff_ii_to_candidates = %i\n", n_diffuse_ii_to_candidates_);
+  for (int i_entry{0}; i_entry < n_diffuse_ii_to_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(diffuse_ii_to_candidates_[i_entry])};
+    wally_->Log("   - xlink %i\n", head->xlink_->id_);
+  }
+  wally_->Log(" n_diff_ii_fr_candidates = %i\n", n_diffuse_ii_fr_candidates_);
+  for (int i_entry{0}; i_entry < n_diffuse_ii_fr_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(diffuse_ii_fr_candidates_[i_entry])};
+    wally_->Log("   - xlink %i\n", head->xlink_->id_);
+  }
+  wally_->Log(" n_unbind_ii_candidates = %i\n", n_unbind_ii_candidates_);
+  for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
+    POP_T *head{std::get<POP_T *>(unbind_ii_candidates_[i_entry])};
+    wally_->Log("   - xlink %i\n", head->xlink_->id_);
   }
 }
 
@@ -1282,7 +1316,7 @@ void AssociatedProteinManagement::Update_Bound_II_Teth() {
         // Site one
         Tubulin *site_one = xlink->head_one_.site_;
         int n_one = site_one->GetPRC1NeighborCount();
-        if (x == rest_dist_) {
+        if (x == 0) {
           int i_one = n_bound_ii_teth_same_[n_one][x_dub][x];
           bound_ii_teth_same_[n_one][x_dub][x][i_one] = &xlink->head_one_;
           n_bound_ii_teth_same_[n_one][x_dub][x]++;
@@ -1301,7 +1335,7 @@ void AssociatedProteinManagement::Update_Bound_II_Teth() {
         // Site two
         Tubulin *site_two = xlink->head_two_.site_;
         int n_two = site_two->GetPRC1NeighborCount();
-        if (x == rest_dist_) {
+        if (x == 0) {
           int i_one = n_bound_ii_teth_same_[n_two][x_dub][x];
           bound_ii_teth_same_[n_two][x_dub][x][i_one] = &xlink->head_two_;
           n_bound_ii_teth_same_[n_two][x_dub][x]++;
@@ -1360,84 +1394,9 @@ void AssociatedProteinManagement::Update_Free_Teth() {
   }
 }
 
-/*
-int AssociatedProteinManagement::Set_Bind_II_Candidates(int n_to_set) {
-
-  if (verbosity_ >= 1) {
-    wally_->Log(" Starting AP_MGMT::Set_Bind_II_Candidates(%i)\n", n_to_set);
-  }
-  double weight[n_bind_ii_candidates_];
-  double weight_total{0.0};
-  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
-    POP_T *head = std::get<POP_T *>(bind_ii_candidates_[i_entry]);
-    double weight_xlink{head->xlink_->GetTotalWeight_Bind_II()};
-    // If entry has a weight of 0.0, remove it from candidates
-    if (weight_xlink == 0.0) {
-      int i_last{--n_bind_ii_candidates_};
-      bind_ii_candidates_[i_entry] = bind_ii_candidates_[i_last];
-      i_entry--;
-      // If we have zero valid candidates, set n_expected to 0 in SampleStats
-      if (n_bind_ii_candidates_ == 0) {
-        return n_to_set;
-      }
-      continue;
-    }
-    weight[i_entry] = weight_xlink;
-    weight_total += weight[i_entry];
-    if (verbosity_ >= 2) {
-      wally_->Log("   - xlink %i has weight %g\n", head->xlink_->id_,
-                  weight[i_entry]);
-    }
-  }
-  if (verbosity_ >= 2) {
-    wally_->Log("   Total weight is %g\n", weight_total);
-  }
-  if (weight_total == 0.0) {
-    wally_->ErrorExit("AP_MGMT::Set_Bind_II_Candidates()");
-  }
-  int n_removed{0};
-  if (n_to_set > n_bind_ii_candidates_) {
-    n_removed = n_to_set - n_bind_ii_candidates_;
-    n_to_set = n_bind_ii_candidates_;
-  }
-  ENTRY_T selected_candidates[n_to_set];
-  for (int i_set{0}; i_set < n_to_set; i_set++) {
-    double p_cum{0.0};
-    double ran{properties_->gsl.GetRanProb()};
-    if (verbosity_ >= 2) {
-      wally_->Log("   Rolled %g\n", ran);
-    }
-    for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
-      p_cum += (weight[i_entry] / weight_total);
-      if (verbosity_ >= 2) {
-        wally_->Log("   p_cum[%i] = %g\n", i_entry, p_cum);
-      }
-      if (ran < p_cum) {
-        selected_candidates[i_set] = bind_ii_candidates_[i_entry];
-        weight_total -= weight[i_entry];
-        if (verbosity_ >= 2) {
-          wally_->Log("   selected entry %i\n", i_entry);
-          wally_->Log("   total weight is now %g\n", weight_total);
-        }
-        bind_ii_candidates_[i_entry] =
-            bind_ii_candidates_[n_bind_ii_candidates_ - 1];
-        weight[i_entry] = weight[n_bind_ii_candidates_ - 1];
-        n_bind_ii_candidates_--;
-        break;
-      }
-    }
-  }
-  n_bind_ii_candidates_ = n_to_set;
-  for (int i_entry{0}; i_entry < n_bind_ii_candidates_; i_entry++) {
-    bind_ii_candidates_[i_entry] = selected_candidates[i_entry];
-  }
-  return n_removed;
-}
-*/
-
 void AssociatedProteinManagement::RunKMC() {
 
-  // if (properties_->current_step_ > 926140) {
+  // if (properties_->current_step_ > 94445) {
   //   verbosity_ = 3;
   // }
   if (!population_active_) {
@@ -1461,11 +1420,13 @@ void AssociatedProteinManagement::UpdateLists() {
   }
   // lists_up_to_date_ = true;
   Update_Extensions();
+  Update_Weights();
   properties_->microtubules.UpdateUnoccupied();
   Update_Bound_I();
   if (crosslinking_active_) {
     Update_Bound_II();
   }
+  /*
   if (tethering_active_) {
     Update_Free_Teth();
     Update_Bound_Unteth();
@@ -1475,6 +1436,7 @@ void AssociatedProteinManagement::UpdateLists() {
     }
     properties_->kinesin4.Update_Bound_Unteth();
   }
+  */
 }
 
 void AssociatedProteinManagement::SampleEventStatistics() {
@@ -1484,8 +1446,8 @@ void AssociatedProteinManagement::SampleEventStatistics() {
   }
   n_events_to_exe_ = 0;
   for (auto &&event : events_) {
-    if (verbosity_ >= 2) {
-      // wally_->Log("Sampling statistics for %s\n", event.name_.c_str());
+    if (verbosity_ >= 3) {
+      wally_->Log("Sampling statistics for %s\n", event.name_.c_str());
     }
     n_events_to_exe_ += event.SampleStatistics();
     // Ensure no funny business occurs with statistics
@@ -1503,7 +1465,7 @@ void AssociatedProteinManagement::SampleEventStatistics() {
           head = std::get<POP_T *>(event.targets_[i_entry]);
         } catch (...) {
           unsigned long index{event.targets_[i_entry].index()};
-          wally_->Log("    -target %i: INDEX %lu ?!\n", i_entry, index);
+          wally_->Log("    -target %i: NULL (i_var = %lu)\n", i_entry, index);
           continue;
         }
         wally_->Log("    -target %i: xlink %i\n", i_entry, head->xlink_->id_);
@@ -1516,7 +1478,7 @@ void AssociatedProteinManagement::SampleEventStatistics() {
   if (n_events_to_exe_ <= 1) {
     return;
   }
-  // Put all events with >1 target into an active_ array
+  // Put all events with >0 targets into an active_ array
   std::pair<EVENT_T *, ENTRY_T> active_events[n_events_to_exe_];
   int i_active{0};
   for (auto &&event : events_) {
@@ -1524,12 +1486,11 @@ void AssociatedProteinManagement::SampleEventStatistics() {
     for (int i_tar{0}; i_tar < event.n_expected_; i_tar++) {
       active_events[i_active++] = std::make_pair(&event, event.targets_[i_tar]);
       if (verbosity_ >= 2) {
-        wally_->Log(" Added %s to active_events\n", event.name_.c_str());
+        wally_->Log(" %s is an active_event\n", event.name_.c_str());
       }
     }
   }
-  // Scan through all active events to ensure that no two target the same
-  // xlink
+  // Scan through all active events to ensure that no two target the same xlink
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
     EVENT_T *event_i = active_events[i_entry].first;
     AssociatedProtein *xlink_i{nullptr};
@@ -1596,7 +1557,7 @@ void AssociatedProteinManagement::GenerateExecutionSequence() {
     wally_->ErrorExit("AP_MGMT::GenerateExecutionSequence()");
   }
   if (n_events_to_exe_ > 1) {
-    properties_->gsl.Shuffle(pre_array, n_events_to_exe_, sizeof(EVENT_T *));
+    gsl_->Shuffle(pre_array, n_events_to_exe_, sizeof(EVENT_T *));
   }
   if (n_events_to_exe_ > events_to_exe_.size()) {
     events_to_exe_.resize(n_events_to_exe_);

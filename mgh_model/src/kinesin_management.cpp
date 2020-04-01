@@ -515,11 +515,10 @@ void KinesinManagement::InitializeEvents() {
       if (max_neighbs_ > 0) {
         event_name += N_NEIGHBS;
       }
-      events_.emplace_back(
-          event_name, p_bind_i_[i_aff][n_neighbs],
-          &properties_->microtubules.n_unocc_motor_[i_aff][n_neighbs],
-          &properties_->microtubules.unocc_motor_[i_aff][n_neighbs], exe_bind_i,
-          binomial, set_ran_indices);
+      events_.emplace_back(event_name, p_bind_i_[i_aff][n_neighbs],
+                           &properties_->microtubules.n_unocc_motor_[n_neighbs],
+                           &properties_->microtubules.unocc_motor_[n_neighbs],
+                           exe_bind_i, binomial, set_ran_indices);
     }
   }
   // Bind_I_Teth: same as bind_i but for tethered populations
@@ -903,7 +902,7 @@ void KinesinManagement::Update_Docked() {
     if (motor->GetActiveHead()->ligand_ == "ADPP") {
       Tubulin *dock_site{motor->GetDockSite()};
       if (!dock_site->occupied_) {
-        int aff{dock_site->GetAffinityExcluding(motor)};
+        int aff{0};
         int n_neighbs_eff{0};
         if (max_neighbs_ > 0) {
           n_neighbs_eff = dock_site->GetKif4ANeighborCount() - 1;

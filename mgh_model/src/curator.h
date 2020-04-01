@@ -12,7 +12,6 @@ class Curator {
 private:
   FILE *log_file_{nullptr};
   unsigned long data_threshold_{0};
-  unsigned long n_steps_recorded_{0};
   unsigned long n_steps_per_output_{0};
   unsigned long equil_milestone_{0};
   unsigned long data_milestone_{0};
@@ -36,7 +35,7 @@ public:
 private:
   FILE *OpenFile(const char *file_name, const char *type);
   bool FileExists(std::string file_name);
-  void CheckArgs(char *agrv[]);
+  void ParseArgs(char *agrv[]);
   void GenerateLogFile();
   void GenerateDataFiles();
   void ParseParameters();

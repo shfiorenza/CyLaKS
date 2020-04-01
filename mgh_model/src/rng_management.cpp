@@ -28,6 +28,11 @@ double RandomNumberManagement::GetGaussianPDF(double x, double sigma) {
   return gsl_ran_gaussian_pdf(x, sigma);
 }
 
+double RandomNumberManagement::GetGaussianNoise(double sigma) {
+
+  return gsl_ran_gaussian(rng_, sigma);
+}
+
 void RandomNumberManagement::SetRanIndices(int indices[], int n, int m) {
 
   int integer_pool[m];

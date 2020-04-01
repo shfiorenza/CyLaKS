@@ -1,9 +1,9 @@
 clear all;
 % Input parameters
-baseName = "test";
+baseName = "test_expandD";
 seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
-site_size = 0.008; % in microns
+site_size = 0.008; % in nm
 % Set file directory
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
@@ -42,7 +42,7 @@ for i_seed = 1:length(seeds)
     end
     % Open mt coordinate file
     mt_coords_file = fopen(sprintf(fileDirectory, sprintf('%s_mt_coord.file', simName)));
-    mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'int');
+    mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'double');
     fclose(mt_coords_file);
     for i_data = start_point + 1: n_datapoints
         mt_coords = mt_coord_data(:, i_data)';
@@ -82,7 +82,7 @@ hold all
 
 % Plot overlap length on top
 subplot(2, 1, 1)
-%plot(linspace(start_time, end_time, active_datapoints), overlap_length_data, 'LineWidth', 2);
+plot(linspace(start_time, end_time, active_datapoints), overlap_length_data, 'LineWidth', 2);
 hold on
 plot(linspace(start_time, end_time, active_datapoints), plus_end_dist_data, 'LineWidth', 2);
 title('Distance between plus-ends over time');
@@ -96,7 +96,7 @@ grid minor
 
 % Plot sliding velocity on bottom
 subplot(2, 1, 2)
-%plot(linspace(start_time, end_time, active_datapoints), overlap_velocity, 'LineWidth', 2);
+plot(linspace(start_time, end_time, active_datapoints), overlap_velocity, 'LineWidth', 2);
 hold on
 plot(linspace(start_time, end_time, active_datapoints), plus_end_velocity, 'LineWidth', 2);
 title('Sliding velocity over time');

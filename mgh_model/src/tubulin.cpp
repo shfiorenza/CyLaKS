@@ -9,8 +9,8 @@ void Tubulin::Initialize(system_parameters *parameters,
 
   parameters_ = parameters;
   properties_ = properties;
+  site_size_ = parameters->microtubules.site_size;
   index_ = i_site;
-  coord_ = i_site;
   mt_ = mt;
 }
 
@@ -65,71 +65,7 @@ bool Tubulin::EquilibriumInSameDirection() {
   }
 }
 
-void Tubulin::UpdateAffinity() {
-
-  if (motor_head_ != nullptr) {
-    affinity_ = 0;
-    return;
-  }
-  int n_affs{properties_->kinesin4.n_affinities_};
-  if (n_affs <= 1) {
-    affinity_ = 0;
-    return;
-  }
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / (n_affs - 1)};
-
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
-        return;
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
-        return;
-      }
-    }
-  }
-  affinity_ = n_affs - 1;
-}
-
-int Tubulin::GetAffinityExcluding(Kinesin *motor) {
-
-  int n_affs{properties_->kinesin4.n_affinities_};
-  if (n_affs <= 1) {
-    return 0;
-  }
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{0};
-  if (n_affs > 1) {
-    bin_size = range / (n_affs - 1);
-  }
-
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_fwd].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
-        }
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_bck].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
-        }
-      }
-    }
-  }
-  return (n_affs - 1);
-}
+double Tubulin::GetCoord() { return double(index_) + mt_->coord_; }
 
 int Tubulin::GetPRC1NeighborCount() {
 
@@ -139,7 +75,7 @@ int Tubulin::GetPRC1NeighborCount() {
   int n_neighbs{0};
   for (int delta{-1}; delta <= 1; delta += 2) {
     int i_scan = index_ + delta;
-    if (i_scan < 0 or i_scan > (mt_->n_sites_ - 1)) {
+    if (i_scan < 0 or i_scan > mt_->n_sites_ - 1) {
       continue;
     }
     if (mt_->lattice_[i_scan].xlink_head_ != nullptr) {
@@ -155,12 +91,12 @@ int Tubulin::GetKif4ANeighborCount() {
     return 0;
   }
   int n_neighbs{0};
-  int mt_end{mt_->n_sites_ - 1};
   for (int delta{-1}; delta <= 1; delta += 2) {
     int i_scan = index_ + delta;
-    if (i_scan < 0 or i_scan > mt_end) {
+    if (i_scan < 0 or i_scan > mt_->n_sites_ - 1) {
       continue;
-    } else if (mt_->lattice_[i_scan].motor_head_ != nullptr) {
+    }
+    if (mt_->lattice_[i_scan].motor_head_ != nullptr) {
       n_neighbs++;
     }
   }

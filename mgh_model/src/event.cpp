@@ -24,9 +24,6 @@ template <typename ENTRY_T> void Event<ENTRY_T>::SampleStatistics_Poisson() {
 
 template <typename ENTRY_T> void Event<ENTRY_T>::SetTargets_Poisson() {
 
-  if (n_expected_ > *n_avail_) {
-    n_expected_ = *n_avail_;
-  }
   // Run through potential candidates and remove those with weight = 0.0
   for (int i_entry{0}; i_entry < *n_avail_; i_entry++) {
     if (poisson_weights_[i_entry] == 0.0) {
@@ -60,6 +57,7 @@ template <typename ENTRY_T> void Event<ENTRY_T>::SetTargets_Poisson() {
         int i_last{--*n_avail_};
         target_pool_->at(i_entry) = target_pool_->at(i_last);
         poisson_weights_[i_entry] = poisson_weights_[i_last];
+        break;
       }
     }
   }

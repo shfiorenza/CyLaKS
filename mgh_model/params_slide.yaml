@@ -1,5 +1,5 @@
 seed: 198261346419
-n_steps: 60000000
+n_steps: 6000000 # 0
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 2.5e-05
@@ -16,10 +16,11 @@ microtubules:
   elevation: 50
   start_coord:
   - 0
-  - 0
+  - 950
   immobile_until:
   - 9500
   - 50
+  n_iterations: 100
   applied_force: 0.0
   printout_on: false
   diffusion_on: true
@@ -53,7 +54,7 @@ xlinks:
   c_bulk: 0.54
   c_eff_bind: 45000
   k_off_i: 0.143
-  k_off_ii: 143 # 0.143
+  k_off_ii: 0.0143
   r_0: 32
   k_spring: 0.453
   diffu_coeff_i: 0.131

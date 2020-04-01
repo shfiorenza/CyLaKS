@@ -22,6 +22,7 @@ public:
   int GetRanInt(int n);
   double GetRanProb();
   double GetGaussianPDF(double x, double sigma);
+  double GetGaussianNoise(double sigma);
 
   void SetRanIndices(int indices[], int n, int m);
   void Shuffle(void *array, size_t length, size_t element_size);

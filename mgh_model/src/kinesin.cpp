@@ -468,6 +468,7 @@ void Kinesin::UpdateNeighbors_Tether_Bound() {
 }
 double Kinesin::GetWeight_Bind_I_Teth(Tubulin *site) {
 
+  /*
   // Since only one foot of the motor attaches initially,
   // we only need to consider the coordinate of one site
   // (assuming the diffusion of the other foot avgs out)
@@ -482,6 +483,7 @@ double Kinesin::GetWeight_Bind_I_Teth(Tubulin *site) {
   int n_neighbs = site->GetKif4ANeighborCount();
   // Get binding weight that corresponds to this adj. x-dist
   return weight_bind_i_teth_[aff][n_neighbs][x_dub];
+  */
 }
 
 double Kinesin::GetWeight_Tether_Bound(AssociatedProtein *xlink) {

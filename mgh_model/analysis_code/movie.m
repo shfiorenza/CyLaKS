@@ -3,16 +3,16 @@ clear all;
 mt_lengths = [1000, 500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-simName = "test";
+simName = "test_expandD";
 dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 6000000;
 n_datapoints = 10000;
-start_frame = 01;
+start_frame = 1;
 end_frame = n_datapoints;
-frames_per_plot = 1000;
+frames_per_plot = 100;
 delta_t = 0.000025; 
-xlink_cutoff = 12;
+xlink_cutoff = 5;
 cutoff = 19;
 % Colors
 blue = [30 144 255] / 255;
@@ -58,7 +58,7 @@ fig1 = figure;
 set(fig1, 'Position', [0 100 1600 400]);
 
 mt_data_file = fopen(mtFile);
-mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
+mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*double');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
@@ -260,9 +260,10 @@ for i_data=start_frame:frames_per_plot:end_frame
                 xlink_center_y = xlink_height - site_height/2;
             end
             if(xlink_IDs(i_xlink) ~= -1)
+                %disp(i_xlink)
                 double_bound = false;
-                for i_scan = -xlink_cutoff:1:xlink_cutoff
-                    i_neighb = i_xlink + i_scan + mt_pos - neighb_mt_pos;
+                for i_scan = -(xlink_cutoff + 1) : xlink_cutoff + 1
+                    i_neighb = round(i_xlink + i_scan + mt_pos - neighb_mt_pos);
                     if i_neighb < 1
                         i_neighb = 1;
                     elseif i_neighb > n_sites

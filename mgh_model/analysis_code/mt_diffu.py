@@ -2,9 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 n_mts = 5
-max_tau = 30
-simName = "test"
-delta_t = 2.5e-03
+max_tau = 3.15
+simName = "mt_diffusionB_2"
+delta_t = 2.5e-05
 n_steps = 600000  # 0
 n_datapoints = 10000
 time_per_datapoint = n_steps * delta_t / n_datapoints
@@ -13,7 +13,7 @@ site_size = 0.008
 fileDirectory = "/home/shane/Projects/overlap_analysis/mgh_model/%s"
 mtFileStruct = "%s_mt_coord.file"
 mtFilePath = fileDirectory % mtFileStruct % simName
-mt_data = np.fromfile(mtFilePath, dtype=np.int32).reshape(n_datapoints, n_mts)
+mt_data = np.fromfile(mtFilePath, dtype=np.float).reshape(n_datapoints, n_mts)
 
 min_tau = time_per_datapoint
 tau_increment = time_per_datapoint

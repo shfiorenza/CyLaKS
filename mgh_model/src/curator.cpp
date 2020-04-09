@@ -57,6 +57,7 @@ void Curator::ParseArgs(char *argv[]) {
     printf("Currently-implemented test modes are:\n");
     printf("    motor_lattice_coop\n");
     printf("    xlink_bind_ii\n");
+    printf("    xlink_diffuse_ii");
     exit(1);
   }
 }

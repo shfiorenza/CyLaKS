@@ -1,7 +1,7 @@
 clear all;
 % Input parameters
-baseName = "test_expandD";
-seeds = [1]; %,2,5];%,6,7,4,8];%,8,9]%,11];
+baseName = "test_expandC";
+seeds = [0]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in nm
 % Set file directory
@@ -15,10 +15,19 @@ values = log{1,2};
 % Read in number of MTs
 n_mts = str2double(values{contains(params, "count")});
 % Read in length of each MTs
+
 [length_one, length_two] = values{contains(params, "length")};
 mt_lengths(1) = sscanf(length_one, '%i');
 mt_lengths(2) = sscanf(length_two, '%i');
- %mt_lengths(3) = sscanf(length_three, '%i');
+
+%{
+[l_1, l_2, l_3, l_4, l_5] = values{contains(params, "length")};
+mt_lengths(1) = sscanf(l_1, '%i');
+mt_lengths(2) = sscanf(l_2, '%i');
+mt_lengths(3) = sscanf(l_3, '%i');
+mt_lengths(4) = sscanf(l_4, '%i');
+mt_lengths(5) = sscanf(l_5, '%i');
+%}
 % Read in system parameters
 n_steps = str2double(values{contains(params, "n_steps")});
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
@@ -91,6 +100,7 @@ xlabel('Time (s)');
 axis tight
 xlim([start_time end_time]);
 %ylim([0 4.5]);
+legend(["Overlap length", "Plus-end distance"]);
 grid on
 grid minor
 

@@ -1,16 +1,17 @@
 clear all;
 % Parameters from sim
-mt_lengths = [1000, 500];
+mt_lengths = [1000, 500]; %, 500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-simName = "test_expandD";
+%simName = "xlink_diffusion_double_0_0";
+simName = "test_expand";
 dur_sec = 60;
 % Pseudo-constant variables
-n_steps = 6000000;
+n_steps = 4000000;
 n_datapoints = 10000;
 start_frame = 1;
 end_frame = n_datapoints;
-frames_per_plot = 100;
+frames_per_plot = 10;
 delta_t = 0.000025; 
 xlink_cutoff = 5;
 cutoff = 19;

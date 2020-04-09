@@ -1,32 +1,28 @@
 #!/bin/bash
-echo Starting overlap occupancy scan
-PARAM_FILE="params_processivity.yaml"
-echo Base parameter file is $PARAM_FILE
-MOT_CONC=0.0;
-for DIFF_SCALE in 2 2.25 2.5 3
+BASE_NAME="xlink_diffusion_double"
+BASE_PARAMS="params_slide.yaml"
+echo "Starting ${BASE_NAME} scan"
+echo "Base parameter file is ${BASE_PARAMS}"
+
+#BASE_SEED=198261346419
+
+#for I_SEED in 0 1 2 3 4 5 6 7
+for I_MT in 0 1
 do
-	D_II=$(echo "scale=4; 0.131 / $DIFF_SCALE" | bc)
-	for I_RUN in 1 2 3
+	for OFFSET in 0 0.25 0.5 0.75 1
 	do
-		FILE_NAME="diffu_double"
-		FILE_NAME+="_"
-		FILE_NAME+=$DIFF_SCALE
-		FILE_NAME+="_"
-		FILE_NAME+=$I_RUN
-		echo RUNNING NEW SIM: filename is $FILE_NAME
-		TEMP_PARAMS="params_temp_xlink_diffu"
-		TEMP_PARAMS+="_"
-		TEMP_PARAMS+=$DIFF_SCALE
-		TEMP_PARAMS+="_"
-		TEMP_PARAMS+=$I_RUN
-		TEMP_PARAMS+=".yaml"
-		cp $PARAM_FILE $TEMP_PARAMS
-		yq w -i $TEMP_PARAMS motors.c_bulk $MOT_CONC
-		yq w -i $TEMP_PARAMS xlinks.diffu_coeff_ii $D_II
-		# Run sim for these parameter values
-		./sim $TEMP_PARAMS $FILE_NAME &
+		# SEED=$(( ${BASE_SEED} + ${I_SEED} ))
+		# SIM_NAME="${BASE_NAME}_${I_SEED}"
+		SIM_NAME="${BASE_NAME}_${I_MT}_${OFFSET}"
+		PARAM_FILE="temp_params_${SIM_NAME}.yaml"
+		cp ${BASE_PARAMS} ${PARAM_FILE}
+		# yq w -i ${PARAM_FILE} seed ${SEED}
+		yq w -i ${PARAM_FILE} microtubules.start_coord[${I_MT}] ${OFFSET}
+		# Run simulation; '&' allows for all to run concurrently 
+		echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
+		./sim ${PARAM_FILE} ${SIM_NAME} & 
 	done
 done
-wait
-rm params_temp_xlink_diffu*
-echo END SCAN
+wait 
+rm temp_params_${BASE_NAME}_*
+echo "Finished ${BASE_NAME} scan"

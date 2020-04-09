@@ -16,7 +16,6 @@ private:
   int max_neighbs_motor_{0};
   int n_diffusion_iterations_{0};
   double dt_eff_{0.0};
-  double site_size_{0.0};
   bool lists_up_to_date_{false};
   Curator *wally_{nullptr};
   RandomNumberManagement *gsl_{nullptr};

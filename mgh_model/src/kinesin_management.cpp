@@ -493,6 +493,7 @@ void KinesinManagement::InitializeEvents() {
     }
   };
   /* * Event entries * */
+  /*
   std::string event_name; // scratch space to construct each event name
   // Bind_I: bind first motor head to MT and release ADP
   auto exe_bind_i = [&](ENTRY_T target) {
@@ -765,6 +766,7 @@ void KinesinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_untether_satellite_, &n_satellites_,
                          &satellites_, exe_untether, binomial, set_ran_indices);
   }
+  */
   if (verbosity_ >= 3) {
     wally_->Log("\nMotor events: \n");
     for (const auto &event : events_) {
@@ -876,7 +878,7 @@ void KinesinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void KinesinManagement::Update_Extensions() {
 
-  if (!tethering_active_) {
+  if (!tethering_active_ or !population_active_) {
     return;
   }
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {

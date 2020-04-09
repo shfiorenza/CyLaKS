@@ -37,6 +37,12 @@ void MicrotubuleManagement::InitializeTestEnvironment() {
     parameters_->microtubules.length[1] = 2 * xlink_cutoff + 1;
     parameters_->microtubules.diffusion_on = false;
   }
+  if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {
+    parameters_->microtubules.count = 2;
+    parameters_->microtubules.length[0] = 500;
+    parameters_->microtubules.length[1] = 500;
+    parameters_->microtubules.diffusion_on = false;
+  }
   SetParameters();
   GenerateMicrotubules();
   InitializeLists();
@@ -50,7 +56,6 @@ void MicrotubuleManagement::SetParameters() {
   max_neighbs_motor_ = 0;
   n_diffusion_iterations_ = parameters_->microtubules.n_iterations;
   dt_eff_ = parameters_->delta_t / n_diffusion_iterations_;
-  site_size_ = parameters_->microtubules.site_size;
   for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
     n_sites_tot_ += parameters_->microtubules.length[i_mt];
   }
@@ -125,11 +130,13 @@ void MicrotubuleManagement::UpdateUnoccupied() {
 double MicrotubuleManagement::GetSiteOffset() {
 
   if (mt_list_.size() != 2) {
-    wally_->ErrorExit("MT_MGMT::GetSiteOffset()");
+    return 0.0;
   }
-  double site_diff{(mt_list_[0].coord_ - mt_list_[1].coord_) / site_size_};
+  double site_diff{mt_list_[0].coord_ - mt_list_[1].coord_};
   // Ranges from 0.0 to 0.5
-  return fabs(std::round(site_diff) - site_diff);
+  double site_offset{fabs(std::round(site_diff) - site_diff)};
+  // printf("offset is %g\n", site_offset);
+  return site_offset;
 }
 
 void MicrotubuleManagement::RunDiffusion() {
@@ -151,31 +158,24 @@ void MicrotubuleManagement::RunDiffusion() {
   if (mts_inactive) {
     return;
   }
-  double tolerance{0.0001};
   for (int i_itr{0}; i_itr < n_diffusion_iterations_; i_itr++) {
     // Sum up all forces exerted on each microtubule
     double forces_summed[n_mts];
     properties_->prc1.Update_Extensions();
     properties_->kinesin4.Update_Extensions();
     for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-      forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
-    }
-    // Check for symmetry
-    double delta{forces_summed[0] + forces_summed[1]};
-    if (delta > tolerance) {
-      properties_->wallace.ErrorExit("MT_MGMT::RunDiffusion()");
-    }
-    // Calculate the displacement of each microtubule in nm
-    for (int i_mt{0}; i_mt < n_mts; i_mt++) {
       // If microtubule is still immobilized, simply continue
       if (current_time < mt_list_[i_mt].immobile_until_) {
         continue;
       }
+      forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
       // Calculate instanteous velocity due to forces using drag coefficient
       double velocity{forces_summed[i_mt] / mt_list_[i_mt].gamma_};
       // Add gaussian noise to represent theraml motion, i.e., diffusion
       double noise{gsl_->GetGaussianNoise(mt_list_[i_mt].sigma_)};
-      mt_list_[i_mt].coord_ += (velocity * dt_eff_ + noise) / site_size_;
+      mt_list_[i_mt].coord_ += velocity * dt_eff_ + noise;
+      // printf("coord[%i] is %g\n", i_mt, mt_list_[i_mt].coord_);
     }
   }
+  // printf("\n  -- \n");
 }

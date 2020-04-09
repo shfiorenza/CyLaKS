@@ -1,20 +1,21 @@
 
 clear all;
 % Often-changed variables
-simName = 'xlink_diffusion_double';
-n_sites = [5000, 5000];
+simName = 'xlink_diffusion_single';
+%simName = 'xlink_diffusion_single';
+n_sites = [5000]; %,5000];
 max_sites = max(n_sites);
 n_mts = length(n_sites);
 starting_point = 001;
-max_tau = 3.6;  % in seconds
+max_tau = 1.5;  % in seconds
 % Pseudo-constant variables
 delta_t = 0.000025;
-n_steps = 60000000;
+n_steps = 40000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 active_datapoints = n_datapoints - starting_point;
 site_size = 0.008; % in um
-xlink_cutoff = 4;
+xlink_cutoff = 5;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 xlinkFileStruct = '%s_xlinkID.file';
@@ -28,7 +29,7 @@ xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
 
 mtFileName = sprintf(fileDirectory, sprintf(mtFileStruct, simName));
 mt_data_file = fopen(mtFileName);
-mt_raw_data = fread(mt_data_file, n_mts * n_datapoints, '*int');
+mt_raw_data = fread(mt_data_file, n_mts * n_datapoints, '*double');
 fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
@@ -67,7 +68,16 @@ for i_tau = 1 : n_taus
                     n_entries(i_tau) = n_entries(i_tau) + 1;
                 % Otherwise if two MTs, check to see if doubly-bound
                 elseif n_mts == 2
-                    i_neighb = find(cur_IDs(:, 2) == cur_IDs(i_site, 1), 1);
+                    %disp(sprintf("i_site = %i", i_site))
+                    i_bck = int32(site_coord - cur_coords(2) - (xlink_cutoff + 1));
+                    if i_bck < 1
+                       i_bck = 1; 
+                    end
+                    i_fwd = int32(site_coord - cur_coords(2) + (xlink_cutoff + 1));
+                    if i_fwd > max_sites
+                        i_fwd = max_sites;
+                    end
+                    i_neighb = find(cur_IDs(i_bck:i_fwd, 2) == cur_IDs(i_site, 1), 1);
                     % If i_neighb isn't found, xlink isn't doubly-bound; skip it
                     if isempty(i_neighb)
                        continue; 
@@ -80,7 +90,16 @@ for i_tau = 1 : n_taus
                        continue; 
                     end
                     prev_site_coord = prev_index + prev_coords(1);
-                    prev_i_neighb = find(prev_IDs(:, 2) == prev_IDs(prev_index, 1), 1);
+                    %disp(sprintf("prev_i_site = %i", prev_index));
+                    i_bck = int32(prev_site_coord - prev_coords(2) - (xlink_cutoff + 1));
+                    if i_bck < 1
+                       i_bck = 1; 
+                    end
+                    i_fwd = int32(prev_site_coord - prev_coords(2) + (xlink_cutoff + 1));
+                    if i_fwd > max_sites
+                        i_fwd = max_sites;
+                    end    
+                    prev_i_neighb = find(prev_IDs(i_bck:i_fwd, 2) == prev_IDs(prev_index, 1), 1);
                     % If xlink isn't doubly-bound in prev timestep; skip
                     if(isempty(prev_i_neighb))
                        continue; 
@@ -124,13 +143,13 @@ D = fit(2) / 2
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600])
 % Plot data
-errorbar(taus, MSD, MSD_err, 'o', 'MarkerSize', 10, 'LineWidth', 2);
+errorbar(taus, MSD, MSD_err, '.', 'MarkerSize', 14, 'LineWidth', 2);
 hold on
 % Plot fit
 plot(taus, taus_padded * fit, '--', 'LineWidth',  2)
 ylabel('Mean squared displacement (\mum^2)', 'FontSize', 14);
 xlabel('Tau (s)', 'FontSize', 14);
-title('Doubly-bound crosslinkers', 'FontSize', 16);
+title('Singly-bound crosslinkers', 'FontSize', 16);
 legend('Sim data', 'Linear fit', 'location', 'northwest', 'FontSize', 14);
 xlim([0.0 (max_tau + tau_increment)]);
 ax = gca;

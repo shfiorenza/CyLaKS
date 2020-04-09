@@ -6,9 +6,9 @@ echo "Base parameter file is ${BASE_PARAMS}"
 
 BASE_SEED=198261346419
 
-for APPLIED_FORCE in 50.0 5.0 0.5 
+for APPLIED_FORCE in 50 5 0.5 0.05
 do
-    for I_SEED in 0 1 2 3 4 5 6 7 8 9
+    for I_SEED in 0 1 2 3 4 5 6 7
     do
         SEED=$(( ${BASE_SEED} + ${I_SEED} ))
         SIM_NAME="${BASE_NAME}_${APPLIED_FORCE}_${I_SEED}"
@@ -22,4 +22,9 @@ do
     done
     wait 
     rm params_temp_${BASE_NAME}_*
+    rm ${BASE_NAME}_*_occupancy.file
+    rm ${BASE_NAME}_*_motor*.file
+    rm ${BASE_NAME}_*_xlink*.file
+    rm ${BASE_NAME}_*_tether_coord.file
+    rm ${BASE_NAME}_*_total_force.file
 done

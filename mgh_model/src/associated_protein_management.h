@@ -34,6 +34,9 @@ private:
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
   std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
   Vec<std::pair<unsigned long, unsigned long>> bind_ii_stats_;
+  Vec<std::pair<unsigned long, unsigned long>> unbind_ii_stats_;
+  Vec<std::pair<unsigned long, unsigned long>> diff_ii_to_stats_;
+  Vec<std::pair<unsigned long, unsigned long>> diff_ii_fr_stats_;
   // WALLACE, MISTA
   Curator *wally_{nullptr};
   // Pointer to class that manages GSL functions
@@ -63,14 +66,13 @@ public:
   int n_active_{0}; // No. actively bound; dynamic
   int n_free_teth_{0};
   int n_bound_unteth_{0};
-  int n_diffuse_ii_to_candidates_{0};
-  int n_diffuse_ii_fr_candidates_{0};
-  int n_bind_i_teth_candidates_{0};
   int n_bind_ii_candidates_{0};
+  int n_bind_i_teth_candidates_{0};
   int n_bind_ii_teth_candidates_{0};
-  int n_unbind_ii_candidates_{0};
   // Index scheme: [n_neighbs]
   Vec<int> n_bound_i_;
+  // Index scheme: [n_neighbs][x]
+  Vec<Vec<int>> n_bound_ii_;
   // Index scheme: [n_neighbs][x_dub]
   Vec<Vec<int>> n_bound_i_teth_;
   // Index scheme: [n_neighbs][x_dub][x]
@@ -79,9 +81,9 @@ public:
 
   /* Probabilities of possible KMC events */
   double p_avg_diffuse_ii_;
-  double p_avg_bind_i_teth_;
   double p_avg_bind_ii_;
   double p_avg_unbind_ii_;
+  double p_avg_bind_i_teth_;
   double p_tether_free_;
   double p_untether_free_;
   // First index is number of PRC1 neighbors: [0], [1], or [2]
@@ -89,20 +91,14 @@ public:
   Vec<double> p_unbind_i_;
   Vec<double> p_diffuse_i_fwd_;
   Vec<double> p_diffuse_i_bck_;
-  // Indices are [n_neighbs][x] or [n_neighbs][x_dub]
-  Vec<Vec<double>> p_unbind_i_teth_;
+  // Indices are [n_neighbs][x]
   Vec<Vec<double>> p_unbind_ii_;
+  Vec<Vec<double>> p_diffuse_ii_to_rest_;
+  Vec<Vec<double>> p_diffuse_ii_fr_rest_;
+  // Indices are [n_neighbs][x_dub]
+  Vec<Vec<double>> p_unbind_i_teth_;
   Vec<Vec<double>> p_diffuse_i_to_teth_rest_;
   Vec<Vec<double>> p_diffuse_i_fr_teth_rest_;
-  /*
-  // Indices are [n_neighbs][x_dub][x]
-  Vec<Vec<Vec<double>>> p_unbind_ii_to_teth_;
-  Vec<Vec<Vec<double>>> p_unbind_ii_fr_teth_;
-  Vec<Vec<Vec<double>>> p_diffuse_ii_to_both_;
-  Vec<Vec<Vec<double>>> p_diffuse_ii_fr_both_;
-  Vec<Vec<Vec<double>>> p_diffuse_ii_to_self_fr_teth_;
-  Vec<Vec<Vec<double>>> p_diffuse_ii_fr_self_to_teth_;
-  */
 
   // Index scheme: [x_dist]
   Vec<double> possible_extensions_;
@@ -112,14 +108,6 @@ public:
   // Index scheme: [n_neighbs]
   Vec<double> weight_neighb_bind_;
   Vec<double> weight_neighb_unbind_;
-
-  /*
-  Vec<Vec<double>> weight_bind_ii_;     // [n_neighbs][x]
-  Vec<Vec<double>> weight_bind_i_teth_; // [n_neighbs][x_dub]
-  // x is PROPOSED x_dist after bind_ii; x_dub is current value before bind_ii
-  Vec<Vec<Vec<double>>> weight_bind_ii_to_teth_; // [n_neighbs][x_dub][x]
-  Vec<Vec<Vec<double>>> weight_bind_ii_fr_teth_; // [n_neighbs][x_dub][x]
-  */
 
   /* Lists that track different population types */
   Vec<AssociatedProtein> xlinks_;
@@ -136,6 +124,8 @@ public:
   // First index is number of PRC1 neighbors: [0], [1], or [2]
   // Second index is actual xlink entry
   Vec<Vec<ENTRY_T>> bound_i_;
+  // Index scheme: [n_neighbs][x][i_entry]
+  Vec<Vec<Vec<ENTRY_T>>> bound_ii_;
   // Second index is [x] or [x_dub]; third index is xlink entry
   Vec<Vec<Vec<ENTRY_T>>> bound_i_teth_;
   // Second index is [x_dub]; third index is [x]; fourth is entry

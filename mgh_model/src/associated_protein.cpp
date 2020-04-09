@@ -141,11 +141,20 @@ void AssociatedProtein::UpdateExtension() {
   if (heads_active_ == 2) {
     double r_x{fabs(head_one_.GetCoord() - head_two_.GetCoord())};
     double x_dist = std::round(r_x);
+    /*
+    if (head_one_.site_->index_ == head_two_.site_->index_) {
+      printf("i_one: %i | i_two: %i\n", head_one_.site_->index_,
+             head_two_.site_->index_);
+      printf("coord one: %g | coord two: %g\n", head_one_.GetCoord(),
+             head_two_.GetCoord());
+      printf("%g -> %g\n", r_x, x_dist);
+    }
+    */
     if (x_dist > dist_cutoff_) {
       ForceUnbind();
     } else {
       x_dist_ = x_dist;
-      // No extension(site_offset): 0
+      // No extension (site_offset): 0
       // Smaller extensions (x_dist - site_offset): 1 to dist_cutoff_
       // Larger extensions (x_dist + site_offset): cutoff + 1 to 2*cutoff
       if (r_x > x_dist and x_dist != 0) {
@@ -351,12 +360,14 @@ Tubulin *AssociatedProtein::GetSiteFartherFromTethRest() {
 void AssociatedProtein::UpdateNeighbors_Bind_II() {
 
   n_neighbors_bind_ii_ = 0;
+  // printf("dist cutoff is %g\n", dist_cutoff_);
   Monomer *bound_head{GetActiveHead()};
   double bound_coord{bound_head->GetCoord()};
   Microtubule *adjacent_mt{bound_head->site_->mt_->neighbor_};
   // Scan through all potential neighbors; only add unoccupied to list
-  for (int delta{-dist_cutoff_ + 1}; delta <= dist_cutoff_ + 1; delta++) {
+  for (int delta{-(dist_cutoff_ + 1)}; delta <= dist_cutoff_ + 1; delta++) {
     int i_neighb{int(bound_coord - adjacent_mt->coord_) + delta};
+    // printf("i_neighb = %i\n", i_neighb);
     // Skip loop iteration if i_neighb is negative
     if (i_neighb < 0) {
       continue;
@@ -365,10 +376,26 @@ void AssociatedProtein::UpdateNeighbors_Bind_II() {
     if (i_neighb > adjacent_mt->n_sites_ - 1) {
       return;
     }
+    /*
+    printf("delta = %i\n", delta);
+    printf("i_neighb = %i\n", i_neighb);
+    */
+    // printf("occu?\n");
     Tubulin *neighb = &adjacent_mt->lattice_[i_neighb];
     if (!neighb->occupied_) {
-      double x_dist{fabs(bound_coord - neighb->GetCoord())};
-      if (std::round(x_dist) <= dist_cutoff_) {
+      // printf("not occu!\n");
+      double r_x{fabs(bound_coord - neighb->GetCoord())};
+      double x_dist{std::round(r_x)};
+      // printf("x_dist is %g\n", x_dist);
+      // printf("r_x = %g\n", r_x);
+      if (x_dist <= dist_cutoff_) {
+        // printf("n_neighbs = %i\n", n_neighbors_bind_ii_);
+        /*
+        if (r_x > x_dist and x_dist != 0.0) {
+          x_dist += dist_cutoff_;
+        }
+        printf("added with x_dist = %g\n", x_dist);
+        */
         neighbors_bind_ii_[n_neighbors_bind_ii_++] = neighb;
       }
     }
@@ -466,6 +493,8 @@ double AssociatedProtein::GetWeight_DiffuseToRest(Monomer *head) {
   // x_dist == 1 is handled by diffuse_fr for x == 0
   if (x_dist_ == 0) {
     x_to = dist_cutoff_ + 1;
+  } else if (x_dist_ == dist_cutoff_ + 1) {
+    x_to = 0;
   }
   // We consider diffusing towards rest to be an unbind-like event,
   // since it results in the spring becoming less stretched
@@ -486,7 +515,7 @@ double AssociatedProtein::GetWeight_DiffuseFrRest(Monomer *head) {
   if (x_dist_ == dist_cutoff_ or x_dist_ == 2 * dist_cutoff_) {
     return 0.0;
   }
-  Monomer *other_head{head->GetOtherHead()};
+  // Monomer *other_head{head->GetOtherHead()};
   // Check site we will be diffusing to
   int dx_rest{GetDirectionTowardRest(head->site_)};
   int i_neighb{head->site_->index_ - dx_rest};
@@ -526,10 +555,10 @@ double AssociatedProtein::GetWeight_Bind_II(Tubulin *neighbor) {
     wally_->ErrorExit("AP::GetWeight_Bind_II()");
   }
   double r_x{fabs(neighbor->GetCoord() - site->GetCoord())};
-  int x_dist{std::round(r_x)};
+  int x_dist{(int)std::round(r_x)};
   // By convention, smaller extensions (w/ x = x_base - site_offset()) range
   // from 0 to dist_cutoff_. Larger extensions from dist_cutoff_ to 2*cutoff_
-  if (r_x > x_dist) {
+  if (r_x > x_dist and x_dist != 0) {
     x_dist += dist_cutoff_;
   }
   int n_neighbs{neighbor->GetPRC1NeighborCount()};

@@ -1,5 +1,5 @@
 #!/bin/bash
-BASE_NAME="xlink_diffusion_double"
+BASE_NAME="xlink_diffusion_doubleD"
 BASE_PARAMS="params_slide.yaml"
 echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"

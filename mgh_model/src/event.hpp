@@ -68,7 +68,9 @@ public:
         std::function<void(int *, int, int)> set_ran_indices)
       : name_{name}, p_occur_ptr_{p_occur_ptr}, n_avail_{n_avail},
         target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
-        set_ran_indices_{set_ran_indices} {}
+        set_ran_indices_{set_ran_indices} {
+    p_occur_ = *p_occur_ptr_;
+  }
   // Constructor for poisson-based events
   Event(std::string name, double p_occur, int *n_avail,
         std::vector<ENTRY_T> *target_pool,
@@ -85,13 +87,11 @@ public:
   }
   // Sample appropriate stastistical distribution and return n_expected_
   int SampleStatistics() {
-    if (!poisson_based_) {
-      p_occur_ = *p_occur_ptr_;
-    }
     n_opportunities_tot_ += *n_avail_;
     if (poisson_based_) {
       SamplePoissonStatistics();
     } else {
+      p_occur_ = *p_occur_ptr_;
       n_expected_ = prob_dist_(p_occur_, *n_avail_);
     }
     SetTargets();

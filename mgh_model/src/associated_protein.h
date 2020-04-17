@@ -58,9 +58,9 @@ public:
   int heads_active_{0};
   // x_dist_ is used to index the xlink extensions for lookup
   // e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
-  int x_dist_{0};         // in no. of sites; can only be 0 or pos.
-  double rest_dist_{0};   // x_dist at which spring extension is ~0
-  double dist_cutoff_{0}; // maximum value x_dist_ can have
+  int x_dist_{0};       // in no. of sites; can only be 0 or pos.
+  double rest_dist_{0}; // x_dist at which spring extension is ~0
+  int dist_cutoff_{0};  // maximum value x_dist_ can have
 
   double r_0_{0.0};
   double k_spring_{0.0};

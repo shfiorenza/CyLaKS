@@ -33,8 +33,8 @@ void MicrotubuleManagement::InitializeTestEnvironment() {
   if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
     int xlink_cutoff{properties_->prc1.dist_cutoff_};
     parameters_->microtubules.count = 2;
-    parameters_->microtubules.length[0] = 2 * xlink_cutoff + 1;
-    parameters_->microtubules.length[1] = 2 * xlink_cutoff + 1;
+    parameters_->microtubules.length[0] = 2 * (xlink_cutoff + 1) + 1;
+    parameters_->microtubules.length[1] = 2 * (xlink_cutoff + 1) + 1;
     parameters_->microtubules.diffusion_on = false;
   }
   if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {

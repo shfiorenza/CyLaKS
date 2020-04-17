@@ -57,7 +57,7 @@ void AssociatedProteinManagement::CalculateCutoffs() {
     double dr{r - r_0_};                                 // in n_sites
     double energy_factor{0.5 * k_spring_eff_ * dr * dr}; // unitless energy
     double boltzmann_weight = exp(lambda_spring_ * energy_factor);
-    if (boltzmann_weight > 1e3) {
+    if (boltzmann_weight > 1e2) {
       f_cutoff = fabs(dr * site_size * k_spring);
       dist_cutoff_ = x_dist;
       break;
@@ -85,22 +85,51 @@ void AssociatedProteinManagement::SetParameters() {
   weight_neighb_bind_.resize(max_neighbs_ + 1);
   weight_neighb_unbind_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    // energy is in units of kbT
+    // ! energy is in units of kbT
+    // value in params is aboslute value; need to multiply by -1
     double energy{-1 * n_neighbs * parameters_->xlinks.interaction_energy};
-    weight_neighb_bind_[n_neighbs] = exp(-(1 - lambda_neighb_) * energy);
+    weight_neighb_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb_) * energy);
     weight_neighb_unbind_[n_neighbs] = exp(lambda_neighb_ * energy);
   }
-  // Construct array of spring extensions and associated weights
+  auto xlink_test{strstr(wally_->test_mode_, "xlink")};
+  if (xlink_test != nullptr) {
+    properties_->microtubules.InitializeTestEnvironment();
+  }
+  // Construct array of spring extensions and cosines for each x_dist value
   possible_cosines_.resize(2 * dist_cutoff_ + 1);
   possible_extensions_.resize(2 * dist_cutoff_ + 1);
-  if (wally_->test_mode_ == nullptr) {
-    Update_Extensions();
+  // if (wally_->test_mode_ == nullptr) {
+  Update_Extensions();
+  // } else if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {
+  //   Update_Extensions();
+  // }
+  double kbT{parameters_->kbT};
+  double delta_t{parameters_->delta_t};
+  double site_size{parameters_->microtubules.site_size};
+  double x_squared{(site_size / 1000) * (site_size / 1000)}; //! in um^2
+  // Characteristic timescale for doubly-bound xlink to diffuse 1 site
+  double tau_ii{x_squared / (2 * parameters_->xlinks.diffu_coeff_ii)};
+  double p_diffu_ii{delta_t / tau_ii};
+  // We consider diff_fwd and diff_bck as two separate events, which
+  // effectively doubles the probability to diffuse. To counteract this,
+  // divide p_diff by 2.
+  p_diffu_ii /= 2;
+  p_avg_diffuse_ii_ = p_diffu_ii;
+  double k_off_ii{parameters_->xlinks.k_off_ii};
+  p_avg_unbind_ii_ = k_off_ii * delta_t;
+  p_diffuse_ii_to_rest_.resize(max_neighbs_ + 1);
+  p_diffuse_ii_fr_rest_.resize(max_neighbs_ + 1);
+  p_unbind_ii_.resize(max_neighbs_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    p_diffuse_ii_to_rest_[n_neighbs].resize(2 * dist_cutoff_ + 1);
+    p_diffuse_ii_fr_rest_[n_neighbs].resize(2 * dist_cutoff_ + 1);
+    p_unbind_ii_[n_neighbs].resize(2 * dist_cutoff_ + 1);
   }
   weight_spring_bind_.resize(2 * dist_cutoff_ + 1);
   weight_spring_unbind_.resize(2 * dist_cutoff_ + 1);
-  if (wally_->test_mode_ == nullptr) {
-    Update_Weights();
-  }
+  // if (xlink_test != nullptr) {
+  Update_Weights();
+  // }
 
   /*
   // Calculate neighbor interaction energies
@@ -145,23 +174,11 @@ void AssociatedProteinManagement::SetParameters() {
     }
   }
   */
-  // [DIFFUSION STATISTICS FOR CROSSLINKER W/O TETH BELOW] //
-  double kbT{parameters_->kbT};
-  double delta_t{parameters_->delta_t};
-  double site_size{parameters_->microtubules.site_size};
-  double x_squared{(site_size / 1000) * (site_size / 1000)}; //! in um^2
+  // [DIFFUSION STATISTICS FOR CROSSLINKER W/O TETH BELOW] //  //
   // Characteristic timescale for singly-bound xlink to diffuse 1 site
   double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
   double p_diffu_i{delta_t / tau_i};
-  // Characteristic timescale for doubly-bound xlink to diffuse 1 site
-  double tau_ii{x_squared / (2 * parameters_->xlinks.diffu_coeff_ii)};
-  double p_diffu_ii{delta_t / tau_ii};
-  // We consider diff_fwd and diff_bck as two separate events, which
-  // effectively doubles the probability to diffuse. To counteract this, divide
-  // p_diff by 2.
   p_diffu_i /= 2;
-  p_diffu_ii /= 2;
-  p_avg_diffuse_ii_ = p_diffu_ii;
   p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
   p_diffuse_i_bck_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -194,7 +211,8 @@ void AssociatedProteinManagement::SetParameters() {
       // Diffusing towards rest is considered an unbinding-type event in
       // regards to Boltzmann factors, since both events let the spring relax
       double weight_to{exp(-lambda_spring * dU_to / kbT)};
-      // Diffusing away from rest is considered a binding-type event in regards
+      // Diffusing away from rest is considered a binding-type event in
+    regards
       // to Boltzmann factors, since both events stretch the spring out
       double weight_fr{exp(-(1.0 - lambda_spring) * dU_fr / kbT)};
       if (x == 0) {
@@ -240,7 +258,8 @@ void AssociatedProteinManagement::SetParameters() {
       // Diffusing towards rest is considered an unbinding-type event in
       // regards to Boltzmann factors, since both events let the spring relax
       double weight_to_teth{exp(-lambda_teth * dU_to / kbT)};
-      // Diffusing away from rest is considered a binding-type event in regards
+      // Diffusing away from rest is considered a binding-type event in
+  regards
       // to Boltzmann factors, since both events stretch the spring out
       double weight_fr_teth{exp(-(1.0 - lambda_teth) * dU_fr / kbT)};
       if (x_dub == 2 * comp_cutoff_ or x_dub == 2 * teth_cutoff_) {
@@ -256,9 +275,9 @@ void AssociatedProteinManagement::SetParameters() {
       }
       p_diffuse_ii_to_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       p_diffuse_ii_fr_both_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      for (int x{0}; x <= dist_cutoff_; x++) {
+      p_diffuse_ii_to_self_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ +
+  1); p_diffuse_ii_fr_self_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ +
+  1); for (int x{0}; x <= dist_cutoff_; x++) {
         // Diffuse towards both own and tether rest
         p_diffuse_ii_to_both_[n_neighbs][x_dub][x] =
             p_diffuse_ii_to_rest_[n_neighbs][x] * weight_to_teth;
@@ -285,13 +304,8 @@ void AssociatedProteinManagement::SetParameters() {
   p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
   double k_off_i = parameters_->xlinks.k_off_i;
   double p_unbind_i{k_off_i * delta_t};
-  double k_off_ii = parameters_->xlinks.k_off_ii;
-  p_avg_unbind_ii_ = k_off_ii * delta_t;
   p_bind_i_.resize(max_neighbs_ + 1);
   p_unbind_i_.resize(max_neighbs_ + 1);
-  p_unbind_ii_.resize(max_neighbs_ + 1);
-  weight_neighb_bind_.resize(max_neighbs_ + 1);
-  weight_neighb_unbind_.resize(max_neighbs_ + 1);
   p_unbind_i_teth_.resize(max_neighbs_ + 1);
   /*
     p_unbind_ii_to_teth_.resize(max_neighbs_ + 1);
@@ -317,8 +331,8 @@ void AssociatedProteinManagement::SetParameters() {
       double dU_bind{teth_energy[x_dub] - 0.0};
       double dU_unbind{0.0 - teth_energy[x_dub]};
       double weight_bind{exp(-(1.0 - lambda_teth) * dU_bind / kbT)};
-      weight_bind_i_teth_[n_neighbs][x_dub] = weight_neighb_bind * weight_bind;
-      double weight_unbind{exp(-lambda_teth * dU_unbind / kbT)};
+      weight_bind_i_teth_[n_neighbs][x_dub] = weight_neighb_bind *
+    weight_bind; double weight_unbind{exp(-lambda_teth * dU_unbind / kbT)};
       p_unbind_i_teth_[n_neighbs][x_dub] =
           weight_unbind * p_unbind_i_[n_neighbs];
       p_unbind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
@@ -326,7 +340,8 @@ void AssociatedProteinManagement::SetParameters() {
       weight_bind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       weight_bind_ii_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
       for (int x{0}; x <= dist_cutoff_; x++) {
-        // Change in x_dub if 2nd xlink head were to (un)bind at current x_dist
+        // Change in x_dub if 2nd xlink head were to (un)bind at current
+    x_dist
         // (anchor position changes by x/2; then doubled to convert to x_dub)
         int dx_teth_dub = x;
         // Change in x_dub that brings teth towards rest; -1 if extended
@@ -346,8 +361,8 @@ void AssociatedProteinManagement::SetParameters() {
         double dU_to{teth_energy[x_dub_to] - teth_energy[x_dub]};
         double dU_fr{teth_energy[x_dub_fr] - teth_energy[x_dub]};
         // (Un)binding towards rest is considered an unbinding-type event in
-        // regards to Boltzmann factors, since both events let the spring relax
-        double weight_to_teth{exp(-lambda_teth * dU_to / kbT)};
+        // regards to Boltzmann factors, since both events let the spring
+    relax double weight_to_teth{exp(-lambda_teth * dU_to / kbT)};
         // (Un)binding away from rest is considered a binding-type event in
         // regards to Boltzmann factors, since both events stretch the spring
         double weight_fr_teth{exp(-(1.0 - lambda_teth) * dU_fr / kbT)};
@@ -385,12 +400,10 @@ void AssociatedProteinManagement::SetParameters() {
   // Add these johnnys to our p_theory_ map; need to pad so all are 3-D
   p_theory_["diffuse_i_fwd"] = {{p_diffuse_i_fwd_}};
   p_theory_["diffuse_i_bck"] = {{p_diffuse_i_bck_}};
-  /*
   if (crosslinking_active_) {
     p_theory_["diffuse_ii_to_rest"] = {p_diffuse_ii_to_rest_};
     p_theory_["diffuse_ii_fr_rest"] = {p_diffuse_ii_fr_rest_};
   }
-  */
   if (tethering_active_) {
     p_theory_["diffuse_i_to_teth_rest"] = {p_diffuse_i_to_teth_rest_};
     p_theory_["diffuse_i_fr_teth_rest"] = {p_diffuse_i_fr_teth_rest_};
@@ -464,9 +477,9 @@ void AssociatedProteinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          if (verbosity_ >= 3) {
-            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          }
+          // if (verbosity_ >= 3) {
+          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          // }
           if (value[i][j][k] > 1.0) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             // wally_->ErrorExit("AP_MGMT:SetParameters()");
@@ -522,10 +535,7 @@ void AssociatedProteinManagement::InitializeLists() {
   active_.resize(n_xlinks_);
   bound_unteth_.resize(n_xlinks_);
   free_teth_.resize(n_xlinks_);
-  diffuse_ii_to_candidates_.resize(n_xlinks_);
-  diffuse_ii_fr_candidates_.resize(n_xlinks_);
   bind_ii_candidates_.resize(n_xlinks_);
-  unbind_ii_candidates_.resize(n_xlinks_);
   bind_i_teth_candidates_.resize(n_xlinks_);
   bind_ii_teth_candidates_.resize(n_xlinks_);
   bound_i_.resize(max_neighbs_ + 1);
@@ -612,33 +622,15 @@ void AssociatedProteinManagement::InitializeEvents() {
     }
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       std::string X_DIST{"_" + std::to_string(x)};
-      event_name = "diffuse_ii_to" + N_NEIGHBS + X_DIST;
+      event_name = "diffuse_ii_to_rest" + N_NEIGHBS + X_DIST;
       events_.emplace_back(event_name, &p_diffuse_ii_to_rest_[n_neighbs][x],
                            &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
                            exe_diffuse_fwd, binomial, set_ran_indices);
-      event_name = "diffuse_ii_fr" + N_NEIGHBS + X_DIST;
+      event_name = "diffuse_ii_fr_rest" + N_NEIGHBS + X_DIST;
       events_.emplace_back(event_name, &p_diffuse_ii_fr_rest_[n_neighbs][x],
                            &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
                            exe_diffuse_bck, binomial, set_ran_indices);
     }
-  }
-  if (crosslinking_active_) {
-    event_name = "diffuse_ii_to_rest";
-    auto weight_diffuse_to = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_DiffuseToRest();
-    };
-    events_.emplace_back(
-        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_to_candidates_,
-        &diffuse_ii_to_candidates_, exe_diffuse_fwd, weight_diffuse_to, poisson,
-        get_ran_prob, set_ran_indices);
-    event_name = "diffuse_ii_fr_rest";
-    auto weight_diffuse_fr = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_DiffuseFrRest();
-    };
-    events_.emplace_back(
-        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_fr_candidates_,
-        &diffuse_ii_fr_candidates_, exe_diffuse_bck, weight_diffuse_fr, poisson,
-        get_ran_prob, set_ran_indices);
   }
   /*
   // Diffuse_teth: same as above but for tethered populations
@@ -784,18 +776,21 @@ void AssociatedProteinManagement::InitializeEvents() {
     */
   }
   // Unbind II: unbinds a head of doubly-bound crosslinkers
-  if (crosslinking_active_) {
-    event_name = "unbind_ii";
-    auto exe_unbind_ii = [&](ENTRY_T target) {
-      Unbind_II(std::get<POP_T *>(target));
-    };
-    auto weight_unbind_ii = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_Unbind_II();
-    };
-    events_.emplace_back(event_name, p_avg_unbind_ii_, &n_unbind_ii_candidates_,
-                         &unbind_ii_candidates_, exe_unbind_ii,
-                         weight_unbind_ii, poisson, get_ran_prob,
-                         set_ran_indices);
+  auto exe_unbind_ii = [&](ENTRY_T target) {
+    Unbind_II(std::get<POP_T *>(target));
+  };
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    if (!crosslinking_active_) {
+      continue;
+    }
+    std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
+    for (int x{0}; x <= 2 * dist_cutoff_; x++) {
+      std::string X_DIST{"_" + std::to_string(x)};
+      event_name = "unbind_ii" + N_NEIGHBS + X_DIST;
+      events_.emplace_back(event_name, &p_unbind_ii_[n_neighbs][x],
+                           &n_bound_ii_[n_neighbs][x], &bound_ii_[n_neighbs][x],
+                           exe_unbind_ii, binomial, set_ran_indices);
+    }
   }
   /*
   // Unbind_II_Teth: same as above but for tethered populations
@@ -885,18 +880,16 @@ void AssociatedProteinManagement::InitializeTestEnvironment() {
 
   if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
     wally_->Log("Initializing xlink_bind_ii test in AP_MGMT\n");
-    properties_->microtubules.InitializeTestEnvironment();
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       bind_ii_stats_.emplace_back(0, 0);
       unbind_ii_stats_.emplace_back(0, 0);
     }
-    int i_site{dist_cutoff_};
+    int i_site{dist_cutoff_ + 1};
     Tubulin *site{&properties_->microtubules.mt_list_[0].lattice_[i_site]};
     Bind_I(site);
   }
   if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {
     wally_->Log("Initializing xlink_diffuse_ii test in AP_MGMT\n");
-    properties_->microtubules.InitializeTestEnvironment();
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       diff_ii_to_stats_.emplace_back(0, 0);
       diff_ii_fr_stats_.emplace_back(0, 0);
@@ -950,8 +943,14 @@ void AssociatedProteinManagement::InitializeTestEvents() {
     };
     // Poisson dist. is used w/ partition function for E-dependent binding
     auto poisson_bind_ii = [&](double p, int n) {
+      double offset{properties_->microtubules.GetSiteOffset()};
       for (int x{0}; x <= 2 * dist_cutoff_; x++) {
-        bind_ii_stats_[x].second += n_bind_ii_candidates_;
+        double factor{1.0};
+        // With offset = 0.0 or 0.5, there is a symmetry in available sites
+        if (x != 0 and (offset == 0.0 or offset == 0.5)) {
+          factor = 2.0;
+        }
+        bind_ii_stats_[x].second += factor * n_bind_ii_candidates_;
       }
       if (p == 0.0) {
         return 0;
@@ -963,7 +962,6 @@ void AssociatedProteinManagement::InitializeTestEvents() {
                          poisson_bind_ii, get_ran_prob, set_ran_indices);
 
     // Unbind II: unbinds a head of doubly-bound crosslinkers
-    event_name = "unbind_ii";
     auto exe_unbind_ii = [&](ENTRY_T target) {
       POP_T *head{nullptr};
       try {
@@ -974,68 +972,68 @@ void AssociatedProteinManagement::InitializeTestEvents() {
       unbind_ii_stats_[head->xlink_->x_dist_].first++;
       Unbind_II(head);
     };
-    auto weight_unbind_ii = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_Unbind_II();
-    };
-    auto poisson_unbind_ii = [&](double p, int n) {
-      if (n_unbind_ii_candidates_ > 0) {
-        int x{std::get<POP_T *>(unbind_ii_candidates_[0])->xlink_->x_dist_};
-        unbind_ii_stats_[x].second++;
+    auto binomial_unbind_ii = [&](double p, int n) {
+      // There will always be one active xlink
+      if (active_[0]->heads_active_ == 2) {
+        unbind_ii_stats_[active_[0]->x_dist_].second += n;
       }
-      if (p == 0.0) {
+      if (p == 0.0 or n == 0) {
         return 0;
       }
-      return properties_->gsl.SamplePoissonDist(p);
+      return properties_->gsl.SampleBinomialDist(p, n);
     };
-    events_.emplace_back(event_name, p_avg_unbind_ii_, &n_unbind_ii_candidates_,
-                         &unbind_ii_candidates_, exe_unbind_ii,
-                         weight_unbind_ii, poisson_unbind_ii, get_ran_prob,
-                         set_ran_indices);
+    for (int x{0}; x <= 2 * dist_cutoff_; x++) {
+      std::string N_NEIGHBS{"_" + std::to_string(0)};
+      std::string X_DIST{"_" + std::to_string(x)};
+      event_name = "unbind_ii" + N_NEIGHBS + X_DIST;
+      events_.emplace_back(event_name, &p_unbind_ii_[0][x], &n_bound_ii_[0][x],
+                           &bound_ii_[0][x], exe_unbind_ii, binomial_unbind_ii,
+                           set_ran_indices);
+    }
   }
   if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {
-    event_name = "diffuse_ii_to_rest";
     auto exe_diff_to = [&](ENTRY_T target) {
       POP_T *head{std::get<POP_T *>(target)};
       diff_ii_to_stats_[head->xlink_->x_dist_].first++;
       Diffuse(head, 1);
       head->xlink_->UpdateExtension();
     };
-    auto weight_diff_to = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_DiffuseToRest();
-    };
-    auto poisson_diff_to = [&](double p, int n) {
-      diff_ii_to_stats_[active_[0]->x_dist_].second += 2;
-      if (p == 0.0) {
-        return 0;
-      }
-      return properties_->gsl.SamplePoissonDist(p);
-    };
-    events_.emplace_back(
-        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_to_candidates_,
-        &diffuse_ii_to_candidates_, exe_diff_to, weight_diff_to,
-        poisson_diff_to, get_ran_prob, set_ran_indices);
-
-    event_name = "diffuse_ii_fr_rest";
     auto exe_diff_fr = [&](ENTRY_T target) {
       POP_T *head{std::get<POP_T *>(target)};
       diff_ii_fr_stats_[head->xlink_->x_dist_].first++;
       Diffuse(head, -1);
       head->xlink_->UpdateExtension();
     };
-    auto weight_diff_fr = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->GetWeight_DiffuseFrRest();
-    };
-    auto poisson_diff_fr = [&](double p, int n) {
-      diff_ii_fr_stats_[active_[0]->x_dist_].second += 2;
-      if (p == 0.0) {
+    auto binomial_to = [&](double p, int n) {
+      diff_ii_to_stats_[active_[0]->x_dist_].second += n;
+      if (p == 0.0 or n == 0) {
         return 0;
       }
-      return properties_->gsl.SamplePoissonDist(p);
+      return properties_->gsl.SampleBinomialDist(p, n);
     };
-    events_.emplace_back(
-        event_name, p_avg_diffuse_ii_, &n_diffuse_ii_fr_candidates_,
-        &diffuse_ii_fr_candidates_, exe_diff_fr, weight_diff_fr,
-        poisson_diff_fr, get_ran_prob, set_ran_indices);
+    auto binomial_fr = [&](double p, int n) {
+      diff_ii_fr_stats_[active_[0]->x_dist_].second += n;
+      if (p == 0.0 or n == 0) {
+        return 0;
+      }
+      return properties_->gsl.SampleBinomialDist(p, n);
+    };
+    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
+      for (int x{0}; x <= 2 * dist_cutoff_; x++) {
+        std::string X_DIST{"_" + std::to_string(x)};
+        event_name = "diffuse_ii_to_rest" + N_NEIGHBS + X_DIST;
+        events_.emplace_back(event_name, &p_diffuse_ii_to_rest_[n_neighbs][x],
+                             &n_bound_ii_[n_neighbs][x],
+                             &bound_ii_[n_neighbs][x], exe_diff_to, binomial_to,
+                             set_ran_indices);
+        event_name = "diffuse_ii_fr_rest" + N_NEIGHBS + X_DIST;
+        events_.emplace_back(event_name, &p_diffuse_ii_fr_rest_[n_neighbs][x],
+                             &n_bound_ii_[n_neighbs][x],
+                             &bound_ii_[n_neighbs][x], exe_diff_fr, binomial_fr,
+                             set_ran_indices);
+      }
+    }
   }
 }
 
@@ -1045,49 +1043,50 @@ void AssociatedProteinManagement::ReportProbabilities() {
     return;
   }
 
-  if (wally_->test_mode_ == nullptr) {
-    for (const auto &entry : p_theory_) {
-      auto label = entry.first;
-      auto value = entry.second;
-      for (int i{0}; i < value.size(); i++) {
-        for (int j{0}; j < value[i].size(); j++) {
-          for (int k{0}; k < value[i][j].size(); k++) {
-            std::string name{label};
-            if (value.size() > 1) {
-              name += "_" + std::to_string(i);
-            }
-            if (value[i].size() > 1) {
-              name += "_" + std::to_string(j);
-            }
-            if (value[i][j].size() > 1) {
-              name += "_" + std::to_string(k);
-            }
-            auto event = std::find_if(
-                events_.begin(), events_.end(),
-                [&name](EVENT_T const &event) { return event.name_ == name; });
-            if (event->name_ != name) {
-              wally_->Log("Couldn't find %s\n", name.c_str());
-              continue;
-            }
-            if (event->n_opportunities_tot_ == 0) {
-              wally_->Log("No statistics for %s\n", name.c_str());
-              continue;
-            }
-            double n_exe_tot{(double)event->n_executed_tot_};
-            double n_opp_tot{(double)event->n_opportunities_tot_};
-            if (n_opp_tot < 0.0) {
-              wally_->Log("WHAT?? n_opp = %g\n", n_opp_tot);
-              exit(1);
-            }
-            wally_->Log("For AP event %s:\n", event->name_.c_str());
-            wally_->Log("   p_theory = %g\n", value[i][j][k]);
-            wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
-            wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
+  // if (wally_->test_mode_ == nullptr) {
+  for (const auto &entry : p_theory_) {
+    auto label = entry.first;
+    auto value = entry.second;
+    for (int i{0}; i < value.size(); i++) {
+      for (int j{0}; j < value[i].size(); j++) {
+        for (int k{0}; k < value[i][j].size(); k++) {
+          std::string name{label};
+          if (value.size() > 1) {
+            name += "_" + std::to_string(i);
           }
+          if (value[i].size() > 1) {
+            name += "_" + std::to_string(j);
+          }
+          if (value[i][j].size() > 1) {
+            name += "_" + std::to_string(k);
+          }
+          auto event = std::find_if(
+              events_.begin(), events_.end(),
+              [&name](EVENT_T const &event) { return event.name_ == name; });
+          if (event->name_ != name) {
+            wally_->Log("Couldn't find %s\n", name.c_str());
+            continue;
+          }
+          if (event->n_opportunities_tot_ == 0) {
+            wally_->Log("No statistics for %s\n", name.c_str());
+            continue;
+          }
+          double n_exe_tot{(double)event->n_executed_tot_};
+          double n_opp_tot{(double)event->n_opportunities_tot_};
+          if (n_opp_tot < 0.0) {
+            wally_->Log("WHAT?? n_opp = %g\n", n_opp_tot);
+            exit(1);
+          }
+          wally_->Log("For AP event %s:\n", event->name_.c_str());
+          wally_->Log("   p_theory = %g\n", value[i][j][k]);
+          wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
+          wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
         }
       }
     }
-  } else if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
+  }
+  // } else
+  if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
     wally_->Log("For xlink_bind_ii test:\n");
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       wally_->Log("p_bind_theory_[%i] = %g\n", x,
@@ -1215,9 +1214,11 @@ void AssociatedProteinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void AssociatedProteinManagement::Update_Extensions() {
 
+  /*
   if (!crosslinking_active_ and !tethering_active_) {
     return;
   }
+  */
   // Offset ranges from 0 to 0.5; corresponds to the fractional misalignment
   // of MTs in n_sites, e.g., offset = 0 means they are perfectly aligned and
   // offset = 0.25 means all sites are misaligned by a 0.25*site_size
@@ -1242,14 +1243,64 @@ void AssociatedProteinManagement::Update_Extensions() {
 
 void AssociatedProteinManagement::Update_Weights() {
 
-  if (!crosslinking_active_) {
-    return;
-  }
+  /*
+    if (!crosslinking_active_ or !population_active_) {
+      printf("boink\n");
+      exit(1);
+      return;
+    }
+    */
   for (int x_dist{0}; x_dist <= 2 * dist_cutoff_; x_dist++) {
-    double dr{possible_extensions_[x_dist]};
+    double dr{possible_extensions_[x_dist]};             // in n_sites
     double spring_energy{0.5 * k_spring_eff_ * dr * dr}; // unitless
-    weight_spring_bind_[x_dist] = exp(-(1 - lambda_spring_) * spring_energy);
+    weight_spring_bind_[x_dist] = exp(-(1.0 - lambda_spring_) * spring_energy);
     weight_spring_unbind_[x_dist] = exp(lambda_spring_ * spring_energy);
+  }
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    for (int x_dist{0}; x_dist <= 2 * dist_cutoff_; x_dist++) {
+      p_unbind_ii_[n_neighbs][x_dist] = p_avg_unbind_ii_ *
+                                        weight_spring_unbind_[x_dist] *
+                                        weight_neighb_unbind_[n_neighbs];
+      if (n_neighbs == max_neighbs_) {
+        // printf("[%i][%i] -> 0\n", n_neighbs, x_dist);
+        p_diffuse_ii_to_rest_[n_neighbs][x_dist] = 0.0;
+        p_diffuse_ii_fr_rest_[n_neighbs][x_dist] = 0.0;
+        continue;
+      }
+      int x_fr{x_dist + 1};
+      int x_to{x_dist - 1};
+      if (x_dist == 0) {
+        x_to = dist_cutoff_ + 1;
+      } else if (x_dist == dist_cutoff_ + 1) {
+        x_to = 0;
+      }
+      // printf("x_to = %i | x_fr = %i\n", x_to, x_fr);
+      // Dividing in the following way results in:
+      // p_diff_ii * exp{lambda_spring_ * -(E_f - E_i)} * weight_neighb
+      // Which will get larger with x_dist since E_f < E_i generally
+      p_diffuse_ii_to_rest_[n_neighbs][x_dist] =
+          p_avg_diffuse_ii_ * weight_spring_unbind_[x_dist] /
+          weight_spring_unbind_[x_to] * weight_neighb_unbind_[n_neighbs];
+      // printf("p_to = %g * %g / %g * %g\n", p_avg_diffuse_ii_,
+      //        weight_spring_unbind_[x_dist], weight_spring_unbind_[x_to],
+      //        weight_neighb_unbind_[n_neighbs]);
+      // printf("     = %g\n", p_diffuse_ii_to_rest_[n_neighbs][x_dist]);
+      if (x_dist % dist_cutoff_ == 0 and x_dist != 0) {
+        p_diffuse_ii_fr_rest_[n_neighbs][x_dist] = 0.0;
+        // printf("x_fr = %i --> 0.0\n", x_fr);
+        continue;
+      }
+      // Dividing in the following way results in:
+      // p_diff_ii * exp{-(1.0 - lambda_spring_) * (E_f - E_i)} *
+      // weight_neighb Which will get smaller with x_dist since E_f > E_i
+      p_diffuse_ii_fr_rest_[n_neighbs][x_dist] =
+          p_avg_diffuse_ii_ * weight_spring_bind_[x_fr] /
+          weight_spring_bind_[x_dist] * weight_neighb_unbind_[n_neighbs];
+      // printf("p_fr = %g * %g / %g * %g\n", p_avg_diffuse_ii_,
+      //        weight_spring_bind_[x_fr], weight_spring_bind_[x_dist],
+      //        weight_neighb_unbind_[n_neighbs]);
+      // printf("     = %g\n", p_diffuse_ii_fr_rest_[n_neighbs][x_dist]);
+    }
   }
 }
 
@@ -1322,46 +1373,43 @@ void AssociatedProteinManagement::Update_Bound_II() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting AP_MGMT::Update_Bound_II()\n");
   }
-  n_diffuse_ii_to_candidates_ = 0;
-  n_diffuse_ii_fr_candidates_ = 0;
-  n_unbind_ii_candidates_ = 0;
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    for (int x{0}; x <= 2 * dist_cutoff_; x++) {
+      n_bound_ii_[n_neighbs][x] = 0;
+    }
+  }
+
   for (int i_xlink{0}; i_xlink < n_active_; i_xlink++) {
     AssociatedProtein *xlink = active_[i_xlink];
     if (xlink->heads_active_ != 2) {
       continue;
     }
     if (!xlink->tethered_ or xlink->HasSatellite()) {
-      POP_T *head_one{&xlink->head_one_};
-      diffuse_ii_to_candidates_[n_diffuse_ii_to_candidates_++] = head_one;
-      diffuse_ii_fr_candidates_[n_diffuse_ii_fr_candidates_++] = head_one;
+      int x{xlink->x_dist_};
       // If we're testing bind_ii or bind_ii_teth, head one remains fixed
       if (wally_->test_mode_ == nullptr) {
-        unbind_ii_candidates_[n_unbind_ii_candidates_++] = head_one;
+        POP_T *head_one{&xlink->head_one_};
+        int neighbs_one{head_one->GetPRC1NeighborCount()};
+        bound_ii_[neighbs_one][x][n_bound_ii_[neighbs_one][x]++] = head_one;
       }
       // Always add head two
       POP_T *head_two{&xlink->head_two_};
-      diffuse_ii_to_candidates_[n_diffuse_ii_to_candidates_++] = head_two;
-      diffuse_ii_fr_candidates_[n_diffuse_ii_fr_candidates_++] = head_two;
-      unbind_ii_candidates_[n_unbind_ii_candidates_++] = head_two;
+      int neighbs_two{head_two->GetPRC1NeighborCount()};
+      bound_ii_[neighbs_two][x][n_bound_ii_[neighbs_two][x]++] = head_two;
     }
   }
   if (verbosity_ < 2) {
     return;
   }
-  wally_->Log(" n_diff_ii_to_candidates = %i\n", n_diffuse_ii_to_candidates_);
-  for (int i_entry{0}; i_entry < n_diffuse_ii_to_candidates_; i_entry++) {
-    POP_T *head{std::get<POP_T *>(diffuse_ii_to_candidates_[i_entry])};
-    wally_->Log("   - xlink %i\n", head->xlink_->id_);
-  }
-  wally_->Log(" n_diff_ii_fr_candidates = %i\n", n_diffuse_ii_fr_candidates_);
-  for (int i_entry{0}; i_entry < n_diffuse_ii_fr_candidates_; i_entry++) {
-    POP_T *head{std::get<POP_T *>(diffuse_ii_fr_candidates_[i_entry])};
-    wally_->Log("   - xlink %i\n", head->xlink_->id_);
-  }
-  wally_->Log(" n_unbind_ii_candidates = %i\n", n_unbind_ii_candidates_);
-  for (int i_entry{0}; i_entry < n_unbind_ii_candidates_; i_entry++) {
-    POP_T *head{std::get<POP_T *>(unbind_ii_candidates_[i_entry])};
-    wally_->Log("   - xlink %i\n", head->xlink_->id_);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    for (int x{0}; x <= 2 * dist_cutoff_; x++) {
+      wally_->Log(" n_bound_ii_[%i][%i]  = %i\n", n_neighbs, x,
+                  n_bound_ii_[n_neighbs][x]);
+      for (int i_entry{0}; i_entry < n_bound_ii_[n_neighbs][x]; i_entry++) {
+        POP_T *head{std::get<POP_T *>(bound_ii_[n_neighbs][x][i_entry])};
+        wally_->Log("   - xlink %i\n", head->xlink_->id_);
+      }
+    }
   }
 }
 
@@ -1562,7 +1610,8 @@ void AssociatedProteinManagement::SampleEventStatistics() {
       }
     }
   }
-  // Scan through all active events to ensure that no two target the same xlink
+  // Scan through all active events to ensure that no two target the same
+  // xlink
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
     EVENT_T *event_i = active_events[i_entry].first;
     AssociatedProtein *xlink_i{nullptr};
@@ -1722,7 +1771,8 @@ void AssociatedProteinManagement::Bind_II(POP_T *bound_head) {
   } else {
     site = bound_head->xlink_->GetWeightedSite_Bind_II_Teth();
   }
-  // In case another crosslinker binds and takes up the only available neighbor
+  // In case another crosslinker binds and takes up the only available
+  // neighbor
   if (site == nullptr) {
     return;
     wally_->Log("woah XL.\n");

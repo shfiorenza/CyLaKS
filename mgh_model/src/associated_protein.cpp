@@ -476,6 +476,7 @@ void AssociatedProtein::UpdateNeighbors_Bind_II_Teth() {
   */
 }
 
+/*
 double AssociatedProtein::GetWeight_DiffuseToRest(Monomer *head) {
 
   // Check site we will be diffusing to
@@ -547,6 +548,7 @@ double AssociatedProtein::GetWeight_Unbind_II(Monomer *head) {
   return properties_->prc1.weight_spring_unbind_[x_dist_] *
          properties_->prc1.weight_neighb_unbind_[n_neighbs];
 }
+*/
 
 double AssociatedProtein::GetWeight_Bind_II(Tubulin *neighbor) {
 

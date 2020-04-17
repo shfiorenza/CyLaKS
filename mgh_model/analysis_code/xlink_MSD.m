@@ -1,13 +1,15 @@
 
 clear all;
+mt_index = 0;
+offset = 0;
 % Often-changed variables
-simName = 'xlink_diffusion_single';
+simName = sprintf('xlink_diffusion_doubleD_%i_%g', mt_index, offset);
 %simName = 'xlink_diffusion_single';
-n_sites = [5000]; %,5000];
+n_sites = [5000, 5000];
 max_sites = max(n_sites);
 n_mts = length(n_sites);
 starting_point = 001;
-max_tau = 1.5;  % in seconds
+max_tau = 4.5;  % in seconds
 % Pseudo-constant variables
 delta_t = 0.000025;
 n_steps = 40000000;
@@ -34,7 +36,7 @@ fclose(mt_data_file);
 mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 
 min_tau = time_per_datapoint;
-tau_increment = time_per_datapoint;
+tau_increment = 3 * time_per_datapoint;
 
 taus = min_tau : tau_increment : max_tau;
 n_taus = length(taus);
@@ -149,7 +151,8 @@ hold on
 plot(taus, taus_padded * fit, '--', 'LineWidth',  2)
 ylabel('Mean squared displacement (\mum^2)', 'FontSize', 14);
 xlabel('Tau (s)', 'FontSize', 14);
-title('Singly-bound crosslinkers', 'FontSize', 16);
+title("Doubly-bound crosslinkers - " + mt_index + "\_" + offset, 'FontSize', 16);
+%title("Singly-bound crosslinkers", 'FontSize', 16);
 legend('Sim data', 'Linear fit', 'location', 'northwest', 'FontSize', 14);
 xlim([0.0 (max_tau + tau_increment)]);
 ax = gca;

@@ -1,6 +1,6 @@
 clear all;
 % Input parameters
-baseName = "test_expandC";
+baseName = "test_expandA";
 seeds = [0]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in nm

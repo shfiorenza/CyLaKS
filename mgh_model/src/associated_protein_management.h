@@ -115,12 +115,9 @@ public:
   Vec<ENTRY_T> free_teth_;
   Vec<ENTRY_T> bound_unteth_;
   // Target pools for poisson processes (do not track n_neighbs/etc.)
-  Vec<ENTRY_T> diffuse_ii_to_candidates_;
-  Vec<ENTRY_T> diffuse_ii_fr_candidates_;
-  Vec<ENTRY_T> bind_i_teth_candidates_;
   Vec<ENTRY_T> bind_ii_candidates_;
+  Vec<ENTRY_T> bind_i_teth_candidates_;
   Vec<ENTRY_T> bind_ii_teth_candidates_;
-  Vec<ENTRY_T> unbind_ii_candidates_;
   // First index is number of PRC1 neighbors: [0], [1], or [2]
   // Second index is actual xlink entry
   Vec<Vec<ENTRY_T>> bound_i_;

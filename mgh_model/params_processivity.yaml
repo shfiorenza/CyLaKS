@@ -1,5 +1,5 @@
 seed: 198261346419
-n_steps: 2500000
+n_steps: 1250000
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 2.0e-04 # 2.5e-05
@@ -27,10 +27,11 @@ microtubules:
   printout_on: false
   diffusion_on: false
 motors:
-  lattice_coop_alpha: 1.25e-8
-  lattice_coop_Emax_solo: 1.5
-  lattice_coop_Emax_bulk: 3.0
-  interaction_energy: 2.0
+    # lattice_coop_alpha: 1.25e-8
+  lattice_coop_range: 1121
+  lattice_coop_Emax_solo: 0.883
+  lattice_coop_Emax_bulk: 2.38
+  interaction_energy: 2.11
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.020

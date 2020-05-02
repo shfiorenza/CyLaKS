@@ -3,7 +3,8 @@
 
 struct kinesin_parameters {
 
-  double lattice_coop_alpha;
+  //  double lattice_coop_alpha;
+  int lattice_coop_range;
   double lattice_coop_Emax_solo;
   double lattice_coop_Emax_bulk;
   double interaction_energy;  // absolute value of interaction energy

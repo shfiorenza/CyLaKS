@@ -38,8 +38,12 @@ void KinesinManagement::CalculateCutoffs() {
       n_sites_max = parameters_->microtubules.length[i_mt];
     }
   }
-  lattice_alpha_ = parameters_->motors.lattice_coop_alpha;
   lattice_E_0_solo_ = -1 * parameters_->motors.lattice_coop_Emax_solo;
+  lattice_cutoff_ = parameters_->motors.lattice_coop_range;
+  // Set lattice_alpha_ so that E = 0 at site immediately after cutoff
+  double dx_post_cutoff{(lattice_cutoff_ + 1) * site_size};
+  lattice_alpha_ = -1 * lattice_E_0_solo_ / (dx_post_cutoff * dx_post_cutoff);
+  /*
   double max_energy{0.0}; // max deformation energy for a single motor (kbT)
   for (int n_sites{0}; n_sites < n_sites_max; n_sites++) {
     double dx{n_sites * site_size};
@@ -51,6 +55,7 @@ void KinesinManagement::CalculateCutoffs() {
     }
     lattice_cutoff_ = n_sites;
   }
+  */
   // Calculate rest_dist_ in number of sites
   int approx_rest{int(sqrt(r_0 * r_0 - r_y * r_y) / site_size)};
   double rest_scan[3];
@@ -121,6 +126,7 @@ void KinesinManagement::CalculateCutoffs() {
   if (lattice_E_0_solo_ != 0.0 and lattice_alpha_ > 0.0) {
     lattice_coop_active_ = true;
     wally_->Log("  lattice_cutoff_ is %i\n", lattice_cutoff_);
+    wally_->Log("  lattice_alpha_ is %g\n", lattice_alpha_);
   } else {
     wally_->Log("  Lattice cooperativity is disabled.\n");
   }
@@ -232,10 +238,11 @@ void KinesinManagement::SetParameters() {
   for (int delta{0}; delta <= lattice_cutoff_; delta++) {
     double dx{delta * site_size};
     double energy{lattice_alpha_ * dx * dx + lattice_E_0_solo_}; // in kbT
+    //    printf("energy[%i] = %g\n", delta, energy);
     weight_lattice_bind_[delta] = exp(-(1 - lambda_lattice) * energy);
-    // printf("wt_b[%i] = %g\n", delta, weight_lattice_bind_[delta]);
+    //    printf("wt_b[%i] = %g\n", delta, weight_lattice_bind_[delta]);
     weight_lattice_unbind_[delta] = exp(lambda_lattice * energy);
-    // printf("wt_ub[%i] = %g\n", delta, weight_lattice_unbind_[delta]);
+    //    printf("wt_ub[%i] = %g\n", delta, weight_lattice_unbind_[delta]);
   }
   // Array of tether energies (in kbT) for any given extension
   double k_slack{parameters_->motors.k_slack};
@@ -451,9 +458,9 @@ void KinesinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          // if (verbosity_ >= 3) {
-          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          // }
+          if (verbosity_ >= 3) {
+            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          }
           if (value[i][j][k] > 1.0) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             wally_->ErrorExit("Kin_MGMT:SetParameters()");
@@ -1322,6 +1329,12 @@ void KinesinManagement::Update_Lattice_Weights() {
       int n_neighbs{site->GetKif4ANeighborCount()};
       site->weight_bind_ = weight_neighbs_bind_[n_neighbs];
       site->weight_unbind_ = weight_neighbs_unbind_[n_neighbs];
+      /*
+  printf("base weight bind is %g for site %i\n", site->weight_bind_,
+         i_site);
+  printf("base weight unbind is %g for site %i\n", site->weight_unbind_,
+         i_site);
+      */
     }
   }
   // Add up all lattice deformation weights on top of baseline neighb weights

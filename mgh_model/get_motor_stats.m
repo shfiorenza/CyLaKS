@@ -5,7 +5,7 @@ function mot_stats = get_motor_stats(simName, n_sites)
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0002;
-n_steps = 2500000;
+n_steps = 1250000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -37,6 +37,7 @@ for i_data = starting_point:1:n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
+		%{
         endtag_boundary = 1;
         % Determine end-tag region; ignore motors that terminate here
         for i_site=1:n_sites
@@ -47,6 +48,7 @@ for i_data = starting_point:1:n_datapoints - 1
                break;    
            end
         end
+		%}
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -91,12 +93,12 @@ for i_data = starting_point:1:n_datapoints - 1
                 run_time = delta_t * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if run_time > time_cutoff && end_site(1) > endtag_boundary
+ %             if run_time > time_cutoff && end_site(1) > endtag_boundary
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
                     velocities(n_runs) = velocity;  
-                end
+  %              end
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
                 % Switch now-deleted entry with last entry in active_motors
@@ -119,6 +121,8 @@ runlengths = runlengths - min_run;
 % fit distribution of shifted run lengths
 run_dist = fitdist(runlengths, 'exponential');
 mean_run = run_dist.mu + min_run;
+ci_run = paramci(run_dist);
+err_run = abs(ci_run(2) - ci_run(1)) / 2;
 
 % matlab's exponential fit always goes to zero; offset it appropriately
 min_time = min(lifetimes);
@@ -127,13 +131,20 @@ lifetimes = lifetimes - min_time;
 time_dist = fitdist(lifetimes, 'exponential');
 % get mean run time
 mean_time = time_dist.mu + min_time;
+ci_time = paramci(time_dist);
+err_time = abs(ci_time(2) - ci_time(1)) / 2;
 
 vel_dist = fitdist(velocities, 'normal');
 mean_vel = vel_dist.mu;
+ci_vel = paramci(vel_dist);
+err_vel = abs(ci_vel(2) - ci_vel(1)) / 2;
 
 
 mot_stats(1) = mean_run;
-mot_stats(2) = mean_time;
-mot_stats(3) = mean_vel;
+mot_stats(2) = err_run;
+mot_stats(3) = mean_time;
+mot_stats(4) = err_time;
+mot_stats(5) = mean_vel;
+mot_stats(6) = err_vel;
 
 end

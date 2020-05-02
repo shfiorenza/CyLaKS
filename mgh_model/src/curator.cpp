@@ -201,8 +201,17 @@ void Curator::ParseParameters() {
   parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
+  /*
   parameters_->motors.lattice_coop_alpha =
       motors["lattice_coop_alpha"].as<double>();
+  */
+  try {
+    parameters_->motors.lattice_coop_range =
+        motors["lattice_coop_range"].as<int>();
+  } catch (const YAML::BadConversion error) {
+    parameters_->motors.lattice_coop_range =
+        (int)std::round(motors["lattice_coop_range"].as<double>());
+  }
   parameters_->motors.lattice_coop_Emax_solo =
       motors["lattice_coop_Emax_solo"].as<double>();
   parameters_->motors.lattice_coop_Emax_bulk =
@@ -246,8 +255,8 @@ void Curator::ParseParameters() {
   parameters_->xlinks.interaction_energy =
       xlinks["interaction_energy"].as<double>();
   // Store params pointer as parameters_ in Curator
-  int n_steps = parameters_->n_steps;
-  double delta_t = parameters_->delta_t;
+  unsigned long n_steps{parameters_->n_steps};
+  double delta_t{parameters_->delta_t};
   Log("Reading params from %s:\n\n", param_file_);
   Log("  General simulation parameters:\n");
   Log("    seed = %lu\n", parameters_->seed);
@@ -259,7 +268,16 @@ void Curator::ParseParameters() {
   Log("    eta = %g (pN*s)/um^2\n", parameters_->eta);
   Log("\n  Microtubule (mt) parameters:\n");
   Log("    count = %i\n", parameters_->microtubules.count);
+  // Check to make sure there are enough vector entries for given MT count
   int n_lengths = input["microtubules"]["length"].size();
+  int n_start_coords = input["microtubules"]["start_coord"].size();
+  int n_immo = input["microtubules"]["immobile_until"].size();
+  if (parameters_->microtubules.count > n_lengths or
+      parameters_->microtubules.count > n_start_coords or
+      parameters_->microtubules.count > n_immo) {
+    Log("\nToo few parameters input for microtubules\n");
+    ErrorExit("Curator::ParseParameters()");
+  }
   for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
     Log("    length = %i sites for mt %i\n",
         parameters_->microtubules.length[i_mt], i_mt);
@@ -269,13 +287,10 @@ void Curator::ParseParameters() {
   Log("    radius = %g nm\n", parameters_->microtubules.radius);
   Log("    elevation = %g nm above surface\n",
       parameters_->microtubules.elevation);
-  // Check to make sure there are enough vector entries for given MT count
-  int n_start_coords = input["microtubules"]["start_coord"].size();
   for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
     double start_coord = parameters_->microtubules.start_coord[i_mt];
     Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
   }
-  int n_immo = input["microtubules"]["immobile_until"].size();
   for (int i_mt = 0; i_mt < n_immo; i_mt++) {
     double immo = parameters_->microtubules.immobile_until[i_mt];
     Log("    immobile until = %g s for mt %i\n", immo, i_mt);
@@ -286,7 +301,9 @@ void Curator::ParseParameters() {
   Log("    diffusion_on = %s\n",
       parameters_->microtubules.diffusion_on ? "true" : "false");
   Log("\n  Kinesin (motor) parameters:\n");
-  Log("    lattice_coop_alpha = %g\n", parameters_->motors.lattice_coop_alpha);
+  // Log("    lattice_coop_alpha = %g\n",
+  // parameters_->motors.lattice_coop_alpha);
+  Log("    lattice_coop_range = %i\n", parameters_->motors.lattice_coop_range);
   Log("    lattice_coop_Emax_solo = -%g kbT\n",
       parameters_->motors.lattice_coop_Emax_solo);
   Log("    lattice_coop_Emax_bulk = -%g kbT\n",
@@ -573,7 +590,7 @@ void Curator::UpdateTimestep(unsigned long i_step) {
     }
     // Announce when simulation is done
     else if (steps_past_threshold == n_steps_recorded_ - 1) {
-      Log("Done!\n");
+      Log("Sim '%s' done!\n", sim_name_);
     }
   }
   if (parameters_->microtubules.printout_on and i_step % 1000 == 0) {

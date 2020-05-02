@@ -12,32 +12,38 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization_new"
+#sim_name_base = "kif4a_coop_optimization_lifetimeOnly"
+sim_name_base = "TEST"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
-param_label = ["interaction_energy", "lattice_coop_alpha",
+param_label = ["interaction_energy", "lattice_coop_range",
                "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
-param_initialVal = [2.25, 2.0e-8, 1.25, 2.5]
-param_bounds = ([0.5, 1.25e-8, 0.5, 1.8], [3.0, 5.0e-5, 1.75, 4.5])
-step_size = [0.5, 1.0e-9, 0.1, 0.1]
+param_initialVal = [2.25, 650, 0.87, 2.35]
+param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 4.5])
+step_size = [1, 50, 0.5, 1]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
+#kif4a_conc = [20, 120, 220, 420]
 # n_sites to be used for each conc run, respectively
-n_sites = [105000, 42000, 26250, 17500, 10000, 5000]
-# n_steps (in millions) to be used for each conc run, respectively
-#n_steps_mil = [100, 40, 25, 17, 9, 5]
-#n_steps = [i * 1000000 for i in n_steps_mil]
+n_sites = [75000, 50000, 30000, 20000, 8500, 3250]
+#n_sites = [75000, 25000, 8500, 3250]
 # Experimental Kif4A run lengths at each concentration
 exp_runlengths = [0.9735, 1.310, 2.420, 1.659, 1.964, 2.855]
 exp_err_runlengths = [0.18, 0.32, 0.35, 0.94, 0.31, 0.72]
+#exp_runlengths = [0.9735, 1.659, 1.964, 2.855]
+#exp_err_runlengths = [0.18, 0.94, 0.31, 0.72]
 # Experiemntal Kif4A life times at each concentration
 exp_lifetimes = [1.821, 2.083, 7.096, 5.233, 8.308, 17.95]
 exp_err_lifetimes = [0.56, 0.75, 1.8, 5.9, 2.6, 3.9]
+#exp_lifetimes = [1.821, 5.233, 8.308, 17.95]
+#exp_err_lifetimes = [0.56, 5.9, 2.6, 3.9]
 # Experimental Kif4A velocities at each concentration
 exp_velocities = [598.6, 709.9, 360.8, 311.2, 308.52, 180.7]
 exp_err_velocities = [76, 110, 49, 78, 40, 38]
+#exp_velocities = [598.6, 311.2, 308.52, 180.7]
+#exp_err_velocities = [76, 78, 40, 38]
 
 # Create logger to record history of optimizer
 log = logging.getLogger()
@@ -103,17 +109,14 @@ def kif4a_coop_scaling(params):
         kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]), float(n_sites[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
-        err_runlength = (
-            exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
+        err_runlength = (exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
         log.info("      Runlength error: {}".format(err_runlength))
-        err_lifetime = (
-            exp_lifetimes[i_conc] - kif4a_stats[0][1]) / exp_err_lifetimes[i_conc]
+        err_lifetime = (exp_lifetimes[i_conc] - kif4a_stats[0][2]) / exp_err_lifetimes[i_conc]
         log.info("      Lifetime error: {}".format(err_lifetime))
-        err_velocity = (
-            exp_velocities[i_conc] - kif4a_stats[0][2]) / exp_err_velocities[i_conc]
+        err_velocity = (exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
-        weighted_errors.append(
-            err_runlength**2 + err_lifetime**2 + err_velocity**2)
+        #weighted_errors.append(err_runlength**2 + err_lifetime**2 + err_velocity**2)
+        weighted_errors.append(err_lifetime**2)
     log.info("Weighted errors: {}".format(weighted_errors))
     # Move log file into output folder to keep a record of all runs
     call("mv *.log grad_descent_output", shell=True)
@@ -133,4 +136,5 @@ if not ready_for_output:
 log.info("Start of gradient descent parameter optimization")
 log.info("Initial parameters: {}".format(param_initialVal))
 res = least_squares(kif4a_coop_scaling, param_initialVal,
-                    bounds=param_bounds, diff_step=step_size, verbose=2, xtol=None)
+                    bounds=param_bounds, diff_step=step_size, 
+                    x_scale='jac', verbose=2, xtol=None)

@@ -109,6 +109,7 @@ void Kinesin::InitializeLookupTables() {
     cosine_lookup_[x_dub] = r_x / r;
     extension_lookup_[x_dub] = r - r_0_;
   }
+  /*
   // Copy more involved lookup tables from MGMT to ensure consistency
   weight_tether_bound_.resize(2 * teth_cutoff_ + 1);
   for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
@@ -124,10 +125,11 @@ void Kinesin::InitializeLookupTables() {
       weight_bind_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
       for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
         // weight_bind_i_teth_[i_aff][n_neighbs][x_dub] =
-        //     properties_->kinesin4.weight_bind_i_teth_[i_aff][n_neighbs][x_dub];
+        // properties_->kinesin4.weight_bind_i_teth_[i_aff][n_neighbs][x_dub];
       }
     }
   }
+  */
 }
 
 void Kinesin::InitializeNeighborLists() {
@@ -194,6 +196,7 @@ double Kinesin::GetDockedCoordinate() {
   }
 }
 
+/*
 int Kinesin::GetCometSize(Monomer *head) {
 
   int n_stacks_max{properties_->kinesin4.n_stacks_};
@@ -233,6 +236,7 @@ int Kinesin::GetCometSize(Monomer *head) {
   }
   return comet_size;
 }
+*/
 
 void Kinesin::ChangeConformation() {
 

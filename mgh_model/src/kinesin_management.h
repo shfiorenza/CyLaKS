@@ -49,16 +49,12 @@ public:
   std::pair<int, int> lattice_step_unbind_ii_stats_;
   std::pair<int, int> lattice_step_unbind_i_stats_;
 
-  // trash
-  int n_stacks_{0};
-  int n_affinities_{0};
-  int n_affinities_tot_{0};
   // coop stuff -- neighbs
   int max_neighbs_{2};
   Vec<double> weight_neighbs_bind_;
   Vec<double> weight_neighbs_unbind_;
   // coop stuff -- lattice
-  bool weights_active_{true};
+  bool dynamic_weights_{true};
   int lattice_cutoff_{0};
   double lattice_alpha_{0.0};
   double lattice_E_0_solo_{0.0};
@@ -77,6 +73,7 @@ public:
   // Populations are untethered/mixed unless otherwise specified
   int n_motors_{0}; // Total number of motors in system
   int n_active_{0}; // Motors actively bound to some MT/xlink
+  int n_bound_NULL_{0};
   int n_bound_ATP_{0};
   int n_bound_ATP_st_{0};
   int n_bound_unteth_{0};
@@ -90,23 +87,13 @@ public:
   // Index scheme: [x_dub]
   Vec<int> n_bound_teth_;
   // Index scheme: [n_neighbs (behind only)]
-  Vec<int> n_bound_NULL_;
+  // Vec<int> n_bound_NULL_;
   // Index scheme: [n_neighbs (behind only)][x_dub]
   Vec<Vec<int>> n_bound_NULL_to_teth_;
   Vec<Vec<int>> n_bound_NULL_fr_teth_;
 
-  /*
-  // Index scheme: [tubulin_affinity][n_neighbs]
-  Vec<Vec<int>> n_docked_;
-  Vec<Vec<int>> n_bound_ADPP_ii_;
-  Vec<Vec<int>> n_bound_ADPP_i_;
-  Vec<Vec<int>> n_bound_ADPP_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_;
-  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_st_;
-  */
-
   // Event probabilities
+  double p_bind_ATP_;
   double p_hydrolyze_;
   double p_hydrolyze_st_;
   double p_tether_free_;
@@ -122,27 +109,15 @@ public:
   Vec<double> p_untether_bound_;    // curent x_dub
   Vec<double> weight_tether_bound_; // proposed x_dub
   // Index scheme: [n_neighbs (behind only)]
-  Vec<double> p_bind_ATP_;
+  // Vec<double> p_bind_ATP_;
   // Index scheme: [n_neighbs (behind only)][x_dub]
   Vec<Vec<double>> p_bind_ATP_to_teth_;
   Vec<Vec<double>> p_bind_ATP_fr_teth_;
 
-  /*
-  // Index scheme: [tubulin_affinity][n_neighbs]
-  Vec<Vec<double>> p_bind_i_;
-  Vec<Vec<double>> p_bind_ii_;
-  Vec<Vec<double>> p_unbind_ii_;
-  Vec<Vec<double>> p_unbind_i_;
-  Vec<Vec<double>> p_unbind_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  Vec<Vec<Vec<double>>> p_unbind_i_teth_;    // current x_dub
-  Vec<Vec<Vec<double>>> p_unbind_i_teth_st_; // current x_dub
-  Vec<Vec<Vec<double>>> weight_bind_i_teth_; // proposed x_dub
-  */
-
   // 1-D vectors, index is simply motor entry
   Vec<Kinesin> motors_;
   Vec<Kinesin *> active_;
+  Vec<ENTRY_T> bound_NULL_;
   Vec<ENTRY_T> bound_ATP_;
   Vec<ENTRY_T> bound_ATP_st_;
   Vec<ENTRY_T> bound_unteth_;
@@ -156,21 +131,10 @@ public:
   // Index scheme: [x_dub][motor_entry]
   Vec<Vec<ENTRY_T>> bound_teth_;
   // Index scheme: [n_neighbs (behind only)][motor_entry]
-  Vec<Vec<ENTRY_T>> bound_NULL_;
+  // Vec<Vec<ENTRY_T>> bound_NULL_;
   // Index scheme: [n_neighbs (behind only)][x_dub][motor_entry]
   Vec<Vec<Vec<ENTRY_T>>> bound_NULL_to_teth_;
   Vec<Vec<Vec<ENTRY_T>>> bound_NULL_fr_teth_;
-
-  /*
-  // Index scheme: [tubulin_affinity][n_neighbs][motor_entry]
-  Vec<Vec<Vec<ENTRY_T>>> docked_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_ii_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub][motor_entry]
-  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_;
-  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_st_;
-  */
 
 private:
   void CalculateCutoffs();
@@ -194,8 +158,8 @@ public:
   void ReportExecutionOf(std::string event_name);
   void ReportFailureOf(std::string event_name);
 
-  void Update_Tether_Extensions();
-  void Update_Lattice_Weights();
+  void Update_Extensions();
+  void Update_Weights();
   void Update_Docked();
   void Update_Bound_NULL();
   void Update_Bound_NULL_Teth();

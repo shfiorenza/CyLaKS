@@ -31,31 +31,11 @@ void KinesinManagement::CalculateCutoffs() {
   double k_spring{parameters_->motors.k_spring};
   double k_slack{parameters_->motors.k_slack};
   double site_size{parameters_->microtubules.site_size};
-  // Calculate cutoff of lattice deformation
-  int n_sites_max{0};
-  for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
-    if (parameters_->microtubules.length[i_mt] > n_sites_max) {
-      n_sites_max = parameters_->microtubules.length[i_mt];
-    }
-  }
   lattice_E_0_solo_ = -1 * parameters_->motors.lattice_coop_Emax_solo;
   lattice_cutoff_ = parameters_->motors.lattice_coop_range;
   // Set lattice_alpha_ so that E = 0 at site immediately after cutoff
   double dx_post_cutoff{(lattice_cutoff_ + 1) * site_size};
   lattice_alpha_ = -1 * lattice_E_0_solo_ / (dx_post_cutoff * dx_post_cutoff);
-  /*
-  double max_energy{0.0}; // max deformation energy for a single motor (kbT)
-  for (int n_sites{0}; n_sites < n_sites_max; n_sites++) {
-    double dx{n_sites * site_size};
-    double energy{lattice_alpha_ * dx * dx + lattice_E_0_solo_}; // in kbT
-    double boltzmann_factor{exp(-energy)};
-    // printf("energy[%i] = %g | wt = %g\n", n_sites, energy, boltzmann_factor);
-    if (energy > max_energy) {
-      break;
-    }
-    lattice_cutoff_ = n_sites;
-  }
-  */
   // Calculate rest_dist_ in number of sites
   int approx_rest{int(sqrt(r_0 * r_0 - r_y * r_y) / site_size)};
   double rest_scan[3];
@@ -143,7 +123,7 @@ void KinesinManagement::SetParameters() {
     for an event and its complement (e.g., binding and unbinding), where lambda
     is a constant that ranges from 0 to 1, delta_E is the change in energy that
     results from the event, kB is Boltzmann's constant, and T is the temperature
-  */
+ */
   /*
     For tethered motor binding & unbinding, we use force-dependence instead:
                 exp{-(1 - lambda)*(f_teth * delta_off)/(kB*T)}, and
@@ -162,67 +142,22 @@ void KinesinManagement::SetParameters() {
   // Lambda = 0.5 means energy dependence is equal for binding and unbinding
   double lambda_teth{0.5}; // Lambda for tethering mechanisms
 
-  /*
-  // Get lattice cooperativity jawn - preliminary
-  int range{(int)parameters_->motors.lattice_coop_range}; // in n_sites
-  printf("lattice coop range: %i\n", range);
-  double amp{parameters_->motors.lattice_coop_amp}; // amplitude of Gaussian
-  printf("lattice coop amp: %g\n", amp);
-  // Set the range of our gaussian to correspond to +/- 3 sigma
-  double sigma{double(range) / 3};
-  double sites_per_bin{0};
-  if (n_affinities_ > 0) {
-    sites_per_bin = (double)range / n_affinities_;
-  }
-  printf("sites_per_bin = %g\n", sites_per_bin);
-  // Check the no. of sites per bin is an integer
-  if (sites_per_bin != (int)sites_per_bin) {
-    printf("fix your stupid lattice coop ya dingus\n");
-    exit(1);
-  }
-  // Array of affinity weights (unitless) due to lattice deformations
-  std::vector<double> wt_lattice_bind(n_affinities_tot_, 0.0);
-  std::vector<double> wt_lattice_unbind(n_affinities_tot_, 0.0);
-  wt_lattice_bind[0] = 1.0;
-  // printf("wt_lattice_bind[0] = %g\n", wt_lattice_bind[0]);
-  wt_lattice_unbind[0] = 1.0;
-  // printf("wt_lattice_unbind[0] = %g\n", wt_lattice_unbind[0]);
-  for (int i_stack{0}; i_stack < n_stacks_; i_stack++) {
-    for (int i_aff{1}; i_aff <= n_affinities_; i_aff++) {
-      int index = i_stack * n_affinities_ + i_aff;
-      // Affinity is 1 when weakest, n_affinites when strongest
-      double dist{sites_per_bin * (n_affinities_ - i_aff)};
-      double gauss{exp(-1 * dist * dist / (2 * sigma * sigma))};
-      gauss *= amp * (i_stack + 1);
-      wt_lattice_bind[index] = 1.0 + gauss;
-      wt_lattice_unbind[index] = 1.0 / (1.0 + gauss);
-      // printf("wt_lattice_bind[%i] = %g\n", index, wt_lattice_bind[index]);
-      // printf("wt_lattice_unbind[%i] = %g\n", index,
-      // wt_lattice_unbind[index]);
-    }
-  }
-  */
-
-  // Array of interaction energies (in kbT) due to neighbor cooperativity
-  double int_energy{-1 * parameters_->motors.interaction_energy}; // kbT
-  std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
+  // Array Boltzmann weights due to neighbor-neighbor interactions
+  double energy_per_neighb{-1 * parameters_->motors.interaction_energy}; // kbT
   weight_neighbs_bind_.resize(max_neighbs_ + 1);
   weight_neighbs_unbind_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    neighb_energy[n_neighbs] = n_neighbs * int_energy; // ! in kbT
-    // printf("E_neighbs[%i] = %g\n", n_neighbs, neighb_energy[n_neighbs]);
-    weight_neighbs_bind_[n_neighbs] =
-        exp(-(1.0 - lambda_neighb) * neighb_energy[n_neighbs]);
-    // printf("wt_b[%i] = %g\n", n_neighbs, weight_neighbs_bind_[n_neighbs]);
-    weight_neighbs_unbind_[n_neighbs] =
-        exp(lambda_neighb * neighb_energy[n_neighbs]);
-    // printf("wt_ub[%i] = %g\n", n_neighbs, weight_neighbs_unbind_[n_neighbs]);
+    double energy{n_neighbs * energy_per_neighb}; // ! in kbT
+    weight_neighbs_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * energy);
+    weight_neighbs_unbind_[n_neighbs] = exp(lambda_neighb * energy);
+    printf("wt_nb_b[%i] = %g\n", n_neighbs, weight_neighbs_bind_[n_neighbs]);
+    printf("wt_nb_ub[%i] = %g\n", n_neighbs, weight_neighbs_unbind_[n_neighbs]);
   }
   // Array of binding/unbinding weights due to lattice deformation from a SINGLE
   // motor; multiplied together to get total weight for any arrangement
   double site_size{parameters_->microtubules.site_size};
   double lattice_E_max_tot{-1 * parameters_->motors.lattice_coop_Emax_bulk};
-  double wt_lattice_bind_max{exp(-(1 - lambda_lattice) * lattice_E_max_tot)};
+  double wt_lattice_bind_max{exp(-(1.0 - lambda_lattice) * lattice_E_max_tot)};
   double wt_lattice_unbind_max{exp(lambda_lattice * lattice_E_max_tot)};
   weight_lattice_bind_max_.resize(max_neighbs_ + 1);
   weight_lattice_unbind_max_.resize(max_neighbs_ + 1);
@@ -232,18 +167,15 @@ void KinesinManagement::SetParameters() {
     weight_lattice_unbind_max_[n_neighbs] =
         wt_lattice_unbind_max * weight_neighbs_unbind_[n_neighbs];
   }
-  // printf("wt_lt_b_max = %g\n", weight_lattice_bind_max_);
   weight_lattice_bind_.resize(lattice_cutoff_ + 1);
   weight_lattice_unbind_.resize(lattice_cutoff_ + 1);
   for (int delta{0}; delta <= lattice_cutoff_; delta++) {
     double dx{delta * site_size};
     double energy{lattice_alpha_ * dx * dx + lattice_E_0_solo_}; // in kbT
-    //    printf("energy[%i] = %g\n", delta, energy);
     weight_lattice_bind_[delta] = exp(-(1 - lambda_lattice) * energy);
-    //    printf("wt_b[%i] = %g\n", delta, weight_lattice_bind_[delta]);
     weight_lattice_unbind_[delta] = exp(lambda_lattice * energy);
-    //    printf("wt_ub[%i] = %g\n", delta, weight_lattice_unbind_[delta]);
   }
+  /*
   // Array of tether energies (in kbT) for any given extension
   double k_slack{parameters_->motors.k_slack};
   double k_teth{parameters_->motors.k_spring};
@@ -258,7 +190,7 @@ void KinesinManagement::SetParameters() {
     double r{sqrt(r_x * r_x + r_y * r_y)};
     double dr{r - r_0};
     double k_spring{0.0};
-    if (dr < 0) {
+    if (dr < 0.0) {
       k_spring = k_slack;
     } else {
       k_spring = k_teth;
@@ -267,26 +199,29 @@ void KinesinManagement::SetParameters() {
     tether_force[x_dub] = fabs(k_spring * dr);
     tether_cosine[x_dub] = r_x / r;
   }
+  */
   double delta_t{parameters_->delta_t};
   double k_on{parameters_->motors.k_on};
   double c_bulk{parameters_->motors.c_bulk};
+  p_avg_bind_i_ = k_on * c_bulk * delta_t;
   double c_eff_bind{parameters_->motors.c_eff_bind};
+  p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
+  double k_on_ATP{parameters_->motors.k_on_ATP};
+  double c_ATP{parameters_->motors.c_ATP};
+  p_bind_ATP_ = k_on_ATP * c_ATP * delta_t;
   double k_hydrolyze{parameters_->motors.k_hydrolyze};
-  double k_hydrolyze_stalled{parameters_->motors.k_hydrolyze_stalled};
+  p_hydrolyze_ = k_hydrolyze * delta_t;
   double k_off_ii{parameters_->motors.k_off_ii};
+  p_avg_unbind_ii_ = k_off_ii * delta_t;
   double k_off_i{parameters_->motors.k_off_i};
+  p_avg_unbind_i_ = k_off_i * delta_t;
+  /*
   double c_eff_teth{parameters_->motors.c_eff_tether};
   double k_tether{parameters_->motors.k_tether};
   double k_untether{parameters_->motors.k_untether};
-  p_hydrolyze_ = k_hydrolyze * delta_t;
-  p_hydrolyze_st_ = k_hydrolyze_stalled * delta_t;
   p_tether_free_ = k_tether * c_bulk * delta_t;
   p_untether_satellite_ = k_untether * delta_t;
-  p_avg_bind_i_ = k_on * c_bulk * delta_t;
   p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
-  p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
-  p_avg_unbind_ii_ = k_off_ii * delta_t;
-  p_avg_unbind_i_ = k_off_i * delta_t;
   p_avg_tether_bound_ = k_tether * c_eff_teth * delta_t;
   p_untether_bound_.resize(2 * teth_cutoff_ + 1);
   weight_tether_bound_.resize(2 * teth_cutoff_ + 1);
@@ -302,9 +237,9 @@ void KinesinManagement::SetParameters() {
     p_untether_bound_[x_dub] = p_untether_satellite_ * wt_untether;
     weight_tether_bound_[x_dub] = p_avg_tether_bound_ * wt_tether;
   }
+  */
+  /*
   double f_stall{parameters_->motors.stall_force};
-  double k_on_ATP{parameters_->motors.k_on_ATP};
-  double c_ATP{parameters_->motors.c_ATP};
   double p_bind_ATP{k_on_ATP * c_ATP * delta_t};
   p_bind_ATP_.resize(max_neighbs_ + 1);
   p_bind_ATP_to_teth_.resize(max_neighbs_ + 1);
@@ -331,87 +266,38 @@ void KinesinManagement::SetParameters() {
       p_bind_ATP_fr_teth_[n_neighbs][x_dub] = p_bind_ATP_[n_neighbs] * wt_fr;
     }
   }
+  */
   // Force perpetually applied to motors, e.g., by optical trapping
   if (parameters_->motors.applied_force > 0.0) {
-    wally_->Log("FIX APPLIED MOT FORCE\n");
-    exit(1);
-    double old_prob{p_avg_unbind_i_};
-    double sigma_off = 1.2;
-    double app_force = parameters_->motors.applied_force;
-    double weight = exp(app_force * sigma_off / kbT);
-    p_avg_unbind_i_ = k_off_i * weight * delta_t;
-    wally_->Log("p_unbind_i scaled from %g to %g \n", old_prob,
+    double force{parameters_->motors.applied_force};
+    wally_->Log("\n Motor applied force is %g\n", force);
+    double p_unbind_i_old{p_avg_unbind_i_};
+    double p_unbind_ii_old{p_avg_unbind_ii_};
+    double p_bind_ATP_old{p_bind_ATP_};
+    double sigma_off_i{2.0};
+    double sigma_off_ii{0.35};
+    double sigma_ATP{4.6};
+    double kbT{parameters_->kbT};
+    // Motor singly-bound unbinding rate increases with increasing force
+    p_avg_unbind_i_ *= exp(force * sigma_off_i / kbT);
+    wally_->Log("p_avg_unbind_i scaled from %g to %g \n", p_unbind_i_old,
                 p_avg_unbind_i_);
+    // Motor doubly-bound unbinding rate decreases with increasing force
+    // because it partially cancels out the internal necklinker forces
+    p_avg_unbind_ii_ *= exp(-1 * force * sigma_off_ii / kbT);
+    wally_->Log("p_avg_unbind_ii scaled from %g to %g \n", p_unbind_ii_old,
+                p_avg_unbind_ii_);
+    // ATP binding rate decreases with increasing force
+    p_bind_ATP_ *= exp(-1 * force * sigma_ATP / kbT);
+    wally_->Log("p_bind_ATP scaled from %g to %g \n", p_bind_ATP_old,
+                p_bind_ATP_);
   }
-  /*
-
-  double k_off_ii{parameters_->motors.k_off_ii};
-  double k_off_i{parameters_->motors.k_off_i};
-  double k_off_i_st{parameters_->motors.k_off_i_stalled};
-  double p_bind_i{k_on * c_bulk * delta_t};
-  printf("p_bind_i = %g\n", p_bind_i);
-  printf("k_on = %g | c = %g | delta_t = %g\n", k_on, c_bulk, delta_t);
-  double p_bind_ii{k_on * c_eff_bind * delta_t};
-  double p_unbind_ii{k_off_ii * delta_t};
-  double p_unbind_i{k_off_i * delta_t};
-  double p_unbind_i_st{k_off_i_st * delta_t};
-  double sigma_off{1.5};
-
-  p_bind_i_.resize(n_affinities_tot_);
-  p_bind_ii_.resize(n_affinities_tot_);
-  p_unbind_ii_.resize(n_affinities_tot_);
-  p_unbind_i_.resize(n_affinities_tot_);
-  p_unbind_i_st_.resize(n_affinities_tot_);
-  p_unbind_i_teth_.resize(n_affinities_tot_);
-  p_unbind_i_teth_st_.resize(n_affinities_tot_);
-  weight_bind_i_teth_.resize(n_affinities_tot_);
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    p_bind_i_[i_aff].resize(max_neighbs_ + 1);
-    p_bind_ii_[i_aff].resize(max_neighbs_ + 1);
-    p_unbind_ii_[i_aff].resize(max_neighbs_ + 1);
-    p_unbind_i_[i_aff].resize(max_neighbs_ + 1);
-    p_unbind_i_st_[i_aff].resize(max_neighbs_ + 1);
-    p_unbind_i_teth_[i_aff].resize(max_neighbs_ + 1);
-    p_unbind_i_teth_st_[i_aff].resize(max_neighbs_ + 1);
-    weight_bind_i_teth_[i_aff].resize(max_neighbs_ + 1);
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      // dU = U_f - U_i
-      double dU_bind{neighb_energy[n_neighbs] - 0.0};
-      double dU_unbind{0.0 - neighb_energy[n_neighbs]};
-      // Weights for neighbor interaction energy via Boltzmann factor
-      double wt_neighb_bind{exp(-(1.0 - lambda_neighb) * dU_bind)};
-      double wt_neighb_unbind{exp(-lambda_neighb * dU_unbind)};
-      // Total weights that include lattice deformation
-      double wt_tot_bind{wt_neighb_bind * wt_lattice_bind[i_aff]};
-      double wt_tot_unbind{wt_neighb_unbind * wt_lattice_unbind[i_aff]};
-      p_bind_i_[i_aff][n_neighbs] = p_bind_i * wt_tot_bind;
-      printf("wt_lattice = %g\n", wt_lattice_unbind[i_aff]);
-      printf("wt_neighb = %g\n", wt_neighb_unbind);
-      printf("wt_tot = %g\n\n", wt_tot_unbind);
-      p_bind_ii_[i_aff][n_neighbs] = p_bind_ii * wt_tot_bind;
-      p_unbind_ii_[i_aff][n_neighbs] = p_unbind_ii * wt_tot_unbind;
-      p_unbind_i_[i_aff][n_neighbs] = p_unbind_i * wt_tot_unbind;
-      p_unbind_i_st_[i_aff][n_neighbs] = p_unbind_i_st * wt_tot_unbind;
-      p_unbind_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      p_unbind_i_teth_st_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      weight_bind_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-        double f_dependence{tether_force[x_dub] * sigma_off / kbT};
-        double wt_teth{exp(-(1.0 - lambda_teth) * f_dependence)};
-        double wt_unteth{exp(lambda_teth * f_dependence)};
-        if (x_dub < 2 * comp_cutoff_) {
-          wt_teth = 0.0;
-          wt_unteth = 0.0;
-        }
-        weight_bind_i_teth_[i_aff][n_neighbs][x_dub] = wt_tot_bind * wt_teth;
-        p_unbind_i_teth_[i_aff][n_neighbs][x_dub] =
-            p_unbind_i_[i_aff][n_neighbs] * wt_unteth;
-        p_unbind_i_teth_st_[i_aff][n_neighbs][x_dub] =
-            p_unbind_i_st_[i_aff][n_neighbs] * wt_unteth;
-      }
+  if (wally_->test_mode_ == nullptr) {
+    Update_Weights();
+    if (!lattice_coop_active_) {
+      dynamic_weights_ = false;
     }
   }
-  */
   p_theory_["hydrolyze"] = {{{p_hydrolyze_}}};
   p_theory_["hydrolyze_st"] = {{{p_hydrolyze_st_}}};
   if (tethering_active_) {
@@ -421,7 +307,7 @@ void KinesinManagement::SetParameters() {
     p_theory_["tether_bound"] = {{{p_avg_tether_bound_}}};
     p_theory_["untether_bound"] = {{p_untether_bound_}};
   }
-  p_theory_["bind_ATP"] = {{p_bind_ATP_}};
+  p_theory_["bind_ATP"] = {{{p_bind_ATP_}}};
   if (tethering_active_) {
     p_theory_["bind_ATP_to_teth"] = {p_bind_ATP_to_teth_};
     p_theory_["bind_ATP_fr_teth"] = {p_bind_ATP_fr_teth_};
@@ -430,17 +316,6 @@ void KinesinManagement::SetParameters() {
   p_theory_["bind_ii"] = {{{p_avg_bind_ii_}}};
   p_theory_["unbind_ii"] = {{{p_avg_unbind_ii_}}};
   p_theory_["unbind_i"] = {{{p_avg_unbind_i_}}};
-  /*
-  p_theory_["bind_i"] = {p_bind_i_};
-  p_theory_["bind_ii"] = {p_bind_ii_};
-  p_theory_["unbind_ii"] = {p_unbind_ii_};
-  p_theory_["unbind_i"] = {p_unbind_i_};
-  p_theory_["unbind_i_st"] = {p_unbind_i_st_};
-  if (tethering_active_) {
-    p_theory_["unbind_i_teth"] = p_unbind_i_teth_;
-    p_theory_["unbind_i_teth_st"] = p_unbind_i_teth_st_;
-  }
-  */
   // READ EM OUT
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
@@ -458,9 +333,9 @@ void KinesinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          if (verbosity_ >= 3) {
-            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          }
+          // if (verbosity_ >= 3) {
+          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          // }
           if (value[i][j][k] > 1.0) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             wally_->ErrorExit("Kin_MGMT:SetParameters()");
@@ -489,6 +364,7 @@ void KinesinManagement::InitializeLists() {
 
   // 1-D stuff -- indexed by i_motor
   active_.resize(n_motors_);
+  bound_NULL_.resize(n_motors_);
   bound_ATP_.resize(n_motors_);
   bound_ATP_st_.resize(n_motors_);
   bound_unteth_.resize(n_motors_);
@@ -505,6 +381,7 @@ void KinesinManagement::InitializeLists() {
     n_bound_teth_[x_dub] = 0;
     bound_teth_[x_dub].resize(n_motors_);
   }
+  /*
   // 2-D stuff -- indexed by n_neighbs & i_motor
   n_bound_NULL_.resize(max_neighbs_ + 1);
   bound_NULL_.resize(max_neighbs_ + 1);
@@ -512,6 +389,7 @@ void KinesinManagement::InitializeLists() {
     n_bound_NULL_[n_neighbs] = 0;
     bound_NULL_[n_neighbs].resize(n_motors_);
   }
+  */
   // 3-D stuff -- indexed by n_neighbs, x_dub, & i_motor
   n_bound_NULL_to_teth_.resize(max_neighbs_ + 1);
   n_bound_NULL_fr_teth_.resize(max_neighbs_ + 1);
@@ -529,61 +407,6 @@ void KinesinManagement::InitializeLists() {
       bound_NULL_fr_teth_[n_neighbs][x_dub].resize(n_motors_);
     }
   }
-
-  /*
-  // 3-D stuff -- indexed by tubulin_affinity, n_neighbs, & i_motor
-  n_docked_.resize(n_affinities_tot_);
-  n_bound_ADPP_ii_.resize(n_affinities_tot_);
-  n_bound_ADPP_i_.resize(n_affinities_tot_);
-  n_bound_ADPP_i_st_.resize(n_affinities_tot_);
-  docked_.resize(n_affinities_tot_);
-  bound_ADPP_ii_.resize(n_affinities_tot_);
-  bound_ADPP_i_.resize(n_affinities_tot_);
-  bound_ADPP_i_st_.resize(n_affinities_tot_);
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    n_docked_[i_aff].resize(max_neighbs_ + 1);
-    n_bound_ADPP_ii_[i_aff].resize(max_neighbs_ + 1);
-    n_bound_ADPP_i_[i_aff].resize(max_neighbs_ + 1);
-    n_bound_ADPP_i_st_[i_aff].resize(max_neighbs_ + 1);
-    docked_[i_aff].resize(max_neighbs_ + 1);
-    bound_ADPP_ii_[i_aff].resize(max_neighbs_ + 1);
-    bound_ADPP_i_[i_aff].resize(max_neighbs_ + 1);
-    bound_ADPP_i_st_[i_aff].resize(max_neighbs_ + 1);
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      n_docked_[i_aff][n_neighbs] = 0;
-      n_bound_ADPP_ii_[i_aff][n_neighbs] = 0;
-      n_bound_ADPP_i_[i_aff][n_neighbs] = 0;
-      n_bound_ADPP_i_st_[i_aff][n_neighbs] = 0;
-      docked_[i_aff][n_neighbs].resize(n_motors_);
-      bound_ADPP_ii_[i_aff][n_neighbs].resize(n_motors_);
-      bound_ADPP_i_[i_aff][n_neighbs].resize(n_motors_);
-      bound_ADPP_i_st_[i_aff][n_neighbs].resize(n_motors_);
-    }
-  }
-  // 4-D stuff -- indexed by tubulin_affinity, n_neighbs, x_dub, & i_motor
-  n_bound_ADPP_i_teth_.resize(n_affinities_tot_);
-  n_bound_ADPP_i_teth_st_.resize(n_affinities_tot_);
-  bound_ADPP_i_teth_.resize(n_affinities_tot_);
-  bound_ADPP_i_teth_st_.resize(n_affinities_tot_);
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    n_bound_ADPP_i_teth_[i_aff].resize(max_neighbs_ + 1);
-    n_bound_ADPP_i_teth_st_[i_aff].resize(max_neighbs_ + 1);
-    bound_ADPP_i_teth_[i_aff].resize(max_neighbs_ + 1);
-    bound_ADPP_i_teth_st_[i_aff].resize(max_neighbs_ + 1);
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      n_bound_ADPP_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      n_bound_ADPP_i_teth_st_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      bound_ADPP_i_teth_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      bound_ADPP_i_teth_st_[i_aff][n_neighbs].resize(2 * teth_cutoff_ + 1);
-      for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-        n_bound_ADPP_i_teth_[i_aff][n_neighbs][x_dub] = 0;
-        n_bound_ADPP_i_teth_st_[i_aff][n_neighbs][x_dub] = 0;
-        bound_ADPP_i_teth_[i_aff][n_neighbs][x_dub].resize(n_motors_);
-        bound_ADPP_i_teth_st_[i_aff][n_neighbs][x_dub].resize(n_motors_);
-      }
-    }
-  }
-  */
 }
 
 void KinesinManagement::InitializeEvents() {
@@ -636,109 +459,28 @@ void KinesinManagement::InitializeEvents() {
                        &properties_->microtubules.n_unocc_motor_,
                        &properties_->microtubules.unocc_motor_, exe_bind_i,
                        weight_bind_i, poisson, get_ran_prob, set_ran_indices);
-  /*
-  // Bind_I: bind first motor head to MT and release ADP
-  auto exe_bind_i = [&](ENTRY_T target) {
-    SITE_T *site = std::get<SITE_T *>(target);
-    if (site != nullptr) {
-      ReportExecutionOf("bind_i");
-      Bind_I(site);
-    } else {
-      ReportFailureOf("bind_i");
-    }
-  };
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    std::string AFFINITY{"_" + std::to_string(i_aff)};
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "bind_i";
-      if (n_affinities_tot_ > 1) {
-        event_name += AFFINITY;
-      }
-      if (max_neighbs_ > 0) {
-        event_name += N_NEIGHBS;
-      }
-      events_.emplace_back(
-          event_name, p_bind_i_[i_aff][n_neighbs],
-          &properties_->microtubules.n_unocc_motor_[i_aff][n_neighbs],
-          &properties_->microtubules.unocc_motor_[i_aff][n_neighbs], exe_bind_i,
-          binomial, set_ran_indices);
-    }
-  }
-  */
-  // Bind_I_Teth: same as bind_i but for tethered populations
-  if (tethering_active_) {
-    event_name = "bind_i_teth";
-    auto exe_bind_i_teth = [&](ENTRY_T target) {
-      Bind_I_Teth(std::get<POP_T *>(target));
-    };
-    auto weight_bind_i_teth = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->motor_->GetTotalWeight_Bind_I_Teth();
-    };
-    events_.emplace_back(event_name, p_avg_bind_i_teth_,
-                         &n_bind_i_teth_candidates_, &bind_i_teth_candidates_,
-                         exe_bind_i_teth, weight_bind_i_teth, poisson,
-                         get_ran_prob, set_ran_indices);
-  }
   // Bind_ATP: bind ATP to motor heads that have released their ADP
+  event_name = "bind_ATP";
   auto exe_bind_ATP = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    if (head != nullptr) {
-      ReportExecutionOf("bind_ATP");
-      Bind_ATP(head);
-    } else {
-      ReportFailureOf("bind_ATP");
+    try {
+      Bind_ATP(std::get<POP_T *>(target));
+    } catch (...) {
+      wally_->ErrorExit("K_MGMT::exe_bind_ATP");
     }
   };
-  int max_neighbs_step{max_neighbs_ - 1};
-  if (max_neighbs_ == 0) {
-    max_neighbs_step = 0;
-  }
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs_step; n_neighbs++) {
-    std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-    event_name = "bind_ATP";
-    if (max_neighbs_ > 0) {
-      event_name += N_NEIGHBS;
-    }
-    events_.emplace_back(event_name, p_bind_ATP_[n_neighbs],
-                         &n_bound_NULL_[n_neighbs], &bound_NULL_[n_neighbs],
-                         exe_bind_ATP, binomial, set_ran_indices);
-    if (!tethering_active_) {
-      continue;
-    }
-    // Bind_ATP_Teth
-    for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-      std::string X_DUB{"_" + std::to_string(x_dub)};
-      event_name = "bind_ATP_to_teth" + N_NEIGHBS + X_DUB;
-      events_.emplace_back(event_name, p_bind_ATP_to_teth_[n_neighbs][x_dub],
-                           &n_bound_NULL_to_teth_[n_neighbs][x_dub],
-                           &bound_NULL_to_teth_[n_neighbs][x_dub], exe_bind_ATP,
-                           binomial, set_ran_indices);
-      event_name = "bind_ATP_fr_teth" + N_NEIGHBS + X_DUB;
-      events_.emplace_back(event_name, p_bind_ATP_fr_teth_[n_neighbs][x_dub],
-                           &n_bound_NULL_fr_teth_[n_neighbs][x_dub],
-                           &bound_NULL_fr_teth_[n_neighbs][x_dub], exe_bind_ATP,
-                           binomial, set_ran_indices);
-    }
-  }
+  events_.emplace_back(event_name, p_bind_ATP_, &n_bound_NULL_, &bound_NULL_,
+                       exe_bind_ATP, binomial, set_ran_indices);
   // Hydrolyze: convert ATP to ADPP
   event_name = "hydrolyze";
   auto exe_hydrolyze = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    if (head != nullptr) {
-      ReportExecutionOf("hydrolyze");
-      Hydrolyze(head);
-    } else {
-      ReportFailureOf("hydrolyze");
+    try {
+      Hydrolyze(std::get<POP_T *>(target));
+    } catch (...) {
+      wally_->ErrorExit("K_MGMT::exe_hydrolyze");
     }
   };
   events_.emplace_back(event_name, p_hydrolyze_, &n_bound_ATP_, &bound_ATP_,
                        exe_hydrolyze, binomial, set_ran_indices);
-  // Hydrolyze_stalled: same as Hydrolyze but only targets stalled motors
-  event_name = "hydrolyze_st";
-  events_.emplace_back(event_name, p_hydrolyze_st_, &n_bound_ATP_st_,
-                       &bound_ATP_st_, exe_hydrolyze, binomial,
-                       set_ran_indices);
   // Bind_II: binds docked motor head to MT and releases its ADP
   event_name = "bind_ii";
   auto exe_bind_ii = [&](ENTRY_T target) {
@@ -775,7 +517,6 @@ void KinesinManagement::InitializeEvents() {
       wally_->ErrorExit("K_MGMT::weight_unbind_ii");
     }
   };
-
   events_.emplace_back(event_name, p_avg_unbind_ii_, &n_unbind_ii_candidates_,
                        &unbind_ii_candidates_, exe_unbind_ii, weight_unbind_ii,
                        poisson, get_ran_prob, set_ran_indices);
@@ -798,161 +539,6 @@ void KinesinManagement::InitializeEvents() {
   events_.emplace_back(event_name, p_avg_unbind_i_, &n_unbind_i_candidates_,
                        &unbind_i_candidates_, exe_unbind_i, weight_unbind_i,
                        poisson, get_ran_prob, set_ran_indices);
-  /*
-  // Bind_II: binds docked motor head to MT and releases its ADP
-  auto exe_bind_ii = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    if (head != nullptr) {
-      ReportExecutionOf("bind_ii");
-      Bind_II(head);
-    } else {
-      ReportFailureOf("bind_ii");
-    }
-  };
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    std::string AFFINITY{"_" + std::to_string(i_aff)};
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "bind_ii";
-      if (n_affinities_tot_ > 1) {
-        event_name += AFFINITY;
-      }
-      if (max_neighbs_ > 0) {
-        event_name += N_NEIGHBS;
-      }
-      events_.emplace_back(event_name, p_bind_ii_[i_aff][n_neighbs],
-                           &n_docked_[i_aff][n_neighbs],
-                           &docked_[i_aff][n_neighbs], exe_bind_ii, binomial,
-                           set_ran_indices);
-    }
-  }
-  // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
-  auto exe_unbind_ii = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    if (head != nullptr) {
-      ReportExecutionOf("unbind_ii");
-      Unbind_II(head);
-    } else {
-      ReportFailureOf("unbind_ii");
-      printf("step #%i!!\n", properties_->current_step_);
-      exit(1);
-    }
-  };
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    std::string AFFINITY{"_" + std::to_string(i_aff)};
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "unbind_ii";
-      if (n_affinities_tot_ > 1) {
-        event_name += AFFINITY;
-      }
-      if (max_neighbs_ > 0) {
-        event_name += N_NEIGHBS;
-      }
-      events_.emplace_back(event_name, p_unbind_ii_[i_aff][n_neighbs],
-                           &n_bound_ADPP_ii_[i_aff][n_neighbs],
-                           &bound_ADPP_ii_[i_aff][n_neighbs], exe_unbind_ii,
-                           binomial, set_ran_indices);
-    }
-  }
-  // Unbind_I: Converts ADPP to ADP and unbinds a singly-bound head
-  auto exe_unbind_i = [&](ENTRY_T target) {
-    POP_T *head = std::get<POP_T *>(target);
-    if (head != nullptr) {
-      ReportExecutionOf("unbind_i");
-      Unbind_I(head);
-    } else {
-      ReportFailureOf("unbind_i");
-    }
-  };
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    std::string AFFINITY{"_" + std::to_string(i_aff)};
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      std::string N_NEIGHBS{"_" + std::to_string(n_neighbs)};
-      event_name = "unbind_i";
-      if (n_affinities_tot_ > 1) {
-        event_name += AFFINITY;
-      }
-      if (max_neighbs_ > 0) {
-        event_name += N_NEIGHBS;
-      }
-      events_.emplace_back(event_name, p_unbind_i_[i_aff][n_neighbs],
-                           &n_bound_ADPP_i_[i_aff][n_neighbs],
-                           &bound_ADPP_i_[i_aff][n_neighbs], exe_unbind_i,
-                           binomial, set_ran_indices);
-      // Unbind_I_Stalled: Same as unbind_I but only targets stalled motors
-      event_name = "unbind_i_st";
-      if (n_affinities_tot_ > 1) {
-        event_name += AFFINITY;
-      }
-      if (max_neighbs_ > 0) {
-        event_name += N_NEIGHBS;
-      }
-      events_.emplace_back(event_name, p_unbind_i_st_[i_aff][n_neighbs],
-                           &n_bound_ADPP_i_st_[i_aff][n_neighbs],
-                           &bound_ADPP_i_st_[i_aff][n_neighbs], exe_unbind_i,
-                           binomial, set_ran_indices);
-      if (!tethering_active_) {
-        continue;
-      }
-      for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-        std::string X_DUB{"_" + std::to_string(x_dub)};
-        // Unbind_I_Tethered
-        event_name = "unbind_i_teth" + AFFINITY + N_NEIGHBS + X_DUB;
-        events_.emplace_back(event_name,
-                             p_unbind_i_teth_[i_aff][n_neighbs][x_dub],
-                             &n_bound_ADPP_i_teth_[i_aff][n_neighbs][x_dub],
-                             &bound_ADPP_i_teth_[i_aff][n_neighbs][x_dub],
-                             exe_unbind_i, binomial, set_ran_indices);
-        // Unbind_I_Tethered_Stalled
-        event_name = "unbind_i_teth_st" + AFFINITY + N_NEIGHBS + X_DUB;
-        events_.emplace_back(event_name,
-                             p_unbind_i_teth_st_[i_aff][n_neighbs][x_dub],
-                             &n_bound_ADPP_i_teth_st_[i_aff][n_neighbs][x_dub],
-                             &bound_ADPP_i_teth_st_[i_aff][n_neighbs][x_dub],
-                             exe_unbind_i, binomial, set_ran_indices);
-      }
-    }
-  }
-  */
-  if (tethering_active_) {
-    // Tether_bound
-    event_name = "tether_bound";
-    auto exe_tether_bound = [&](ENTRY_T target) {
-      Tether_Bound(std::get<POP_T *>(target));
-    };
-    auto weight_tether_bound = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->motor_->GetTotalWeight_Tether_Bound();
-    };
-    events_.emplace_back(event_name, p_avg_tether_bound_,
-                         &n_tether_bound_candidates_, &tether_bound_candidates_,
-                         exe_tether_bound, weight_tether_bound, poisson,
-                         get_ran_prob, set_ran_indices);
-    // Tether_free
-    auto exe_tether_free = [&](ENTRY_T target) {
-      Tether_Free(std::get<ALT_T *>(target));
-    };
-    event_name = "tether_free";
-    events_.emplace_back(event_name, p_tether_free_,
-                         &properties_->prc1.n_bound_unteth_,
-                         &properties_->prc1.bound_unteth_, exe_tether_free,
-                         binomial, set_ran_indices);
-    // Untether_bound
-    auto exe_untether = [&](ENTRY_T target) {
-      Untether(std::get<POP_T *>(target));
-    };
-    for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-      std::string X_DUB{"_" + std::to_string(x_dub)};
-      event_name = "untether_bound" + X_DUB;
-      events_.emplace_back(event_name, p_untether_bound_[x_dub],
-                           &n_bound_teth_[x_dub], &bound_teth_[x_dub],
-                           exe_untether, binomial, set_ran_indices);
-    }
-    // Untether_satellite
-    event_name = "untether_satellite";
-    events_.emplace_back(event_name, p_untether_satellite_, &n_satellites_,
-                         &satellites_, exe_untether, binomial, set_ran_indices);
-  }
   if (verbosity_ >= 3) {
     wally_->Log("\nMotor events: \n");
     for (const auto &event : events_) {
@@ -966,8 +552,6 @@ void KinesinManagement::InitializeTestEnvironment() {
   properties_->microtubules.InitializeTestEnvironment();
   if (strcmp(wally_->test_mode_, "motor_lattice_bind") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
-    // Disable automatic weight updates
-    weights_active_ = false;
     // Disable neighbor interactions
     parameters_->motors.interaction_energy = 0.0;
     for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -989,7 +573,10 @@ void KinesinManagement::InitializeTestEnvironment() {
     Tubulin *site{&properties_->microtubules.mt_list_[0].lattice_[i_site]};
     Bind_I(site);
     // Update site weights
-    Update_Lattice_Weights();
+    dynamic_weights_ = true;
+    Update_Weights();
+    // Disable dynamic weights for the remainder of the run
+    dynamic_weights_ = false;
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
@@ -998,7 +585,7 @@ void KinesinManagement::InitializeTestEnvironment() {
     // test_delta_ = 5;
     if (test_delta_ > 0) {
       // Disable automatic weight updates
-      weights_active_ = false;
+      dynamic_weights_ = false;
       // Disable neighbor interactions
       parameters_->motors.interaction_energy = 0.0;
       for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -1011,6 +598,10 @@ void KinesinManagement::InitializeTestEnvironment() {
         mt->lattice_[i_site].weight_unbind_ =
             weight_lattice_unbind_[test_delta_];
       }
+    } else if (!lattice_coop_active_) {
+      dynamic_weights_ = true;
+      Update_Weights();
+      dynamic_weights_ = false;
     }
     // Initialize stat trackers
     lattice_step_bind_ii_stats_ = std::make_pair(0, 0);
@@ -1081,13 +672,12 @@ void KinesinManagement::InitializeTestEvents() {
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
     // Bind_ATP: bind ATP to motor heads that have released their ADP
-    event_name = "bind_ATP_0";
+    event_name = "bind_ATP";
     auto exe_bind_ATP = [&](ENTRY_T target) {
       Bind_ATP(std::get<POP_T *>(target));
     };
-    events_.emplace_back(event_name, p_bind_ATP_[0], &n_bound_NULL_[0],
-                         &bound_NULL_[0], exe_bind_ATP, binomial,
-                         set_ran_indices);
+    events_.emplace_back(event_name, p_bind_ATP_, &n_bound_NULL_, &bound_NULL_,
+                         exe_bind_ATP, binomial, set_ran_indices);
     // Hydrolyze: convert ATP to ADPP
     event_name = "hydrolyze";
     auto exe_hydrolyze = [&](ENTRY_T target) {
@@ -1134,7 +724,9 @@ void KinesinManagement::InitializeTestEvents() {
       Unbind_II(std::get<POP_T *>(target));
     };
     auto weight_unbind_ii = [&](ENTRY_T target) {
-      return std::get<POP_T *>(target)->motor_->GetWeight_Unbind_II();
+      double weight{std::get<POP_T *>(target)->motor_->GetWeight_Unbind_II()};
+      // printf("wt_unbind_ii is %g\n", weight);
+      return weight;
     };
     auto poisson_unbind_ii = [&](double p, int n) {
       if (n_unbind_ii_candidates_ > 0) {
@@ -1211,7 +803,8 @@ void KinesinManagement::ReportProbabilities() {
           wally_->Log("For Kin event %s:\n", event->name_.c_str());
           wally_->Log("   p_theory = %g\n", value[i][j][k]);
           wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
-          wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
+          wally_->Log(" (n_exe = %i)", event->n_executed_tot_);
+          wally_->Log(" (n_opp = %i)\n", event->n_opportunities_tot_);
         }
       }
     }
@@ -1316,9 +909,9 @@ void KinesinManagement::ReportFailureOf(std::string event_name) {
   std::cout << event_name << std::endl;
 }
 
-void KinesinManagement::Update_Lattice_Weights() {
+void KinesinManagement::Update_Weights() {
 
-  if (!weights_active_) {
+  if (!dynamic_weights_) {
     return;
   }
   MicrotubuleManagement *mts = &properties_->microtubules;
@@ -1329,12 +922,6 @@ void KinesinManagement::Update_Lattice_Weights() {
       int n_neighbs{site->GetKif4ANeighborCount()};
       site->weight_bind_ = weight_neighbs_bind_[n_neighbs];
       site->weight_unbind_ = weight_neighbs_unbind_[n_neighbs];
-      /*
-  printf("base weight bind is %g for site %i\n", site->weight_bind_,
-         i_site);
-  printf("base weight unbind is %g for site %i\n", site->weight_unbind_,
-         i_site);
-      */
     }
   }
   // Add up all lattice deformation weights on top of baseline neighb weights
@@ -1373,7 +960,7 @@ void KinesinManagement::Update_Lattice_Weights() {
   }
 }
 
-void KinesinManagement::Update_Tether_Extensions() {
+void KinesinManagement::Update_Extensions() {
 
   if (!tethering_active_) {
     return;
@@ -1388,13 +975,6 @@ void KinesinManagement::Update_Docked() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting K_MGMT::Update_Docked()");
   }
-  /*
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      n_docked_[i_aff][n_neighbs] = 0;
-    }
-  }
-  */
   n_bind_ii_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     Kinesin *motor = active_[i_entry];
@@ -1406,15 +986,6 @@ void KinesinManagement::Update_Docked() {
       Tubulin *dock_site{motor->GetDockSite()};
       if (!dock_site->occupied_) {
         bind_ii_candidates_[n_bind_ii_candidates_++] = motor->GetDockedHead();
-        /*
-        int aff{dock_site->GetAffinityExcluding(motor)};
-        int n_neighbs_eff{0};
-        if (max_neighbs_ > 0) {
-          n_neighbs_eff = dock_site->GetKif4ANeighborCount() - 1;
-        }
-        int index{n_docked_[aff][n_neighbs_eff]++};
-        docked_[aff][n_neighbs_eff][index] = motor->GetDockedHead();
-        */
       }
     }
   }
@@ -1434,23 +1005,36 @@ void KinesinManagement::Update_Bound_NULL() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting K_MGMT::Update_Bound_NULL()");
   }
+  /*
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     n_bound_NULL_[n_neighbs] = 0;
   }
+  */
+  n_bound_NULL_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     Kinesin *motor = active_[i_entry];
-    if (!motor->tethered_ or motor->HasSatellite()) {
-      if (motor->head_one_.ligand_ == "NULL") {
-        int n_neighbs{motor->head_one_.GetKif4ANeighborCount_Step()};
-        int index{n_bound_NULL_[n_neighbs]++};
-        bound_NULL_[n_neighbs][index] = &motor->head_one_;
-      }
-      if (motor->head_two_.ligand_ == "NULL") {
-        int n_neighbs{motor->head_two_.GetKif4ANeighborCount_Step()};
-        int index{n_bound_NULL_[n_neighbs]++};
-        bound_NULL_[n_neighbs][index] = &motor->head_two_;
-      }
+    if (motor->heads_active_ != 1) {
+      continue;
     }
+    if (motor->tethered_ and !motor->HasSatellite()) {
+      continue;
+    }
+    POP_T *head{motor->GetActiveHead()};
+    if (head->ligand_ == "NULL") {
+      bound_NULL_[n_bound_NULL_++] = head;
+    }
+    /*
+    if (motor->head_one_.ligand_ == "NULL") {
+      int n_neighbs{motor->head_one_.GetKif4ANeighborCount_Step()};
+      int index{n_bound_NULL_[n_neighbs]++};
+      bound_NULL_[n_neighbs][index] = &motor->head_one_;
+    }
+    if (motor->head_two_.ligand_ == "NULL") {
+      int n_neighbs{motor->head_two_.GetKif4ANeighborCount_Step()};
+      int index{n_bound_NULL_[n_neighbs]++};
+      bound_NULL_[n_neighbs][index] = &motor->head_two_;
+    }
+    */
   }
   if (verbosity_ > 1) {
     wally_->Log(" -- finished\n");
@@ -1507,14 +1091,14 @@ void KinesinManagement::Update_Bound_ATP() {
   n_bound_ATP_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
-    if (!motor->IsStalled()) {
-      if (motor->head_one_.ligand_ == "ATP") {
-        bound_ATP_[n_bound_ATP_++] = &motor->head_one_;
-      }
-      if (motor->head_two_.ligand_ == "ATP") {
-        bound_ATP_[n_bound_ATP_++] = &motor->head_two_;
-      }
+    // if (!motor->IsStalled()) {
+    if (motor->head_one_.ligand_ == "ATP") {
+      bound_ATP_[n_bound_ATP_++] = &motor->head_one_;
     }
+    if (motor->head_two_.ligand_ == "ATP") {
+      bound_ATP_[n_bound_ATP_++] = &motor->head_two_;
+    }
+    // }
   }
   if (verbosity_ > 1) {
     wally_->Log("-- finished\n");
@@ -1668,13 +1252,6 @@ void KinesinManagement::Update_Bound_ADPP_II() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting K_MGMT::Update_Bound_ADPP_II()");
   }
-  /*
-  for (int i_aff{0}; i_aff < n_affinities_tot_; i_aff++) {
-    for (int i_neighb{0}; i_neighb <= max_neighbs_; i_neighb++) {
-      n_bound_ADPP_ii_[i_aff][i_neighb] = 0;
-    }
-  }
-  */
   n_unbind_ii_candidates_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
     Kinesin *motor = active_[i_motor];
@@ -1686,6 +1263,7 @@ void KinesinManagement::Update_Bound_ADPP_II() {
     // FIXME when attempting to incorporate back-stepping cycle
     if (motor->head_one_.ligand_ == "ADPP" and
         motor->head_two_.ligand_ == "ADPP") {
+      wally_->ErrorExit("K_MGMT::Update_Bound_ADPP_II()");
       if (motor->head_one_.trailing_) {
         chosen_head = &motor->head_one_;
       } else {
@@ -1708,6 +1286,9 @@ void KinesinManagement::Update_Bound_ADPP_II() {
       wally_->ErrorExit("KinMGMT::Update_Bound_ADPP_II");
     }
   }
+  // if (n_unbind_ii_candidates_ > 0) {
+  //   printf("%i unbind_ii candidates\n", n_unbind_ii_candidates_);
+  // }
   if (verbosity_ > 1) {
     wally_->Log(" -- finished\n");
   }
@@ -1808,17 +1389,15 @@ void KinesinManagement::UpdateLists() {
   if (lists_up_to_date_) {
     return;
   }
-  Update_Lattice_Weights();
+  Update_Weights();
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
   Update_Bound_NULL();
   Update_Bound_ATP();
-  Update_Bound_ATP_Stalled();
   Update_Bound_ADPP_I();
-  // Update_Bound_ADPP_I_Stalled();
   Update_Bound_ADPP_II();
   if (parameters_->motors.tethers_active) {
-    Update_Tether_Extensions();
+    Update_Extensions();
     Update_Free_Teth();
     Update_Bound_NULL_Teth();
     // Update_Bound_ADPP_I_Teth();
@@ -2016,6 +1595,8 @@ void KinesinManagement::Bind_ATP(POP_T *head) {
   // If head is leading, change conformation
   if (!head->trailing_) {
     head->motor_->ChangeConformation();
+  } else {
+    wally_->ErrorExit("K_MGMT::Bind_ATP()");
   }
 }
 

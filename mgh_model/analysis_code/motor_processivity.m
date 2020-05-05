@@ -1,16 +1,19 @@
 
 clear all;
 % Often-changed variables
+i_conc = 6;
 kif4a_concs = [20, 50, 80, 120, 220, 420];
 mt_lengths = [75000, 50000, 40000, 25000, 8500, 3250];
-i_conc = 6;
 conc = kif4a_concs(i_conc);
-n_sites = mt_lengths(i_conc);
-simName = sprintf("kif4a_coop_optimization_lifetimeOnly_10.1_%i", conc);
+%n_sites = mt_lengths(i_conc);
+n_sites = 5000;
+%simName = sprintf("kif4a_coop_optimization_lifetimeOnly_10.1_%i", conc);
+%simName = sprintf("lattice_coop_%i", conc);
+simName = "test";
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.0002; %0.000025;
-n_steps = 1250000;
+delta_t = 0.00002; %0.000025;
+n_steps = 12500000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -109,7 +112,7 @@ for i_data = starting_point:1:n_datapoints - 1
                 delta_time = abs(i_data - start_datapoint);
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
-                if isempty(find(jammed_region == end_site, 1))
+                if true %isempty(find(jammed_region == end_site, 1))
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
@@ -186,7 +189,7 @@ dim3 = [0.55 0.55 0.2 0.2];
 str3 = sprintf('Mean velocity: %#.1f +/- %#d nm/s', mean_vel, sigma_vel);
 annotation('textbox',dim3,'String',str3,'FitBoxToText','on');
 % Cosmetic stuff
-title(sprintf('Run length histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
+%title(sprintf('Run length histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
    % sprintf('k on = 0.000242 nM^{-1}s^{-1} | c eff bind = 800,000 nM | k hydro = 100 s^{-1} | k off i = 0.45 s^{-1}')});
 xlabel('Run length (um)');
 ylabel('Counts');
@@ -200,6 +203,6 @@ histfit(lifetimes, n_bins, 'exponential');
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 960, 600]);
 histfit(velocities, n_bins, 'normal');
-title(sprintf('Velocity histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
+%title(sprintf('Velocity histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
 xlabel('Velocity (nm/s)');
 ylabel('Counts');

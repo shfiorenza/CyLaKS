@@ -1,20 +1,20 @@
 clear all;
 % Parameters from sim
-mt_lengths = [3250];
+mt_lengths = [50];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'lattice_coop_220';
+simName = 'test';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 4000000;
-n_datapoints = 10000; %0;
+n_steps = 625000;
+n_datapoints = 625000; %0;
 start_frame = 001;
 end_frame = n_datapoints;
-frames_per_plot = 100;
-delta_t = 0.000025; 
+frames_per_plot = 1;
+delta_t = 0.00004; 
 xlink_cutoff = 5;
 cutoff = 19;
 % Colors

@@ -30,7 +30,7 @@ void MicrotubuleManagement::InitializeTestEnvironment() {
   }
   if (strcmp(properties_->wallace.test_mode_, "motor_lattice_step") == 0) {
     parameters_->microtubules.count = 1;
-    parameters_->microtubules.length[0] = 5000;
+    parameters_->microtubules.length[0] = 50;
     parameters_->microtubules.diffusion_on = false;
   }
   if (strcmp(properties_->wallace.test_mode_, "xlink_bind_ii") == 0) {
@@ -107,11 +107,6 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
-      /*
-      if (weights_active_) {
-        site->UpdateWeights_Kinesin();
-      }
-      */
       if (site->occupied_) {
         continue;
       }
@@ -150,7 +145,7 @@ void MicrotubuleManagement::RunDiffusion() {
   // Sum up all forces exerted on each microtubule
   double forces_summed[n_mts];
   properties_->prc1.Update_Extensions();
-  properties_->kinesin4.Update_Tether_Extensions();
+  properties_->kinesin4.Update_Extensions();
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
     forces_summed[i_mt] += parameters_->microtubules.applied_force;

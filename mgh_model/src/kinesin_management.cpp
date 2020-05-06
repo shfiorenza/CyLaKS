@@ -103,7 +103,7 @@ void KinesinManagement::CalculateCutoffs() {
   } else {
     wally_->Log("  Tethering is disabled.\n");
   }
-  if (lattice_E_0_solo_ != 0.0 and lattice_alpha_ > 0.0) {
+  if (lattice_cutoff_ > 0) {
     lattice_coop_active_ = true;
     wally_->Log("  lattice_cutoff_ is %i\n", lattice_cutoff_);
     wally_->Log("  lattice_alpha_ is %g\n", lattice_alpha_);
@@ -150,8 +150,6 @@ void KinesinManagement::SetParameters() {
     double energy{n_neighbs * energy_per_neighb}; // ! in kbT
     weight_neighbs_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * energy);
     weight_neighbs_unbind_[n_neighbs] = exp(lambda_neighb * energy);
-    printf("wt_nb_b[%i] = %g\n", n_neighbs, weight_neighbs_bind_[n_neighbs]);
-    printf("wt_nb_ub[%i] = %g\n", n_neighbs, weight_neighbs_unbind_[n_neighbs]);
   }
   // Array of binding/unbinding weights due to lattice deformation from a SINGLE
   // motor; multiplied together to get total weight for any arrangement
@@ -208,7 +206,14 @@ void KinesinManagement::SetParameters() {
   p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
   double k_on_ATP{parameters_->motors.k_on_ATP};
   double c_ATP{parameters_->motors.c_ATP};
-  p_bind_ATP_ = k_on_ATP * c_ATP * delta_t;
+  p_bind_ATP_.resize(max_neighbs_ + 1);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    double weight{weight_neighbs_unbind_[n_neighbs]};
+    if (n_neighbs == 2) {
+      weight = weight_neighbs_unbind_[1];
+    }
+    p_bind_ATP_[n_neighbs] = k_on_ATP * c_ATP * delta_t * weight;
+  }
   double k_hydrolyze{parameters_->motors.k_hydrolyze};
   p_hydrolyze_ = k_hydrolyze * delta_t;
   double k_off_ii{parameters_->motors.k_off_ii};
@@ -269,6 +274,8 @@ void KinesinManagement::SetParameters() {
   */
   // Force perpetually applied to motors, e.g., by optical trapping
   if (parameters_->motors.applied_force > 0.0) {
+    wally_->ErrorExit("APPLIED FORCE COMMENTED OUT IN K_MGMT!!");
+    /*
     double force{parameters_->motors.applied_force};
     wally_->Log("\n Motor applied force is %g\n", force);
     double p_unbind_i_old{p_avg_unbind_i_};
@@ -291,13 +298,9 @@ void KinesinManagement::SetParameters() {
     p_bind_ATP_ *= exp(-1 * force * sigma_ATP / kbT);
     wally_->Log("p_bind_ATP scaled from %g to %g \n", p_bind_ATP_old,
                 p_bind_ATP_);
+    */
   }
-  if (wally_->test_mode_ == nullptr) {
-    Update_Weights();
-    if (!lattice_coop_active_) {
-      dynamic_weights_ = false;
-    }
-  }
+  // Update_Weights();
   p_theory_["hydrolyze"] = {{{p_hydrolyze_}}};
   p_theory_["hydrolyze_st"] = {{{p_hydrolyze_st_}}};
   if (tethering_active_) {
@@ -307,7 +310,7 @@ void KinesinManagement::SetParameters() {
     p_theory_["tether_bound"] = {{{p_avg_tether_bound_}}};
     p_theory_["untether_bound"] = {{p_untether_bound_}};
   }
-  p_theory_["bind_ATP"] = {{{p_bind_ATP_}}};
+  p_theory_["bind_ATP"] = {{p_bind_ATP_}};
   if (tethering_active_) {
     p_theory_["bind_ATP_to_teth"] = {p_bind_ATP_to_teth_};
     p_theory_["bind_ATP_fr_teth"] = {p_bind_ATP_fr_teth_};
@@ -364,7 +367,7 @@ void KinesinManagement::InitializeLists() {
 
   // 1-D stuff -- indexed by i_motor
   active_.resize(n_motors_);
-  bound_NULL_.resize(n_motors_);
+  // bound_NULL_.resize(n_motors_);
   bound_ATP_.resize(n_motors_);
   bound_ATP_st_.resize(n_motors_);
   bound_unteth_.resize(n_motors_);
@@ -381,7 +384,6 @@ void KinesinManagement::InitializeLists() {
     n_bound_teth_[x_dub] = 0;
     bound_teth_[x_dub].resize(n_motors_);
   }
-  /*
   // 2-D stuff -- indexed by n_neighbs & i_motor
   n_bound_NULL_.resize(max_neighbs_ + 1);
   bound_NULL_.resize(max_neighbs_ + 1);
@@ -389,7 +391,6 @@ void KinesinManagement::InitializeLists() {
     n_bound_NULL_[n_neighbs] = 0;
     bound_NULL_[n_neighbs].resize(n_motors_);
   }
-  */
   // 3-D stuff -- indexed by n_neighbs, x_dub, & i_motor
   n_bound_NULL_to_teth_.resize(max_neighbs_ + 1);
   n_bound_NULL_fr_teth_.resize(max_neighbs_ + 1);
@@ -460,7 +461,6 @@ void KinesinManagement::InitializeEvents() {
                        &properties_->microtubules.unocc_motor_, exe_bind_i,
                        weight_bind_i, poisson, get_ran_prob, set_ran_indices);
   // Bind_ATP: bind ATP to motor heads that have released their ADP
-  event_name = "bind_ATP";
   auto exe_bind_ATP = [&](ENTRY_T target) {
     try {
       Bind_ATP(std::get<POP_T *>(target));
@@ -468,8 +468,12 @@ void KinesinManagement::InitializeEvents() {
       wally_->ErrorExit("K_MGMT::exe_bind_ATP");
     }
   };
-  events_.emplace_back(event_name, p_bind_ATP_, &n_bound_NULL_, &bound_NULL_,
-                       exe_bind_ATP, binomial, set_ran_indices);
+  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
+    event_name = "bind_ATP_" + std::to_string(n_neighbs);
+    events_.emplace_back(event_name, p_bind_ATP_[n_neighbs],
+                         &n_bound_NULL_[n_neighbs], &bound_NULL_[n_neighbs],
+                         exe_bind_ATP, binomial, set_ran_indices);
+  }
   // Hydrolyze: convert ATP to ADPP
   event_name = "hydrolyze";
   auto exe_hydrolyze = [&](ENTRY_T target) {
@@ -552,11 +556,14 @@ void KinesinManagement::InitializeTestEnvironment() {
   properties_->microtubules.InitializeTestEnvironment();
   if (strcmp(wally_->test_mode_, "motor_lattice_bind") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
-    // Disable neighbor interactions
-    parameters_->motors.interaction_energy = 0.0;
-    for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-      weight_neighbs_bind_[n_neighbs] = 1.0;
-      weight_neighbs_unbind_[n_neighbs] = 1.0;
+    MicrotubuleManagement *mts = &properties_->microtubules;
+    for (int i_mt{0}; i_mt < mts->mt_list_.size(); i_mt++) {
+      for (int i_site{0}; i_site < mts->mt_list_[i_mt].n_sites_; i_site++) {
+        Tubulin *site{&mts->mt_list_[i_mt].lattice_[i_site]};
+        int n_neighbs{site->GetKif4ANeighborCount()};
+        site->weight_bind_ = 1.0;
+        site->weight_unbind_ = 1.0;
+      }
     }
     // Set p_avg_bind_i_ to a large value for better statistics
     double c_bulk{10.0};
@@ -572,20 +579,18 @@ void KinesinManagement::InitializeTestEnvironment() {
     int i_site{lattice_cutoff_};
     Tubulin *site{&properties_->microtubules.mt_list_[0].lattice_[i_site]};
     Bind_I(site);
-    // Update site weights
-    dynamic_weights_ = true;
-    Update_Weights();
-    // Disable dynamic weights for the remainder of the run
-    dynamic_weights_ = false;
+    properties_->microtubules.FlagForUpdate();
+    properties_->microtubules.UpdateUnoccupied();
+    lattice_coop_active_ = false;
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
     wally_->Log("Initializing test %s\n", wally_->test_mode_);
     Microtubule *mt = &properties_->microtubules.mt_list_[0];
     // If test_delta_ is left uninitialized, test checks against self-coop
-    // test_delta_ = 5;
+    test_delta_ = 5;
     if (test_delta_ > 0) {
       // Disable automatic weight updates
-      dynamic_weights_ = false;
+      lattice_coop_active_ = false;
       // Disable neighbor interactions
       parameters_->motors.interaction_energy = 0.0;
       for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
@@ -598,10 +603,6 @@ void KinesinManagement::InitializeTestEnvironment() {
         mt->lattice_[i_site].weight_unbind_ =
             weight_lattice_unbind_[test_delta_];
       }
-    } else if (!lattice_coop_active_) {
-      dynamic_weights_ = true;
-      Update_Weights();
-      dynamic_weights_ = false;
     }
     // Initialize stat trackers
     lattice_step_bind_ii_stats_ = std::make_pair(0, 0);
@@ -671,13 +672,15 @@ void KinesinManagement::InitializeTestEvents() {
         poisson_bind_i, get_ran_prob, set_ran_indices);
   }
   if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
+    wally_->ErrorExit("FIX TEST\n");
     // Bind_ATP: bind ATP to motor heads that have released their ADP
     event_name = "bind_ATP";
     auto exe_bind_ATP = [&](ENTRY_T target) {
       Bind_ATP(std::get<POP_T *>(target));
     };
-    events_.emplace_back(event_name, p_bind_ATP_, &n_bound_NULL_, &bound_NULL_,
-                         exe_bind_ATP, binomial, set_ran_indices);
+    // events_.emplace_back(event_name, p_bind_ATP_, &n_bound_NULL_,
+    // &bound_NULL_,
+    //                      exe_bind_ATP, binomial, set_ran_indices);
     // Hydrolyze: convert ATP to ADPP
     event_name = "hydrolyze";
     auto exe_hydrolyze = [&](ENTRY_T target) {
@@ -795,7 +798,7 @@ void KinesinManagement::ReportProbabilities() {
             continue;
           }
           double n_exe_tot{(double)event->n_executed_tot_};
-          double n_opp_tot{(double)event->n_opportunities_tot_};
+          unsigned long n_opp_tot{event->n_opportunities_tot_};
           if (n_opp_tot < 0.0) {
             wally_->Log("WHAT?? n_opp = %g\n", n_opp_tot);
             exit(1);
@@ -803,8 +806,8 @@ void KinesinManagement::ReportProbabilities() {
           wally_->Log("For Kin event %s:\n", event->name_.c_str());
           wally_->Log("   p_theory = %g\n", value[i][j][k]);
           wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
-          wally_->Log(" (n_exe = %i)", event->n_executed_tot_);
-          wally_->Log(" (n_opp = %i)\n", event->n_opportunities_tot_);
+          wally_->Log(" (n_exe = %lu)", event->n_executed_tot_);
+          wally_->Log(" (n_opp = %lu)\n", event->n_opportunities_tot_);
         }
       }
     }
@@ -911,6 +914,7 @@ void KinesinManagement::ReportFailureOf(std::string event_name) {
 
 void KinesinManagement::Update_Weights() {
 
+  /*
   if (!dynamic_weights_) {
     return;
   }
@@ -923,6 +927,10 @@ void KinesinManagement::Update_Weights() {
       site->weight_bind_ = weight_neighbs_bind_[n_neighbs];
       site->weight_unbind_ = weight_neighbs_unbind_[n_neighbs];
     }
+  }
+  */
+  if (!lattice_coop_active_) {
+    return;
   }
   // Add up all lattice deformation weights on top of baseline neighb weights
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
@@ -1005,12 +1013,10 @@ void KinesinManagement::Update_Bound_NULL() {
   if (verbosity_ >= 1) {
     wally_->Log("Starting K_MGMT::Update_Bound_NULL()");
   }
-  /*
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     n_bound_NULL_[n_neighbs] = 0;
   }
-  */
-  n_bound_NULL_ = 0;
+  // n_bound_NULL_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     Kinesin *motor = active_[i_entry];
     if (motor->heads_active_ != 1) {
@@ -1021,7 +1027,8 @@ void KinesinManagement::Update_Bound_NULL() {
     }
     POP_T *head{motor->GetActiveHead()};
     if (head->ligand_ == "NULL") {
-      bound_NULL_[n_bound_NULL_++] = head;
+      int n_neighbs{head->GetKif4ANeighborCount()};
+      bound_NULL_[n_neighbs][n_bound_NULL_[n_neighbs]++] = head;
     }
     /*
     if (motor->head_one_.ligand_ == "NULL") {
@@ -1389,7 +1396,6 @@ void KinesinManagement::UpdateLists() {
   if (lists_up_to_date_) {
     return;
   }
-  Update_Weights();
   properties_->microtubules.UpdateUnoccupied();
   Update_Docked();
   Update_Bound_NULL();
@@ -1596,7 +1602,8 @@ void KinesinManagement::Bind_ATP(POP_T *head) {
   if (!head->trailing_) {
     head->motor_->ChangeConformation();
   } else {
-    wally_->ErrorExit("K_MGMT::Bind_ATP()");
+    // Not an error; perfectly valid @ plus end due to end pausing
+    // wally_->ErrorExit("K_MGMT::Bind_ATP()");
   }
 }
 

@@ -587,6 +587,7 @@ double Kinesin::GetWeight_Unbind_II() {
 
   Monomer *chosen_head{nullptr};
   if (head_one_.ligand_ == "ADPP" and head_two_.ligand_ == "ADPP") {
+    wally_->ErrorExit("Kinesin::GetWeight_Unbind_II()");
     if (head_one_.trailing_) {
       chosen_head = &head_one_;
     } else {
@@ -604,7 +605,15 @@ double Kinesin::GetWeight_Unbind_II() {
   double corrected_weight{raw_weight};
   // To prevent self-cooperativity, divide by self neighb weight
   corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
-  return corrected_weight;
+  // square the contribution from lattice deformations
+  double final_weight{corrected_weight * corrected_weight};
+  // if we have 2 neighbs (1 in reality excluding other bound head), divide out
+  // squared neighb weight
+  int n_neighbs{chosen_head->GetKif4ANeighborCount()};
+  if (n_neighbs == 2) {
+    final_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
+  }
+  return final_weight;
 }
 
 double Kinesin::GetTotalWeight_Tether_Bound() {

@@ -4,8 +4,8 @@ function mot_stats = get_motor_stats(simName, n_sites)
 %n_sites = 5000;
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.0002;
-n_steps = 1250000;
+delta_t = 0.00002;
+n_steps = 12500000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;

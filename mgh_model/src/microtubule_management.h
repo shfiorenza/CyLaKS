@@ -12,13 +12,12 @@ private:
   template <class DATA_T> using Vec = std::vector<DATA_T>;
   int n_sites_tot_{0};
   int max_neighbs_xlink_{2};
-  bool lists_up_to_date_{false};
   Curator *wally_{nullptr};
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
 
 public:
-  bool weights_active_{true};
+  bool lists_up_to_date_{false};
 
   int n_unocc_motor_{0};
   Vec<int> n_unocc_xlink_;

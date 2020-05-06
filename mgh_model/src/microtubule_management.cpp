@@ -107,6 +107,13 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
+      if (wally_->test_mode_ == nullptr) {
+        int n_neighbs{site->GetKif4ANeighborCount()};
+        site->weight_bind_ =
+            properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
+        site->weight_unbind_ =
+            properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+      }
       if (site->occupied_) {
         continue;
       }
@@ -115,6 +122,7 @@ void MicrotubuleManagement::UpdateUnoccupied() {
       unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
     }
   }
+  properties_->kinesin4.Update_Weights();
 }
 
 void MicrotubuleManagement::RunDiffusion() {

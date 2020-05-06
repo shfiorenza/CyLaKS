@@ -49,6 +49,8 @@ public:
     }
     void RelieveFrustration() {
       if (motor_->frustrated_) {
+        printf("err in K::Monomer::RelieveFrustration()");
+        exit(1);
         if (trailing_) {
           motor_->ChangeConformation();
         } else {

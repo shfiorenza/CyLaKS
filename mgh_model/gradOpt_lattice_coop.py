@@ -13,7 +13,7 @@ MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
 #sim_name_base = "kif4a_coop_optimization_lifetimeOnly"
-sim_name_base = "TEST"
+sim_name_base = "kif4a_coop_optimization_summit"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
@@ -60,6 +60,7 @@ log.addHandler(file_log_handler)
 
 call_no = 0
 
+
 def kif4a_coop_scaling(params):
     global call_no
     # Keep track of which iteration of the gradient descent algorithm we're on
@@ -88,7 +89,8 @@ def kif4a_coop_scaling(params):
         yaml_edit = "yq w -i " + param_file + " motors."
         call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
              shell=True)  # Convert conc from pM to nM
-        call("yq w -i " + param_file + " microtubules.length[0] " + repr(n_sites[i_conc]), shell=True)
+        call("yq w -i " + param_file +
+             " microtubules.length[0] " + repr(n_sites[i_conc]), shell=True)
         for i in range(len(params)):
             call(yaml_edit + param_label[i] +
                  " " + repr(params[i]), shell=True)
@@ -106,14 +108,18 @@ def kif4a_coop_scaling(params):
     # Calculate errors
     weighted_errors = []
     for i_conc in range(len(kif4a_conc)):
-        kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]), float(n_sites[i_conc]))
+        kif4a_stats = MATLAB.get_motor_stats(
+            str(sim_names[i_conc]), float(n_sites[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
-        err_runlength = (exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
+        err_runlength = (
+            exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
         log.info("      Runlength error: {}".format(err_runlength))
-        err_lifetime = (exp_lifetimes[i_conc] - kif4a_stats[0][2]) / exp_err_lifetimes[i_conc]
+        err_lifetime = (
+            exp_lifetimes[i_conc] - kif4a_stats[0][2]) / exp_err_lifetimes[i_conc]
         log.info("      Lifetime error: {}".format(err_lifetime))
-        err_velocity = (exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
+        err_velocity = (
+            exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
         #weighted_errors.append(err_runlength**2 + err_lifetime**2 + err_velocity**2)
         weighted_errors.append(err_lifetime**2)
@@ -136,5 +142,5 @@ if not ready_for_output:
 log.info("Start of gradient descent parameter optimization")
 log.info("Initial parameters: {}".format(param_initialVal))
 res = least_squares(kif4a_coop_scaling, param_initialVal,
-                    bounds=param_bounds, diff_step=step_size, 
+                    bounds=param_bounds, diff_step=step_size,
                     x_scale='jac', verbose=2, xtol=None)

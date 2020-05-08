@@ -15,6 +15,7 @@ void Tubulin::Initialize(system_parameters *parameters,
 
 bool Tubulin::EquilibriumInSameDirection() {
 
+  /*
   if (occupied_ and xlink_head_ != nullptr) {
     if (xlink_head_->xlink_->tethered_ and
         xlink_head_->xlink_->heads_active_ == 2) {
@@ -62,6 +63,7 @@ bool Tubulin::EquilibriumInSameDirection() {
     printf("error in tubulin:spring equil on same side\n");
     exit(1);
   }
+  */
 }
 
 int Tubulin::GetPRC1NeighborCount() {

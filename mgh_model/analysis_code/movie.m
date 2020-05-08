@@ -1,6 +1,6 @@
 clear all;
 % Parameters from sim
-mt_lengths = [500];
+mt_lengths = [50];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
@@ -9,7 +9,7 @@ simName = 'test';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
-n_steps = 625000;
+n_steps = 1250000;
 n_datapoints = 10000; %0;
 start_frame = 001;
 end_frame = n_datapoints;

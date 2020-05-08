@@ -401,9 +401,9 @@ void Curator::OutputData() {
   int mt_coord_array[n_mts];
   int *mt_coord_ptr = mt_coord_array;
   // For extension statistics, data is on a per-extension basis
-  int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
-  int motor_extension_array[2 * motor_ext_cutoff + 1];
-  int *motor_extension_ptr = motor_extension_array;
+  // int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
+  // int motor_extension_array[2 * motor_ext_cutoff + 1];
+  // int *motor_extension_ptr = motor_extension_array;
   int xlink_ext_cutoff = properties_->prc1.dist_cutoff_;
   int xlink_extension_array[xlink_ext_cutoff + 1];
   int *xlink_extension_ptr = xlink_extension_array;
@@ -457,6 +457,7 @@ void Curator::OutputData() {
         motor_ID_array[i_site] = motor->id_;
         xlink_ID_array[i_site] = -1;
         motor_head_status_array[i_site] = site->motor_head_->trailing_;
+        /*
         if (motor->tethered_ == true) {
           if (motor->xlink_->heads_active_ > 0) {
             AssociatedProtein *xlink = motor->xlink_;
@@ -471,6 +472,7 @@ void Curator::OutputData() {
             tether_coord_array[i_site] = -1;
         } else
           tether_coord_array[i_site] = -1;
+        */
       }
     }
     // Pad written data with zeros for shorter MTs
@@ -481,9 +483,9 @@ void Curator::OutputData() {
       tether_coord_array[i_site] = -1;
     }
     mt_coord_array[i_mt] = mt->coord_;
-    motor_force_array[i_mt] = mt->GetNetForce_Motors();
-    xlink_force_array[i_mt] = mt->GetNetForce_Xlinks();
-    total_force_array[i_mt] = mt->GetNetForce();
+    motor_force_array[i_mt] = 0; // mt->GetNetForce_Motors();
+    xlink_force_array[i_mt] = 0; // mt->GetNetForce_Xlinks();
+    total_force_array[i_mt] = 0; // mt->GetNetForce();
     // Write the data to respective files one microtubule at a time
     fwrite(occupancy_ptr, sizeof(int), max_length, occupancy_file);
     fwrite(motor_ID_ptr, sizeof(int), max_length, motor_ID_file);
@@ -493,6 +495,7 @@ void Curator::OutputData() {
            motor_head_status_file);
   }
   // Scan through kinesin4/prc1 statistics to get extension occupancies
+  /*
   for (int i_ext = 0; i_ext <= 2 * motor_ext_cutoff; i_ext++) {
     KinesinManagement *kinesin4 = &properties_->kinesin4;
     motor_extension_array[i_ext] = kinesin4->n_bound_teth_[i_ext];
@@ -502,16 +505,19 @@ void Curator::OutputData() {
     //  int max = prc1->max_neighbs_;
     // xlink_extension_array[i_ext] = prc1->n_bound_ii_[max + 1][i_ext];
   }
+  */
   // Write the data to respective files one timestep at a time
   // fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
   fwrite(mt_coord_array, sizeof(int), n_mts, mt_coord_file);
-  fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
-  fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
-  fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
+  // fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
+  // fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
+  // fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
+  /*
   fwrite(motor_extension_ptr, sizeof(int), 2 * motor_ext_cutoff + 1,
          motor_extension_file);
   fwrite(xlink_extension_ptr, sizeof(int), xlink_ext_cutoff + 1,
          xlink_extension_file);
+  */
 }
 
 void Curator::OutputSimDuration() {
@@ -600,6 +606,7 @@ void Curator::UpdateTimestep(unsigned long i_step) {
 
 void Curator::PrintMicrotubules() {
 
+  /*
   int n_mts = parameters_->microtubules.count;
   // Figure out which MT is the farthest left
   int leftmost_coord = 0;
@@ -707,6 +714,7 @@ void Curator::PrintMicrotubules() {
     printf(" %i\n", mt->polarity_);
   }
   printf("\n");
+  */
 
   /* site coordinate printout below */
   /*

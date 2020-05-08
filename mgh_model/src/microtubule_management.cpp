@@ -107,13 +107,14 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
-      if (wally_->test_mode_ == nullptr) {
-        int n_neighbs{site->GetKif4ANeighborCount()};
-        site->weight_bind_ =
-            properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
-        site->weight_unbind_ =
-            properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
-      }
+      // Uncomment for motor_lattice_bind and self-coop test to work
+      // if (wally_->test_mode_ == nullptr) {
+      int n_neighbs{site->GetKif4ANeighborCount()};
+      site->weight_bind_ =
+          properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
+      site->weight_unbind_ =
+          properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+      // }
       if (site->occupied_) {
         continue;
       }
@@ -125,6 +126,7 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   properties_->kinesin4.Update_Weights();
 }
 
+/*
 void MicrotubuleManagement::RunDiffusion() {
 
   // If diffusion is disabled for this simulation, immediately return
@@ -153,7 +155,6 @@ void MicrotubuleManagement::RunDiffusion() {
   // Sum up all forces exerted on each microtubule
   double forces_summed[n_mts];
   properties_->prc1.Update_Extensions();
-  properties_->kinesin4.Update_Extensions();
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
     forces_summed[i_mt] += parameters_->microtubules.applied_force;
@@ -192,40 +193,8 @@ void MicrotubuleManagement::RunDiffusion() {
       }
     }
     continue;
-    // }
-    /*
-    // Add gaussan noise, meant to represent thermal motion
-    double delta_t_eff{delta_t * mt_list_[i_mt].steps_per_iteration_};
-    double dx_sigma{sqrt(2 * kbT * delta_t_eff / mt_list_[i_mt].gamma_)};
-    // Convert mean and sigma from nm to n_sites
-    dx_mean /= site_size;
-    dx_sigma /= site_size;
-    int sigma_cutoff{3};
-    // Construct a discrete gaussian cumulative distribution table
-    int range{(int)ceil(fabs(dx_mean) + dx_sigma * sigma_cutoff)};
-    double discrete_cdf[2 * range + 1];
-    double p_cum{0.0};
-    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
-      // dx goes from -range to +range
-      int dx{i_bin - range};
-      p_cum += properties_->gsl.GetGaussianPDF(dx - dx_mean, dx_sigma);
-      discrete_cdf[i_bin] = p_cum;
-    }
-    // Normalize table so that last entry is 1.0
-    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
-      discrete_cdf[i_bin] /= discrete_cdf[2 * range];
-    }
-    // Roll a random number to determine which dx to choose
-    double ran{properties_->gsl.GetRanProb()};
-    for (int i_bin{0}; i_bin < 2 * range + 1; i_bin++) {
-      if (ran < discrete_cdf[i_bin]) {
-        displacement[i_mt] = i_bin - range;
-        break;
-      }
-    }
-    */
   }
-  /*  Run through MT list and update displacementsi */
+  //  Run through MT list and update displacements
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     if (displacement[i_mt] == 0) {
       continue;
@@ -233,3 +202,4 @@ void MicrotubuleManagement::RunDiffusion() {
     mt_list_[i_mt].coord_ += displacement[i_mt];
   }
 }
+*/

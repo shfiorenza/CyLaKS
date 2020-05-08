@@ -11,6 +11,7 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
   properties_ = properties;
   CalculateCutoffs();
   SetParameters();
+  /*
   GenerateXLinks();
   InitializeLists();
   if (wally_->test_mode_ == nullptr) {
@@ -19,6 +20,7 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
     InitializeTestEvents();
     InitializeTestEnvironment();
   }
+  */
 }
 
 void AssociatedProteinManagement::CalculateCutoffs() {
@@ -128,9 +130,10 @@ void AssociatedProteinManagement::SetParameters() {
   double k_slack{parameters_->motors.k_slack};
   double r_0_teth{parameters_->motors.r_0};
   double r_y_teth{parameters_->microtubules.y_dist / 2};
-  double rest_dist_teth{properties_->kinesin4.rest_dist_};
-  teth_cutoff_ = properties_->kinesin4.teth_cutoff_;
-  comp_cutoff_ = properties_->kinesin4.comp_cutoff_;
+  double rest_dist_teth{0};
+  // double rest_dist_teth{properties_->kinesin4.rest_dist_};
+  teth_cutoff_ = 0; // properties_->kinesin4.teth_cutoff_;
+  comp_cutoff_ = 0; // properties_->kinesin4.comp_cutoff_;
   std::vector<double> teth_energy(2 * teth_cutoff_ + 1, 0.0);
   for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
     double r_x_teth{((double)x_dub / 2) * site_size};
@@ -490,6 +493,7 @@ void AssociatedProteinManagement::SetParameters() {
   }
 }
 
+/*
 void AssociatedProteinManagement::GenerateXLinks() {
 
   // Since only one head has to be bound, the sim will at most
@@ -566,7 +570,7 @@ void AssociatedProteinManagement::InitializeLists() {
 
 void AssociatedProteinManagement::InitializeEvents() {
 
-  /* * Function that sets n random indices from the range [0, m) * */
+  // Function that sets n random indices from the range [0, m)
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
@@ -574,14 +578,14 @@ void AssociatedProteinManagement::InitializeEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  // Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
     }
     return properties_->gsl.SampleBinomialDist(p, n);
   };
-  /* * Event entries * */
+  // Event entries
   std::string event_name; // scratch space to construct each event name
   // Diffuse: steps head one site to the left or right
   auto exe_diffuse_fwd = [&](ENTRY_T target) {
@@ -864,7 +868,7 @@ void AssociatedProteinManagement::InitializeEvents() {
 void AssociatedProteinManagement::InitializeTestEvents() {
 
   std::string event_name;
-  /* * Function that sets n random indices from the range [0, m) * */
+  // Function that sets n random indices from the range [0, m)
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
@@ -872,7 +876,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  // Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
@@ -1164,7 +1168,6 @@ void AssociatedProteinManagement::Update_Bound_I() {
     }
   }
   if (wally_->test_mode_ != nullptr) {
-    /*
     if (strcmp(wally_->test_mode_, "bind_ii") == 0) {
       // for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
       //   for (int i_entry{0}; i_entry < n_bound_i_[n_neighbs]; i_entry++) {
@@ -1186,7 +1189,6 @@ void AssociatedProteinManagement::Update_Bound_I() {
         }
       }
     }
-    */
   }
   if (verbosity_ >= 1) {
     wally_->Log(" n_bind_ii_candidates = %i\n", n_bind_ii_candidates_);
@@ -1605,30 +1607,28 @@ void AssociatedProteinManagement::RunKMC() {
 
 void AssociatedProteinManagement::UpdateLists() {
 
-  /*
   if (lists_up_to_date_) {
     return;
   }
-  */
-  if (verbosity_ >= 1) {
-    wally_->Log("\nStarting AP_MGMT::UpdateLists()\n");
-  }
-  // lists_up_to_date_ = true;
-  Update_Extensions();
-  properties_->microtubules.UpdateUnoccupied();
-  Update_Bound_I();
+if (verbosity_ >= 1) {
+  wally_->Log("\nStarting AP_MGMT::UpdateLists()\n");
+}
+// lists_up_to_date_ = true;
+Update_Extensions();
+properties_->microtubules.UpdateUnoccupied();
+Update_Bound_I();
+if (crosslinking_active_) {
+  Update_Bound_II();
+}
+if (tethering_active_) {
+  Update_Free_Teth();
+  Update_Bound_Unteth();
+  Update_Bound_I_Teth();
   if (crosslinking_active_) {
-    Update_Bound_II();
+    Update_Bound_II_Teth();
   }
-  if (tethering_active_) {
-    Update_Free_Teth();
-    Update_Bound_Unteth();
-    Update_Bound_I_Teth();
-    if (crosslinking_active_) {
-      Update_Bound_II_Teth();
-    }
-    properties_->kinesin4.Update_Bound_Unteth();
-  }
+  // properties_->kinesin4.Update_Bound_Unteth();
+}
 }
 
 void AssociatedProteinManagement::SampleEventStatistics() {
@@ -1887,7 +1887,8 @@ void AssociatedProteinManagement::Unbind_I(POP_T *head) {
   }
   properties_->microtubules.FlagForUpdate();
 }
-
+*/
+/*
 void AssociatedProteinManagement::Tether_Free(ALT_T *untethered_head) {
 
   if (verbosity_ >= 1) {
@@ -1915,3 +1916,4 @@ void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
   motor->tethered_ = false;
   RemoveFromActive(xlink);
 }
+*/

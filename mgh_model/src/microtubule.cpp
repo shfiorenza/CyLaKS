@@ -74,6 +74,7 @@ void Microtubule::GenerateLattice() {
   }
 }
 
+/*
 void Microtubule::UpdateExtensions() {
 
   // Run through all sites on MT
@@ -222,3 +223,4 @@ double Microtubule::GetNetForce_Xlinks() {
   }
   return forces_summed;
 }
+*/

@@ -12,6 +12,7 @@ int AssociatedProtein::Monomer::GetPRC1NeighborCount() {
 
 AssociatedProtein::AssociatedProtein() {}
 
+/*
 void AssociatedProtein::Initialize(system_parameters *parameters,
                                    system_properties *properties, int id) {
 
@@ -34,48 +35,48 @@ void AssociatedProtein::SetParameters() {
 
 void AssociatedProtein::InitializeLookupTables() {
 
-  /* Construct rly basic lookup tables on the fly */
-  double r_0{parameters_->xlinks.r_0};
-  double r_y{parameters_->microtubules.y_dist};
-  double site_size{parameters_->microtubules.site_size};
-  cosine_lookup_.resize(dist_cutoff_ + 1);
-  extension_lookup_.resize(dist_cutoff_ + 1);
-  for (int x_dist{0}; x_dist <= dist_cutoff_; x_dist++) {
-    double r_x = site_size * x_dist;
-    double r = sqrt(r_x * r_x + r_y * r_y);
-    extension_lookup_[x_dist] = r - r_0_;
-    cosine_lookup_[x_dist] = r_x / r;
+  // Construct rly basic lookup tables on the fly
+double r_0{parameters_->xlinks.r_0};
+double r_y{parameters_->microtubules.y_dist};
+double site_size{parameters_->microtubules.site_size};
+cosine_lookup_.resize(dist_cutoff_ + 1);
+extension_lookup_.resize(dist_cutoff_ + 1);
+for (int x_dist{0}; x_dist <= dist_cutoff_; x_dist++) {
+  double r_x = site_size * x_dist;
+  double r = sqrt(r_x * r_x + r_y * r_y);
+  extension_lookup_[x_dist] = r - r_0_;
+  cosine_lookup_[x_dist] = r_x / r;
+}
+// Copy more involved lookup tables from MGMT to ensure consistency
+int teth_cutoff{properties_->kinesin4.teth_cutoff_};
+int comp_cutoff{properties_->kinesin4.comp_cutoff_};
+int max_neighbs{properties_->prc1.max_neighbs_};
+weight_bind_ii_.resize(max_neighbs + 1);
+weight_bind_i_teth_.resize(max_neighbs + 1);
+weight_bind_ii_to_teth_.resize(max_neighbs + 1);
+weight_bind_ii_fr_teth_.resize(max_neighbs + 1);
+for (int n_neighbs{0}; n_neighbs <= max_neighbs; n_neighbs++) {
+  weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
+  for (int x{0}; x <= dist_cutoff_; x++) {
+    weight_bind_ii_[n_neighbs][x] =
+        properties_->prc1.weight_bind_ii_[n_neighbs][x];
   }
-  /* Copy more involved lookup tables from MGMT to ensure consistency */
-  int teth_cutoff{properties_->kinesin4.teth_cutoff_};
-  int comp_cutoff{properties_->kinesin4.comp_cutoff_};
-  int max_neighbs{properties_->prc1.max_neighbs_};
-  weight_bind_ii_.resize(max_neighbs + 1);
-  weight_bind_i_teth_.resize(max_neighbs + 1);
-  weight_bind_ii_to_teth_.resize(max_neighbs + 1);
-  weight_bind_ii_fr_teth_.resize(max_neighbs + 1);
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs; n_neighbs++) {
-    weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
+  weight_bind_i_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
+  weight_bind_ii_to_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
+  weight_bind_ii_fr_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
+  for (int x_dub{2 * comp_cutoff}; x_dub <= 2 * teth_cutoff; x_dub++) {
+    weight_bind_i_teth_[n_neighbs][x_dub] =
+        properties_->prc1.weight_bind_i_teth_[n_neighbs][x_dub];
+    weight_bind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
+    weight_bind_ii_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
     for (int x{0}; x <= dist_cutoff_; x++) {
-      weight_bind_ii_[n_neighbs][x] =
-          properties_->prc1.weight_bind_ii_[n_neighbs][x];
-    }
-    weight_bind_i_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
-    weight_bind_ii_to_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
-    weight_bind_ii_fr_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
-    for (int x_dub{2 * comp_cutoff}; x_dub <= 2 * teth_cutoff; x_dub++) {
-      weight_bind_i_teth_[n_neighbs][x_dub] =
-          properties_->prc1.weight_bind_i_teth_[n_neighbs][x_dub];
-      weight_bind_ii_to_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      weight_bind_ii_fr_teth_[n_neighbs][x_dub].resize(dist_cutoff_ + 1);
-      for (int x{0}; x <= dist_cutoff_; x++) {
-        weight_bind_ii_to_teth_[n_neighbs][x_dub][x] =
-            properties_->prc1.weight_bind_ii_to_teth_[n_neighbs][x_dub][x];
-        weight_bind_ii_fr_teth_[n_neighbs][x_dub][x] =
-            properties_->prc1.weight_bind_ii_fr_teth_[n_neighbs][x_dub][x];
-      }
+      weight_bind_ii_to_teth_[n_neighbs][x_dub][x] =
+          properties_->prc1.weight_bind_ii_to_teth_[n_neighbs][x_dub][x];
+      weight_bind_ii_fr_teth_[n_neighbs][x_dub][x] =
+          properties_->prc1.weight_bind_ii_fr_teth_[n_neighbs][x_dub][x];
     }
   }
+}
 }
 
 void AssociatedProtein::InitializeNeighborLists() {
@@ -614,3 +615,4 @@ Tubulin *AssociatedProtein::GetWeightedSite_Bind_II_Teth() {
   printf("No neighb for bind_ii_teth??\n");
   return nullptr;
 }
+*/

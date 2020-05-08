@@ -10,8 +10,8 @@ int main(int argc, char *argv[]) {
   for (int i_step{0}; i_step < parameters.n_steps; i_step++) {
     properties.wallace.UpdateTimestep(i_step);
     properties.kinesin4.RunKMC();
-    properties.prc1.RunKMC();
-    properties.microtubules.RunDiffusion();
+    // properties.prc1.RunKMC();
+    // properties.microtubules.RunDiffusion();
   }
   properties.kinesin4.ReportProbabilities();
   // properties.prc1.ReportProbabilities();

@@ -757,7 +757,7 @@ void KinesinManagement::Update_Weights() {
 void KinesinManagement::Update_Docked() {
 
   if (verbosity_ >= 1) {
-    wally_->Log("Starting K_MGMT::Update_Docked()");
+    wally_->Log("Starting K_MGMT::Update_Docked()\n");
   }
   n_bind_ii_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
@@ -787,7 +787,7 @@ void KinesinManagement::Update_Docked() {
 void KinesinManagement::Update_Bound_NULL() {
 
   if (verbosity_ >= 1) {
-    wally_->Log("Starting K_MGMT::Update_Bound_NULL()");
+    wally_->Log("Starting K_MGMT::Update_Bound_NULL()\n");
   }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     n_bound_NULL_[n_neighbs] = 0;
@@ -812,7 +812,7 @@ void KinesinManagement::Update_Bound_NULL() {
 void KinesinManagement::Update_Bound_ATP() {
 
   if (verbosity_ >= 1) {
-    wally_->Log("Starting K_MGMT::Update_Bound_ATP() ");
+    wally_->Log("Starting K_MGMT::Update_Bound_ATP()\n");
   }
   n_bound_ATP_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
@@ -832,7 +832,7 @@ void KinesinManagement::Update_Bound_ATP() {
 void KinesinManagement::Update_Bound_ADPP_I() {
 
   if (verbosity_ >= 1) {
-    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_I()");
+    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_I()\n");
   }
   n_unbind_i_candidates_ = 0;
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
@@ -852,7 +852,7 @@ void KinesinManagement::Update_Bound_ADPP_I() {
 void KinesinManagement::Update_Bound_ADPP_II() {
 
   if (verbosity_ >= 1) {
-    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_II()");
+    wally_->Log("Starting K_MGMT::Update_Bound_ADPP_II()\n");
   }
   n_unbind_ii_candidates_ = 0;
   for (int i_motor = 0; i_motor < n_active_; i_motor++) {
@@ -892,6 +892,11 @@ void KinesinManagement::RunKMC() {
   if (!population_active_) {
     return;
   }
+  /*
+  if (properties_->current_step_ > 291430) {
+    verbosity_ = 3;
+  }
+  */
   UpdateLists();
   SampleEventStatistics();
   GenerateExecutionSequence();
@@ -942,11 +947,11 @@ void KinesinManagement::SampleEventStatistics() {
       }
     }
   }
-  if (verbosity_ >= 2) {
-    wally_->Log(" %i events expected pre-correction\n", n_events_to_exe_);
-  }
   if (n_events_to_exe_ <= 1) {
     return;
+  }
+  if (verbosity_ >= 2) {
+    wally_->Log(" %i events expected pre-correction\n", n_events_to_exe_);
   }
   // Put all events with >1 target into an active_ array
   std::pair<EVENT_T *, ENTRY_T> active_events[n_events_to_exe_];
@@ -963,47 +968,62 @@ void KinesinManagement::SampleEventStatistics() {
   // Scan through all active events to ensure that no two target the same
   // motor
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
-    EVENT_T *event_i = active_events[i_entry].first;
+    EVENT_T *event_i{active_events[i_entry].first};
+    if (verbosity_ >= 2) {
+      wally_->Log("event_i = %s\n", event_i->name_.c_str());
+    }
+    ENTRY_T tar_i{active_events[i_entry].second};
+    /*
     Kinesin *motor_i{nullptr};
     try {
       motor_i = std::get<POP_T *>(active_events[i_entry].second)->motor_;
     } catch (...) {
       continue;
     }
+    */
     for (int j_entry{i_entry + 1}; j_entry < n_events_to_exe_; j_entry++) {
-      EVENT_T *event_j = active_events[j_entry].first;
+      EVENT_T *event_j{active_events[j_entry].first};
+      if (verbosity_ >= 2) {
+        wally_->Log("   event_j = %s\n", event_j->name_.c_str());
+      }
+      ENTRY_T tar_j{active_events[j_entry].second};
+      /*
       Kinesin *motor_j{nullptr};
       try {
         motor_j = std::get<POP_T *>(active_events[j_entry].second)->motor_;
       } catch (...) {
         continue;
       }
-      // If event_i and event_j target different motors, continue
-      if (motor_i != motor_j) {
-        continue;
+      */
+      bool motors_are_identical{false};
+      if (tar_i.index() == 2 and tar_j.index() == 2) {
+        if (std::get<2>(tar_i)->motor_ == std::get<2>(tar_j)->motor_) {
+          motors_are_identical = true;
+        }
       }
-      double p_one{event_i->p_occur_};
-      double p_two{event_j->p_occur_};
-      double ran{gsl_->GetRanProb()};
-      if (ran < p_one / (p_one + p_two)) {
-        if (verbosity_ >= 2) {
-          wally_->Log("Removed xlink #%i from %s's targets\n", motor_i->id_,
-                      event_i->name_.c_str());
+      // If event_i and event_j target different motors, continue
+      if (tar_i == tar_j or motors_are_identical) {
+        double p_one{event_i->p_occur_};
+        double p_two{event_j->p_occur_};
+        double ran{gsl_->GetRanProb()};
+        if (ran < p_one / (p_one + p_two)) {
+          if (verbosity_ >= 2) {
+            wally_->Log(" Added %s to active_events\n", event_i->name_.c_str());
+          }
+          event_i->RemoveTarget(active_events[i_entry].second);
+          active_events[i_entry] = active_events[n_events_to_exe_ - 1];
+          i_entry--;
+          n_events_to_exe_--;
+          break;
+        } else {
+          if (verbosity_ >= 2) {
+            wally_->Log(" Added %s to active_events\n", event_j->name_.c_str());
+          }
+          event_j->RemoveTarget(active_events[j_entry].second);
+          active_events[j_entry] = active_events[n_events_to_exe_ - 1];
+          j_entry--;
+          n_events_to_exe_--;
         }
-        event_i->RemoveTarget(active_events[i_entry].second);
-        active_events[i_entry] = active_events[n_events_to_exe_ - 1];
-        i_entry--;
-        n_events_to_exe_--;
-        break;
-      } else {
-        if (verbosity_ >= 2) {
-          wally_->Log("Removed xlink #%i from %s's targets\n", motor_j->id_,
-                      event_j->name_.c_str());
-        }
-        event_j->RemoveTarget(active_events[j_entry].second);
-        active_events[j_entry] = active_events[n_events_to_exe_ - 1];
-        j_entry--;
-        n_events_to_exe_--;
       }
     }
   }

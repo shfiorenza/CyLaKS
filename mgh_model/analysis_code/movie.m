@@ -1,16 +1,16 @@
 clear all;
 % Parameters from sim
-mt_lengths = [15000];
+mt_lengths = [5000];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
-simName = 'kif4a_coop_optimization_summit_2.1_220';
+simName = 'test';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
 % Pseudo-constant variables
 n_steps = 1250000;
-n_datapoints = 5598; %0;
+n_datapoints = 10000; %0;
 start_frame = 001;
 end_frame = n_datapoints;
 frames_per_plot = 100;
@@ -24,8 +24,7 @@ purple = [128 0 128] / 255;
 % File info
 movie_name = 'test';
 %fileDirectory = '/home/shane/Desktop/slide_scan/%s';
-fileDirectory = '/projects/shfi4480/overlap_analysis/mgh_model/%s';
-%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
 motorHeadFileName = '%s_motor_head_status.file';

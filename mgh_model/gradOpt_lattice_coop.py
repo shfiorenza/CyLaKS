@@ -27,7 +27,7 @@ step_size = [1, 50, 0.5, 1]
 kif4a_conc = [20, 50, 80, 120, 220, 420]
 #kif4a_conc = [20, 120, 220, 420]
 # n_sites to be used for each conc run, respectively
-n_sites = [75000, 50000, 30000, 20000, 8500, 3250]
+n_sites = [75000, 50000, 40000, 30000, 15000, 10000]
 #n_sites = [75000, 25000, 8500, 3250]
 # Experimental Kif4A run lengths at each concentration
 exp_runlengths = [0.9735, 1.310, 2.420, 1.659, 1.964, 2.855]

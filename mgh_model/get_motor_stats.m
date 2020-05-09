@@ -4,15 +4,16 @@ function mot_stats = get_motor_stats(simName, n_sites)
 %n_sites = 5000;
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.00002;
-n_steps = 12500000;
+delta_t = 0.0002;
+n_steps = 1250000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/projects/shfi4480/overlap_analysis/mgh_model/%s';
+%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 motorFileStruct = '%s_motorID.file';
 
 motorFileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));

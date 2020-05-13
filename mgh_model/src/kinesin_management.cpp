@@ -1072,7 +1072,9 @@ void KinesinManagement::ExecuteEvents() {
 void KinesinManagement::Bind_I(SITE_T *site) {
 
   if (site->occupied_) {
-    wally_->ErrorExit("K_MGMT::Bind_I()");
+    wally_->Log("??? in K_MGMT::Bind_I()");
+    return;
+    // wally_->ErrorExit("K_MGMT::Bind_I()");
   }
   // Get random free motor
   Kinesin *motor{GetFreeMotor()};

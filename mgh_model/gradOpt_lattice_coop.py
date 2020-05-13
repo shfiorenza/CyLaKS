@@ -12,14 +12,13 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-#sim_name_base = "kif4a_coop_optimization_lifetimeOnly"
 sim_name_base = "kif4a_coop_optimization_summit"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
 param_label = ["interaction_energy", "lattice_coop_range",
                "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
-param_initialVal = [2.25, 650, 0.87, 2.35]
+param_initialVal = [0.75, 500, 0.3, 3.75]
 param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 4.5])
 step_size = [1, 50, 0.5, 1]
 

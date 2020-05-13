@@ -79,6 +79,7 @@ double Kinesin::GetWeight_Unbind_II() {
   double corrected_weight{raw_weight};
   // To prevent self-cooperativity, divide by self neighb weight
   corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
+/*
   // square the contribution from lattice deformations
   double final_weight{corrected_weight * corrected_weight};
   // if we have 1 neighb (2 in reality including other bound head), divide
@@ -88,6 +89,8 @@ double Kinesin::GetWeight_Unbind_II() {
     final_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
   }
   return final_weight;
+*/
+  return corrected_weight;
 }
 
 Kinesin::Monomer *Kinesin::GetActiveHead() {

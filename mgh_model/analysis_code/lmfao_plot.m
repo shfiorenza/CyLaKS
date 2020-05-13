@@ -1,5 +1,14 @@
 concentrations = [20, 50, 80, 120, 220, 420];
 
+
+runlengths = [1.0, 1.00, 0.982, 1.02, 0.979, 4.49];
+err_runlengths = [0.18, 0.13, 0.12, 0.11, 0.11, 0.35];
+lifetimes = [1.52, 1.52, 1.47, 1.53, 1.47, 17.9];
+err_lifetimes = [0.3, 0.2, 0.17, 0.17, 0.17, 1.4];
+velocities = [666, 662, 668, 671, 672, 465];
+err_velocities = [15, 11, 10, 10, 12, 21];
+
+%{
 % velocity-only fit
 runlengths = [0.9,  1.1, 3.4, 4.6, 5.0, 4.5];
 err_runlengths = [0.17, 0.15, 0.4, 0.5, 0.6, 0.5];
@@ -15,7 +24,7 @@ lifetimesB = [1.5, 1.5, 1.7, 1.6, 4.7, 20.9];
 err_lifetimesB = [0.3, 0.2, 0.2, 0.2, 0.7, 2.7];
 velocitiesB = [622, 624, 620, 620, 561, 396];
 err_velocitiesB = [10, 10, 10, 10, 20, 30];
-
+%}
 %{
 % without cap
 runlengthsB = [0.9, 1.0 ,1.0, 1.5, 7.1, 5.8];
@@ -48,8 +57,8 @@ set(fig1, 'Position', [50, 50, 2*720, 2*240])
 subplot(1, 4, 1)
 errorbar(exp_concs, exp_runlengths, exp_err_runlengths, ':d','LineWidth', 2);
 hold on
-%errorbar(concentrations, runlengths, err_runlengths, 'o','LineWidth', 2);
-errorbar(concentrations, runlengthsB, err_runlengthsB, 'o','LineWidth', 2);
+errorbar(concentrations, runlengths, err_runlengths, 'o','LineWidth', 2);
+%errorbar(concentrations, runlengthsB, err_runlengthsB, 'o','LineWidth', 2);
 ylabel('Run length (microns)');
 %xlim([0 440]);
 %ylim([0 8]);
@@ -57,8 +66,8 @@ ylabel('Run length (microns)');
 subplot(1, 4, 2)
 errorbar(exp_concs, exp_lifetimes, exp_err_lifetimes, ':d','LineWidth', 2);
 hold on
-%errorbar(concentrations, lifetimes, err_lifetimes, 'o', 'LineWidth', 2);
-errorbar(concentrations, lifetimesB, err_lifetimesB, 'o', 'LineWidth', 2);
+errorbar(concentrations, lifetimes, err_lifetimes, 'o', 'LineWidth', 2);
+%errorbar(concentrations, lifetimesB, err_lifetimesB, 'o', 'LineWidth', 2);
 xlabel('KIF4A concentration (pM)');
 ylabel('Life time (seconds)');
 %xlim([0 440]);
@@ -67,8 +76,8 @@ ylabel('Life time (seconds)');
 subplot(1, 4, 3)
 errorbar(exp_concs, exp_velocities, exp_err_velocities, ':d','LineWidth', 2);
 hold on
-%errorbar(concentrations, velocities, err_velocities, 'o', 'LineWidth', 2);
-errorbar(concentrations, velocitiesB, err_velocitiesB, 'o', 'LineWidth', 2);
+errorbar(concentrations, velocities, err_velocities, 'o', 'LineWidth', 2);
+%errorbar(concentrations, velocitiesB, err_velocitiesB, 'o', 'LineWidth', 2);
 ylabel('Velocity (nm/s)');
 %xlim([0 440]);
 %ylim([0 1000]);

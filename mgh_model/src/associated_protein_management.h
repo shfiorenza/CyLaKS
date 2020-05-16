@@ -47,7 +47,7 @@ private:
 
 public:
   int verbosity_{0};
-  // lambdas for different mechanisms
+  // lambdas for Boltzmann factors of different mechanisms
   double lambda_neighb_{0.0};
   double lambda_spring_{0.0};
   double lambda_teth_{0.0};
@@ -80,10 +80,11 @@ public:
   Vec<Vec<Vec<int>>> n_bound_ii_teth_oppo_;
 
   /* Probabilities of possible KMC events */
-  double p_avg_diffuse_ii_;
-  double p_avg_bind_ii_;
-  double p_avg_unbind_ii_;
-  double p_avg_bind_i_teth_;
+  double p_base_diffuse_i_;
+  double p_base_diffuse_ii_;
+  double p_base_bind_i_teth_;
+  double p_base_bind_ii_;
+  double p_base_unbind_ii_;
   double p_tether_free_;
   double p_untether_free_;
   // First index is number of PRC1 neighbors: [0], [1], or [2]
@@ -91,14 +92,21 @@ public:
   Vec<double> p_unbind_i_;
   Vec<double> p_diffuse_i_fwd_;
   Vec<double> p_diffuse_i_bck_;
-  // Indices are [n_neighbs][x]
+  // Index scheme: [n_neighbs][x]
   Vec<Vec<double>> p_unbind_ii_;
   Vec<Vec<double>> p_diffuse_ii_to_rest_;
   Vec<Vec<double>> p_diffuse_ii_fr_rest_;
-  // Indices are [n_neighbs][x_dub]
+  // Index scheme: [n_neighbs][x_dub]
   Vec<Vec<double>> p_unbind_i_teth_;
   Vec<Vec<double>> p_diffuse_i_to_teth_rest_;
   Vec<Vec<double>> p_diffuse_i_fr_teth_rest_;
+  // Index scheme: [n_neighbs][x_dub][x]
+  Vec<Vec<Vec<double>>> p_unbind_ii_fr_teth_;
+  Vec<Vec<Vec<double>>> p_unbind_ii_to_teth_;
+  Vec<Vec<Vec<double>>> p_diffuse_ii_to_both_;
+  Vec<Vec<Vec<double>>> p_diffuse_ii_to_self_fr_teth_;
+  Vec<Vec<Vec<double>>> p_diffuse_ii_fr_self_to_teth_;
+  Vec<Vec<Vec<double>>> p_diffuse_ii_fr_both_;
 
   // Index scheme: [x_dist]
   Vec<double> possible_extensions_;
@@ -123,7 +131,7 @@ public:
   Vec<Vec<ENTRY_T>> bound_i_;
   // Index scheme: [n_neighbs][x][i_entry]
   Vec<Vec<Vec<ENTRY_T>>> bound_ii_;
-  // Second index is [x] or [x_dub]; third index is xlink entry
+  // Index scheme: [n_neighbs][x_dub][i_entry]
   Vec<Vec<Vec<ENTRY_T>>> bound_i_teth_;
   // Second index is [x_dub]; third index is [x]; fourth is entry
   // e.g., [0][16][2][1] -> 2nd xlink w/ x_dub=16, x=2, & 0 neighbs

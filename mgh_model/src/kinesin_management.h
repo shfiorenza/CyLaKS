@@ -6,6 +6,7 @@
 struct system_parameters;
 struct system_properties;
 class Curator;
+class RandomNumberManagement;
 
 class KinesinManagement {
 private:
@@ -28,108 +29,89 @@ private:
   bool population_active_{false};
   bool tethering_active_{false};
   bool lists_up_to_date_{false};
+  // WALLACE, MISTA
+  Curator *wally_{nullptr};
+  // Pointer to wrapper of gsl libraries
+  RandomNumberManagement *gsl_{nullptr};
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_{nullptr};
   system_properties *properties_{nullptr};
-  // WALLACE, MISTA
-  Curator *wally_{nullptr};
 
 public:
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
-  std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
-  std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
+  // Index scheme: [x_dub]; If N/A, will be padded w/ zero, i.e. [0]
+  std::map<std::string, Vec<double>> p_theory_;
+  std::map<std::string, Vec<double>> p_actual_;
 
-  // placeholder
-  int lattice_cutoff_{0};
+  double lambda_teth_{0.0};
 
-  // coop stuff
-  int n_affinities_{1}; //{11};
-  int max_neighbs_{0};  //{2};
+  int x_dub_min_{0};
+  int x_dub_max_{0};
+  double r_0_{0.0};
+  double r_y_{0.0};
+  double k_teth_eff_{0.0};
+  double k_slack_eff_{0.0};
+  // Index scheme: [x_dub]
+  Vec<double> possible_extensions_;
+  Vec<double> possible_cosines_;
+  Vec<double> weight_teth_bind_;
+  Vec<double> weight_teth_unbind_;
 
-  // See kinesin header for meaningful description of below
-  int teth_cutoff_;
-  int comp_cutoff_;
-  double rest_dist_;
-
-  // Populations are untethered/mixed unless otherwise specified
-  int n_motors_{0}; // Total number of motors in system
-  int n_active_{0}; // Motors actively bound to some MT/xlink
+  // Population size trackers -- stores how many entries are in each population
+  int n_motors_{0};
+  int n_active_{0};
+  int n_docked_{0};
+  int n_bound_NULL_{0};
   int n_bound_ATP_{0};
-  int n_bound_ATP_st_{0};
+  int n_bound_ADPP_i_{0};
+  int n_bound_ADPP_ii_{0};
   int n_bound_unteth_{0};
   int n_satellites_{0};
   // Candidates for poisson-based events
   int n_bind_i_teth_candidates_{0};
   int n_tether_bound_candidates_{0};
-  // Index scheme: [x_dub]
+  // Tether-based populations; index scheme: [x_dub]
+  Vec<int> n_bound_ADPP_i_teth_;
+  Vec<int> n_bound_NULL_to_teth_;
+  Vec<int> n_bound_NULL_fr_teth_;
   Vec<int> n_bound_teth_;
-  // Index scheme: [n_neighbs]
-  Vec<int> n_bound_NULL_;
-  // Index scheme: [n_neighbs (behind only)][x_dub]
-  Vec<Vec<int>> n_bound_NULL_to_teth_;
-  Vec<Vec<int>> n_bound_NULL_fr_teth_;
-  // Index scheme: [tubulin_affinity][n_neighbs]
-  Vec<Vec<int>> n_docked_;
-  Vec<Vec<int>> n_bound_ADPP_ii_;
-  Vec<Vec<int>> n_bound_ADPP_i_;
-  Vec<Vec<int>> n_bound_ADPP_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_;
-  Vec<Vec<Vec<int>>> n_bound_ADPP_i_teth_st_;
 
   // Event probabilities
+  double p_bind_i_;
+  double p_bind_ATP_;
   double p_hydrolyze_;
-  double p_hydrolyze_st_;
+  double p_bind_ii_;
+  double p_unbind_ii_;
+  double p_unbind_i_;
   double p_tether_free_;
   double p_untether_satellite_;
   // Avg probabilities used for poisson-based events
   double p_avg_bind_i_teth_;
   double p_avg_tether_bound_;
-  // Index scheme: [x_dub]
-  Vec<double> p_untether_bound_;    // curent x_dub
-  Vec<double> weight_tether_bound_; // proposed x_dub
-  // Index scheme: [n_neighbs (behind only)]
-  Vec<double> p_bind_ATP_;
-  // Index scheme: [n_neighbs (behind only)][x_dub]
-  Vec<Vec<double>> p_bind_ATP_to_teth_;
-  Vec<Vec<double>> p_bind_ATP_fr_teth_;
-  // Index scheme: [tubulin_affinity][n_neighbs]
-  Vec<Vec<double>> p_bind_i_;
-  Vec<Vec<double>> p_bind_ii_;
-  Vec<Vec<double>> p_unbind_ii_;
-  Vec<Vec<double>> p_unbind_i_;
-  Vec<Vec<double>> p_unbind_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  Vec<Vec<Vec<double>>> p_unbind_i_teth_;    // current x_dub
-  Vec<Vec<Vec<double>>> p_unbind_i_teth_st_; // current x_dub
-  Vec<Vec<Vec<double>>> weight_bind_i_teth_; // proposed x_dub
+  // Tether-based probabilities; index scheme: [x_dub]
+  Vec<double> p_unbind_i_teth_;
+  Vec<double> p_bind_ATP_to_teth_;
+  Vec<double> p_bind_ATP_fr_teth_;
+  Vec<double> p_untether_bound_; // curent x_dub
 
   // 1-D vectors, index is simply motor entry
   Vec<Kinesin> motors_;
   Vec<Kinesin *> active_;
+  Vec<ENTRY_T> docked_;
+  Vec<ENTRY_T> bound_NULL_;
   Vec<ENTRY_T> bound_ATP_;
-  Vec<ENTRY_T> bound_ATP_st_;
+  Vec<ENTRY_T> bound_ADPP_i_;
+  Vec<ENTRY_T> bound_ADPP_ii_;
+  Vec<ENTRY_T> bound_ADPP_ii_;
   Vec<ENTRY_T> bound_unteth_;
   Vec<ENTRY_T> satellites_;
   // Candidates for poisson-based events
   Vec<ENTRY_T> bind_i_teth_candidates_;
   Vec<ENTRY_T> tether_bound_candidates_;
-  // Index scheme: [x_dub][motor_entry]
+  // Tether-based entries; index scheme: [x_dub][motor_entry]
+  Vec<Vec<ENTRY_T>> bound_ADPP_i_teth_;
+  Vec<Vec<ENTRY_T>> bound_NULL_to_teth_;
+  Vec<Vec<ENTRY_T>> bound_NULL_fr_teth_;
   Vec<Vec<ENTRY_T>> bound_teth_;
-  // Index scheme: [n_neighbs (behind only)][motor_entry]
-  Vec<Vec<ENTRY_T>> bound_NULL_;
-  // Index scheme: [n_neighbs (behind only)][x_dub][motor_entry]
-  Vec<Vec<Vec<ENTRY_T>>> bound_NULL_to_teth_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_NULL_fr_teth_;
-  // Index scheme: [tubulin_affinity][n_neighbs][motor_entry]
-  Vec<Vec<Vec<ENTRY_T>>> docked_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_ii_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_;
-  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_st_;
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub][motor_entry]
-  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_;
-  Vec<Vec<Vec<Vec<ENTRY_T>>>> bound_ADPP_i_teth_st_;
 
 private:
   void CalculateCutoffs();
@@ -154,25 +136,17 @@ public:
   void FlagForUpdate();
 
   void Update_Extensions();
+  void Update_Weights();
   void Update_Docked();
   void Update_Bound_NULL();
   void Update_Bound_NULL_Teth();
   void Update_Bound_ATP();
-  void Update_Bound_ATP_Stalled();
   void Update_Bound_ADPP_I();
-  void Update_Bound_ADPP_I_Stalled();
   void Update_Bound_ADPP_I_Teth();
-  void Update_Bound_ADPP_I_Teth_Stalled();
   void Update_Bound_ADPP_II();
   void Update_Bound_Unteth();
   void Update_Bound_Teth();
   void Update_Free_Teth();
-
-  double GetWeight_Bind_I_Teth();
-  double GetWeight_Tether_Bound();
-
-  void Set_Bind_I_Teth_Candidates(int n_to_set);
-  void Set_Tether_Bound_Candidates(int n_to_set);
 
   void RunKMC();
   void UpdateLists();

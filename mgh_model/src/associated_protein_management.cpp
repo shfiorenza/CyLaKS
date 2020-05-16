@@ -23,13 +23,6 @@ void AssociatedProteinManagement::Initialize(system_parameters *parameters,
 }
 
 void AssociatedProteinManagement::CalculateCutoffs() {
-
-  double kbT{parameters_->kbT};                           // in pN * nm
-  double k_spring{parameters_->xlinks.k_spring};          // in pN / nm
-  double site_size{parameters_->microtubules.site_size};  // in nm
-  r_0_ = parameters_->xlinks.r_0 / site_size;             // in n_sites
-  r_y_ = parameters_->microtubules.y_dist / site_size;    // in n_sites
-  k_spring_eff_ = k_spring * site_size * site_size / kbT; // in 1 / (n_sites)^2
   /*
       For events that result in a change in energy, we use Boltzmann factors to
       scale rates appropriately. Detailed balance is satisfied with the factors:
@@ -50,6 +43,13 @@ void AssociatedProteinManagement::CalculateCutoffs() {
     wally_->Log("Lambda != 1.0 for neighb interactions not implemented yet!\n");
     wally_->ErrorExit("AssociatedProteinManagement::SetParameters()\n");
   }
+  // Get system variables
+  double kbT{parameters_->kbT};                           // in pN * nm
+  double k_spring{parameters_->xlinks.k_spring};          // in pN / nm
+  double site_size{parameters_->microtubules.site_size};  // in nm
+  r_0_ = parameters_->xlinks.r_0 / site_size;             // in n_sites
+  r_y_ = parameters_->microtubules.y_dist / site_size;    // in n_sites
+  k_spring_eff_ = k_spring * site_size * site_size / kbT; // in 1 / (n_sites)^2
   double f_cutoff{0.0};
   for (int x_dist{0}; x_dist < 1000; x_dist++) {
     double r_x{x_dist};
@@ -85,51 +85,66 @@ void AssociatedProteinManagement::SetParameters() {
   weight_neighb_bind_.resize(max_neighbs_ + 1);
   weight_neighb_unbind_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    // ! energy is in units of kbT
     // value in params is aboslute value; need to multiply by -1
     double energy{-1 * n_neighbs * parameters_->xlinks.interaction_energy};
+    // ! energy is already in units of kbT; no need to divide by it
     weight_neighb_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb_) * energy);
     weight_neighb_unbind_[n_neighbs] = exp(lambda_neighb_ * energy);
   }
+  // If xlink test mode, initialize MT test environment from AP_MGMT
   auto xlink_test{strstr(wally_->test_mode_, "xlink")};
   if (xlink_test != nullptr) {
     properties_->microtubules.InitializeTestEnvironment();
   }
-  // Construct array of spring extensions and cosines for each x_dist value
-  possible_cosines_.resize(2 * dist_cutoff_ + 1);
-  possible_extensions_.resize(2 * dist_cutoff_ + 1);
-  // if (wally_->test_mode_ == nullptr) {
-  Update_Extensions();
-  // } else if (strcmp(wally_->test_mode_, "xlink_diffuse_ii") == 0) {
-  //   Update_Extensions();
-  // }
+
+  // KMC statistics!
   double kbT{parameters_->kbT};
   double delta_t{parameters_->delta_t};
   double site_size{parameters_->microtubules.site_size};
   double x_squared{(site_size / 1000) * (site_size / 1000)}; //! in um^2
+  // Characteristic timescale for singly-bound xlink to diffuse 1 site
+  double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
+  p_base_diffuse_i_ = delta_t / tau_i;
   // Characteristic timescale for doubly-bound xlink to diffuse 1 site
   double tau_ii{x_squared / (2 * parameters_->xlinks.diffu_coeff_ii)};
-  double p_diffu_ii{delta_t / tau_ii};
+  p_base_diffuse_ii_ = delta_t / tau_ii;
   // We consider diff_fwd and diff_bck as two separate events, which
   // effectively doubles the probability to diffuse. To counteract this,
   // divide p_diff by 2.
-  p_diffu_ii /= 2;
-  p_avg_diffuse_ii_ = p_diffu_ii;
+  p_base_diffuse_i_ /= 2;
+  p_base_diffuse_ii_ /= 2;
   double k_off_ii{parameters_->xlinks.k_off_ii};
-  p_avg_unbind_ii_ = k_off_ii * delta_t;
+  p_base_unbind_ii_ = k_off_ii * delta_t;
+  p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
+  p_diffuse_i_bck_.resize(max_neighbs_ + 1);
   p_diffuse_ii_to_rest_.resize(max_neighbs_ + 1);
   p_diffuse_ii_fr_rest_.resize(max_neighbs_ + 1);
   p_unbind_ii_.resize(max_neighbs_ + 1);
+  p_unbind_ii_to_teth_.resize(max_neighbs_ + 1);
+  p_unbind_ii_fr_teth_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     p_diffuse_ii_to_rest_[n_neighbs].resize(2 * dist_cutoff_ + 1);
     p_diffuse_ii_fr_rest_[n_neighbs].resize(2 * dist_cutoff_ + 1);
     p_unbind_ii_[n_neighbs].resize(2 * dist_cutoff_ + 1);
+    // currently, diffusion is thought of as an unbinding event
+    double weight_neighb{weight_neighb_unbind_[n_neighbs]};
+    // With two neighbors, the binding head is jammed and cannot diffuse
+    if (n_neighbs == 2) {
+      weight_neighb = 0.0;
+    }
+    p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_base_diffuse_i_;
+    p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_base_diffuse_i_;
+    for (int x_dub{0}; x_dub <= 2 * comp_cutoff_) {
+    }
   }
+  // Construct array of spring extensions and cosines for each x_dist
+  possible_cosines_.resize(2 * dist_cutoff_ + 1);
+  possible_extensions_.resize(2 * dist_cutoff_ + 1);
+  Update_Extensions();
+  // Construct array of spring weights and event probabilities for each x_dist
   weight_spring_bind_.resize(2 * dist_cutoff_ + 1);
   weight_spring_unbind_.resize(2 * dist_cutoff_ + 1);
-  // if (xlink_test != nullptr) {
   Update_Weights();
-  // }
 
   /*
   // Calculate neighbor interaction energies
@@ -174,7 +189,6 @@ void AssociatedProteinManagement::SetParameters() {
     }
   }
   */
-  // [DIFFUSION STATISTICS FOR CROSSLINKER W/O TETH BELOW] //  //
   // Characteristic timescale for singly-bound xlink to diffuse 1 site
   double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
   double p_diffu_i{delta_t / tau_i};
@@ -299,9 +313,9 @@ void AssociatedProteinManagement::SetParameters() {
   double c_xlink = parameters_->xlinks.c_bulk;
   double p_bind_i{k_on * c_xlink * delta_t};
   double c_eff_teth = parameters_->motors.c_eff_tether;
-  p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
+  p_base_bind_i_teth_ = k_on * c_eff_teth * delta_t;
   double c_eff_bind = parameters_->xlinks.c_eff_bind;
-  p_avg_bind_ii_ = k_on * c_eff_bind * delta_t;
+  p_base_bind_ii_ = k_on * c_eff_bind * delta_t;
   double k_off_i = parameters_->xlinks.k_off_i;
   double p_unbind_i{k_off_i * delta_t};
   p_bind_i_.resize(max_neighbs_ + 1);
@@ -419,14 +433,14 @@ void AssociatedProteinManagement::SetParameters() {
   p_theory_["bind_i"] = {{p_bind_i_}};
   p_theory_["unbind_i"] = {{p_unbind_i_}};
   if (crosslinking_active_) {
-    p_theory_["bind_ii"] = {{{p_avg_bind_ii_}}};
+    p_theory_["bind_ii"] = {{{p_base_bind_ii_}}};
     p_theory_["unbind_ii"] = {{p_unbind_ii_}};
   }
   if (tethering_active_) {
-    p_theory_["bind_i_teth"] = {{{p_avg_bind_i_teth_}}};
+    p_theory_["bind_i_teth"] = {{{p_base_bind_i_teth_}}};
     p_theory_["unbind_i_teth"] = {p_unbind_i_teth_};
     if (crosslinking_active_) {
-      p_theory_["bind_ii_teth"] = {{{p_avg_bind_ii_}}};
+      p_theory_["bind_ii_teth"] = {{{p_base_bind_ii_}}};
       /*
       p_theory_["unbind_ii_to_teth"] = p_unbind_ii_to_teth_;
       p_theory_["unbind_ii_fr_teth"] = p_unbind_ii_fr_teth_;
@@ -744,7 +758,7 @@ void AssociatedProteinManagement::InitializeEvents() {
         wally_->ErrorExit("AP_MGMT::Weight_Bind_II()");
       }
     };
-    events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
+    events_.emplace_back(event_name, p_base_bind_ii_, &n_bind_ii_candidates_,
                          &bind_ii_candidates_, exe_bind_ii, weight_bind_ii,
                          poisson, get_ran_prob, set_ran_indices);
   }
@@ -957,7 +971,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
       }
       return properties_->gsl.SamplePoissonDist(p);
     };
-    events_.emplace_back(event_name, p_avg_bind_ii_, &n_bind_ii_candidates_,
+    events_.emplace_back(event_name, p_base_bind_ii_, &n_bind_ii_candidates_,
                          &bind_ii_candidates_, exe_bind_ii, weight_bind_ii,
                          poisson_bind_ii, get_ran_prob, set_ran_indices);
 
@@ -1090,14 +1104,14 @@ void AssociatedProteinManagement::ReportProbabilities() {
     wally_->Log("For xlink_bind_ii test:\n");
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       wally_->Log("p_bind_theory_[%i] = %g\n", x,
-                  p_avg_bind_ii_ * weight_spring_bind_[x]);
+                  p_base_bind_ii_ * weight_spring_bind_[x]);
       wally_->Log("p_bind_actual_[%i] = %g (n_exe = %i)\n", x,
                   double(bind_ii_stats_[x].first) / bind_ii_stats_[x].second,
                   bind_ii_stats_[x].first);
     }
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       wally_->Log("p_unbind_theory_[%i] = %g\n", x,
-                  p_avg_unbind_ii_ * weight_spring_unbind_[x]);
+                  p_base_unbind_ii_ * weight_spring_unbind_[x]);
       wally_->Log("p_unbind_actual_[%i] = %g (n_exe = %i)\n", x,
                   double(unbind_ii_stats_[x].first) /
                       unbind_ii_stats_[x].second,
@@ -1115,7 +1129,7 @@ void AssociatedProteinManagement::ReportProbabilities() {
         x_to = 0;
       }
       wally_->Log("p_to_theory_[%i] = %g\n", x,
-                  p_avg_diffuse_ii_ * weight_spring_unbind_[x] /
+                  p_base_diffuse_ii_ * weight_spring_unbind_[x] /
                       weight_spring_unbind_[x_to]);
       wally_->Log("p_to_actual_[%i] = %g (n_exe = %i)\n", x,
                   double(diff_ii_to_stats_[x].first) /
@@ -1125,7 +1139,7 @@ void AssociatedProteinManagement::ReportProbabilities() {
     for (int x{0}; x <= 2 * dist_cutoff_; x++) {
       double p_theory{0.0};
       if (x != dist_cutoff_ and x != 2 * dist_cutoff_) {
-        p_theory = p_avg_diffuse_ii_ * weight_spring_bind_[x + 1] /
+        p_theory = p_base_diffuse_ii_ * weight_spring_bind_[x + 1] /
                    weight_spring_bind_[x];
       }
       wally_->Log("p_fr_theory_[%i] = %g\n", x, p_theory);
@@ -1214,11 +1228,10 @@ void AssociatedProteinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void AssociatedProteinManagement::Update_Extensions() {
 
-  /*
-  if (!crosslinking_active_ and !tethering_active_) {
+  if (!population_active_ or !crosslinking_active_) {
     return;
   }
-  */
+
   // Offset ranges from 0 to 0.5; corresponds to the fractional misalignment
   // of MTs in n_sites, e.g., offset = 0 means they are perfectly aligned and
   // offset = 0.25 means all sites are misaligned by a 0.25*site_size
@@ -1258,7 +1271,7 @@ void AssociatedProteinManagement::Update_Weights() {
   }
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
     for (int x_dist{0}; x_dist <= 2 * dist_cutoff_; x_dist++) {
-      p_unbind_ii_[n_neighbs][x_dist] = p_avg_unbind_ii_ *
+      p_unbind_ii_[n_neighbs][x_dist] = p_base_unbind_ii_ *
                                         weight_spring_unbind_[x_dist] *
                                         weight_neighb_unbind_[n_neighbs];
       if (n_neighbs == max_neighbs_) {
@@ -1279,7 +1292,7 @@ void AssociatedProteinManagement::Update_Weights() {
       // p_diff_ii * exp{lambda_spring_ * -(E_f - E_i)} * weight_neighb
       // Which will get larger with x_dist since E_f < E_i generally
       p_diffuse_ii_to_rest_[n_neighbs][x_dist] =
-          p_avg_diffuse_ii_ * weight_spring_unbind_[x_dist] /
+          p_base_diffuse_ii_ * weight_spring_unbind_[x_dist] /
           weight_spring_unbind_[x_to] * weight_neighb_unbind_[n_neighbs];
       // printf("p_to = %g * %g / %g * %g\n", p_avg_diffuse_ii_,
       //        weight_spring_unbind_[x_dist], weight_spring_unbind_[x_to],
@@ -1294,7 +1307,7 @@ void AssociatedProteinManagement::Update_Weights() {
       // p_diff_ii * exp{-(1.0 - lambda_spring_) * (E_f - E_i)} *
       // weight_neighb Which will get smaller with x_dist since E_f > E_i
       p_diffuse_ii_fr_rest_[n_neighbs][x_dist] =
-          p_avg_diffuse_ii_ * weight_spring_bind_[x_fr] /
+          p_base_diffuse_ii_ * weight_spring_bind_[x_fr] /
           weight_spring_bind_[x_dist] * weight_neighb_unbind_[n_neighbs];
       // printf("p_fr = %g * %g / %g * %g\n", p_avg_diffuse_ii_,
       //        weight_spring_bind_[x_fr], weight_spring_bind_[x_dist],

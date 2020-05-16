@@ -16,101 +16,24 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   InitializeLists();
   if (wally_->test_mode_ == nullptr) {
     InitializeEvents();
-  } else {
+  }
+  // No kinesin tests implemented as of yet
+  else {
     t_active_ = std::numeric_limits<double>::max();
   }
 }
 
 void KinesinManagement::CalculateCutoffs() {
 
-  double kbT{parameters_->kbT};
-  double r_0{parameters_->motors.r_0};
-  double r_y{parameters_->microtubules.y_dist / 2};
-  double k_spring{parameters_->motors.k_spring};
-  double k_slack{parameters_->motors.k_slack};
-  double site_size{parameters_->microtubules.site_size};
-  // First, calculate rest_dist_ in number of sites
-  int approx_rest{int(sqrt(r_0 * r_0 - r_y * r_y) / site_size)};
-  double rest_scan[3];
-  double scan_force[3];
-  for (int i_scan = -1; i_scan <= 1; i_scan++) {
-    rest_scan[i_scan + 1] = approx_rest + ((double)i_scan * 0.5);
-    double rest_scan_length = rest_scan[i_scan + 1] * site_size;
-    double r_scan = sqrt(r_y * r_y + rest_scan_length * rest_scan_length);
-    if (r_scan >= r_0)
-      scan_force[i_scan + 1] = (r_scan - r_0) * k_spring;
-    else
-      scan_force[i_scan + 1] = (r_scan - r_0) * k_slack;
-  }
-  double min_force{1000};
-  for (int i_scan = -1; i_scan <= 1; i_scan++) {
-    double force = fabs(scan_force[i_scan + 1]);
-    if (force < min_force) {
-      min_force = force;
-      rest_dist_ = rest_scan[i_scan + 1];
-    }
-  }
-  // Next, calculate compression distance cutoff
-  comp_cutoff_ = 0;
-  for (int x_dub{int(2 * rest_dist_)}; x_dub >= 0; x_dub--) {
-    // increment by 0.5x
-    double r_x{x_dub * site_size / 2};
-    double r{sqrt(r_y * r_y + r_x * r_x)};
-    double dr{r - r_0};
-    double spring_energy{0.0};
-    if (dr < 0) {
-      spring_energy = 0.5 * k_slack * dr * dr;
-    } else {
-      spring_energy = 0.5 * k_spring * dr * dr;
-    }
-    double boltzmann_weight = exp(0.5 * spring_energy / kbT);
-    if (boltzmann_weight > 100) {
-      comp_cutoff_ = x_dub / 2;
-      break;
-    }
-  }
-  // Finally, calculate extension distance cutoff
-  for (int x_dub{int(2 * rest_dist_)}; x_dub < 1000; x_dub++) {
-    // increment by 0.5x
-    double r_x{x_dub * site_size / 2};
-    double r{sqrt(r_y * r_y + r_x * r_x)};
-    double dr{r - r_0};
-    double spring_energy{0.0};
-    if (dr < 0) {
-      spring_energy = 0.5 * k_slack * dr * dr;
-    } else {
-      spring_energy = 0.5 * k_spring * dr * dr;
-    }
-    double boltzmann_weight = exp(0.5 * spring_energy / kbT);
-    if (boltzmann_weight > 100) {
-      teth_cutoff_ = x_dub / 2;
-      break;
-    }
-  }
-  if (parameters_->xlinks.c_bulk > 0.0 and parameters_->motors.c_bulk > 0.0 and
-      parameters_->motors.tethers_active) {
-    tethering_active_ = true;
-    wally_->Log("\nFor motors:\n");
-    wally_->Log("  rest_dist is %g\n", rest_dist_);
-    wally_->Log("  comp_cutoff is %i\n", comp_cutoff_);
-    wally_->Log("  dist_cutoff is %i\n", teth_cutoff_);
-  } else {
-    wally_->Log("\nTethering is disabled for motors.\n");
-  }
-}
-
-void KinesinManagement::SetParameters() {
-
-  t_active_ = parameters_->motors.t_active;
   /*
-    For events that result in a change in energy, we use Boltzmann factors to
-    scale rates appropriately. Detailed balance is satisfied with the factors:
-                  exp{-(1 - lambda)*(delta_E)/(kB*T)}, and
-                  exp{-(lambda)*(delta_E)/(kB*T)}
-    for an event and its complement (e.g., binding and unbinding), where lambda
-    is a constant that ranges from 0 to 1, delta_E is the change in energy that
-    results from the event, kB is Boltzmann's constant, and T is the temperature
-  */
+   For events that result in a change in energy, we use Boltzmann factors to
+   scale rates appropriately. Detailed balance is satisfied with the factors:
+                 exp{-(1 - lambda)*(delta_E)/(kB*T)}, and
+                 exp{-(lambda)*(delta_E)/(kB*T)}
+   for an event and its complement (e.g., binding and unbinding), where lambda
+   is a constant that ranges from 0 to 1, delta_E is the change in energy that
+   results from the event, kB is Boltzmann's constant, and T is the temperature
+ */
   /*
     For tethered motor binding & unbinding, we use force-dependence instead:
                 exp{-(1 - lambda)*(f_teth * delta_off)/(kB*T)}, and
@@ -127,93 +50,108 @@ void KinesinManagement::SetParameters() {
   // Lambda = 1.0 means all energy dependence is in unbinding
   double lambda_neighb{1.0}; // Lambda for neighbor cooperativity
   // Lambda = 0.5 means energy dependence is equal for binding and unbinding
-  double lambda_teth{0.5}; // Lambda for tethering mechanisms
-  // Get lattice cooperativity jawn - preliminary
-  int range{(int)parameters_->motors.lattice_coop_range}; // in n_sites
-  double amp{parameters_->motors.lattice_coop_amp}; // amplitude of Gaussian
-  // Set the range of our gaussian to correspond to +/- 3 sigma
-  double sigma{double(range) / 3};
-  double sites_per_bin{0};
-  if (n_affinities_ > 1) {
-    sites_per_bin = (double)range / (n_affinities_ - 1);
-  }
-  // Check the no. of sites per bin is an integer
-  if (sites_per_bin != (int)sites_per_bin) {
-    printf("fix your stupid lattice coop ya dingus\n");
-    exit(1);
-  }
-  // Array of affinity weights (unitless) due to lattice deformations
-  std::vector<double> wt_lattice_bind(n_affinities_, 0.0);
-  std::vector<double> wt_lattice_unbind(n_affinities_, 0.0);
-  for (int i_aff{0}; i_aff < n_affinities_ - 1; i_aff++) {
-    double dist{sites_per_bin * i_aff};
-    double gauss{amp * exp(-1 * dist * dist / (2 * sigma * sigma))};
-    wt_lattice_bind[i_aff] = 1.0 + gauss;
-    wt_lattice_unbind[i_aff] = 1.0 / (1.0 + gauss);
-  }
-  wt_lattice_bind[n_affinities_ - 1] = 1.0;
-  wt_lattice_unbind[n_affinities_ - 1] = 1.0;
-  // Array of interaction energies (in kbT) due to neighbor cooperativity
-  double int_energy{-1 * parameters_->motors.interaction_energy}; // kbT
-  std::vector<double> neighb_energy(max_neighbs_ + 1, 0.0);
-  for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    neighb_energy[n_neighbs] = n_neighbs * int_energy; // ! in kbT
-  }
-  // Array of tether energies (in kbT) for any given extension
-  double site_size{parameters_->microtubules.site_size};
-  double k_slack{parameters_->motors.k_slack};
-  double k_teth{parameters_->motors.k_spring};
-  double r_y{parameters_->microtubules.y_dist / 2};
-  double r_0{parameters_->motors.r_0};
+  lambda_teth_ = 0.5;
+  // Get system variables
   double kbT{parameters_->kbT};
-  std::vector<double> tether_energy(2 * teth_cutoff_ + 1, 0.0);
-  std::vector<double> tether_force(2 * teth_cutoff_ + 1, 0.0);
-  std::vector<double> tether_cosine(2 * teth_cutoff_ + 1, 0.0);
-  for (int x_dub{2 * comp_cutoff_}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-    double r_x{(double)x_dub * site_size / 2};
-    double r{sqrt(r_x * r_x + r_y * r_y)};
-    double dr{r - r_0};
-    double k_spring{0.0};
-    if (dr < 0) {
-      k_spring = k_slack;
-    } else {
-      k_spring = k_teth;
+  double site_size{parameters_->microtubules.site_size};
+  double k_teth{parameters_->motors.k_spring};
+  double k_slack{parameters_->motors.k_slack};
+  r_0_ = parameters_->motors.r_0;
+  r_y_ = parameters_->microtubules.y_dist / 2;
+  k_teth_eff_ = k_teth * site_size * site_size / kbT;
+  k_slack_eff_ = k_slack * site_size * site_size / kbT;
+  // Calculate compression distance cutoff
+  x_dub_min_ = 0;
+  int x_dub_rest{2 * (int)std::ceil(sqrt(r_0_ * r_0_ - r_y_ * r_y_))};
+  double f_cutoff_comp{0.0};
+  for (int x_dub{x_dub_rest}; x_dub >= 0; x_dub--) {
+    double r_x{double(x_dub) / 2};
+    double r{sqrt(r_y_ * r_y_ + r_x * r_x)};
+    double dr{r - r_0_};
+    if (dr > 0.0) {
+      continue;
     }
-    tether_energy[x_dub] = 0.5 * k_spring * dr * dr / kbT; // ! in kbT
-    tether_force[x_dub] = fabs(k_spring * dr);
-    tether_cosine[x_dub] = r_x / r;
+    double energy{0.5 * k_slack_eff_ * dr * dr}; // in kBT
+    double boltzmann_factor{exp(lambda_teth_ * energy)};
+    if (boltzmann_factor > 1e2) {
+      f_cutoff_comp = fabs(dr * site_size * k_slack);
+      x_dub_min_ = x_dub;
+      break;
+    }
   }
+  // Calculate extension distance cutoff
+  double f_cutoff_ext{0.0};
+  for (int x_dub{x_dub_rest}; x_dub < 1000; x_dub++) {
+    double r_x{double(x_dub) / 2};
+    double r{sqrt(r_y_ * r_y_ + r_x * r_x)};
+    double dr{r - r_0_};
+    if (dr < 0.0) {
+      continue;
+    }
+    double energy{0.5 * k_teth_eff_ * dr * dr};
+    double boltzmann_factor{exp(lambda_teth_ * energy)};
+    if (boltzmann_factor > 1e2) {
+      x_dub_max_ = x_dub;
+      f_cutoff_ext = fabs(dr * site_size * k_teth);
+      break;
+    }
+  }
+  if (parameters_->xlinks.c_bulk > 0.0 and parameters_->motors.c_bulk > 0.0 and
+      parameters_->motors.tethers_active) {
+    tethering_active_ = true;
+    wally_->Log("\nFor motors:\n");
+    // wally_->Log("  rest_dist is %g\n", rest_dist_);
+    wally_->Log("  x_dub_min = %i (F = %g pN)\n", x_dub_min_, f_cutoff_comp);
+    wally_->Log("  x_dub_max = %i (F - %g pN)\n", x_dub_max_, f_cutoff_ext);
+  } else {
+    wally_->Log("\nTethering is disabled for motors.\n");
+  }
+}
+
+void KinesinManagement::SetParameters() {
+
+  t_active_ = parameters_->motors.t_active;
+
+  // Baseline probabilities -- constant
   double delta_t{parameters_->delta_t};
   double k_on{parameters_->motors.k_on};
   double c_motor{parameters_->motors.c_bulk};
-  double k_hydrolyze{parameters_->motors.k_hydrolyze};
-  double k_hydrolyze_stalled{parameters_->motors.k_hydrolyze_stalled};
-  double k_tether{parameters_->motors.k_tether};
-  double k_untether{parameters_->motors.k_untether};
-  double c_eff_teth{parameters_->motors.c_eff_tether};
-  p_hydrolyze_ = k_hydrolyze * delta_t;
-  p_hydrolyze_st_ = k_hydrolyze_stalled * delta_t;
-  p_tether_free_ = k_tether * c_motor * delta_t;
-  p_untether_satellite_ = k_untether * delta_t;
-  p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
-  p_avg_tether_bound_ = k_tether * c_eff_teth * delta_t;
-  p_untether_bound_.resize(2 * teth_cutoff_ + 1);
-  weight_tether_bound_.resize(2 * teth_cutoff_ + 1);
-  for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
-    double dU_teth{tether_energy[x_dub] - 0.0};
-    double dU_unteth{0.0 - tether_energy[x_dub]};
-    double wt_tether{exp(-(1.0 - lambda_teth) * dU_teth)};
-    double wt_untether{exp(-lambda_teth * dU_unteth)};
-    if (x_dub < 2 * comp_cutoff_) {
-      wt_tether = 0.0;
-      wt_untether = 0.0;
-    }
-    p_untether_bound_[x_dub] = p_untether_satellite_ * wt_untether;
-    weight_tether_bound_[x_dub] = p_avg_tether_bound_ * wt_tether;
-  }
-  double f_stall{parameters_->motors.stall_force};
+  p_bind_i_ = k_on * c_motor * delta_t;
   double k_on_ATP{parameters_->motors.k_on_ATP};
   double c_ATP{parameters_->motors.c_ATP};
+  p_bind_ATP_ = k_on_ATP * c_ATP * delta_t;
+  double k_hydrolyze{parameters_->motors.k_hydrolyze};
+  p_hydrolyze_ = k_hydrolyze * delta_t;
+  double c_eff_bind{parameters_->motors.c_eff_bind};
+  p_bind_ii_ = k_on * c_eff_bind * delta_t;
+  double k_off_ii{parameters_->motors.k_off_ii};
+  p_unbind_ii_ = k_off_ii * delta_t;
+  double k_off_i{parameters_->motors.k_off_i};
+  p_unbind_i_ = k_off_i * delta_t;
+  double k_tether{parameters_->motors.k_tether};
+  p_tether_free_ = k_tether * c_motor * delta_t;
+  double k_untether{parameters_->motors.k_untether};
+  p_untether_satellite_ = k_untether * delta_t;
+  double c_eff_teth{parameters_->motors.c_eff_tether};
+  p_avg_bind_i_teth_ = k_on * c_eff_teth * delta_t;
+  p_avg_tether_bound_ = k_tether * c_eff_teth * delta_t;
+  // Construct array of spring extensions and cosines for each x_dub
+  possible_extensions_.resize(2 * x_dub_max_ + 1);
+  possible_cosines_.resize(2 * x_dub_max_ + 1);
+  Update_Extensions();
+  // Construct array of Boltzmann factors from tether energy for each x_dub
+  // Also set extension-based probabilities (change throughout sim based on MT
+  // offset)
+  p_unbind_i_teth_.resize(2 * x_dub_max_ + 1);
+  p_bind_ATP_to_teth_.resize(2 * x_dub_max_ + 1);
+  p_bind_ATP_fr_teth_.resize(2 * x_dub_max_ + 1);
+  p_untether_bound_.resize(2 * x_dub_max_ + 1);
+  weight_teth_bind_.resize(2 * x_dub_max_ + 1);
+  weight_teth_unbind_.resize(2 * x_dub_max_ + 1);
+  Update_Weights();
+
+  double f_stall{parameters_->motors.stall_force};
+
   double p_bind_ATP{k_on_ATP * c_ATP * delta_t};
   p_bind_ATP_.resize(max_neighbs_ + 1);
   p_bind_ATP_to_teth_.resize(max_neighbs_ + 1);
@@ -240,15 +178,6 @@ void KinesinManagement::SetParameters() {
       p_bind_ATP_fr_teth_[n_neighbs][x_dub] = p_bind_ATP_[n_neighbs] * wt_fr;
     }
   }
-  double c_eff{parameters_->motors.c_eff_bind};
-  double k_off_ii{parameters_->motors.k_off_ii};
-  double k_off_i{parameters_->motors.k_off_i};
-  double k_off_i_st{parameters_->motors.k_off_i_stalled};
-  double p_bind_i{k_on * c_motor * delta_t};
-  double p_bind_ii{k_on * c_eff * delta_t};
-  double p_unbind_ii{k_off_ii * delta_t};
-  double p_unbind_i{k_off_i * delta_t};
-  double p_unbind_i_st{k_off_i_st * delta_t};
   double sigma_off{1.5};
   // Force perpetually applied to motors, e.g., by optical trapping
   if (parameters_->motors.applied_force > 0.0) {
@@ -878,11 +807,49 @@ void KinesinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
 void KinesinManagement::Update_Extensions() {
 
-  if (!tethering_active_ or !population_active_) {
+  if (!population_active_ or !tethering_active_) {
     return;
+  }
+  // Offset ranges from 0 to 0.5; corresponds to the fractional misalignment
+  // of MTs in n_sites, e.g., offset = 0 means they are perfectly aligned and
+  // offset = 0.25 means all sites are misaligned by a 0.25*site_size
+  double offset{properties_->microtubules.GetSiteOffset()};
+  for (int x_dub{x_dub_min_}; x_dub <= 2 * x_dub_max_; x_dub++) {
+    double r_x{double(x_dub) / 2 + offset};
+    if (x_dub > x_dub_max_) {
+      if (x_dub < x_dub_max_ + x_dub_min_) {
+        continue;
+      }
+      r_x = double(x_dub - x_dub_max_) / 2 - offset;
+    }
+    double r{sqrt(r_x * r_x + r_y_ * r_y_)};
+    possible_extensions_[x_dub] = r - r_0_;
+    possible_cosines_[x_dub] = r_x / r;
   }
   for (int i_entry{0}; i_entry < n_active_; i_entry++) {
     active_[i_entry]->UpdateExtension();
+  }
+}
+
+void KinesinManagement::Update_Weights() {
+
+  for (int x_dub{x_dub_min_}; x_dub <= 2 * x_dub_max_; x_dub++) {
+    if (x_dub > x_dub_max_ and x_dub < x_dub_max_ + x_dub_min_) {
+      continue;
+    }
+    double dr{possible_extensions_[x_dub]};
+    double k_eff{k_teth_eff_};
+    if (dr < 0.0) {
+      k_eff = k_slack_eff_;
+    }
+    double spring_energy{0.5 * k_eff * dr * dr}; // unitless
+    weight_teth_bind_[x_dub] = exp(-(1.0 - lambda_teth_) * spring_energy);
+    weight_teth_unbind_[x_dub] = exp(lambda_teth_ * spring_energy);
+  }
+  for (int x_dub{x_dub_min_}; x_dub <= 2 * x_dub_max_; x_dub++) {
+    if (x_dub > x_dub_max_ and x_dub < x_dub_max_ + x_dub_min_) {
+      continue;
+    }
   }
 }
 

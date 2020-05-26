@@ -12,7 +12,7 @@ n_sites = 5000;
 simName = "test";
 % Pseudo-constant variables
 n_mts = 1;
-delta_t = 0.00002; %0.000025;
+delta_t = 0.0002; %0.000025;
 n_steps = 12500000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;

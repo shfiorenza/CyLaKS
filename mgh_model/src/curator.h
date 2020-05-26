@@ -21,6 +21,7 @@ private:
   system_properties *properties_;
 
 public:
+  int verbosity_{0};
   double t_motors_[4];
   double t_xlinks_[4];
   double t_MTs_[4];
@@ -53,7 +54,7 @@ public:
   void ErrorExit(const char *function_name);
   template <typename... Args> void Log(const char *msg, const Args... args) {
     // This is technically a horrendous vulnerability, but we don't care about
-    // scary 'hackers' in our sim; also should never be linked to input
+    // 'hackers' in our sim; also should never be linked to input
     int chars_printed{printf(msg, args..., "MISSING STRING")};
     int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
     if (chars_printed < 0 or chars_written < 0) {
@@ -63,6 +64,14 @@ public:
       fprintf(log_file_, " *** EXITING ***\n");
       exit(1);
     }
+  }
+  template <typename... Args>
+  // Overloaded for verbosity-based alerts
+  void Log(int alert_level, const char *msg, const Args... args) {
+    if (verbosity_ < alert_level) {
+      return;
+    }
+    Log(msg, args...);
   }
   void UpdateTimestep(unsigned long i_step);
   void PrintMicrotubules();

@@ -18,17 +18,6 @@ private:
   using SITE_T = Tubulin;
   // ENTRY_T is defined in entry.h header
   using EVENT_T = Event<ENTRY_T>;
-  // All possible KMC event objects; arbitrary sequential order
-  Vec<EVENT_T> events_;
-  // Number of events to execute at any given timestep
-  int n_events_to_exe_{0};
-  // List of events to execute any given timestep; dynamically updated
-  Vec<EVENT_T *> events_to_exe_;
-  int verbosity_{0};
-  double t_active_{0.0};
-  bool population_active_{false};
-  bool lattice_coop_active_{false};
-  bool lists_up_to_date_{false};
   // WALLACE, MISTA
   Curator *wally_{nullptr};
   // Pointer to class that manages GSL functions (RNG, sampling, etc.)
@@ -38,70 +27,68 @@ private:
   system_properties *properties_{nullptr};
 
 public:
-  // Index scheme: [tubulin_affinity][n_neighbs][x_dub]
-  // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
-  std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;
-  std::map<std::string, Vec<Vec<Vec<double>>>> p_actual_;
-  Vec<std::pair<int, int>> lattice_bind_stats_;
-  int test_delta_{-1};
-  std::pair<int, int> lattice_step_bind_ii_stats_;
-  std::pair<int, int> lattice_step_unbind_ii_stats_;
-  std::pair<int, int> lattice_step_unbind_i_stats_;
+  /* Probability & test statistic trackers*/
+  std::map<std::string, double> p_theory_; // Values from SetParameters()
+  std::map<std::string, double> p_actual_; // Values stored by event struct
+  std::map<std::string, Vec<std::pair<size_t, size_t>>> test_stats_;
+  std::map<std::string, Vec<double>> test_ref_;
 
-  // coop stuff -- neighbs
-  int max_neighbs_{2};
-  // Index scheme: [n_neighbs]
-  Vec<double> weight_neighbs_bind_;
-  Vec<double> weight_neighbs_unbind_;
-  // coop stuff -- lattice
-  int lattice_cutoff_{0};
-  // Index scheme: [delta], i.e., distance in n_sites
-  Vec<double> weight_lattice_bind_;
-  Vec<double> weight_lattice_unbind_;
-  // Index scheme: [n_neighbs], since each neighb weight has a unique max
-  Vec<double> weight_lattice_bind_max_;
-  Vec<double> weight_lattice_unbind_max_;
+  /* Auxiliary functions */
+  size_t step_active_{0};           // KMC step at which motors become active
+  bool population_active_{false};   // Switch for motor activity
+  bool lattice_coop_active_{false}; // Switch for lattice deformation effect
+  bool lists_up_to_date_{false};    // Whether or not lists are current
 
-  // Populations are untethered/mixed unless otherwise specified
-  int n_motors_{0}; // Total number of motors in system
-  int n_active_{0}; // Motors actively bound to some MT/xlink
-  // int n_bound_NULL_{0};
-  int n_bound_ATP_{0};
-  int n_bind_ii_candidates_{0};
-  int n_unbind_ii_candidates_{0};
-  int n_unbind_i_candidates_{0};
-  // Index scheme: [n_neighbs (behind only)]
-  Vec<int> n_bound_NULL_;
+  /* Cooperativity mechanisms*/
+  int max_neighbs_{2}; // Maximum number of neighbors a single motor can have
+  Vec<double> weight_neighbs_bind_;   // Index scheme: [n_neighbs]
+  Vec<double> weight_neighbs_unbind_; // Index scheme: [n_neighbs]
+  int lattice_cutoff_{0}; // Range of lattice deformation effect (n_sites)
+  Vec<double> weight_lattice_bind_;       // Index scheme: [delta] (n_sites)
+  Vec<double> weight_lattice_unbind_;     // Index scheme: [delta] (n_sites)
+  Vec<double> weight_lattice_bind_max_;   // Index scheme: [n_neighbs]
+  Vec<double> weight_lattice_unbind_max_; // Index scheme: [n_neighbs]
 
-  // Event probabilities
-  double p_hydrolyze_;
-  // Avg probabilities used for poisson-based events
-  double p_avg_bind_i_;
-  double p_avg_bind_ii_;
-  double p_avg_unbind_ii_;
-  double p_avg_unbind_i_;
-  // Index scheme: [n_neighbs (behind only)]
-  Vec<double> p_bind_ATP_;
+  /* KMC event handling */
+  Vec<EVENT_T> events_;    // All possible KMC event objects; arbitrary order
+  int n_events_to_exe_{0}; // Number of events to execute at each timestep
+  Vec<EVENT_T *> events_to_exe_; // List of events to execute at each timestep
 
-  // 1-D vectors, index is simply motor entry
-  Vec<Kinesin> motors_;
-  Vec<Kinesin *> active_;
-  Vec<ENTRY_T> bound_ATP_;
-  // Candidates for poisson-based events
-  Vec<ENTRY_T> bind_ii_candidates_;
-  Vec<ENTRY_T> unbind_ii_candidates_;
-  Vec<ENTRY_T> unbind_i_candidates_;
-  // Index scheme: [n_neighbs (behind only)][motor_entry]
-  Vec<Vec<ENTRY_T>> bound_NULL_;
+  /* Event probabilities; 'avg' refers to poisson events over an interval dt */
+  double p_bind_ATP_i_;  // For ATP binding to heads of singly-bound motors
+  double p_hydrolyze_;   // For hydrolyzing ATP-bound motor heads
+  double p_avg_bind_i_;  // For binding first head of motors from bulk solution
+  double p_avg_bind_ii_; // For binding second head of singly-bound motors
+  double p_avg_bind_ATP_ii_; // For ATP binding to heads of doubly-bound motors
+  double p_avg_unbind_ii_;   // For unbinding rear heads of doubly-bound motors
+  double p_avg_unbind_i_;    // For unbinding heads of singly-bound motors
+
+  /* Population size trackers; 'candidates' are targets for poisson events */
+  int n_motors_{0}; // Number of motors in system including reservoir; static
+  int n_active_{0}; // Number of active (e.g., bound) motors; dynamic
+  int n_docked_{0}; // Number of fully-docked heads able to bind
+  int n_bound_NULL_i_{0};  // Number of NULL-bound heads of singly-bound motor
+  int n_bound_NULL_ii_{0}; // Number of NULL-bound heads of doubly-bound motors
+  int n_bound_ATP_{0};     // Number of ATP-bound motor heads
+  int n_bound_ADPP_i_{0};  // Number of singly-bound heads able to unbind
+  int n_bound_ADPP_ii_{0}; // Number of doubly-bound heads able to unbind
+
+  /* Population trackers -- 'candidates' are targets for possion events */
+  Vec<Kinesin> motors_;   // All motors in system including reservoir; static
+  Vec<Kinesin *> active_; // Active motors (e.g., bound or tethered); dynamic
+  Vec<ENTRY_T> docked_;   // Fully-docked motor heads ready to bind
+  Vec<ENTRY_T> bound_NULL_i_;  // NULL-bound heads of singly-bound motors
+  Vec<ENTRY_T> bound_NULL_ii_; // NULL-bound heads of doubly-bound motors
+  Vec<ENTRY_T> bound_ATP_;     // ATP-bound motor heads
+  Vec<ENTRY_T> bound_ADPP_i_;  // ADPP-bound heads of singly-bound motors
+  Vec<ENTRY_T> bound_ADPP_ii_; // ADPP-bound heads of doubly-bound motors
 
 private:
-  void CalculateCutoffs();
   void SetParameters();
   void GenerateMotors();
   void InitializeLists();
-  void InitializeEvents();
   void InitializeTestEnvironment();
-  void InitializeTestEvents();
+  void InitializeEvents();
 
 public:
   KinesinManagement();
@@ -109,16 +96,9 @@ public:
   void ReportProbabilities();
 
   Kinesin *GetFreeMotor();
-
+  void UpdateLatticeWeights();
   void AddToActive(Kinesin *motor);
   void RemoveFromActive(Kinesin *motor);
-
-  void Update_Weights();
-  void Update_Docked();
-  void Update_Bound_NULL();
-  void Update_Bound_ATP();
-  void Update_Bound_ADPP_I();
-  void Update_Bound_ADPP_II();
 
   void RunKMC();
   void UpdateLists();

@@ -3,7 +3,7 @@ echo STARTING PROCESSIVITY SCAN
 PARAM_FILE="params_processivity.yaml"
 echo BASE PARAM FILE is $PARAM_FILE
 
-for APP_FORCE in 0 1 2 3 4 5 6
+for APP_FORCE in 0 2 4 6 8 10 12
 do
 	FILE_NAME="processivity_${APP_FORCE}pN"
 	echo RUNNING NEW SIM: filename is $FILE_NAME

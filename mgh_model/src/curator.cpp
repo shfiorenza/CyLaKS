@@ -225,22 +225,22 @@ void Curator::ParseParameters() {
   parameters_->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
   parameters_->motors.c_ATP = motors["c_ATP"].as<double>();
   parameters_->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
-  parameters_->motors.k_hydrolyze_stalled =
-      motors["k_hydrolyze_stalled"].as<double>();
   parameters_->motors.k_off_i = motors["k_off_i"].as<double>();
-  parameters_->motors.k_off_i_stalled = motors["k_off_i_stalled"].as<double>();
   parameters_->motors.k_off_ii = motors["k_off_ii"].as<double>();
-  parameters_->motors.endpausing_active =
-      motors["endpausing_active"].as<bool>();
-  parameters_->motors.tethers_active = motors["tethers_active"].as<bool>();
+  parameters_->motors.applied_force = motors["applied_force"].as<double>();
+  parameters_->motors.internal_force = motors["internal_force"].as<double>();
+  parameters_->motors.sigma_off_i = motors["sigma_off_i"].as<double>();
+  parameters_->motors.sigma_off_ii = motors["sigma_off_ii"].as<double>();
+  parameters_->motors.sigma_ATP = motors["sigma_ATP"].as<double>();
   parameters_->motors.k_tether = motors["k_tether"].as<double>();
   parameters_->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
   parameters_->motors.k_untether = motors["k_untether"].as<double>();
   parameters_->motors.r_0 = motors["r_0"].as<double>();
   parameters_->motors.k_spring = motors["k_spring"].as<double>();
   parameters_->motors.k_slack = motors["k_slack"].as<double>();
-  parameters_->motors.stall_force = motors["stall_force"].as<double>();
-  parameters_->motors.applied_force = motors["applied_force"].as<double>();
+  parameters_->motors.endpausing_active =
+      motors["endpausing_active"].as<bool>();
+  parameters_->motors.tethers_active = motors["tethers_active"].as<bool>();
   /* Xlink parameters below */
   YAML::Node xlinks = input["xlinks"];
   parameters_->xlinks.k_on = xlinks["k_on"].as<double>();
@@ -317,19 +317,19 @@ void Curator::ParseParameters() {
   Log("    k_on_ATP = %g /(mM*s)\n", parameters_->motors.k_on_ATP);
   Log("    c_ATP = %g mM\n", parameters_->motors.c_ATP);
   Log("    k_hydrolyze = %g /s\n", parameters_->motors.k_hydrolyze);
-  Log("    k_hydrolyze_stalled = %g /s\n",
-      parameters_->motors.k_hydrolyze_stalled);
   Log("    k_off_i = %g /s\n", parameters_->motors.k_off_i);
-  Log("    k_off_i_stalled = %g /s\n", parameters_->motors.k_off_i_stalled);
   Log("    k_off_ii = %g /s\n", parameters_->motors.k_off_ii);
+  Log("    applied_force = %g pN\n", parameters_->motors.applied_force);
+  Log("    internal_force = %g pN\n", parameters_->motors.internal_force);
+  Log("    sigma_off_i = %g nm\n", parameters_->motors.sigma_off_i);
+  Log("    sigma_off_ii = %g nm\n", parameters_->motors.sigma_off_ii);
+  Log("    sigma_ATP = %g nm\n", parameters_->motors.sigma_ATP);
   Log("    k_tether = %g /(nM*s)\n", parameters_->motors.k_tether);
   Log("    c_eff_tether = %g nM\n", parameters_->motors.c_eff_tether);
   Log("    k_untether = %g /s\n", parameters_->motors.k_untether);
   Log("    r_0 = %g nm\n", parameters_->motors.r_0);
   Log("    k_spring = %g pN/nm\n", parameters_->motors.k_spring);
   Log("    k_slack = %g pN/nm\n", parameters_->motors.k_slack);
-  Log("    stall_force = %g pN\n", parameters_->motors.stall_force);
-  Log("    applied_force = %g pN\n", parameters_->motors.applied_force);
   Log("    tethers_active = %s\n",
       parameters_->motors.tethers_active ? "true" : "false");
   Log("    endpausing_active = %s\n",

@@ -22,7 +22,6 @@ void MicrotubuleManagement::Initialize(system_parameters *parameters,
 void MicrotubuleManagement::InitializeTestEnvironment() {
 
   if (strcmp(properties_->wallace.test_mode_, "motor_lattice_bind") == 0) {
-    // Set parameters
     int lattice_cutoff{properties_->kinesin4.lattice_cutoff_};
     parameters_->microtubules.count = 1;
     parameters_->microtubules.length[0] = 2 * lattice_cutoff + 1;
@@ -104,16 +103,15 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
     n_unocc_xlink_[n_neighbs] = 0;
   }
+  KinesinManagement *motors{&properties_->kinesin4};
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
-      // Uncomment for motor_lattice_bind and self-coop test to work
+      // Uncomment for motor_lattice_step
       // if (wally_->test_mode_ == nullptr) {
-      int n_neighbs{site->GetKif4ANeighborCount()};
-      site->weight_bind_ =
-          properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
-      site->weight_unbind_ =
-          properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+      int n_neighbs_mot{site->GetKif4ANeighborCount()};
+      site->weight_bind_ = motors->weight_neighbs_bind_[n_neighbs_mot];
+      site->weight_unbind_ = motors->weight_neighbs_unbind_[n_neighbs_mot];
       // }
       if (site->occupied_) {
         continue;
@@ -123,7 +121,7 @@ void MicrotubuleManagement::UpdateUnoccupied() {
       unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
     }
   }
-  properties_->kinesin4.Update_Weights();
+  motors->UpdateLatticeWeights();
 }
 
 /*

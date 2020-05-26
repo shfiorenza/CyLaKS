@@ -51,6 +51,7 @@ public:
   void ChangeConformation();
   double GetWeight_Bind_II();
   double GetWeight_Unbind_II();
+  double GetWeight_BindATP_II();
   Monomer *GetActiveHead();
   Monomer *GetDockedHead();
   Tubulin *GetDockSite();

@@ -1,12 +1,20 @@
 concentrations = [20, 50, 80, 120, 220, 420];
 
+% best_wtSq; stats: [2.8, 434, 1.03, 3.4]
+runlengths = [0.956, 1.04, 1.05, 1.11, 2.66, 3.07];
+err_runlengths = [0.17, 0.13, 0.12, 0.12, 0.26, 0.25];
+lifetimes = [1.44, 1.55, 1.65, 1.65, 12.3, 26.5];
+err_lifetimes = [0.25, 0.2, 0.19, 0.18, 1.2, 2.1];
+velocities = [665, 663, 676, 673, 517, 350];
+err_velocities = [18, 10, 12, 10, 25, 24];
 
-runlengths = [1.0, 1.00, 0.982, 1.02, 0.979, 4.49];
-err_runlengths = [0.18, 0.13, 0.12, 0.11, 0.11, 0.35];
-lifetimes = [1.52, 1.52, 1.47, 1.53, 1.47, 17.9];
-err_lifetimes = [0.3, 0.2, 0.17, 0.17, 0.17, 1.4];
-velocities = [666, 662, 668, 671, 672, 465];
-err_velocities = [15, 11, 10, 10, 12, 21];
+%best; stats: [2.8, 875, 0.658, 3.6]
+runlengthsB = [0.97, 1.03, 0.96, 1.03, 1.19, 7.55];
+err_runlengthsB = [0.17, 0.13, 0.11, 0.11, 0.13, 0.56];
+lifetimesB = [1.45, 1.54, 1.45, 1.53, 1.74, 19.05];
+err_lifetimesB = [0.25, 0.2, 0.17, 0.17, 0.19, 1.4];
+velocitiesB = [674, 674, 670, 681, 683, 526];
+err_velocitiesB = [15, 11, 12, 11, 10, 14];
 
 %{
 % velocity-only fit
@@ -58,7 +66,7 @@ subplot(1, 4, 1)
 errorbar(exp_concs, exp_runlengths, exp_err_runlengths, ':d','LineWidth', 2);
 hold on
 errorbar(concentrations, runlengths, err_runlengths, 'o','LineWidth', 2);
-%errorbar(concentrations, runlengthsB, err_runlengthsB, 'o','LineWidth', 2);
+errorbar(concentrations, runlengthsB, err_runlengthsB, 'o','LineWidth', 2);
 ylabel('Run length (microns)');
 %xlim([0 440]);
 %ylim([0 8]);
@@ -67,7 +75,7 @@ subplot(1, 4, 2)
 errorbar(exp_concs, exp_lifetimes, exp_err_lifetimes, ':d','LineWidth', 2);
 hold on
 errorbar(concentrations, lifetimes, err_lifetimes, 'o', 'LineWidth', 2);
-%errorbar(concentrations, lifetimesB, err_lifetimesB, 'o', 'LineWidth', 2);
+errorbar(concentrations, lifetimesB, err_lifetimesB, 'o', 'LineWidth', 2);
 xlabel('KIF4A concentration (pM)');
 ylabel('Life time (seconds)');
 %xlim([0 440]);
@@ -77,7 +85,7 @@ subplot(1, 4, 3)
 errorbar(exp_concs, exp_velocities, exp_err_velocities, ':d','LineWidth', 2);
 hold on
 errorbar(concentrations, velocities, err_velocities, 'o', 'LineWidth', 2);
-%errorbar(concentrations, velocitiesB, err_velocitiesB, 'o', 'LineWidth', 2);
+errorbar(concentrations, velocitiesB, err_velocitiesB, 'o', 'LineWidth', 2);
 ylabel('Velocity (nm/s)');
 %xlim([0 440]);
 %ylim([0 1000]);
@@ -86,9 +94,9 @@ subplot(1, 4, 4);
 hold on
 errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
 errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
-%errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
+errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
 xlim([1 2]);
 ylim([1 2]);
 axis off
-legend({'Data', 'Sim'}, 'location', 'northwestoutside'); %,  ...
+legend({'Data', 'Best fit (weight\_squared)', 'Best fit'}, 'location', 'northwestoutside'); %,  ...
     %'Sim data w/ cooperative unbind\_ii'}, 'location', 'best');

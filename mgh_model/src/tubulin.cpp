@@ -90,52 +90,23 @@ int Tubulin::GetKif4ANeighborCount() {
     return 0;
   }
   int n_neighbs{0};
+  Kinesin *motor{nullptr};
+  if (motor_head_ != nullptr) {
+    motor = motor_head_->motor_;
+  }
   int mt_end{mt_->n_sites_ - 1};
   for (int delta{-1}; delta <= 1; delta += 2) {
     int i_scan = index_ + delta;
     if (i_scan < 0 or i_scan > mt_end) {
       continue;
-    } else if (mt_->lattice_[i_scan].motor_head_ != nullptr) {
-      n_neighbs++;
+    }
+    Kinesin::Monomer *head{mt_->lattice_[i_scan].motor_head_};
+    if (head != nullptr) {
+      // Avoid self-cooperativity
+      if (motor != head->motor_) {
+        n_neighbs++;
+      }
     }
   }
   return n_neighbs;
 }
-
-/*
-void Tubulin::UpdateWeights_Kinesin() {
-
-  // Get weight from neighbor interactions
-  int n_neighbs{GetKif4ANeighborCount()};
-  weight_bind_ = properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
-  weight_unbind_ = properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
-  // Get weight from lattice deformation
-  int cutoff{properties_->kinesin4.lattice_cutoff_};
-  double wt_max{weight_bind_ * properties_->kinesin4.weight_lattice_bind_max_};
-  // Skip delta = 0 to avoid self-coop; will not affect unoccupied sites
-  for (int delta{1}; delta <= cutoff; delta++) {
-    for (int dir{-1}; dir <= 1; dir += 2) {
-      int i_scan{index_ + dir * delta};
-      // Only access sites that exist
-      if (i_scan < 0 or i_scan >= mt_->n_sites_) {
-        continue;
-      }
-      // Only count sites that are occupied by a kinesin motor head
-      Kinesin::Monomer *head{mt_->lattice_[i_scan].motor_head_};
-      if (head == nullptr) {
-        continue;
-      }
-      // Count all singly-bound motors; for doubly-bound motors, only count
-      // trailing head to avoid double-counting
-      if (head->motor_->heads_active_ == 1 or head->trailing_) {
-        weight_bind_ *= properties_->kinesin4.weight_lattice_bind_[delta];
-        weight_unbind_ *= properties_->kinesin4.weight_lattice_unbind_[delta];
-      }
-      if (weight_bind_ > wt_max) {
-        weight_bind_ = wt_max;
-        return;
-      }
-    }
-  }
-}
-*/

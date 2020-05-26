@@ -1,6 +1,6 @@
 
 clear all;
-applied_forces = [-6, -5, -4, -3, -2, -1, 0];
+applied_forces = [-12, -10, -8, -6, -4, -2, 0];
 n_sites = 5000;
 n_steps = 12500000;
 n_mts = 1;
@@ -29,7 +29,7 @@ err_lifetimes = zeros(n_runs, 1);
 avg_velocities = zeros(n_runs, 1);
 err_velocities = zeros(n_runs, 1);
 for i_run = 1 : n_runs 
-    simName = sprintf("processivityB_%ipN", abs(applied_forces(i_run)));
+    simName = sprintf("processivity_%ipN", abs(applied_forces(i_run)));
     motorFileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));
     motor_data_file = fopen(motorFileName);
     raw_motor_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
@@ -178,7 +178,7 @@ ax.FontSize = 12;
 % Label axes, legend, etc. 
 xlabel('Applied force (pN)', 'FontSize', 14);
 ylabel('Run length (nm)', 'FontSize', 14);
-xlim([-6.5 0.5]);
+%xlim([-6.5 0.5]);
 legend({'Experimental data', 'Experimental fit', 'Simulation data'}, ... 
     'location', 'northwest', 'FontSize', 12);
 
@@ -210,6 +210,6 @@ ax = gca;
 ax.FontSize = 12; 
 xlabel('Applied force (pN)', 'FontSize', 14);
 ylabel('Velocity (nm/s)', 'FontSize', 14);
-xlim([-6.5 0.5]);
+%xlim([-6.5 0.5]);
 legend({'Experimental data', 'Experimental fit', 'Simulation data'}, ... 
     'location', 'northwest', 'FontSize', 12);

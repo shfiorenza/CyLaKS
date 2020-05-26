@@ -46,17 +46,12 @@ double Kinesin::GetWeight_Bind_II() {
     return 0.0;
   }
   Monomer *bound_head{GetActiveHead()};
-  return bound_head->site_->weight_bind_;
-  // weight_neighb_bind is 1.0 for all entries as of now -- don't need it
-  /*
-  double raw_weight{bound_head->site_->weight_bind_};
-  return corrected_weight;
+  double corrected_weight{bound_head->site_->weight_bind_};
   int neighbs_dock{dock_site->GetKif4ANeighborCount() - 1};
   int neighbs_bound{bound_head->site_->GetKif4ANeighborCount()};
-  double corrected_weight{raw_weight};
   corrected_weight /= properties_->kinesin4.weight_neighbs_bind_[neighbs_bound];
   corrected_weight *= properties_->kinesin4.weight_neighbs_bind_[neighbs_dock];
-  */
+  return corrected_weight;
 }
 
 double Kinesin::GetWeight_Unbind_II() {
@@ -69,27 +64,40 @@ double Kinesin::GetWeight_Unbind_II() {
   } else if (head_two_.ligand_ == "ADPP") {
     chosen_head = &head_two_;
     if (head_found) {
-      wally_->ErrorExit("Kinesin::GetWeight_Unbind_II()");
+      wally_->ErrorExit("Kinesin::GetWeight_Unbind_II() [1]");
     }
   }
   if (chosen_head == nullptr) {
-    wally_->ErrorExit("Kinesin::GetWeight_Unbind_II()");
+    wally_->ErrorExit("Kinesin::GetWeight_Unbind_II() [2]");
   }
-  double raw_weight{chosen_head->site_->weight_unbind_};
-  double corrected_weight{raw_weight};
-  // To prevent self-cooperativity, divide by self neighb weight
-  corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
-/*
-  // square the contribution from lattice deformations
-  double final_weight{corrected_weight * corrected_weight};
-  // if we have 1 neighb (2 in reality including other bound head), divide
-  // out squared neighb weight
-  int n_neighbs{chosen_head->GetKif4ANeighborCount()};
-  if (n_neighbs == 1) {
-    final_weight /= properties_->kinesin4.weight_neighbs_unbind_[1];
+  double corrected_weight{chosen_head->site_->weight_unbind_};
+  corrected_weight *= corrected_weight;
+  // Divide out one of the squared neighbor weights
+  int n_neighbs{chosen_head->site_->GetKif4ANeighborCount()};
+  corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+  return corrected_weight;
+}
+
+double Kinesin::GetWeight_BindATP_II() {
+
+  Monomer *chosen_head{nullptr};
+  bool head_found{false};
+  if (head_one_.ligand_ == "NULL") {
+    chosen_head = &head_one_;
+    head_found = true;
+  } else if (head_two_.ligand_ == "NULL") {
+    chosen_head = &head_two_;
+    if (head_found) {
+      wally_->ErrorExit("Kinesin::GetWeight_BindATP_II()");
+    }
   }
-  return final_weight;
-*/
+  if (chosen_head == nullptr) {
+    wally_->ErrorExit("Kinesin::GetWeight_BindATP_II()");
+  }
+  double corrected_weight{chosen_head->site_->weight_bind_};
+  // Remove contribution from neighb mechanism
+  int n_neighbs{chosen_head->site_->GetKif4ANeighborCount()};
+  corrected_weight /= properties_->kinesin4.weight_neighbs_bind_[n_neighbs];
   return corrected_weight;
 }
 

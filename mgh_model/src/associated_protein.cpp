@@ -41,10 +41,12 @@ void AssociatedProtein::SetParameters() {
 void AssociatedProtein::InitializeNeighborLists() {
 
   int n_mts{parameters_->microtubules.count};
-  int teth_cutoff{properties_->kinesin4.teth_cutoff_};
   neighbors_bind_ii_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
+  /*
+  int teth_cutoff{properties_->kinesin4.teth_cutoff_};
   neighbors_bind_i_teth_.resize(n_mts * (2 * teth_cutoff + 1));
   neighbors_bind_ii_teth_.resize((n_mts - 1) * (2 * dist_cutoff_ + 1));
+  */
 }
 
 AssociatedProtein::Monomer *AssociatedProtein::GetActiveHead() {

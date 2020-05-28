@@ -52,7 +52,7 @@ void AssociatedProteinManagement::CalculateCutoffs() {
   k_spring_eff_ = k_spring * site_size * site_size / kbT; // in 1 / (n_sites)^2
   double f_cutoff{0.0};
   for (int x_dist{0}; x_dist < 1000; x_dist++) {
-    double r_x{x_dist};
+    double r_x{(double)x_dist};
     double r{sqrt(r_x * r_x + r_y_ * r_y_)};
     double dr{r - r_0_};                                 // in n_sites
     double energy_factor{0.5 * k_spring_eff_ * dr * dr}; // unitless energy
@@ -91,11 +91,13 @@ void AssociatedProteinManagement::SetParameters() {
     weight_neighb_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb_) * energy);
     weight_neighb_unbind_[n_neighbs] = exp(lambda_neighb_ * energy);
   }
+  /*
   // If xlink test mode, initialize MT test environment from AP_MGMT
   auto xlink_test{strstr(wally_->test_mode_, "xlink")};
   if (xlink_test != nullptr) {
     properties_->microtubules.InitializeTestEnvironment();
   }
+*/
 
   // KMC statistics!
   double kbT{parameters_->kbT};
@@ -134,8 +136,6 @@ void AssociatedProteinManagement::SetParameters() {
     }
     p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_base_diffuse_i_;
     p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_base_diffuse_i_;
-    for (int x_dub{0}; x_dub <= 2 * comp_cutoff_) {
-    }
   }
   // Construct array of spring extensions and cosines for each x_dist
   possible_cosines_.resize(2 * dist_cutoff_ + 1);
@@ -190,20 +190,20 @@ void AssociatedProteinManagement::SetParameters() {
   }
   */
   // Characteristic timescale for singly-bound xlink to diffuse 1 site
-  double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
-  double p_diffu_i{delta_t / tau_i};
-  p_diffu_i /= 2;
-  p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
-  p_diffuse_i_bck_.resize(max_neighbs_ + 1);
+  // double tau_i{x_squared / (2 * parameters_->xlinks.diffu_coeff_i)};
+  // double p_diffu_i{delta_t / tau_i};
+  // p_diffu_i /= 2;
+  // p_diffuse_i_fwd_.resize(max_neighbs_ + 1);
+  // p_diffuse_i_bck_.resize(max_neighbs_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_; n_neighbs++) {
-    // currently, diffusion is thought of as an unbinding event
-    double weight_neighb{weight_neighb_unbind_[n_neighbs]};
-    // With two neighbors, the binding head is jammed and cannot diffuse
-    if (n_neighbs == 2) {
-      weight_neighb = 0.0;
-    }
-    p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_diffu_i;
-    p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_diffu_i;
+    // // currently, diffusion is thought of as an unbinding event
+    // double weight_neighb{weight_neighb_unbind_[n_neighbs]};
+    // // With two neighbors, the binding head is jammed and cannot diffuse
+    // if (n_neighbs == 2) {
+    //   weight_neighb = 0.0;
+    // }
+    // p_diffuse_i_fwd_[n_neighbs] = weight_neighb * p_diffu_i;
+    // p_diffuse_i_bck_[n_neighbs] = weight_neighb * p_diffu_i;
     /*
     p_diffuse_ii_to_rest_[n_neighbs].resize(dist_cutoff_ + 1);
     p_diffuse_ii_fr_rest_[n_neighbs].resize(dist_cutoff_ + 1);
@@ -491,9 +491,9 @@ void AssociatedProteinManagement::SetParameters() {
           if (value[i][j].size() > 1) {
             name += "[" + std::to_string(k) + "]";
           }
-          // if (verbosity_ >= 3) {
-          wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
-          // }
+          if (verbosity_ >= 3) {
+            wally_->Log("%s = %g\n", name.c_str(), value[i][j][k]);
+          }
           if (value[i][j][k] > 1.0) {
             wally_->Log("Error! %s = %g\n", name.c_str(), value[i][j][k]);
             // wally_->ErrorExit("AP_MGMT:SetParameters()");

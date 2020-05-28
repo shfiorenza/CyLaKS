@@ -101,7 +101,6 @@ public:
   Vec<ENTRY_T> bound_ATP_;
   Vec<ENTRY_T> bound_ADPP_i_;
   Vec<ENTRY_T> bound_ADPP_ii_;
-  Vec<ENTRY_T> bound_ADPP_ii_;
   Vec<ENTRY_T> bound_unteth_;
   Vec<ENTRY_T> satellites_;
   // Candidates for poisson-based events

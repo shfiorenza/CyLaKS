@@ -25,10 +25,12 @@ void MicrotubuleManagement::InitializeTestEnvironment() {
 
   if (strcmp(wally_->test_mode_, "motor_lattice_coop") == 0) {
     // Set parameters
+    /*
     int lattice_cutoff{properties_->kinesin4.lattice_cutoff_};
     parameters_->microtubules.count = 1;
     parameters_->microtubules.length[0] = 2 * lattice_cutoff + 1;
     parameters_->microtubules.diffusion_on = false;
+    */
   }
   if (strcmp(wally_->test_mode_, "xlink_bind_ii") == 0) {
     int xlink_cutoff{properties_->prc1.dist_cutoff_};
@@ -53,7 +55,7 @@ void MicrotubuleManagement::InitializeTestEnvironment() {
 void MicrotubuleManagement::SetParameters() {
 
   max_neighbs_xlink_ = 2;
-  max_neighbs_motor_ = 0;
+  // max_neighbs_motor_ = 0;
   n_diffusion_iterations_ = parameters_->microtubules.n_iterations;
   dt_eff_ = parameters_->delta_t / n_diffusion_iterations_;
   for (int i_mt{0}; i_mt < parameters_->microtubules.count; i_mt++) {
@@ -77,12 +79,14 @@ void MicrotubuleManagement::InitializeLists() {
     n_unocc_xlink_[n_neighbs] = 0;
     unocc_xlink_[n_neighbs].resize(n_sites_tot_);
   }
+  /*
   n_unocc_motor_.resize(max_neighbs_motor_ + 1);
   unocc_motor_.resize(max_neighbs_motor_ + 1);
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
     n_unocc_motor_[n_neighbs] = 0;
     unocc_motor_[n_neighbs].resize(n_sites_tot_);
   }
+  */
 }
 
 void MicrotubuleManagement::FlagForUpdate() { lists_up_to_date_ = false; }
@@ -110,9 +114,11 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_xlink_; n_neighbs++) {
     n_unocc_xlink_[n_neighbs] = 0;
   }
+  /*
   for (int n_neighbs{0}; n_neighbs <= max_neighbs_motor_; n_neighbs++) {
     n_unocc_motor_[n_neighbs] = 0;
   }
+  */
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
@@ -121,8 +127,8 @@ void MicrotubuleManagement::UpdateUnoccupied() {
       }
       int n_neighbs_xl{site->GetPRC1NeighborCount()};
       unocc_xlink_[n_neighbs_xl][n_unocc_xlink_[n_neighbs_xl]++] = site;
-      int n_neighbs_mot{site->GetKif4ANeighborCount()};
-      unocc_motor_[n_neighbs_mot][n_unocc_motor_[n_neighbs_mot]++] = site;
+      // int n_neighbs_mot{site->GetKif4ANeighborCount()};
+      // unocc_motor_[n_neighbs_mot][n_unocc_motor_[n_neighbs_mot]++] = site;
     }
   }
 }

@@ -1,5 +1,5 @@
 seed: 198261346419
-n_steps: 400000000
+n_steps: 4000000
 n_datapoints: 10000
 data_threshold: 0
 delta_t: 2.5e-05
@@ -8,8 +8,8 @@ eta: 0.001
 microtubules:
   count: 2
   length:
-  - 5000
-  - 5000
+  - 1000
+  - 1000
   - 625
   - 3125
   - 15625
@@ -19,7 +19,7 @@ microtubules:
   elevation: 50
   start_coord:
   - 0
-  - 0.75 # 0.25 # 950
+  - 900
   - 0
   - 0
   - 0
@@ -32,7 +32,7 @@ microtubules:
   n_iterations: 100
   applied_force: 0.0
   printout_on: false
-  diffusion_on: false # true
+  diffusion_on: true
 motors:
   lattice_coop_amp: 5
   lattice_coop_range: 750
@@ -60,10 +60,10 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238 
-  c_bulk: 0.02 # 0.54 # 0.005 # 0.54 # 0.02 #0.54
-  c_eff_bind: 45000 # 4500
+  c_bulk: 0.54
+  c_eff_bind: 4500 
   k_off_i: 0.143
-  k_off_ii: 14.3 # 0.0143 # 0.0715
+  k_off_ii: 0.0143
   r_0: 32
   k_spring: 0.453
   diffu_coeff_i: 0.131

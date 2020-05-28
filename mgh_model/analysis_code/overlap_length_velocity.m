@@ -1,6 +1,6 @@
 clear all;
 % Input parameters
-baseName = "test_expandA";
+baseName = "test2";
 seeds = [0]; %,2,5];%,6,7,4,8];%,8,9]%,11];
 start_point = 0;
 site_size = 0.008; % in nm
@@ -93,14 +93,14 @@ hold all
 subplot(2, 1, 1)
 plot(linspace(start_time, end_time, active_datapoints), overlap_length_data, 'LineWidth', 2);
 hold on
-plot(linspace(start_time, end_time, active_datapoints), plus_end_dist_data, 'LineWidth', 2);
-title('Distance between plus-ends over time');
-ylabel('Plus-end distance (microns)');
+%plot(linspace(start_time, end_time, active_datapoints), plus_end_dist_data, 'LineWidth', 2);
+title('Overlap length over time');
+ylabel('Overlap length (microns)');
 xlabel('Time (s)');
 axis tight
 xlim([start_time end_time]);
-%ylim([0 4.5]);
-legend(["Overlap length", "Plus-end distance"]);
+ylim([-1.0 9.0]);
+%legend(["Overlap length", "Plus-end distance"]);
 grid on
 grid minor
 
@@ -108,7 +108,7 @@ grid minor
 subplot(2, 1, 2)
 plot(linspace(start_time, end_time, active_datapoints), overlap_velocity, 'LineWidth', 2);
 hold on
-plot(linspace(start_time, end_time, active_datapoints), plus_end_velocity, 'LineWidth', 2);
+%plot(linspace(start_time, end_time, active_datapoints), plus_end_velocity, 'LineWidth', 2);
 title('Sliding velocity over time');
 ylabel('Sliding velocity (nm/s)');
 xlabel('Time (s)');
@@ -118,6 +118,6 @@ xlim([start_time end_time]);
 grid on
 grid minor
 
-sgtitle('0.2 nM PRC1 + 6 nM Kif4A');
+%sgtitle('0.2 nM PRC1 + 6 nM Kif4A');
 
 set(gcf, 'color', 'w');

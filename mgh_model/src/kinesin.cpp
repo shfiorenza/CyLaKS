@@ -3,6 +3,7 @@
 
 int Kinesin::Monomer::GetAffinity() {
 
+  /*
   int n_affs{motor_->properties_->kinesin4.n_affinities_};
   if (n_affs <= 1) {
     return 0;
@@ -29,10 +30,12 @@ int Kinesin::Monomer::GetAffinity() {
     }
   }
   return (n_affs - 1);
+  */
 }
 
 int Kinesin::Monomer::GetKif4ANeighborCount() {
 
+  /*
   if (site_ == nullptr or motor_->properties_->kinesin4.max_neighbs_ == 0) {
     return 0;
   }
@@ -41,10 +44,12 @@ int Kinesin::Monomer::GetKif4ANeighborCount() {
     n_neighbs--;
   }
   return n_neighbs;
+  */
 }
 
 int Kinesin::Monomer::GetKif4ANeighborCount_Step() {
 
+  /*
   if (motor_->properties_->kinesin4.max_neighbs_ == 0) {
     return 0;
   }
@@ -60,6 +65,7 @@ int Kinesin::Monomer::GetKif4ANeighborCount_Step() {
   if (rear_head != nullptr and rear_head != GetOtherHead()) {
     return 1;
   }
+  */
   return 0;
 }
 
@@ -82,9 +88,11 @@ void Kinesin::SetParameters() {
   r_0_ = parameters_->motors.r_0;
   k_spring_ = parameters_->motors.k_spring;
   k_slack_ = parameters_->motors.k_slack;
+  /*
   comp_cutoff_ = properties_->kinesin4.comp_cutoff_;
   rest_dist_ = properties_->kinesin4.rest_dist_;
   teth_cutoff_ = properties_->kinesin4.teth_cutoff_;
+  */
 }
 
 void Kinesin::InitializeLookupTables() {
@@ -100,6 +108,7 @@ void Kinesin::InitializeLookupTables() {
     cosine_lookup_[x_dub] = r_x / r;
     extension_lookup_[x_dub] = r - r_0_;
   }
+  /*
   // Copy more involved lookup tables from MGMT to ensure consistency
   weight_tether_bound_.resize(2 * teth_cutoff_ + 1);
   for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
@@ -119,6 +128,7 @@ void Kinesin::InitializeLookupTables() {
       }
     }
   }
+  */
 }
 
 void Kinesin::InitializeNeighborLists() {
@@ -412,7 +422,7 @@ void Kinesin::UpdateNeighbors_Bind_I_Teth() {
       }
       Tubulin *neighb{&mt->lattice_[i_neighb]};
       if (!neighb->occupied_) {
-        int neighb_coord{i_neighb + mt->coord_};
+        int neighb_coord{i_neighb + (int)mt->coord_};
         int x_dub{(int)(2 * fabs(anchor_coord - neighb_coord))};
         if (x_dub >= 2 * comp_cutoff_ and x_dub <= 2 * teth_cutoff_) {
           neighbors_bind_i_teth_[n_neighbors_bind_i_teth_++] = neighb;

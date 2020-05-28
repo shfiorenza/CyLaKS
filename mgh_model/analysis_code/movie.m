@@ -1,10 +1,9 @@
 clear all;
 % Parameters from sim
-mt_lengths = [11, 11]; %, 500];
+mt_lengths = [1000, 500]; %, 500];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
-simName = "xlink_diffusion_doubleC_0_0";
-simName = "test_1_0.75";
+simName = "test";
 dur_sec = 60;
 % Pseudo-constant variables
 n_steps = 4000000;

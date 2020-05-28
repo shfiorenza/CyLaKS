@@ -365,7 +365,7 @@ void Curator::OutputData() {
   // Create arrays to store data; ptrs to write it to file
   double mt_coord_array[n_mts];
   // For extension statistics, data is on a per-extension basis
-  int motor_ext_cutoff = properties_->kinesin4.teth_cutoff_;
+  int motor_ext_cutoff = 0; // properties_->kinesin4.teth_cutoff_;
   int motor_extension_array[2 * motor_ext_cutoff + 1];
   int *motor_extension_ptr = motor_extension_array;
   int xlink_ext_cutoff = properties_->prc1.dist_cutoff_;

@@ -87,6 +87,7 @@ int Tubulin::GetPRC1NeighborCount() {
 
 int Tubulin::GetKif4ANeighborCount() {
 
+  /*
   if (properties_->kinesin4.max_neighbs_ == 0) {
     return 0;
   }
@@ -101,4 +102,5 @@ int Tubulin::GetKif4ANeighborCount() {
     }
   }
   return n_neighbs;
+  */
 }

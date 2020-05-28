@@ -10,6 +10,7 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   wally_ = &properties->wallace;
   parameters_ = parameters;
   properties_ = properties;
+  /*
   CalculateCutoffs();
   SetParameters();
   GenerateMotors();
@@ -21,11 +22,12 @@ void KinesinManagement::Initialize(system_parameters *parameters,
   else {
     t_active_ = std::numeric_limits<double>::max();
   }
+  */
 }
-
+/*
 void KinesinManagement::CalculateCutoffs() {
 
-  /*
+
    For events that result in a change in energy, we use Boltzmann factors to
    scale rates appropriately. Detailed balance is satisfied with the factors:
                  exp{-(1 - lambda)*(delta_E)/(kB*T)}, and
@@ -33,18 +35,16 @@ void KinesinManagement::CalculateCutoffs() {
    for an event and its complement (e.g., binding and unbinding), where lambda
    is a constant that ranges from 0 to 1, delta_E is the change in energy that
    results from the event, kB is Boltzmann's constant, and T is the temperature
- */
-  /*
+
     For tethered motor binding & unbinding, we use force-dependence instead:
                 exp{-(1 - lambda)*(f_teth * delta_off)/(kB*T)}, and
                 exp{lambda*(f_teth * delta_off)/(kB*T)}
     for binding and unbinding, respectively.
-  */
-  /*
+
      For stepping rates (ATP binding), we use a linear scaling based on the
      motor's so-called "stall force," the force at which it's velocity is 0:
                 p_step -> p_step * (1 - f_x / f_stall)
-  */
+
   // Lambda = 0.5 means energy dependence is equal for binding and unbinding
   double lambda_lattice{0.5}; // Lambda for lattice interactions
   // Lambda = 1.0 means all energy dependence is in unbinding
@@ -405,7 +405,7 @@ void KinesinManagement::InitializeLists() {
 
 void KinesinManagement::InitializeEvents() {
 
-  /* * Function that sets n random indices from the range [0, m) * */
+  // Function that sets n random indices from the range [0, m)
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
@@ -413,7 +413,7 @@ void KinesinManagement::InitializeEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  // Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n > 0) {
       return properties_->gsl.SampleBinomialDist(p, n);
@@ -421,8 +421,7 @@ void KinesinManagement::InitializeEvents() {
       return 0;
     }
   };
-  /* * Event entries * */
-  /*
+  // Event entries
   std::string event_name; // scratch space to construct each event name
   // Bind_I: bind first motor head to MT and release ADP
   auto exe_bind_i = [&](ENTRY_T target) {
@@ -695,7 +694,6 @@ void KinesinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_untether_satellite_, &n_satellites_,
                          &satellites_, exe_untether, binomial, set_ran_indices);
   }
-  */
   if (verbosity_ >= 3) {
     wally_->Log("\nMotor events: \n");
     for (const auto &event : events_) {
@@ -703,6 +701,7 @@ void KinesinManagement::InitializeEvents() {
     }
   }
 }
+*/
 
 void KinesinManagement::ReportProbabilities() {
 
@@ -713,41 +712,31 @@ void KinesinManagement::ReportProbabilities() {
     auto label = entry.first;
     auto value = entry.second;
     for (int i{0}; i < value.size(); i++) {
-      for (int j{0}; j < value[i].size(); j++) {
-        for (int k{0}; k < value[i][j].size(); k++) {
-          std::string name{label};
-          if (value.size() > 1) {
-            name += "_" + std::to_string(i);
-          }
-          if (value[i].size() > 1) {
-            name += "_" + std::to_string(j);
-          }
-          if (value[i][j].size() > 1) {
-            name += "_" + std::to_string(k);
-          }
-          auto event = std::find_if(
-              events_.begin(), events_.end(),
-              [&name](EVENT_T const &event) { return event.name_ == name; });
-          if (event->name_ != name) {
-            printf("Couldn't find %s\n", name.c_str());
-            continue;
-          }
-          if (event->n_opportunities_tot_ == 0) {
-            printf("No statistics for %s\n", name.c_str());
-            continue;
-          }
-          double n_exe_tot{(double)event->n_executed_tot_};
-          double n_opp_tot{(double)event->n_opportunities_tot_};
-          if (n_opp_tot < 0.0) {
-            printf("WHAT?? n_opp = %g\n", n_opp_tot);
-            exit(1);
-          }
-          wally_->Log("For Kin event %s:\n", event->name_.c_str());
-          wally_->Log("   p_theory = %g\n", value[i][j][k]);
-          wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
-          wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
-        }
+      std::string name{label};
+      if (value.size() > 1) {
+        name += "_" + std::to_string(i);
       }
+      auto event = std::find_if(
+          events_.begin(), events_.end(),
+          [&name](EVENT_T const &event) { return event.name_ == name; });
+      if (event->name_ != name) {
+        printf("Couldn't find %s\n", name.c_str());
+        continue;
+      }
+      if (event->n_opportunities_tot_ == 0) {
+        printf("No statistics for %s\n", name.c_str());
+        continue;
+      }
+      double n_exe_tot{(double)event->n_executed_tot_};
+      double n_opp_tot{(double)event->n_opportunities_tot_};
+      if (n_opp_tot < 0.0) {
+        printf("WHAT?? n_opp = %g\n", n_opp_tot);
+        exit(1);
+      }
+      wally_->Log("For Kin event %s:\n", event->name_.c_str());
+      wally_->Log("   p_theory = %g\n", value[i]);
+      wally_->Log("   p_actual = %g", n_exe_tot / n_opp_tot);
+      wally_->Log(" (n_exe = %i)\n", event->n_executed_tot_);
     }
   }
 }
@@ -788,6 +777,7 @@ void KinesinManagement::RemoveFromActive(Kinesin *motor) {
   n_active_--;
 }
 
+/*
 void KinesinManagement::ReportExecutionOf(std::string event_name) {
 
   if (verbosity_ < 1) {
@@ -802,6 +792,7 @@ void KinesinManagement::ReportFailureOf(std::string event_name) {
   printf("yo we failed to execute ");
   std::cout << event_name << std::endl;
 }
+*/
 
 void KinesinManagement::FlagForUpdate() { lists_up_to_date_ = false; }
 
@@ -831,6 +822,7 @@ void KinesinManagement::Update_Extensions() {
   }
 }
 
+/*
 void KinesinManagement::Update_Weights() {
 
   for (int x_dub{x_dub_min_}; x_dub <= 2 * x_dub_max_; x_dub++) {
@@ -1256,6 +1248,7 @@ void KinesinManagement::Set_Tether_Bound_Candidates(int n_to_set) {
     tether_bound_candidates_[i_entry] = selected_candidates[i_entry];
   }
 }
+*/
 
 void KinesinManagement::RunKMC() {
 
@@ -1265,20 +1258,19 @@ void KinesinManagement::RunKMC() {
   if (!population_active_) {
     return;
   }
-  UpdateLists();
-  SampleEventStatistics();
-  GenerateExecutionSequence();
-  ExecuteEvents();
+  // UpdateLists();
+  // SampleEventStatistics();
+  // GenerateExecutionSequence();
+  // ExecuteEvents();
 }
 
+/*
 void KinesinManagement::UpdateLists() {
 
-  /*
-  if (lists_up_to_date_) {
-    return;
-  }
-  lists_up_to_date_ = true;
-  */
+  // if (lists_up_to_date_) {
+  //   return;
+  // }
+  // lists_up_to_date_ = true;
 
   Update_Extensions();
   properties_->microtubules.UpdateUnoccupied();
@@ -1559,3 +1551,4 @@ void KinesinManagement::Untether(POP_T *head) {
   }
   properties_->prc1.FlagForUpdate();
 }
+*/

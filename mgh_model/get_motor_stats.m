@@ -1,23 +1,31 @@
-function mot_stats = get_motor_stats(simName, n_sites)
+%function mot_stats = get_motor_stats(sim_name)
 
-% Often-changed variables
-%n_sites = 5000;
-% Pseudo-constant variables
-n_mts = 1;
-delta_t = 0.0002;
-n_steps = 1250000;
-n_datapoints = 10000;
+sim_name = "test";
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s.log', sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, "count")});
+n_sites = values{contains(params, "length")};
+n_sites = sscanf(n_sites, '%i');
+% Read in system params
+delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
+n_steps = str2double(values{contains(params, "n_steps")});
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, "n_datapoints")});
 time_per_datapoint = delta_t * n_steps / n_datapoints;
-starting_point = 1;
-time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
+% Use actual recorded number of datapoints to parse thru data/etc
+datapoint_string = "N_DATAPOINTS";
+if all(contains(params, datapoint_string) == 0)
+   datapoint_string = "n_datapoints"; 
+end
+n_datapoints = str2double(values{contains(params, datapoint_string)});
 
-fileDirectory = '/projects/shfi4480/overlap_analysis/mgh_model/%s';
-%fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-motorFileStruct = '%s_motorID.file';
-
-motorFileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));
-motor_data_file = fopen(motorFileName);
+% Open motor ID file and read in data 
+motor_data_file = fopen(sprintf('%s_motorID.file', sim_name));
 raw_motor_data = fread(motor_data_file, n_mts * n_sites * n_datapoints, '*int');
 fclose(motor_data_file);
 motor_data = reshape(raw_motor_data, n_sites, n_mts, n_datapoints);
@@ -34,7 +42,7 @@ n_runs = 0;
 starting_site = zeros([n_mts*n_sites 1]) - 1;
 starting_datapoint = zeros([n_mts*n_sites 1]) - 1;
 
-for i_data = starting_point:1:n_datapoints - 1
+for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
@@ -74,7 +82,6 @@ for i_data = starting_point:1:n_datapoints - 1
             end
         end
         % Check one datapoint into the future to see if any motors unbound
-
         n_deleted = 0;
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
@@ -88,11 +95,11 @@ for i_data = starting_point:1:n_datapoints - 1
                 run_length = delta * site_size;
                 % Calculate time bound
                 start_datapoint = starting_datapoint(motor_ID);
-                delta_t = abs(i_data - start_datapoint);
-                run_time = delta_t * time_per_datapoint;
+                delta_time = abs(i_data - start_datapoint);
+                run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if end_site(1) > endtag_boundary
+                if end_site(1) > endtag_boundary && run_time > 0
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
@@ -146,4 +153,4 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
-end
+%end

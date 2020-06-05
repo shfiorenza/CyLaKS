@@ -1000,4 +1000,16 @@ void KinesinManagement::Unbind_I(POP_T *head) {
   RemoveFromActive(motor);
   // Flag microtubules for update
   properties_->microtubules.FlagForUpdate();
+  // Update number of kinesin runs
+  n_runs_executed_++;
+  if (n_runs_executed_ >= n_runs_desired_) {
+    n_events_to_exe_ = 0;
+    properties_->sim_running_ = false;
+    wally_->Log("Sim '%s' terminated after %i successful Kinesin runs\n",
+                wally_->sim_name_, n_runs_executed_);
+    size_t steps_recorded{properties_->current_step_ - wally_->data_threshold_};
+    size_t n_datapoints{steps_recorded / wally_->n_steps_per_output_};
+    wally_->Log("N_STEPS = %zu\n", properties_->current_step_);
+    wally_->Log("N_DATAPOINTS = %zu\n", n_datapoints);
+  }
 }

@@ -11,16 +11,17 @@ using sys_timepoint = sys_clock::time_point;
 class Curator {
 private:
   FILE *log_file_{nullptr};
+
+  system_parameters *parameters_;
+  system_properties *properties_;
+
+public:
   unsigned long data_threshold_{0};
   unsigned long n_steps_recorded_{0};
   unsigned long n_steps_per_output_{0};
   unsigned long equil_milestone_{0};
   unsigned long data_milestone_{0};
 
-  system_parameters *parameters_;
-  system_properties *properties_;
-
-public:
   int verbosity_{0};
   double t_motors_[4];
   double t_xlinks_[4];
@@ -73,7 +74,7 @@ public:
     }
     Log(msg, args...);
   }
-  void UpdateTimestep(unsigned long i_step);
+  void UpdateTimestep();
   void PrintMicrotubules();
   void PrintMicrotubules(double pause_duration);
   void PauseSim(double duration);

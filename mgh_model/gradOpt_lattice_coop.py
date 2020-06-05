@@ -12,7 +12,7 @@ from math import sqrt
 MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
-sim_name_base = "kif4a_coop_optimization_summit"
+sim_name_base = "kif4a_coop_opt_summit"
 param_file_base = "params_processivity.yaml"
 log_file = sim_name_base + ".scan"
 
@@ -24,25 +24,15 @@ step_size = [1, 50, 0.5, 1]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
-#kif4a_conc = [20, 120, 220, 420]
-# n_sites to be used for each conc run, respectively
-n_sites = [75000, 50000, 40000, 30000, 15000, 10000]
-#n_sites = [75000, 25000, 8500, 3250]
 # Experimental Kif4A run lengths at each concentration
 exp_runlengths = [0.9735, 1.310, 2.420, 1.659, 1.964, 2.855]
 exp_err_runlengths = [0.18, 0.32, 0.35, 0.94, 0.31, 0.72]
-#exp_runlengths = [0.9735, 1.659, 1.964, 2.855]
-#exp_err_runlengths = [0.18, 0.94, 0.31, 0.72]
 # Experiemntal Kif4A life times at each concentration
 exp_lifetimes = [1.821, 2.083, 7.096, 5.233, 8.308, 17.95]
 exp_err_lifetimes = [0.56, 0.75, 1.8, 5.9, 2.6, 3.9]
-#exp_lifetimes = [1.821, 5.233, 8.308, 17.95]
-#exp_err_lifetimes = [0.56, 5.9, 2.6, 3.9]
 # Experimental Kif4A velocities at each concentration
 exp_velocities = [598.6, 709.9, 360.8, 311.2, 308.52, 180.7]
 exp_err_velocities = [76, 110, 49, 78, 40, 38]
-#exp_velocities = [598.6, 311.2, 308.52, 180.7]
-#exp_err_velocities = [76, 78, 40, 38]
 
 # Create logger to record history of optimizer
 log = logging.getLogger()
@@ -88,8 +78,6 @@ def kif4a_coop_scaling(params):
         yaml_edit = "yq w -i " + param_file + " motors."
         call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
              shell=True)  # Convert conc from pM to nM
-        call("yq w -i " + param_file +
-             " microtubules.length[0] " + repr(n_sites[i_conc]), shell=True)
         for i in range(len(params)):
             call(yaml_edit + param_label[i] +
                  " " + repr(params[i]), shell=True)
@@ -108,20 +96,20 @@ def kif4a_coop_scaling(params):
     weighted_errors = []
     for i_conc in range(len(kif4a_conc)):
         kif4a_stats = MATLAB.get_motor_stats(
-            str(sim_names[i_conc]), float(n_sites[i_conc]))
+            str(sim_names[i_conc])
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
-        err_runlength = (
+        err_runlength=(
             exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
         log.info("      Runlength error: {}".format(err_runlength))
-        err_lifetime = (
+        err_lifetime=(
             exp_lifetimes[i_conc] - kif4a_stats[0][2]) / exp_err_lifetimes[i_conc]
         log.info("      Lifetime error: {}".format(err_lifetime))
-        err_velocity = (
+        err_velocity=(
             exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
-        #weighted_errors.append(err_runlength**2 + err_lifetime**2 + err_velocity**2)
-        weighted_errors.append(err_lifetime**2)
+        weighted_errors.append(
+            err_runlength**2 + err_lifetime**2 + err_velocity**2)
     log.info("Weighted errors: {}".format(weighted_errors))
     # Move log file into output folder to keep a record of all runs
     call("mv *.log grad_descent_output", shell=True)
@@ -132,14 +120,14 @@ def kif4a_coop_scaling(params):
     return weighted_errors
 
 
-already_made = os.path.isfile("./sim")
+already_made=os.path.isfile("./sim")
 if not already_made:
     call("make -j12 CFG=release sim", shell=True)
-ready_for_output = os.path.isfile("/grad_descent_output/")
+ready_for_output=os.path.isfile("/grad_descent_output/")
 if not ready_for_output:
     call("mkdir grad_descent_output", shell=True)
 log.info("Start of gradient descent parameter optimization")
 log.info("Initial parameters: {}".format(param_initialVal))
-res = least_squares(kif4a_coop_scaling, param_initialVal,
+res=least_squares(kif4a_coop_scaling, param_initialVal,
                     bounds=param_bounds, diff_step=step_size,
                     x_scale='jac', verbose=2, xtol=None)

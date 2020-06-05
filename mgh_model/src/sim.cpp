@@ -7,8 +7,8 @@ int main(int argc, char *argv[]) {
   // Initialize sim: parse params & make objects (MTs, kinesin, MAPs, etc)
   properties.wallace.InitializeSimulation(argv, &properties, &parameters);
   // Main KMC loop
-  for (int i_step{0}; i_step < parameters.n_steps; i_step++) {
-    properties.wallace.UpdateTimestep(i_step);
+  while (properties.sim_running_) {
+    properties.wallace.UpdateTimestep();
     properties.kinesin4.RunKMC();
     // properties.prc1.RunKMC();
     // properties.microtubules.RunDiffusion();

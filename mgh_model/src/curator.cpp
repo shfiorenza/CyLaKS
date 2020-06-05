@@ -146,16 +146,6 @@ void Curator::GenerateDataFiles() {
   properties_->total_force_file_ = OpenFile(total_force_file, "w");
   // bool; simply says if motor head is trailing or not
   properties_->motor_head_status_file_ = OpenFile(motor_head_status_file, "w");
-
-  if (test_mode_ != nullptr) {
-    printf("hello\n");
-    printf("test mode is %s\n", test_mode_);
-    if (strcmp(test_mode_, "bind_ii") == 0) {
-      char bind_ii_test_file[256];
-      sprintf(bind_ii_test_file, "%s_bind_ii_test_data.file", sim_name_);
-      properties_->bind_ii_test_file_ = OpenFile(bind_ii_test_file, "w");
-    }
-  }
 }
 
 void Curator::ParseParameters() {
@@ -571,11 +561,14 @@ void Curator::ErrorExit(const char *function_name) {
   exit(1);
 }
 
-void Curator::UpdateTimestep(unsigned long i_step) {
+void Curator::UpdateTimestep() {
 
-  properties_->current_step_ = i_step;
-  if (i_step == 0) {
+  if (properties_->current_step_ == 0) {
     start_ = sys_clock::now();
+  }
+  int i_step{++properties_->current_step_};
+  if (properties_->current_step_ == parameters_->n_steps) {
+    properties_->sim_running_ = false;
   }
   // Give updates on equilibrium process (every 10 percent)
   if (i_step < data_threshold_ and i_step % equil_milestone_ == 0) {

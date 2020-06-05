@@ -34,6 +34,8 @@ public:
   std::map<std::string, Vec<double>> test_ref_;
 
   /* Auxiliary functions */
+  size_t n_runs_desired_{1000};
+  size_t n_runs_executed_{0};
   size_t step_active_{0};           // KMC step at which motors become active
   bool population_active_{false};   // Switch for motor activity
   bool lattice_coop_active_{false}; // Switch for lattice deformation effect

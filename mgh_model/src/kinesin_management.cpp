@@ -217,7 +217,7 @@ void KinesinManagement::InitializeTestEnvironment() {
     // If test_delta is left uninitialized, test checks against self-coop
     double test_weight_bind{1.0};
     double test_weight_unbind{1.0};
-    int test_delta{-1};
+    int test_delta{5};
     if (test_delta > 0) {
       test_weight_bind = weight_lattice_bind_[test_delta];
       test_weight_unbind = weight_lattice_unbind_[test_delta];

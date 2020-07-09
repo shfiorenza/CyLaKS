@@ -1,52 +1,72 @@
-function endtag_length = get_endtag_length(sim_name, n_sites)
+function endtag_length = get_endtag_length(sim_name)
 
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_datapoints = 10000;
-starting_point = 7500;
-active_datapoints = n_datapoints - starting_point;
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileStruct = '%s_%i_occupancy.file';
+site_size = 0.008; % in um
 
-fileName = sprintf(fileDirectory, sprintf(fileStruct, sim_name, n_sites));
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s.log', sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+n_sites = values{contains(params, "length")};
+n_sites = sscanf(n_sites, '%i');
+% Use actual recorded number of datapoints to parse thru data/etc
+datapoint_string = "N_DATAPOINTS";
+if all(contains(params, datapoint_string) == 0)
+   datapoint_string = "n_datapoints"; 
+end
+n_datapoints = str2double(values{contains(params, datapoint_string)});
+
+fileName = sprintf("%s_occupancy.file", sim_name);
 data_file = fopen(fileName);
 motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');
 xlink_raw_data = motor_raw_data;
 fclose(data_file);
 
 motor_avg_occupancy = zeros([n_sites 1]);
-xlink_avg_occupancy = zeros([n_sites 1]);
-
 motor_raw_data(motor_raw_data ~= motor_speciesID) = 0;
 motor_raw_data(motor_raw_data == motor_speciesID) = 1;
 
+xlink_avg_occupancy = zeros([n_sites 1]);
 xlink_raw_data(xlink_raw_data ~= xlink_speciesID) = 0;
 xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 
+starting_point = 199 * n_datapoints / 200;
+active_datapoints = n_datapoints - starting_point + 1;
+
 % Read in and average occupancy data over all datapoints
-for i=starting_point:1:n_datapoints
+for i = starting_point : 1 : n_datapoints
     motor_avg_occupancy(:,1) = motor_avg_occupancy(:,1) + double(motor_raw_data(:,i))./active_datapoints;
     xlink_avg_occupancy(:,1) = xlink_avg_occupancy(:,1) + double(xlink_raw_data(:,i))./active_datapoints;
 end
 
-motor_smoothed_avg = smoothdata(motor_avg_occupancy);
-xlink_smoothed_avg = smoothdata(xlink_avg_occupancy);
-net_smoothed_avg = motor_smoothed_avg + xlink_smoothed_avg;
-occupancy_slope = abs(gradient(net_smoothed_avg, 0.08));
-max_slope = max(occupancy_slope);
+smooth_window = n_sites / 20;
+motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
+xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
+net_occupancy = motor_occupancy + xlink_occupancy;
+occupancy_slope = smoothdata(gradient(net_occupancy, 0.008),'movmean', smooth_window);
+occupancy_accel = smoothdata(gradient(occupancy_slope, 0.008), 'movmean', smooth_window);
+max_occupancy = max(net_occupancy);
+min_slope = min(occupancy_slope);
 
+past_threshold = false;
+i_threshold = 0;
 endtag_site = 0;
-past_max = false;
 for i_site=1:n_sites
-    if(occupancy_slope(i_site) >= max_slope)
-        past_max = true;
+    if(~past_threshold && net_occupancy(i_site) < 0.5 * max_occupancy)
+        past_threshold = true;
+        i_threshold = i_site;
     end
-    if(occupancy_slope(i_site) < max_slope/2 && past_max)
+    if(past_threshold && occupancy_slope(i_site) > (0.5 * min_slope))
         endtag_site = i_site;
         break;
     end
 end
-
-endtag_length = endtag_site*0.008;
+if endtag_site == 0
+    [max_accel, i_peak] = max(occupancy_accel(i_threshold + 1:n_sites));
+    endtag_site = i_threshold + i_peak;
+end
+endtag_length = endtag_site * site_size;
 
 end

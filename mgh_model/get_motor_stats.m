@@ -1,6 +1,5 @@
-%function mot_stats = get_motor_stats(sim_name)
+function mot_stats = get_motor_stats(sim_name)
 
-sim_name = "test";
 % Open log file and parse it into param labels & their values
 log_file = sprintf('%s.log', sim_name);
 log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
@@ -153,4 +152,4 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
-%end
+end

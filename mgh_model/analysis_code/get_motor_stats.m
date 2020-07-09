@@ -1,24 +1,31 @@
 function mot_stats = get_motor_stats(sim_name)
 
-% Often-changed variables
-n_sites = 50000;
-simName = sim_name;
-% Pseudo-constant variables
-n_mts = 1;
-delta_t = 0.000025;
-n_steps = 40000000;
-n_datapoints = 10000;
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s.log', sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, "count")});
+n_sites = values{contains(params, "length")};
+n_sites = sscanf(n_sites, '%i');
+% Read in system params
+delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
+n_steps = str2double(values{contains(params, "n_steps")});
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, "n_datapoints")});
 time_per_datapoint = delta_t * n_steps / n_datapoints;
-starting_point = 1;
-time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
+% Use actual recorded number of datapoints to parse thru data/etc
+datapoint_string = "N_DATAPOINTS";
+if all(contains(params, datapoint_string) == 0)
+   datapoint_string = "n_datapoints"; 
+end
+n_datapoints = str2double(values{contains(params, datapoint_string)});
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-motorFileStruct = '%s_motorID.file';
-
-motorFileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));
-motor_data_file = fopen(motorFileName);
-raw_motor_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
+% Open motor ID file and read in data 
+motor_data_file = fopen(sprintf('%s_motorID.file', sim_name));
+raw_motor_data = fread(motor_data_file, n_mts * n_sites * n_datapoints, '*int');
 fclose(motor_data_file);
 motor_data = reshape(raw_motor_data, n_sites, n_mts, n_datapoints);
 
@@ -27,15 +34,27 @@ active_motors = zeros([n_mts n_mts*n_sites]);
 n_active = zeros([n_mts 1]);
 
 % motor ID is unique; make following arrays serial w/ ID as index
-run_lengths = zeros([(n_mts*n_sites) 1]);
-run_times = zeros([(n_mts*n_sites) 1]);
+runlengths = zeros([(n_mts*n_sites) 1]);
+lifetimes = zeros([(n_mts*n_sites) 1]);
+velocities = zeros([(n_mts*n_sites) 1]);
 n_runs = 0;
 starting_site = zeros([n_mts*n_sites 1]) - 1;
 starting_datapoint = zeros([n_mts*n_sites 1]) - 1;
 
-for i_data = starting_point:1:n_datapoints - 1
+for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
+        future_IDs = motor_data(:, i_mt, i_data + 1);
+        endtag_boundary = 1;
+        % Determine end-tag region; ignore motors that terminate here
+        for i_site=1:n_sites
+           motor_ID = future_IDs(i_site);
+           if motor_ID ~= -1
+               endtag_boundary = i_site + 1;
+           else
+               break;    
+           end
+        end
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -62,7 +81,6 @@ for i_data = starting_point:1:n_datapoints - 1
             end
         end
         % Check one datapoint into the future to see if any motors unbound
-        future_IDs = motor_data(:, i_mt, i_data + 1);
         n_deleted = 0;
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
@@ -76,16 +94,19 @@ for i_data = starting_point:1:n_datapoints - 1
                 run_length = delta * site_size;
                 % Calculate time bound
                 start_datapoint = starting_datapoint(motor_ID);
-                delta_t = abs(i_data - start_datapoint);
-                run_time = delta_t * time_per_datapoint;
+                delta_time = abs(i_data - start_datapoint);
+                run_time = delta_time * time_per_datapoint;
+                velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if run_time >= time_cutoff
+                if end_site(1) > endtag_boundary && run_time > 0
                     n_runs = n_runs + 1;
-                    run_lengths(n_runs) = run_length;
-                    run_times(n_runs) = run_time;
+                    runlengths(n_runs) = run_length;
+                    lifetimes(n_runs) = run_time;
+                    velocities(n_runs) = velocity;
                 end
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
+                % Switch now-deleted entry with last entry in active_motors
                 active_motors(i_mt, i_adj) = active_motors(i_mt, n_active(i_mt));
                 active_motors(i_mt, n_active(i_mt)) = -1;
                 n_active(i_mt) = n_active(i_mt) - 1;
@@ -95,36 +116,40 @@ for i_data = starting_point:1:n_datapoints - 1
     end
 end
 % trim arrays to get rid of un-used containers
-run_lengths = run_lengths(1:n_runs);
-run_times = run_times(1:n_runs);
+runlengths = runlengths(1:n_runs);
+lifetimes = lifetimes(1:n_runs);
+velocities = velocities(1:n_runs);
 
 % matlab's exponential fit always goes to zero; offset it appropriately
-min_run = min(run_lengths);
-run_lengths = run_lengths - min_run;
+min_run = min(runlengths);
+runlengths = runlengths - min_run;
 % fit distribution of shifted run lengths
-run_dist = fitdist(run_lengths, 'exponential');
+run_dist = fitdist(runlengths, 'exponential');
 mean_run = run_dist.mu + min_run;
-conf_inv_run = paramci(run_dist);
-sigma_run = abs(conf_inv_run(2) - conf_inv_run(1)) / 2;
+ci_run = paramci(run_dist);
+err_run = abs(ci_run(2) - ci_run(1)) / 2;
 
 % matlab's exponential fit always goes to zero; offset it appropriately
-min_time = min(run_times);
-run_times = run_times - min_time;
+min_time = min(lifetimes);
+lifetimes = lifetimes - min_time;
 % fit distribution of shifted run times
-time_dist = fitdist(run_times, 'exponential');
+time_dist = fitdist(lifetimes, 'exponential');
 % get mean run time
 mean_time = time_dist.mu + min_time;
-% get confidence interval of mean run time
-conf_inv_time = paramci(time_dist);
-% calculate sigma
-sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
+ci_time = paramci(time_dist);
+err_time = abs(ci_time(2) - ci_time(1)) / 2;
 
-% Calculate avg velocity
-vel = mean_run * 1000 / mean_time;
-sigma_vel = sqrt((sigma_time/mean_time)^2 + (sigma_run/mean_run)^2) * vel;
+vel_dist = fitdist(velocities, 'normal');
+mean_vel = vel_dist.mu;
+ci_vel = paramci(vel_dist);
+err_vel = abs(ci_vel(2) - ci_vel(1)) / 2;
+
 
 mot_stats(1) = mean_run;
-mot_stats(2) = mean_time;
-mot_stats(3) = vel;
+mot_stats(2) = err_run;
+mot_stats(3) = mean_time;
+mot_stats(4) = err_time;
+mot_stats(5) = mean_vel;
+mot_stats(6) = err_vel;
 
 end

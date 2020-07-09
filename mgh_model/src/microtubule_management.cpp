@@ -107,12 +107,12 @@ void MicrotubuleManagement::UpdateUnoccupied() {
   for (int i_mt{0}; i_mt < mt_list_.size(); i_mt++) {
     for (int i_site{0}; i_site < mt_list_[i_mt].n_sites_; i_site++) {
       Tubulin *site{&mt_list_[i_mt].lattice_[i_site]};
-      // Uncomment for motor_lattice_step
-      // if (wally_->test_mode_ == nullptr) {
-      int n_neighbs_mot{site->GetKif4ANeighborCount()};
-      site->weight_bind_ = motors->weight_neighbs_bind_[n_neighbs_mot];
-      site->weight_unbind_ = motors->weight_neighbs_unbind_[n_neighbs_mot];
-      // }
+      // Uncomment for motor_lattice_step w/ delta > 0
+      if (wally_->test_mode_ == nullptr or properties_->current_step_ == 0) {
+        int n_neighbs_mot{site->GetKif4ANeighborCount()};
+        site->weight_bind_ = motors->weight_neighbs_bind_[n_neighbs_mot];
+        site->weight_unbind_ = motors->weight_neighbs_unbind_[n_neighbs_mot];
+      }
       if (site->occupied_) {
         continue;
       }

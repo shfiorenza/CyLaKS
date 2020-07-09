@@ -1,19 +1,19 @@
 
 clear all;
 % Often-changed variables
-i_conc = 6;
+i_conc = 2;
 kif4a_concs = [20, 50, 80, 120, 220, 420];
 mt_lengths = [75000, 50000, 40000, 25000, 8500, 3250];
 conc = kif4a_concs(i_conc);
-%n_sites = mt_lengths(i_conc);
-n_sites = 5000;
+n_sites = mt_lengths(i_conc);
+%n_sites = 1250;
 %simName = sprintf("kif4a_coop_optimization_lifetimeOnly_10.1_%i", conc);
-%simName = sprintf("lattice_coop_%i", conc);
-simName = "test";
+simName = sprintf("lattice_coop_%i", conc);
+%simName = "proc_xklp1";
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0002; %0.000025;
-n_steps = 12500000;
+n_steps = 1000000;
 n_datapoints = 10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
@@ -68,7 +68,6 @@ for i_data = starting_point:1:n_datapoints - 1
                 jam_start = -1;  
            end
         end
-        %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -194,11 +193,11 @@ annotation('textbox',dim3,'String',str3,'FitBoxToText','on');
 xlabel('Run length (um)');
 ylabel('Counts');
 
-%{
 fig2 = figure();
 set(fig2, 'Position', [75, 75, 960, 600]);
 histfit(lifetimes, n_bins, 'exponential');
-%}
+xlabel('Lifetime (s)');
+ylabel('Counts');
 
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 960, 600]);

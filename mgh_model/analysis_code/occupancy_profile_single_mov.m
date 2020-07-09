@@ -5,7 +5,7 @@ k_hydrolyze = 90;
 jam_ratio = 700;
 n_sites = 1750;
 %simName = sprintf('Endtag_20x_0_%i', n_sites);
-simName = 'Endtag_1750';
+simName = 'endtag_1750_1';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;

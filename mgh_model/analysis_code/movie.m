@@ -1,11 +1,11 @@
 clear all;
 % Parameters from sim
-mt_lengths = [50];
+mt_lengths = [1750];
 max_sites = max(mt_lengths);
 n_mts = length(mt_lengths);
 %simName = sprintf('_%i', mt_lengths(1));
 
-simName = 'test';
+simName = 'endtag_1750_1';
 %simName = 'Endtag_hiTeth_lowkOn_1_500';
 dur_sec = 30;
 %simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
@@ -14,7 +14,7 @@ n_steps = 1250000;
 n_datapoints = 10000; %0;
 start_frame = 001;
 end_frame = n_datapoints;
-frames_per_plot = 5;
+frames_per_plot = 100;
 delta_t = 0.00004; 
 xlink_cutoff = 5;
 cutoff = 19;

@@ -11,17 +11,20 @@ n_sites = values{contains(params, "length")};
 n_sites = sscanf(n_sites, '%i');
 % Read in system params
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
-n_steps = str2double(values{contains(params, "n_steps")});
+total_steps = str2double(values{contains(params, "n_steps")});
+data_threshold = sscanf(values{contains(params, "data_threshold")}, '%g');
+if any(contains(params, "DATA_THRESHOLD") ~= 0)
+   data_threshold = str2double(values{contains(params, "DATA_THRESHOLD")});
+end
+n_steps = total_steps - data_threshold;
 % Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
 n_datapoints = str2double(values{contains(params, "n_datapoints")});
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 site_size = 0.008; % in um
 % Use actual recorded number of datapoints to parse thru data/etc
-datapoint_string = "N_DATAPOINTS";
-if all(contains(params, datapoint_string) == 0)
-   datapoint_string = "n_datapoints"; 
+if any(contains(params, "N_DATAPOINTS") ~= 0)
+   n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
 end
-n_datapoints = str2double(values{contains(params, datapoint_string)});
 
 % Open motor ID file and read in data 
 motor_data_file = fopen(sprintf('%s_motorID.file', sim_name));
@@ -45,6 +48,26 @@ for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
+        % Do not count motors that are jammed or at the plus end
+        jammed_motors = [];
+        for i_site = 1 : n_sites
+            motor_ID = motor_IDs(i_site);
+            if motor_ID == -1
+                continue;
+            end
+            if i_site == 1
+                jammed_motors = [jammed_motors motor_ID];
+            else
+                fwd_ID = motor_IDs(i_site - 1);
+                if fwd_ID == -1
+                   continue; 
+                end
+                if fwd_ID ~= motor_ID
+                    jammed_motors = [jammed_motors motor_ID];
+                end
+            end
+        end
+        %{
         endtag_boundary = 1;
         % Determine end-tag region; ignore motors that terminate here
         for i_site=1:n_sites
@@ -55,6 +78,7 @@ for i_data = 1 : n_datapoints - 1
                break;    
            end
         end
+        %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
             motor_ID = motor_IDs(i_site);
@@ -98,7 +122,8 @@ for i_data = 1 : n_datapoints - 1
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if end_site(1) > endtag_boundary && run_time > 0
+                %if end_site(1) > endtag_boundary && run_time > 0
+                if all(jammed_motors(:) ~= motor_ID)
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
@@ -151,5 +176,8 @@ mot_stats(3) = mean_time;
 mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
+
+fprintf("For sim '%s' (%i runs):\n ", sim_name, n_runs);
+disp(mot_stats);
 
 end

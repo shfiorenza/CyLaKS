@@ -34,11 +34,19 @@ public:
   std::map<std::string, Vec<double>> test_ref_;
 
   /* Auxiliary functions */
-  // size_t n_runs_desired_{2000};
-  size_t n_runs_desired_{std::numeric_limits<size_t>::max()};
-  size_t n_runs_executed_{0};
-  size_t step_active_{0};           // KMC step at which motors become active
-  bool population_active_{false};   // Switch for motor activity
+  // size_t equil_threshold_{50};
+  // size_t n_binding_events_{0};
+  bool equilibrated_{false};
+  double scan_window_{10}; // seconds
+  double old_density_avg_{0.0};
+  double old_density_var_{0.0};
+  Vec<double> motor_densities_;
+  size_t n_runs_desired_{150};
+  size_t n_unjammed_runs_{0};
+
+  size_t step_active_{0};         // KMC step at which motors become active
+  bool population_active_{false}; // Switch for motor activity
+  bool tethering_active_{false};
   bool lattice_coop_active_{false}; // Switch for lattice deformation effect
   bool lists_up_to_date_{false};    // Whether or not lists are current
 
@@ -104,6 +112,7 @@ public:
   void RemoveFromActive(Kinesin *motor);
 
   void RunKMC();
+  void CheckEquilibration();
   void UpdateLists();
   void SampleEventStatistics();
   void GenerateExecutionSequence();

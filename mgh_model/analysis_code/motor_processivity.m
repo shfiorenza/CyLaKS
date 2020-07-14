@@ -1,20 +1,20 @@
 
 clear all;
 % Often-changed variables
-i_conc = 2;
+i_conc = 6;
 kif4a_concs = [20, 50, 80, 120, 220, 420];
 mt_lengths = [75000, 50000, 40000, 25000, 8500, 3250];
 conc = kif4a_concs(i_conc);
-n_sites = mt_lengths(i_conc);
-%n_sites = 1250;
+%n_sites = mt_lengths(i_conc);
+n_sites = 7500;
 %simName = sprintf("kif4a_coop_optimization_lifetimeOnly_10.1_%i", conc);
 simName = sprintf("lattice_coop_%i", conc);
 %simName = "proc_xklp1";
 % Pseudo-constant variables
 n_mts = 1;
 delta_t = 0.0002; %0.000025;
-n_steps = 1000000;
-n_datapoints = 10000;
+n_steps = 188324; % 1250000;
+n_datapoints = 1506; %10000;
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;

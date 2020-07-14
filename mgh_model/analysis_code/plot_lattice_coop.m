@@ -1,7 +1,8 @@
+clear variables
 
 baseNames = ["lattice_coop"];
 concentrations = [20, 50, 80, 120, 220, 420];
-dir = "/home/shane/Projects/overlap_analysis/mgh_model/";
+dir = "/home/shane/Projects/overlap_analysis/mgh_model";
 
 n_runs = length(baseNames);
 n_concs = length(concentrations);

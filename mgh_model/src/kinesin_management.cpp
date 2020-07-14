@@ -172,6 +172,9 @@ void KinesinManagement::GenerateMotors() {
 
 void KinesinManagement::InitializeLists() {
 
+  size_t window_size{size_t(scan_window_ / parameters_->delta_t)};
+  motor_densities_.resize(window_size);
+
   // 1-D stuff -- indexed by i_motor
   active_.resize(n_motors_);
   bound_NULL_i_.resize(n_motors_);
@@ -560,6 +563,9 @@ void KinesinManagement::InitializeEvents() {
 
 void KinesinManagement::ReportProbabilities() {
 
+  wally_->Log("%i unjammed kinesin unbinding events recorded for sim '%s'\n",
+              n_unjammed_runs_, wally_->sim_name_);
+
   // Baseline function -- readout of all event probabilities
   for (const auto &entry : p_theory_) {
     auto name = entry.first;
@@ -568,11 +574,11 @@ void KinesinManagement::ReportProbabilities() {
         events_.begin(), events_.end(),
         [&name](EVENT_T const &event) { return event.name_ == name; });
     if (event->name_ != name) {
-      wally_->Log("Couldn't find %s\n", name.c_str());
+      wally_->Log("Couldn't find '%s'\n", name.c_str());
       continue;
     }
     if (event->n_opportunities_tot_ == 0) {
-      wally_->Log("No statistics for %s\n", name.c_str());
+      wally_->Log("No statistics for '%s'\n", name.c_str());
       continue;
     }
     size_t n_exe{event->n_executed_tot_};
@@ -580,7 +586,7 @@ void KinesinManagement::ReportProbabilities() {
     wally_->Log("Statistics for kinesin event '%s':\n", name.c_str());
     wally_->Log("   p_theory = %g\n", value);
     wally_->Log("   p_actual = %g", double(n_exe) / n_opp);
-    wally_->Log(" (n_exe = %lu | n_opp = %lu)\n", n_exe, n_opp);
+    wally_->Log(" (n_exe = %zu | n_opp = %zu)\n", n_exe, n_opp);
   }
   // Test-specific event probabilities
   if (wally_->test_mode_ != nullptr) {
@@ -599,11 +605,11 @@ void KinesinManagement::ReportProbabilities() {
     }
     wally_->Log(" Event '%s':\n", name.c_str());
     for (int index{0}; index < entry.second.size(); index++) {
-      wally_->Log("  p_theory_[%i] = %g\n", index, p_theory->second[index]);
       size_t n_exe{entry.second[index].first};
       size_t n_opp{entry.second[index].second};
-      wally_->Log("  p_actual_[%i] = %g ", index, double(n_exe) / n_opp);
-      wally_->Log("(n_exe = %i | n_opp = %i)\n", n_exe, n_opp);
+      wally_->Log("  p_theory_[%i] = %g\n", index, p_theory->second[index]);
+      wally_->Log("  p_actual_[%i] = %g", index, double(n_exe) / n_opp);
+      wally_->Log(" (n_exe = %zu | n_opp = %zu)\n", n_exe, n_opp);
     }
   }
 }
@@ -693,10 +699,59 @@ void KinesinManagement::RunKMC() {
   // if (properties_->current_step_ >= 16910100) {
   //   properties_->wallace.verbosity_ = 3;
   // }
+  CheckEquilibration();
   UpdateLists();
   SampleEventStatistics();
   GenerateExecutionSequence();
   ExecuteEvents();
+}
+
+void KinesinManagement::CheckEquilibration() {
+
+  if (equilibrated_) {
+    return;
+  }
+  double density{double(n_active_) / properties_->microtubules.n_sites_tot_};
+  if (properties_->current_step_ <= parameters_->data_threshold) {
+    old_density_avg_ += density / parameters_->data_threshold;
+    return;
+  }
+  if (properties_->current_step_ == parameters_->data_threshold + 1) {
+    wally_->Log(
+        "Sim '%s' pre-equilibration ended with kinesin density = %.3g\n",
+        wally_->sim_name_, old_density_avg_);
+  }
+  // Calculate motor density on MT
+  size_t window_size{motor_densities_.size()};
+  size_t i_entry{properties_->current_step_ % window_size};
+  if (i_entry != 0) {
+    motor_densities_[i_entry] = density;
+    return;
+  }
+  double density_avg{0.0};
+  for (int i{0}; i < window_size; i++) {
+    density_avg += motor_densities_[i] / window_size;
+  }
+  double density_var{0.0};
+  for (int i{0}; i < window_size; i++) {
+    double diff{density_avg - motor_densities_[i]};
+    density_var += diff * diff / (window_size - 1);
+  }
+  double sigma{sqrt(density_var)};
+  size_t sigfigs(std::round(std::log10(density_avg / sigma)) + 1);
+  wally_->Log(
+      "Sim '%s' kinesin still equilibrating ... (density = %.3g +/- %.1g)\n",
+      wally_->sim_name_, density_avg, sigma);
+  double delta{std::fabs(old_density_avg_ - density_avg)};
+  double delta_sigma{sqrt(old_density_var_ + density_var)};
+  if (delta < delta_sigma or delta == old_density_avg_) {
+    equilibrated_ = true;
+    wally_->Log("Sim '%s' kinesin equilibration complete ", wally_->sim_name_);
+    wally_->Log("(density change = %.2g | sigma = %.1g)\n", delta, delta_sigma);
+    wally_->StartDataCollection();
+  }
+  old_density_avg_ = density_avg;
+  old_density_var_ = density_var;
 }
 
 void KinesinManagement::UpdateLists() {
@@ -924,6 +979,15 @@ void KinesinManagement::Bind_I(SITE_T *site) {
   // Update active_ list
   AddToActive(motor);
   properties_->microtubules.FlagForUpdate();
+  /*
+  // Log number of binding events
+  if (properties_->sim_equilibrating_) {
+    n_binding_events_++;
+    if (n_binding_events_ >= equil_threshold_) {
+      wally_->OverrideEquilibration();
+    }
+  }
+  */
 }
 
 void KinesinManagement::Bind_ATP(POP_T *head) {
@@ -989,6 +1053,18 @@ void KinesinManagement::Unbind_I(POP_T *head) {
   if (motor->heads_active_ != 1) {
     wally_->ErrorExit("Kin_MGMT::Unbind_I()");
   }
+  // Update number of kinesin runs
+  if (!properties_->sim_equilibrating_) {
+    if (head->site_->index_ != head->site_->mt_->plus_end_) {
+      int i_fwd{head->site_->index_ + head->site_->mt_->delta_x_};
+      if (!head->site_->mt_->lattice_[i_fwd].occupied_) {
+        n_unjammed_runs_++;
+      }
+    }
+    if (n_unjammed_runs_ >= n_runs_desired_) {
+      wally_->TerminateSimulation();
+    }
+  }
   // Update site
   head->site_->occupied_ = false;
   head->site_->motor_head_ = nullptr;
@@ -1000,16 +1076,4 @@ void KinesinManagement::Unbind_I(POP_T *head) {
   RemoveFromActive(motor);
   // Flag microtubules for update
   properties_->microtubules.FlagForUpdate();
-  // Update number of kinesin runs
-  n_runs_executed_++;
-  if (n_runs_executed_ >= n_runs_desired_) {
-    n_events_to_exe_ = 0;
-    properties_->sim_running_ = false;
-    wally_->Log("Sim '%s' terminated after %i successful Kinesin runs\n",
-                wally_->sim_name_, n_runs_executed_);
-    size_t steps_recorded{properties_->current_step_ - wally_->data_threshold_};
-    size_t n_datapoints{steps_recorded / wally_->n_steps_per_output_};
-    wally_->Log("N_STEPS = %zu\n", properties_->current_step_);
-    wally_->Log("N_DATAPOINTS = %zu\n", n_datapoints);
-  }
 }

@@ -3,15 +3,15 @@ clear variables;
 off_ratio = 10;
 k_hydrolyze = 90;
 jam_ratio = 700;
-n_sites = 1750;
+n_sites = 2500;
 %simName = sprintf('Endtag_20x_0_%i', n_sites);
-simName = 'endtag_1750_1';
+simName = 'test';
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
-n_steps = 10000000;
-n_datapoints = 10000;
-steps_per_plot = 100;
+n_steps = 1000000;
+n_datapoints = 100000;
+steps_per_plot = 1000;
 starting_point = 1;
 active_datapoints = n_datapoints - starting_point;
 delta_t = 0.00005;
@@ -52,7 +52,7 @@ for i=starting_point:1:n_datapoints
     
     if(mod(i, steps_per_plot) == 0)
         
-        smooth_window = n_sites / 10;
+        smooth_window = n_sites / 100;
         
         motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
         xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
@@ -123,13 +123,13 @@ for i=starting_point:1:n_datapoints
         set(findall(axis, 'Type', 'Line'), 'LineWidth', 2);
         legend(legendLabel, 'Location', 'northeast');
        
-    %{
+    
     dim = [0.7 0.47 .3 .3];
     time = i * time_per_frame;
     %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');
-%}
+
     drawnow();
     frame = getframe(gcf);
     writeVideo(v, getframe(gcf)); 

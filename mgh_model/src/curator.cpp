@@ -12,14 +12,14 @@ void Curator::InitializeSimulation(char *argv[], system_properties *properties,
   CheckArgs(argv);
   // Log file saves all sim outputs to terminal
   GenerateLogFile();
-  // Data files save all pertinent info: occupancy, coords, extensions, etc.
-  GenerateDataFiles();
   // Parameters from YAML file are transferred to local parameter structs
   ParseParameters();
   // Once parameters are parsed, the Curator's own parameters can be set
   SetLocalParameters();
   // Microtubules, motors, and crosslinkers are all initialized at once
   InitializeSimObjects();
+  // Data files save all pertinent info: occupancy, coords, extensions, etc.
+  GenerateDataFiles();
 }
 
 FILE *Curator::OpenFile(const char *file_name, const char *type) {
@@ -117,35 +117,51 @@ void Curator::GenerateDataFiles() {
   // Open occupancy file, which stores the species ID of each occupant
   // (or -1 for none) for all MT sites during data collection (DC)
   properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
-  // Open motor ID file, which stores the unique ID of all bound motors
-  // (unbound not tracked) and their respective site indices during DC
-  properties_->motor_ID_file_ = OpenFile(motor_ID_file, "w");
-  // Open xlink ID file, which does the same
-  // as the motor ID file but for xlinks
-  properties_->xlink_ID_file_ = OpenFile(xlink_ID_file, "w");
-  // Open tether coord file, which stores the coordinates
-  // of the anchor points of tethered motors
-  properties_->tether_coord_file_ = OpenFile(tether_coord_file, "w");
-  // Open mt coord file, which stores the coordinates
-  // of the left-most edge of each microtubule during DC
-  properties_->mt_coord_file_ = OpenFile(mt_coord_file, "w");
-  // Open motor extension file, which stores the number of motors
-  // with a certain tether extension for all possible extensions
-  properties_->motor_extension_file_ = OpenFile(motor_extension_file, "w");
-  // Open xlink extension file, which stores the number of stage-2
-  // xlinks at a certain extension for all possible extensions
-  properties_->xlink_extension_file_ = OpenFile(xlink_extension_file, "w");
-  // Open motor force file, which stores the sum
-  // of forces coming from motor tether extensions
-  properties_->motor_force_file_ = OpenFile(motor_force_file, "w");
-  // Open xlink force file, which stores the sum
-  // of forces coming from xlink extensions
-  properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
-  // Open total force file, which stores the sum of ALL
-  // forces coming from xlink and motor tether extensions
-  properties_->total_force_file_ = OpenFile(total_force_file, "w");
-  // bool; simply says if motor head is trailing or not
-  properties_->motor_head_status_file_ = OpenFile(motor_head_status_file, "w");
+  // Motor-related files
+  if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+    // Open motor ID file, which stores the unique ID of all bound motors
+    // (unbound not tracked) and their respective site indices during DC
+    properties_->motor_ID_file_ = OpenFile(motor_ID_file, "w");
+    // bool; simply says if motor head is trailing or not
+    properties_->motor_head_status_file_ =
+        OpenFile(motor_head_status_file, "w");
+    if (properties_->kinesin4.tethering_active_) {
+      // Open tether coord file, which stores the coordinates
+      // of the anchor points of tethered motors
+      properties_->tether_coord_file_ = OpenFile(tether_coord_file, "w");
+      // Open motor extension file, which stores the number of motors
+      // with a certain tether extension for all possible extensions
+      properties_->motor_extension_file_ = OpenFile(motor_extension_file, "w");
+      // Open motor force file, which stores the sum
+      // of forces coming from motor tether extensions
+      properties_->motor_force_file_ = OpenFile(motor_force_file, "w");
+    }
+  }
+  // Crosslinker-related files
+  if (properties_->prc1.population_active_) {
+    // Open xlink ID file, which does the same
+    // as the motor ID file but for xlinks
+    properties_->xlink_ID_file_ = OpenFile(xlink_ID_file, "w");
+    if (properties_->prc1.crosslinking_active_) {
+      // Open xlink extension file, which stores the number of stage-2
+      // xlinks at a certain extension for all possible extensions
+      properties_->xlink_extension_file_ = OpenFile(xlink_extension_file, "w");
+    }
+    // Open xlink force file, which stores the sum
+    // of forces coming from xlink extensions
+    properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
+  }
+  if (parameters_->microtubules.diffusion_on) {
+    // Open mt coord file, which stores the coordinates
+    // of the left-most edge of each microtubule during DC
+    properties_->mt_coord_file_ = OpenFile(mt_coord_file, "w");
+  }
+  if (properties_->kinesin4.tethering_active_ and
+      properties_->prc1.crosslinking_active_) {
+    // Open total force file, which stores the sum of ALL
+    // forces coming from xlink and motor tether extensions
+    properties_->total_force_file_ = OpenFile(total_force_file, "w");
+  }
 }
 
 void Curator::ParseParameters() {
@@ -167,7 +183,11 @@ void Curator::ParseParameters() {
   try {
     parameters_->n_steps = input["n_steps"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
-    parameters_->n_steps = (unsigned long)input["n_steps"].as<double>();
+    try {
+      parameters_->n_steps = (unsigned long)input["n_steps"].as<double>();
+    } catch (const YAML::BadConversion error) {
+      parameters_->n_steps = (unsigned long)input["n_steps"].as<int>();
+    }
   }
   parameters_->n_datapoints = input["n_datapoints"].as<int>();
   parameters_->data_threshold = input["data_threshold"].as<int>();
@@ -191,10 +211,6 @@ void Curator::ParseParameters() {
   parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
-  /*
-  parameters_->motors.lattice_coop_alpha =
-      motors["lattice_coop_alpha"].as<double>();
-  */
   try {
     parameters_->motors.lattice_coop_range =
         motors["lattice_coop_range"].as<int>();
@@ -341,7 +357,7 @@ void Curator::ParseParameters() {
 
 void Curator::SetLocalParameters() {
 
-  unsigned long n_steps{parameters_->n_steps};
+  size_t n_steps{parameters_->n_steps};
   int n_datapoints{parameters_->n_datapoints};
   data_threshold_ = parameters_->data_threshold;
   n_steps_recorded_ = n_steps - data_threshold_;
@@ -478,11 +494,17 @@ void Curator::OutputData() {
     total_force_array[i_mt] = 0; // mt->GetNetForce();
     // Write the data to respective files one microtubule at a time
     fwrite(occupancy_ptr, sizeof(int), max_length, occupancy_file);
-    fwrite(motor_ID_ptr, sizeof(int), max_length, motor_ID_file);
-    fwrite(xlink_ID_ptr, sizeof(int), max_length, xlink_ID_file);
-    fwrite(teth_coord_ptr, sizeof(double), max_length, tether_coord_file);
-    fwrite(motor_head_status_ptr, sizeof(bool), max_length,
-           motor_head_status_file);
+    if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+      fwrite(motor_ID_ptr, sizeof(int), max_length, motor_ID_file);
+      fwrite(motor_head_status_ptr, sizeof(bool), max_length,
+             motor_head_status_file);
+      if (properties_->kinesin4.tethering_active_) {
+        fwrite(teth_coord_ptr, sizeof(double), max_length, tether_coord_file);
+      }
+    }
+    if (properties_->prc1.population_active_) {
+      fwrite(xlink_ID_ptr, sizeof(int), max_length, xlink_ID_file);
+    }
   }
   // Scan through kinesin4/prc1 statistics to get extension occupancies
   /*
@@ -498,7 +520,9 @@ void Curator::OutputData() {
   */
   // Write the data to respective files one timestep at a time
   // fwrite(mt_coord_ptr, sizeof(int), n_mts, mt_coord_file);
-  fwrite(mt_coord_array, sizeof(int), n_mts, mt_coord_file);
+  if (parameters_->microtubules.diffusion_on) {
+    fwrite(mt_coord_array, sizeof(int), n_mts, mt_coord_file);
+  }
   // fwrite(motor_force_ptr, sizeof(double), n_mts, motor_force_file);
   // fwrite(xlink_force_ptr, sizeof(double), n_mts, xlink_force_file);
   // fwrite(total_force_ptr, sizeof(double), n_mts, total_force_file);
@@ -515,7 +539,9 @@ void Curator::OutputSimDuration() {
   int n_per_sec{sys_clock::period::den};
   finish_ = sys_clock::now();
   double sim_duration{(double)(finish_ - start_).count()};
-  Log("\nTime to execute sim: %.2f seconds.\n", sim_duration / n_per_sec);
+  Log("\nTime to execute sim '%s': %.2f seconds.\n", sim_name_,
+      sim_duration / n_per_sec);
+  Log(" (%i datapoints recorded)\n", n_datapoints_recorded_);
   /*
   Log("   -Motors: %.2f\n", t_motors_[0] / n_per_sec);
   Log("      -Calculating stats: %.2f\n", t_motors_[1] / n_per_sec);
@@ -540,16 +566,29 @@ void Curator::CloseDataFiles() {
 
   fclose(log_file_);
   fclose(properties_->occupancy_file_);
-  fclose(properties_->motor_ID_file_);
-  fclose(properties_->xlink_ID_file_);
-  fclose(properties_->tether_coord_file_);
-  fclose(properties_->mt_coord_file_);
-  fclose(properties_->motor_extension_file_);
-  fclose(properties_->xlink_extension_file_);
-  fclose(properties_->motor_force_file_);
-  fclose(properties_->xlink_force_file_);
-  fclose(properties_->total_force_file_);
-  fclose(properties_->motor_head_status_file_);
+  if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+    fclose(properties_->motor_ID_file_);
+    fclose(properties_->motor_head_status_file_);
+    if (properties_->kinesin4.tethering_active_) {
+      fclose(properties_->tether_coord_file_);
+      fclose(properties_->motor_extension_file_);
+      fclose(properties_->motor_force_file_);
+    }
+  }
+  if (properties_->prc1.population_active_) {
+    fclose(properties_->xlink_ID_file_);
+    if (properties_->prc1.crosslinking_active_) {
+      fclose(properties_->xlink_extension_file_);
+      fclose(properties_->xlink_force_file_);
+    }
+  }
+  if (parameters_->microtubules.diffusion_on) {
+    fclose(properties_->mt_coord_file_);
+  }
+  if (properties_->kinesin4.tethering_active_ and
+      properties_->prc1.crosslinking_active_) {
+    fclose(properties_->total_force_file_);
+  }
 }
 
 void Curator::ErrorExit(const char *function_name) {
@@ -563,38 +602,47 @@ void Curator::ErrorExit(const char *function_name) {
 
 void Curator::UpdateTimestep() {
 
-  if (properties_->current_step_ == 0) {
+  // Record current step number and then increment it by one
+  size_t i_step{properties_->current_step_++};
+  // Start global system clock on very first step
+  if (i_step == 0) {
     start_ = sys_clock::now();
   }
-  int i_step{++properties_->current_step_};
-  if (properties_->current_step_ == parameters_->n_steps) {
+  if (properties_->sim_equilibrating_) {
+    if (i_step >= data_threshold_) {
+      properties_->sim_equilibrating_ = false;
+    }
+    if (i_step % equil_milestone_ == 0) {
+      int p{int(i_step / equil_milestone_) * 10};
+      Log("Sim '%s' pre-equilibration is %lu%% complete. (step %lu)\n",
+          sim_name_, p, i_step);
+    }
+    return;
+  }
+  if (!properties_->kinesin4.equilibrated_) {
+    return;
+  }
+  size_t steps_past_threshold{i_step - data_threshold_};
+  // Give updates on status of data collection (every 10 percent)
+  if (steps_past_threshold % data_milestone_ == 0) {
+    unsigned long p{(steps_past_threshold / data_milestone_) * 10};
+    Log("Sim '%s' data collection is %lu%% complete. (step # %lu)\n", sim_name_,
+        p, i_step);
+  }
+  if (i_step >= parameters_->n_steps) {
     properties_->sim_running_ = false;
+    return;
   }
-  // Give updates on equilibrium process (every 10 percent)
-  if (i_step < data_threshold_ and i_step % equil_milestone_ == 0) {
-    int p = (int)(i_step / equil_milestone_) * 10;
-    Log("Equilibration is %i percent complete (step # %i)\n", p, i_step);
+  // Collect data every n_pickup timesteps
+  if (steps_past_threshold % n_steps_per_output_ == 0) {
+    OutputData();
+    n_datapoints_recorded_++;
   }
-  // Start data collection at appropriate step threshold
-  else if (i_step >= data_threshold_) {
-    unsigned long steps_past_threshold{i_step - data_threshold_};
-    // Collect data every n_pickup timesteps
-    if (steps_past_threshold % n_steps_per_output_ == 0) {
-      OutputData();
-    }
-    // Give updates on status of data collection (every 10 percent)
-    if (steps_past_threshold % data_milestone_ == 0) {
-      unsigned long p{(steps_past_threshold / data_milestone_) * 10};
-      Log("Data collection is %u percent complete (step # %lu)\n", p, i_step);
-    }
-    // Announce when simulation is done
-    else if (steps_past_threshold == n_steps_recorded_ - 1) {
-      Log("Sim '%s' done!\n", sim_name_);
-    }
-  }
+  /*
   if (parameters_->microtubules.printout_on and i_step % 1000 == 0) {
     PrintMicrotubules(0);
   }
+  */
 }
 
 void Curator::PrintMicrotubules() {
@@ -758,6 +806,30 @@ void Curator::PauseSim(double duration) {
   pause_dur_.tv_sec = (int)duration;
   pause_dur_.tv_nsec = (duration - (int)duration) * 100000000;
   nanosleep(&pause_dur_, NULL);
+}
+
+void Curator::StartDataCollection() {
+
+  size_t n_steps{parameters_->n_steps};
+  int n_datapoints{parameters_->n_datapoints};
+  data_threshold_ = properties_->current_step_;
+  n_steps_recorded_ = n_steps - data_threshold_;
+  n_steps_per_output_ = n_steps_recorded_ / n_datapoints;
+  data_milestone_ = n_steps_recorded_ / 10;
+  Log("Sim '%s' data collection has begun.\n", sim_name_);
+  Log("DATA_THRESHOLD = %zu\n", data_threshold_);
+}
+
+void Curator::TerminateSimulation() {
+
+  properties_->sim_running_ = false;
+  size_t steps_recorded{properties_->current_step_ - data_threshold_};
+  size_t n_datapoints{steps_recorded / n_steps_per_output_};
+  Log("Sim '%s' data collection terminated early after sufficient unjammed "
+      "kinesin unbinding events\n",
+      sim_name_, properties_->kinesin4.n_unjammed_runs_);
+  Log("N_STEPS = %zu\n", properties_->current_step_);
+  Log("N_DATAPOINTS = %zu\n", n_datapoints);
 }
 
 void Curator::CleanUp() {

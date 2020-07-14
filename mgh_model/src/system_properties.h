@@ -14,7 +14,9 @@ struct system_properties {
   KinesinManagement kinesin4;
   AssociatedProteinManagement prc1;
 
-  int current_step_{0};
+  size_t current_step_{0};
+
+  bool sim_equilibrating_{true};
   bool sim_running_{true};
 
   FILE *log_file_, *occupancy_file_, *motor_ID_file_, *xlink_ID_file_,

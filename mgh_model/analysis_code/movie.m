@@ -1,93 +1,123 @@
-clear all;
-% Parameters from sim
-mt_lengths = [1750];
-max_sites = max(mt_lengths);
-n_mts = length(mt_lengths);
-%simName = sprintf('_%i', mt_lengths(1));
+clear variables;
 
-simName = 'endtag_1750_1';
-%simName = 'Endtag_hiTeth_lowkOn_1_500';
-dur_sec = 30;
-%simName = sprintf('outputnew/slide_0_%i', mt_lengths(2));
-% Pseudo-constant variables
-n_steps = 1250000;
-n_datapoints = 10000; %0;
-start_frame = 001;
-end_frame = n_datapoints;
-frames_per_plot = 100;
-delta_t = 0.00004; 
+sim_name = 'test';
+fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+
+movie_name = 'test';
+movie_duration = 30; % in seconds
+
+% Open log file and parse it into param labels & their values
+log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, "count")});
+if n_mts == 1
+    length_one = values{contains(params, "length")};
+    mt_lengths = sscanf(length_one, '%i');
+elseif n_mts == 2
+    [length_one, length_two] = values{contains(params, "length")};
+    mt_lengths(1) = sscanf(length_one, '%i');
+    mt_lengths(2) = sscanf(length_two, '%i');
+else
+    disp("Error -- more than 2 MTs not implemented yet")
+    return
+end
+% Read in system params
+delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
+total_steps = str2double(values{contains(params, "n_steps")});
+data_threshold = sscanf(values{contains(params, "data_threshold")}, '%g');
+if any(contains(params, "DATA_THRESHOLD") ~= 0)
+   data_threshold = str2double(values{contains(params, "DATA_THRESHOLD")});
+end
+n_steps = total_steps - data_threshold;
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, "n_datapoints")});
+time_per_datapoint = delta_t * n_steps / n_datapoints;
+% Use actual recorded number of datapoints to parse thru data/etc
+if any(contains(params, "N_DATAPOINTS") ~= 0)
+   n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
+end
+
+site_size = 0.008; % in um
+max_sites = max(mt_lengths);
 xlink_cutoff = 5;
-cutoff = 19;
+teth_cutoff = 19;
+
+start_frame = 001;
+frames_per_plot = 100;
+end_frame = n_datapoints;
+
 % Colors
 blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
 % File info
-movie_name = 'test';
-%fileDirectory = '/projects/shfi4480/overlap_analysis/mgh_model/%s';
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 mtFileName = '%s_mt_coord.file';
 motorFileName = '%s_motorID.file';
 motorHeadFileName = '%s_motor_head_status.file';
 xlinkFileName = '%s_xlinkID.file';
 tethFileName = '%s_tether_coord.file';
-mtFile = sprintf(fileDirectory, sprintf(mtFileName, simName));
-motorFile = sprintf(fileDirectory, sprintf(motorFileName, simName));
-motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, simName));
-xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, simName));
-tethFile = sprintf(fileDirectory, sprintf(tethFileName, simName));
+mtFile = sprintf(fileDirectory, sprintf(mtFileName, sim_name));
+motorFile = sprintf(fileDirectory, sprintf(motorFileName, sim_name));
+motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, sim_name));
+xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, sim_name));
+tethFile = sprintf(fileDirectory, sprintf(tethFileName, sim_name));
 
 % Figure parameters (i.e., how they appear)
-n_frames = n_datapoints;
 site_height = 1;
 site_width = 1;
-%{
-end_frame = start_frame + n_frames - 1;
-if(end_frame > n_datapoints)
-    end_frame = n_datapoints;
-end
-%}
 active_frames = end_frame - start_frame;
-time_per_frame = delta_t * (n_steps / n_frames);
 
 % Videowriter details
 v = VideoWriter(movie_name);
-v.FrameRate = (active_frames / frames_per_plot) / dur_sec;
+v.FrameRate = (active_frames / frames_per_plot) / movie_duration;
 open(v);
 frame_box = [0 0 1545 200];
 
 % Figure details
 fig1 = figure;
-%set(fig1, 'Position', [0 100 1000 250])
 set(fig1, 'Position', [0 100 1600 400]);
 
-mt_data_file = fopen(mtFile);
-mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
-fclose(mt_data_file);
-mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
-
-motor_data_file = fopen(motorFile);
-motor_raw_data = fread(motor_data_file, [n_mts * max_sites * n_datapoints], '*int');
-fclose(motor_data_file);
-motor_data = reshape(motor_raw_data, max_sites, n_mts, n_datapoints);
-
-motor_head_status_file = fopen(motorHeadFile);
-motor_head_raw_data = fread(motor_head_status_file, [n_mts * max_sites * n_datapoints], '*bool');
-fclose(motor_head_status_file);
-motor_head_data = reshape(motor_head_raw_data, max_sites, n_mts, n_datapoints);
-
-xlink_data_file = fopen(xlinkFile);
-xlink_raw_data = fread(xlink_data_file, [n_mts * max_sites * n_datapoints], '*int');
-fclose(xlink_data_file);
-xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
-
-teth_data_file = fopen(tethFile);
-teth_raw_data = fread(teth_data_file, [n_mts * max_sites * n_datapoints], '*double');
-fclose(teth_data_file);
-teth_data = reshape(teth_raw_data, max_sites, n_mts, n_datapoints);
+mt_data = zeros(n_mts, n_datapoints);
+if isfile(mtFile)
+    mt_data_file = fopen(mtFile);
+    mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
+    fclose(mt_data_file);
+    mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
+end
+motor_data = zeros(max_sites, n_mts, n_datapoints) - 1;
+if isfile(motorFile)
+    motor_data_file = fopen(motorFile);
+    motor_raw_data = fread(motor_data_file, [n_mts * max_sites * n_datapoints], '*int');
+    fclose(motor_data_file);
+    motor_data = reshape(motor_raw_data, max_sites, n_mts, n_datapoints);
+end
+motor_head_data = zeros(max_sites, n_mts, n_datapoints);
+if isfile(motorHeadFile)
+    motor_head_status_file = fopen(motorHeadFile);
+    motor_head_raw_data = fread(motor_head_status_file, [n_mts * max_sites * n_datapoints], '*bool');
+    fclose(motor_head_status_file);
+    motor_head_data = reshape(motor_head_raw_data, max_sites, n_mts, n_datapoints);
+end
+xlink_data = zeros(max_sites, n_mts, n_datapoints) - 1;
+if isfile(xlinkFile)
+    xlink_data_file = fopen(xlinkFile);
+    xlink_raw_data = fread(xlink_data_file, [n_mts * max_sites * n_datapoints], '*int');
+    fclose(xlink_data_file);
+    xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
+end
+teth_data = zeros(max_sites, n_mts, n_datapoints) - 1;
+if isfile(tethFile)
+    teth_data_file = fopen(tethFile);
+    teth_raw_data = fread(teth_data_file, [n_mts * max_sites * n_datapoints], '*double');
+    fclose(teth_data_file);
+    teth_data = reshape(teth_raw_data, max_sites, n_mts, n_datapoints);
+end
 
 % Run through all datapoints; each one is a frame in our movie
-for i_data=start_frame:frames_per_plot:end_frame
+for i_data = start_frame : frames_per_plot : end_frame
     
     % Clear figure so that it only displays figures from current datapoint
     clf;        
@@ -129,8 +159,8 @@ for i_data=start_frame:frames_per_plot:end_frame
             end
               
         else
-           % ax.XLim = [first_pos-1 first_pos + 250];
-            ax.XLim = [first_pos (first_pos + n_sites + 1)];
+             %ax.XLim = [first_pos-1 first_pos + 250];
+              ax.XLim = [first_pos (first_pos + n_sites + 1)];
         end
         
         rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...
@@ -333,7 +363,8 @@ for i_data=start_frame:frames_per_plot:end_frame
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
                     ne = 10; a = 10; ro = 0.5;
-                    if abs(xa - xb) <= cutoff
+                    %{
+                    if abs(xa - xb) <= teth_cutoff
                         [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
                         plot(xs,ys,'LineWidth', 1, 'Color', 'black');
                     else
@@ -341,12 +372,13 @@ for i_data=start_frame:frames_per_plot:end_frame
                         disp(teth_coords(i_teth));
                         disp(i_teth);
                     end
+                    %}
                end
             end 
         end
     end
     dim = [0.0105 0.62 .3 .3];
-    time = (i_data - 1) * time_per_frame;
+    time = (i_data - 1) * time_per_datapoint;
     %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox',dim,'String',str,'FitBoxToText','on');

@@ -10,7 +10,6 @@ struct system_properties;
 class MicrotubuleManagement {
 private:
   template <class DATA_T> using Vec = std::vector<DATA_T>;
-  int n_sites_tot_{0};
   int max_neighbs_xlink_{2};
   Curator *wally_{nullptr};
   system_parameters *parameters_{nullptr};
@@ -18,6 +17,8 @@ private:
 
 public:
   bool lists_up_to_date_{false};
+
+  int n_sites_tot_{0};
 
   int n_unocc_motor_{0};
   Vec<int> n_unocc_xlink_;

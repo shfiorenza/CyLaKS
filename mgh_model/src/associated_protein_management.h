@@ -24,9 +24,6 @@ private:
   // List of events to execute any given timestep; dynamically updated
   Vec<EVENT_T *> events_to_exe_;
   int verbosity_{0};
-  bool population_active_{false};
-  bool crosslinking_active_{false};
-  bool tethering_active_{false};
   bool lists_up_to_date_{false};
   // Pointers to global system params & props; same for all classes
   system_parameters *parameters_{nullptr};
@@ -35,6 +32,9 @@ private:
   Curator *wally_{nullptr};
 
 public:
+  bool population_active_{false};
+  bool crosslinking_active_{false};
+  bool tethering_active_{false};
   // Index scheme: [n_neighbs][x_dub][x]
   // If not applicable, will be padded w/ zeros, e.g. [0][0][n_neighbs]
   std::map<std::string, Vec<Vec<Vec<double>>>> p_theory_;

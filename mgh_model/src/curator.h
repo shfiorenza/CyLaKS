@@ -6,6 +6,8 @@
 struct system_parameters;
 struct system_properties;
 
+#define GetVarName(Variable) (#Variable)
+
 using sys_clock = std::chrono::steady_clock;
 using sys_timepoint = sys_clock::time_point;
 class Curator {
@@ -21,6 +23,8 @@ public:
   unsigned long n_steps_per_output_{0};
   unsigned long equil_milestone_{0};
   unsigned long data_milestone_{0};
+
+  size_t n_datapoints_recorded_{0};
 
   int verbosity_{0};
   double t_motors_[4];
@@ -78,6 +82,8 @@ public:
   void PrintMicrotubules();
   void PrintMicrotubules(double pause_duration);
   void PauseSim(double duration);
+  void StartDataCollection();
+  void TerminateSimulation();
   void CleanUp();
 };
 #endif

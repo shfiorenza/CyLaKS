@@ -6,24 +6,24 @@ log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
 params = log{1,1};
 values = log{1,2};
 % Read in number of MTs
-n_mts = str2double(values{contains(params, "count")});
-n_sites = values{contains(params, "length")};
+n_mts = str2double(values{contains(params, 'count')});
+n_sites = values{contains(params, 'length')};
 n_sites = sscanf(n_sites, '%i');
 % Read in system params
-delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
-total_steps = str2double(values{contains(params, "n_steps")});
-data_threshold = sscanf(values{contains(params, "data_threshold")}, '%g');
-if any(contains(params, "DATA_THRESHOLD") ~= 0)
-   data_threshold = str2double(values{contains(params, "DATA_THRESHOLD")});
+delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
+total_steps = str2double(values{contains(params, 'n_steps')});
+data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
+if any(contains(params, 'DATA_THRESHOLD') ~= 0)
+   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
 end
 n_steps = total_steps - data_threshold;
 % Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-n_datapoints = str2double(values{contains(params, "n_datapoints")});
+n_datapoints = str2double(values{contains(params, 'n_datapoints')});
 time_per_datapoint = delta_t * n_steps / n_datapoints;
 site_size = 0.008; % in um
 % Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, "N_DATAPOINTS") ~= 0)
-   n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
+if any(contains(params, 'N_DATAPOINTS') ~= 0)
+   n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
 end
 
 % Open motor ID file and read in data 
@@ -177,7 +177,7 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
-fprintf("For sim '%s' (%i runs):\n ", sim_name, n_runs);
+fprintf('For sim %s (%i runs):\n ', sim_name, n_runs);
 disp(mot_stats);
 
 end

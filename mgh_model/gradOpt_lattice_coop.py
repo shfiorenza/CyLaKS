@@ -95,8 +95,7 @@ def kif4a_coop_scaling(params):
     # Calculate errors
     weighted_errors = []
     for i_conc in range(len(kif4a_conc)):
-        kif4a_stats = MATLAB.get_motor_stats(
-            str(sim_names[i_conc])
+        kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
         err_runlength=(

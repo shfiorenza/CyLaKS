@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'test';
+sim_name = 'endtag_250_0';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
 movie_name = 'test';

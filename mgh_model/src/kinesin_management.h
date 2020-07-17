@@ -41,7 +41,7 @@ public:
   double old_density_avg_{0.0};
   double old_density_var_{0.0};
   Vec<double> motor_densities_;
-  size_t n_runs_desired_{150};
+  size_t n_runs_desired_{std::numeric_limits<size_t>::max()};
   size_t n_unjammed_runs_{0};
 
   size_t step_active_{0};         // KMC step at which motors become active

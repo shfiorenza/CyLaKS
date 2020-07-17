@@ -11,12 +11,12 @@ params = log{1,1};
 values = log{1,2};
 n_sites = values{contains(params, "length")};
 n_sites = sscanf(n_sites, '%i');
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, "n_datapoints")});
 % Use actual recorded number of datapoints to parse thru data/etc
-datapoint_string = "N_DATAPOINTS";
-if all(contains(params, datapoint_string) == 0)
-   datapoint_string = "n_datapoints"; 
+if any(contains(params, "N_DATAPOINTS") ~= 0)
+   n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
 end
-n_datapoints = str2double(values{contains(params, datapoint_string)});
 
 fileName = sprintf("%s_occupancy.file", sim_name);
 data_file = fopen(fileName);
@@ -32,7 +32,7 @@ xlink_avg_occupancy = zeros([n_sites 1]);
 xlink_raw_data(xlink_raw_data ~= xlink_speciesID) = 0;
 xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 
-starting_point = 199 * n_datapoints / 200;
+starting_point = 1; % 199 * n_datapoints / 200;
 active_datapoints = n_datapoints - starting_point + 1;
 
 % Read in and average occupancy data over all datapoints
@@ -41,7 +41,7 @@ for i = starting_point : 1 : n_datapoints
     xlink_avg_occupancy(:,1) = xlink_avg_occupancy(:,1) + double(xlink_raw_data(:,i))./active_datapoints;
 end
 
-smooth_window = n_sites / 20;
+smooth_window = 32; % should be equivalent to diffraction limit %n_sites / 20;
 motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
 xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
 net_occupancy = motor_occupancy + xlink_occupancy;

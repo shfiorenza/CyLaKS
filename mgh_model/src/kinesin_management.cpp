@@ -563,8 +563,8 @@ void KinesinManagement::InitializeEvents() {
 
 void KinesinManagement::ReportProbabilities() {
 
-  wally_->Log("%i unjammed kinesin unbinding events recorded for sim '%s'\n",
-              n_unjammed_runs_, wally_->sim_name_);
+  wally_->Log("%i kinesin runs recorded for sim '%s'\n", n_runs_recorded_,
+              wally_->sim_name_);
 
   // Baseline function -- readout of all event probabilities
   for (const auto &entry : p_theory_) {
@@ -979,15 +979,6 @@ void KinesinManagement::Bind_I(SITE_T *site) {
   // Update active_ list
   AddToActive(motor);
   properties_->microtubules.FlagForUpdate();
-  /*
-  // Log number of binding events
-  if (properties_->sim_equilibrating_) {
-    n_binding_events_++;
-    if (n_binding_events_ >= equil_threshold_) {
-      wally_->OverrideEquilibration();
-    }
-  }
-  */
 }
 
 void KinesinManagement::Bind_ATP(POP_T *head) {
@@ -1055,13 +1046,16 @@ void KinesinManagement::Unbind_I(POP_T *head) {
   }
   // Update number of kinesin runs
   if (!properties_->sim_equilibrating_) {
+    n_runs_recorded_++;
+    /*
     if (head->site_->index_ != head->site_->mt_->plus_end_) {
       int i_fwd{head->site_->index_ + head->site_->mt_->delta_x_};
       if (!head->site_->mt_->lattice_[i_fwd].occupied_) {
-        n_unjammed_runs_++;
+        n_runs_recorded_++;
       }
     }
-    if (n_unjammed_runs_ >= n_runs_desired_) {
+    */
+    if (n_runs_recorded_ >= n_runs_desired_) {
       wally_->TerminateSimulation();
     }
   }

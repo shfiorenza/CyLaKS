@@ -1,6 +1,6 @@
 seed: 198261346419
-delta_t: 2.0e-5 # 2.0e-04 # 2.5e-05
-n_steps: 5050000 # 0
+delta_t: 2.0e-04 # 2.5e-05
+n_steps: 50500000
 data_threshold: 500000
 n_datapoints: 100000
 kbT: 4.114
@@ -27,17 +27,17 @@ microtubules:
   printout_on: false
   diffusion_on: false
 motors:
-  lattice_coop_range: 0 # 851
+  lattice_coop_range: 851
   lattice_coop_Emax_solo: 0.75
   lattice_coop_Emax_bulk: 4.5
-  interaction_energy: 0.0 # 0.76
+  interaction_energy: 0.76
   t_active: 0
   k_on: 0.000358
-  c_bulk: 1.5
+  c_bulk: 0.020 # 1.5
   c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 130 # 95 for Kif4A # 130 for xklp1
+  k_hydrolyze: 95 # 95 for Kif4A or 130 for xklp1
   k_off_i: 8
   k_off_ii: 260
   applied_force: 0.0

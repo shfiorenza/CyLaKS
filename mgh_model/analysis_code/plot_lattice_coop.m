@@ -1,8 +1,9 @@
 clear variables
 
-baseNames = ["lattice_coop"];
+baseNames = ["kif4a_coop_opt_summit_allSix_run1_11.3"];
 concentrations = [20, 50, 80, 120, 220, 420];
-dir = "/home/shane/Projects/overlap_analysis/mgh_model";
+%dir = "/home/shane/Projects/overlap_analysis/mgh_model";
+dir = "/home/shane/Projects/overlap_analysis/mgh_model/kif4a_coop_allSix/run1";
 
 n_runs = length(baseNames);
 n_concs = length(concentrations);

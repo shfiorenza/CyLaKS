@@ -827,7 +827,7 @@ void Curator::TerminateSimulation() {
   size_t n_datapoints{steps_recorded / n_steps_per_output_};
   Log("Sim '%s' data collection terminated early after sufficient unjammed "
       "kinesin unbinding events\n",
-      sim_name_, properties_->kinesin4.n_unjammed_runs_);
+      sim_name_, properties_->kinesin4.n_runs_recorded_);
   Log("N_STEPS = %zu\n", properties_->current_step_);
   Log("N_DATAPOINTS = %zu\n", n_datapoints);
 }

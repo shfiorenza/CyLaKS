@@ -48,6 +48,7 @@ for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
+        %{
         % Do not count motors that are jammed or at the plus end
         jammed_motors = [];
         for i_site = 1 : n_sites
@@ -67,11 +68,12 @@ for i_data = 1 : n_datapoints - 1
                 end
             end
         end
-        %{
+        %}
+       
+        % Determine end-tag region; ignore motors that terminate from here
         endtag_boundary = 1;
-        % Determine end-tag region; ignore motors that terminate here
         for i_site=1:n_sites
-           motor_ID = future_IDs(i_site);
+           motor_ID = motor_IDs(i_site);
            if motor_ID ~= -1
                endtag_boundary = i_site + 1;
            else
@@ -80,7 +82,7 @@ for i_data = 1 : n_datapoints - 1
         end
         %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
-        for i_site = 1:1:n_sites
+        for i_site = 1 : 1 : n_sites
             motor_ID = motor_IDs(i_site);
             % Always count motor on first site
             if motor_ID > 0 && i_site == 1
@@ -92,7 +94,7 @@ for i_data = 1 : n_datapoints - 1
                     n_active(i_mt) = n_active(i_mt) + 1;
                     active_motors(i_mt, n_active(i_mt)) = motor_ID;
                 end
-                % Otherwise if a motor is found, only count first head
+            % Otherwise if a motor is found, only count first head
             elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
                 % Record the motor's starting site if this is the first time
                 % seeing it (-1 means it was not seen last datapoint)
@@ -106,7 +108,7 @@ for i_data = 1 : n_datapoints - 1
         end
         % Check one datapoint into the future to see if any motors unbound
         n_deleted = 0;
-        for i_motor = 1:1:n_active(i_mt)
+        for i_motor = 1 : 1 : n_active(i_mt)
             i_adj = i_motor - n_deleted;
             motor_ID = active_motors(i_mt, i_adj);
             future_site = find(future_IDs == motor_ID, 1);
@@ -122,8 +124,8 @@ for i_data = 1 : n_datapoints - 1
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                %if end_site(1) > endtag_boundary && run_time > 0
-                if all(jammed_motors(:) ~= motor_ID)
+                if end_site(1) > endtag_boundary
+                %if all(jammed_motors(:) ~= motor_ID)
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;

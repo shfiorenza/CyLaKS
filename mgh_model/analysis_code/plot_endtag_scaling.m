@@ -1,4 +1,4 @@
-
+%{
 clear variables;
 
 base_name = "endtag";
@@ -14,7 +14,7 @@ exp_err_mt_lengths =  [0.79, 0.79, 0.79, 0.79, 0.79, 0.79, 0.79]; % in um;
 exp_endtag_lengths = [1.19, 1.27, 1.43, 1.61, 1.63, 1.74, 2.21]; % in um
 exp_err_endtag_lengths = [0.11, 0.10, 0.12, 0.12, 0.18, 0.16, 0.18, ]; % in um
 
-dir = "/home/shane/Projects/overlap_analysis/mgh_model/data";
+dir = "/home/shane/Projects/overlap_analysis/mgh_model";
 
 endtag_lengths = zeros(n_mts, n_seeds);
 for i_mt = 1 : n_mts
@@ -55,6 +55,6 @@ errorbarxy(exp_mt_lengths, exp_endtag_lengths, exp_err_mt_lengths, ...
 xlabel("Microtubule length (microns)", 'FontSize', 16);
 ylabel("Endtag length (microns)", 'Fontsize', 16);
 set(gca, 'FontSize', 16);
-legend(["Experiment", "Simulation", "wut"], 'location', 'northwest'); 
+legend(["Experiment", "Simulation"], 'location', 'northwest'); 
 %ylim([0 3]);
 xlim([0 16]);

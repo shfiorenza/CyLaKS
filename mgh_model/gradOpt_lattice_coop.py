@@ -20,7 +20,15 @@ param_label = ["interaction_energy", "lattice_coop_range",
                "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
 param_initialVal = [0.75, 500, 0.3, 3.75]
 param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 4.5])
-step_size = [1, 50, 0.5, 1]
+step_size = [0.05, 50, 0.01, 0.05]
+
+#param_label = ["interaction_energy", "lattice_coop_range",
+#               "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk",
+#               "sigma_off_ii", "sigma_ATP"]
+#param_initialVal = [0.75, 850, 0.75, 3.75, 0.175, 2.3]
+#param_bounds = ([0.5, 100, 0.1, 1.5, 0.05, 0.05], [3.0, 1500, 1.5, 4.5, 5, 5])
+#step_size = [0.05, 50, 0.01, 0.05, 0.01, 0.1]
+
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
@@ -107,8 +115,7 @@ def kif4a_coop_scaling(params):
         err_velocity=(
             exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
-        weighted_errors.append(
-            err_runlength**2 + err_lifetime**2 + err_velocity**2)
+        weighted_errors.append(err_lifetime**2 + err_velocity**2)
     log.info("Weighted errors: {}".format(weighted_errors))
     # Move log file into output folder to keep a record of all runs
     call("mv *.log grad_descent_output", shell=True)

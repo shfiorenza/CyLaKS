@@ -211,6 +211,7 @@ void Curator::ParseParameters() {
   parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
+  parameters_->motors.n_runs_desired = motors["n_runs_desired"].as<size_t>();
   try {
     parameters_->motors.lattice_coop_range =
         motors["lattice_coop_range"].as<int>();
@@ -309,6 +310,7 @@ void Curator::ParseParameters() {
   Log("\n  Kinesin (motor) parameters:\n");
   // Log("    lattice_coop_alpha = %g\n",
   // parameters_->motors.lattice_coop_alpha);
+  Log("    n_runs_desired = %zu\n", parameters_->motors.n_runs_desired);
   Log("    lattice_coop_range = %i\n", parameters_->motors.lattice_coop_range);
   Log("    lattice_coop_Emax_solo = -%g kbT\n",
       parameters_->motors.lattice_coop_Emax_solo);

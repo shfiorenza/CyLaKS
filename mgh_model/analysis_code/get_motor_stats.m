@@ -69,7 +69,7 @@ for i_data = 1 : n_datapoints - 1
             end
         end
         %}
-       
+        
         % Determine end-tag region; ignore motors that terminate from here
         endtag_boundary = 1;
         for i_site=1:n_sites

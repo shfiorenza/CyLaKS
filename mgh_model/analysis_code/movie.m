@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'endtag_250_0';
+sim_name = 'lattice_coopM_420';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
 movie_name = 'test';

@@ -1,35 +1,41 @@
 
-clear all;
-% Often-changed variables
-i_conc = 6;
-kif4a_concs = [20, 50, 80, 120, 220, 420];
-mt_lengths = [75000, 50000, 40000, 25000, 8500, 3250];
-conc = kif4a_concs(i_conc);
-%n_sites = mt_lengths(i_conc);
-n_sites = 7500;
-%simName = sprintf("kif4a_coop_optimization_lifetimeOnly_10.1_%i", conc);
-simName = sprintf("lattice_coop_%i", conc);
-%simName = "proc_xklp1";
-% Pseudo-constant variables
-n_mts = 1;
-delta_t = 0.0002; %0.000025;
-n_steps = 188324; % 1250000;
-n_datapoints = 1506; %10000;
+clear variables;
+%sim_name = "kif4a_coop_allSix/run1/kif4a_coop_opt_summit_allSix_run1_11.3_420";
+sim_name = "lattice_coop_420";
+file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
+
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s/%s.log', file_dir, sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, 'count')});
+n_sites = values{contains(params, 'length')};
+n_sites = sscanf(n_sites, '%i');
+% Read in system params
+delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
+total_steps = str2double(values{contains(params, 'n_steps')});
+data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
+if any(contains(params, 'DATA_THRESHOLD') ~= 0)
+   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
+end
+n_steps = total_steps - data_threshold;
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, 'n_datapoints')});
 time_per_datapoint = delta_t * n_steps / n_datapoints;
-starting_point = 1;
-active_datapoints = n_datapoints - starting_point;
-time_cutoff = time_per_datapoint; %0.3;    %in seconds
 site_size = 0.008; % in um
+% Use actual recorded number of datapoints to parse thru data/etc
+if any(contains(params, 'N_DATAPOINTS') ~= 0)
+   n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
+end
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 motorFileStruct = '%s_motorID.file';
-
-motorFileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));
+motorFileName = sprintf("%s/%s", file_dir, sprintf(motorFileStruct, sim_name));
 motor_data_file = fopen(motorFileName);
 raw_motor_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
 fclose(motor_data_file);
 motor_data = reshape(raw_motor_data, n_sites, n_mts, n_datapoints);
-
 
 % have an active list for each MT
 active_motors = zeros([n_mts n_mts*n_sites]);
@@ -43,33 +49,45 @@ n_runs = 0;
 starting_site = zeros([n_mts*n_sites 1]) - 1;
 starting_datapoint = zeros([n_mts*n_sites 1]) - 1;
 
-for i_data = starting_point:1:n_datapoints - 1
+for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
-        jammed_region = 0;
-        jam_start = -1;
-        n_jammed = 0;
-        %endtag_boundary = 2;
-        % Determine end-tag region; ignore motors that terminate here
+        %{
+        % Do not count motors that are jammed or at the plus end
+        jammed_motors = [];
         for i_site = 1 : n_sites
             motor_ID = motor_IDs(i_site);
-            if motor_ID ~= -1
-                if jam_start == -1
-                    jam_start = i_site;
-                end
-                n_jammed = n_jammed + 1;
-                %endtag_boundary = i_site + 1;
+            if motor_ID == -1
+                continue;
+            end
+            if i_site == 1
+                jammed_motors = [jammed_motors motor_ID];
             else
-                if n_jammed > 5
-                    jammed_region = [jammed_region jam_start:i_site];
+                fwd_ID = motor_IDs(i_site - 1);
+                if fwd_ID == -1
+                   continue; 
                 end
-                n_jammed = 0;
-                jam_start = -1;  
+                if fwd_ID ~= motor_ID
+                    jammed_motors = [jammed_motors motor_ID];
+                end
+            end
+        end
+        %}
+       
+        % Determine end-tag region; ignore motors that terminate from here
+        endtag_boundary = 1;
+        for i_site=1:n_sites
+           motor_ID = motor_IDs(i_site);
+           if motor_ID ~= -1
+               endtag_boundary = i_site + 1;
+           else
+               break;    
            end
         end
+        %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
-        for i_site = 1:1:n_sites
+        for i_site = 1 : 1 : n_sites
             motor_ID = motor_IDs(i_site);
             % Always count motor on first site
             if motor_ID > 0 && i_site == 1
@@ -81,7 +99,7 @@ for i_data = starting_point:1:n_datapoints - 1
                     n_active(i_mt) = n_active(i_mt) + 1;
                     active_motors(i_mt, n_active(i_mt)) = motor_ID;
                 end
-                % Otherwise if a motor is found, only count first head
+            % Otherwise if a motor is found, only count first head
             elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
                 % Record the motor's starting site if this is the first time
                 % seeing it (-1 means it was not seen last datapoint)
@@ -94,9 +112,8 @@ for i_data = starting_point:1:n_datapoints - 1
             end
         end
         % Check one datapoint into the future to see if any motors unbound
-
         n_deleted = 0;
-        for i_motor = 1:1:n_active(i_mt)
+        for i_motor = 1 : 1 : n_active(i_mt)
             i_adj = i_motor - n_deleted;
             motor_ID = active_motors(i_mt, i_adj);
             future_site = find(future_IDs == motor_ID, 1);
@@ -111,21 +128,13 @@ for i_data = starting_point:1:n_datapoints - 1
                 delta_time = abs(i_data - start_datapoint);
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
-                if true %isempty(find(jammed_region == end_site, 1))
+                % If time bound is above time cutoff, add to data
+                if end_site(1) > endtag_boundary
+                %if all(jammed_motors(:) ~= motor_ID)
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
                     lifetimes(n_runs) = run_time;
-                    velocities(n_runs) = (run_length / run_time) * 1000; % convert to nm/s  
-                    %{
-                    if run_time > 100
-                       fprintf("Motor %i had lifetime %g\n", motor_ID, run_time); 
-                       fprintf("End site: %i, endtag_boundary: %i\n", end_site(1), endtag_boundary);
-                    end
-                    if velocities(n_runs) < 40
-                       fprintf("Motor %i had vel %g\n", motor_ID, velocities(n_runs)); 
-                       fprintf("End site: %i, endtag_boundary: %i\n", end_site(1), endtag_boundary);
-                    end
-                    %}
+                    velocities(n_runs) = velocity;
                 end
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
@@ -138,6 +147,7 @@ for i_data = starting_point:1:n_datapoints - 1
         end
     end
 end
+
 % trim arrays to get rid of un-used containers
 runlengths = runlengths(1:n_runs);
 lifetimes = lifetimes(1:n_runs);

@@ -22,6 +22,7 @@ void KinesinManagement::Initialize(system_parameters *parameters,
 
 void KinesinManagement::SetParameters() {
 
+  n_runs_desired_ = parameters_->motors.n_runs_desired;
   double kbT{parameters_->kbT};
   double delta_t{parameters_->delta_t};
   step_active_ = (size_t)std::ceil(parameters_->motors.t_active / delta_t);
@@ -1045,16 +1046,8 @@ void KinesinManagement::Unbind_I(POP_T *head) {
     wally_->ErrorExit("Kin_MGMT::Unbind_I()");
   }
   // Update number of kinesin runs
-  if (!properties_->sim_equilibrating_) {
+  if (equilibrated_) {
     n_runs_recorded_++;
-    /*
-    if (head->site_->index_ != head->site_->mt_->plus_end_) {
-      int i_fwd{head->site_->index_ + head->site_->mt_->delta_x_};
-      if (!head->site_->mt_->lattice_[i_fwd].occupied_) {
-        n_runs_recorded_++;
-      }
-    }
-    */
     if (n_runs_recorded_ >= n_runs_desired_) {
       wally_->TerminateSimulation();
     }

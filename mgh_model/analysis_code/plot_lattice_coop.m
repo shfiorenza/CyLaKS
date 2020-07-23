@@ -1,9 +1,13 @@
+
 clear variables
 
-baseNames = ["kif4a_coop_opt_summit_allSix_run1_11.3"];
+baseNames = ["lattice_coopR", "lattice_coopQ"]; %, "lattice_coopP"];
+%baseNames = ["lattice_opt_ATP_wtSq/run2/core/kif4a_coop_opt_summit_run2_14.1"];%, ...
+    %  "kif4a_coop_allSix/run1/kif4a_coop_opt_summit_allSix_run1_11.3"];
 concentrations = [20, 50, 80, 120, 220, 420];
-%dir = "/home/shane/Projects/overlap_analysis/mgh_model";
-dir = "/home/shane/Projects/overlap_analysis/mgh_model/kif4a_coop_allSix/run1";
+dir = "/home/shane/Projects/overlap_analysis/mgh_model";
+
+color = ["b", "c", "m", "g"];
 
 n_runs = length(baseNames);
 n_concs = length(concentrations);
@@ -107,44 +111,67 @@ exp_err_lifetimes = [0.6, 0.7, 1.7, 5.9, 2.6, 3.9];
 exp_velocities = [600, 710, 360, 310, 310, 180];
 exp_err_velocities = [75, 110, 50, 79, 40, 40];
 
+%}
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 2*720, 2*240])
+set(fig1, 'Position', [50, 50, 1440, 285])
     
 subplot(1, 4, 1)
-errorbar(exp_concs, exp_runlengths, exp_err_runlengths, ':d','LineWidth', 2);
-hold on
+hold all
+exp_data = errorbar(exp_concs, exp_runlengths, exp_err_runlengths, '^r','LineWidth', 2);
+exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 for i_run = 1 : n_runs
-    errorbar(concentrations, runlengths(i_run, :), err_runlengths(i_run, :), 'o','LineWidth', 2);
+    sim_data = errorbar(concentrations, runlengths(i_run, :), err_runlengths(i_run, :), ... 
+        color(i_run) + "o",'LineWidth', 2);
+    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
 end
 %errorbar(concentrations, runlengthsB, err_runlengthsB, 'o','LineWidth', 2);
-ylabel('Run length (microns)');
+ylabel('Run length (microns)', 'FontSize', 14);
+set(gca, 'FontSize', 14);
+xlim([0 440]);
+%ylim([0 4]);
 
 subplot(1, 4, 2)
-errorbar(exp_concs, exp_lifetimes, exp_err_lifetimes, ':d','LineWidth', 2);
+exp_data = errorbar(exp_concs, exp_lifetimes, exp_err_lifetimes, '^r','LineWidth', 2);
+exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 hold on
 for i_run = 1 : n_runs
-    errorbar(concentrations, lifetimes(i_run, :), err_lifetimes(i_run, :), 'o', 'LineWidth', 2);
+    sim_data = errorbar(concentrations, lifetimes(i_run, :), err_lifetimes(i_run, :), ...
+        color(i_run) + "o", 'LineWidth', 2);
+    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
 end
 %errorbar(concentrations, lifetimesB, err_lifetimesB, 'o', 'LineWidth', 2);
-xlabel('KIF4A concentration (pM)');
-ylabel('Life time (seconds)');
+xlabel('KIF4A concentration (pM)', 'FontSize', 14);
+ylabel('Life time (seconds)', 'FontSize', 14);
+set(gca, 'FontSize', 14);
+xlim([0 440]);
+%ylim([-2 24]);
 
 subplot(1, 4, 3)
-errorbar(exp_concs, exp_velocities, exp_err_velocities, ':d','LineWidth', 2);
+exp_data = errorbar(exp_concs, exp_velocities, exp_err_velocities, '^r','LineWidth', 2);
+exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 hold on
 for i_run = 1 : n_runs
-    errorbar(concentrations, velocities(i_run, :), err_velocities(i_run, :), 'o', 'LineWidth', 2);
+    sim_data = errorbar(concentrations, velocities(i_run, :), err_velocities(i_run, :), ... 
+        color(i_run) + "o", 'LineWidth', 2);
+    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
 end
 %errorbar(concentrations, velocitiesB, err_velocitiesB, 'o', 'LineWidth', 2);
-ylabel('Velocity (nm/s)');
+ylabel('Velocity (nm/s)', 'FontSize', 14);
+set(gca, 'FontSize', 14);
+xlim([0 440]);
+%ylim([0 900]);
 
 subplot(1, 4, 4);
 hold on
-errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
-errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
+exp_data = errorbar([0, 0], [0, 0], '^r', 'LineWidth', 2);
+exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
+for i_run = 1 : n_runs
+sim_data = errorbar([0, 0], [0, 0], color(i_run) + "o", 'LineWidth', 2);
+sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+end
 %errorbar([0, 0], [0, 0], '--o', 'LineWidth', 2);
 xlim([1 2]);
 ylim([1 2]);
 axis off
-legend({'Data', 'Best fit (4 params)', 'Best fit (6 params)'}, 'location', 'northwestoutside'); %,  ...
-    %'Sim data w/ cooperative unbind\_ii'}, 'location', 'best');
+%legend({'Experiment', 'Simulation'}, 'location', 'northwestoutside', 'FontSize', 14);
+legend(["Experiment" baseNames], 'location', 'northwestoutside', 'FontSize', 14);

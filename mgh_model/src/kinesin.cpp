@@ -71,15 +71,18 @@ double Kinesin::GetWeight_Unbind_II() {
     wally_->ErrorExit("Kinesin::GetWeight_Unbind_II() [2]");
   }
   double corrected_weight{chosen_head->site_->weight_unbind_};
+  /*
   corrected_weight *= corrected_weight;
   // Divide out one of the squared neighbor weights
   int n_neighbs{chosen_head->site_->GetKif4ANeighborCount()};
   corrected_weight /= properties_->kinesin4.weight_neighbs_unbind_[n_neighbs];
+  */
   return corrected_weight;
 }
 
 double Kinesin::GetWeight_BindATP_II() {
 
+  return 0.0;
   Monomer *chosen_head{nullptr};
   bool head_found{false};
   if (head_one_.ligand_ == "NULL") {

@@ -37,24 +37,26 @@ end
 %}
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 480, 480])
+set(fig1, 'Position', [50, 50, 720, 720])
 hold all;
-% Plot sim data
-sim_data = errorbar(mt_lengths * site_size, avg_endtag_length, err_endtag_length, 'o', ...
-    'MarkerSize', 4, 'LineWidth', 2);
-sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+
+
 % Plot exp data -- second plot is for horizontal error bars 
 exp_data = errorbar(exp_mt_lengths, exp_endtag_lengths, ...
-    exp_err_endtag_lengths, 'b^');
+    exp_err_endtag_lengths, 'r^', 'MarkerSize', 12);
 exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
+% Plot sim data
+sim_data = errorbar(mt_lengths * site_size, avg_endtag_length, err_endtag_length, 'bo', ...
+    'MarkerSize', 12, 'LineWidth', 2);
+sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+
+
 errorbarxy(exp_mt_lengths, exp_endtag_lengths, exp_err_mt_lengths, ...
-    exp_err_endtag_lengths, {'b^', 'b', 'b'});
+    exp_err_endtag_lengths, {'r^', 'r', 'r'});
 
-
-
-xlabel("Microtubule length (microns)", 'FontSize', 16);
-ylabel("Endtag length (microns)", 'Fontsize', 16);
-set(gca, 'FontSize', 16);
-legend(["Experiment", "Simulation"], 'location', 'northwest'); 
+xlabel("Microtubule length (microns)", 'FontSize', 18);
+ylabel("Endtag length (microns)", 'Fontsize', 18);
+set(gca, 'FontSize', 18);
+legend(["Experiment", "Simulation"], 'location', 'northwest', 'FontSize', 18); 
 %ylim([0 3]);
 xlim([0 16]);

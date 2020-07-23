@@ -1,11 +1,12 @@
 #!/bin/bash
-SCAN_NAME="lattice_coop"
+SCAN_NAME="lattice_coopR"
 echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params_processivity.yaml"
 echo Base parameter file is ${PARAM_FILE}
 
 MOT_CONC=(0.02 0.05 0.08 0.120 0.220 0.420)
 CONC_SCALE=(20 50 80 120 220 420)
+N_RUNS=(10 20 30 40 100 150)
 
 BASE_SEED=198261346419
 
@@ -24,7 +25,8 @@ BASE_SEED=198261346419
 			TEMP_PARAMS="params_temp_${FILE_NAME}.yaml"
 			cp $PARAM_FILE $TEMP_PARAMS
     	    yq w -i ${PARAM_FILE} seed ${SEED}
-			yq w -i $TEMP_PARAMS motors.c_bulk ${MOT_CONC[I_CONC]}
+			yq w -i ${TEMP_PARAMS} motors.c_bulk ${MOT_CONC[I_CONC]}
+			yq w -i ${TEMP_PARAMS} motors.n_runs_desired ${N_RUNS[I_CONC]}
 	#		yq w -i $TEMP_PARAMS motors.lattice_coop_Emax_solo $EMAX_SOLO
 	#		yq w -i $TEMP_PARAMS motors.lattice_coop_Emax_bulk $EMAX_BULK
 			# Run sim for these parameter values

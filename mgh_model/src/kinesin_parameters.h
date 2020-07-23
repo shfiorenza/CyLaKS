@@ -3,6 +3,7 @@
 
 struct kinesin_parameters {
 
+  size_t n_runs_desired;
   int lattice_coop_range;
   double lattice_coop_Emax_solo;
   double lattice_coop_Emax_bulk;

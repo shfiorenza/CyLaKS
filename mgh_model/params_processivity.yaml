@@ -1,14 +1,14 @@
 seed: 198261346419
-delta_t: 2.0e-04 # 2.5e-05
-n_steps: 50500000
-data_threshold: 500000
+delta_t: 2.0e-05 # 2.5e-05
+n_steps: 505000000
+data_threshold: 5000000
 n_datapoints: 100000
 kbT: 4.114
 eta: 0.001
 microtubules:
   count: 1
   length:
-  - 2500
+  - 1250 # 2500
   - 200
   y_dist: 32
   site_size: 8
@@ -27,10 +27,11 @@ microtubules:
   printout_on: false
   diffusion_on: false
 motors:
-  lattice_coop_range: 851
+  n_runs_desired: 500
+  lattice_coop_range: 1100
   lattice_coop_Emax_solo: 0.75
-  lattice_coop_Emax_bulk: 4.5
-  interaction_energy: 0.76
+  lattice_coop_Emax_bulk: 4.75
+  interaction_energy: 2.25
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.020 # 1.5
@@ -43,8 +44,8 @@ motors:
   applied_force: 0.0
   internal_force: 26
   sigma_off_i: 1.0
-  sigma_off_ii: 0.175
-  sigma_ATP: 2.3
+  sigma_off_ii: 0.2
+  sigma_ATP: 4.6
   k_tether: 0.1
   c_eff_tether: 5000
   k_untether: 0.05

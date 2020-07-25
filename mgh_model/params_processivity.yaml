@@ -28,10 +28,10 @@ microtubules:
   diffusion_on: false
 motors:
   n_runs_desired: 500
-  lattice_coop_range: 1100
-  lattice_coop_Emax_solo: 0.75
-  lattice_coop_Emax_bulk: 4.75
-  interaction_energy: 2.25
+  lattice_coop_range: 1100 # 867 # 1111
+  lattice_coop_Emax_solo: 0.55 # 1.025 # 0.8803
+  lattice_coop_Emax_bulk: 4.75 # 2.87 # 4.739
+  interaction_energy: 2.25 # 2.45 # 0.985 # 2.219
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.020 # 1.5
@@ -44,8 +44,8 @@ motors:
   applied_force: 0.0
   internal_force: 26
   sigma_off_i: 1.0
-  sigma_off_ii: 0.2
-  sigma_ATP: 4.6
+  sigma_off_ii: 0.125 # 0.1874
+  sigma_ATP: 1.35 # 4.6
   k_tether: 0.1
   c_eff_tether: 5000
   k_untether: 0.05

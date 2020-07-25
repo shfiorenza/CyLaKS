@@ -1,7 +1,7 @@
 
 clear variables;
 %sim_name = "kif4a_coop_allSix/run1/kif4a_coop_opt_summit_allSix_run1_11.3_420";
-sim_name = "lattice_coop_420";
+sim_name = "lattice_coopD_220";
 file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
 % Open log file and parse it into param labels & their values

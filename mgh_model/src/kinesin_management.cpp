@@ -97,6 +97,10 @@ void KinesinManagement::SetParameters() {
   double c_ATP{parameters_->motors.c_ATP};
   p_bind_ATP_i_ = k_on_ATP * c_ATP * delta_t;
   double internal_force{parameters_->motors.internal_force};
+  if (internal_force == 0.0) {
+    no_internal_force_ = true;
+    wally_->Log("  Internal forces disabled\n");
+  }
   double sigma_ATP{parameters_->motors.sigma_ATP};
   double weight_internal_ATP{exp(-internal_force * sigma_ATP / kbT)};
   p_avg_bind_ATP_ii_ = p_bind_ATP_i_ * weight_internal_ATP;
@@ -106,6 +110,10 @@ void KinesinManagement::SetParameters() {
   double weight_internal_off_ii{exp(internal_force * sigma_off_ii / kbT)};
   double k_off_ii{parameters_->motors.k_off_ii};
   p_avg_unbind_ii_ = k_off_ii * delta_t * weight_internal_off_ii;
+  if (no_internal_force_) {
+    p_avg_bind_ATP_ii_ = 0.0;
+    p_avg_unbind_ii_ *= exp(26 * 0.35 / kbT);
+  }
   double k_off_i{parameters_->motors.k_off_i};
   p_avg_unbind_i_ = k_off_i * delta_t;
   // Force perpetually applied to motors, e.g., by optical trapping

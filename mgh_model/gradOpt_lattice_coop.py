@@ -20,15 +20,16 @@ param_label = ["interaction_energy", "lattice_coop_range",
                "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
 param_initialVal = [0.75, 500, 0.3, 3.75]
 param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 4.5])
-step_size = [0.05, 50, 0.01, 0.05]
+step_size = [0.1, 100, 0.1, 0.1]
 
-#param_label = ["interaction_energy", "lattice_coop_range",
+# param_label = ["interaction_energy", "lattice_coop_range",
 #               "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk",
 #               "sigma_off_ii", "sigma_ATP"]
 #param_initialVal = [0.75, 850, 0.75, 3.75, 0.175, 2.3]
 #param_bounds = ([0.5, 100, 0.1, 1.5, 0.05, 0.05], [3.0, 1500, 1.5, 4.5, 5, 5])
-#step_size = [0.05, 50, 0.01, 0.05, 0.01, 0.1]
+#step_size = [0.1, 100, 0.1, 0.1, 0.1, 0.5]
 
+n_runs = [50, 100, 150, 350, 350, 350]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
@@ -86,6 +87,8 @@ def kif4a_coop_scaling(params):
         yaml_edit = "yq w -i " + param_file + " motors."
         call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
              shell=True)  # Convert conc from pM to nM
+        call(yaml_edit + "n_runs_desired" + " " +
+             repr(n_runs[i_conc]), shell=True)
         for i in range(len(params)):
             call(yaml_edit + param_label[i] +
                  " " + repr(params[i]), shell=True)
@@ -106,13 +109,13 @@ def kif4a_coop_scaling(params):
         kif4a_stats = MATLAB.get_motor_stats(str(sim_names[i_conc]))
         log.info("For sim {}:".format(sim_names[i_conc]))
         log.info("  Measured stats: {}".format(kif4a_stats))
-        err_runlength=(
+        err_runlength = (
             exp_runlengths[i_conc] - kif4a_stats[0][0]) / exp_err_runlengths[i_conc]
         log.info("      Runlength error: {}".format(err_runlength))
-        err_lifetime=(
+        err_lifetime = (
             exp_lifetimes[i_conc] - kif4a_stats[0][2]) / exp_err_lifetimes[i_conc]
         log.info("      Lifetime error: {}".format(err_lifetime))
-        err_velocity=(
+        err_velocity = (
             exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
         weighted_errors.append(err_lifetime**2 + err_velocity**2)
@@ -126,14 +129,14 @@ def kif4a_coop_scaling(params):
     return weighted_errors
 
 
-already_made=os.path.isfile("./sim")
+already_made = os.path.isfile("./sim")
 if not already_made:
     call("make -j12 CFG=release sim", shell=True)
-ready_for_output=os.path.isfile("/grad_descent_output/")
+ready_for_output = os.path.isfile("/grad_descent_output/")
 if not ready_for_output:
     call("mkdir grad_descent_output", shell=True)
 log.info("Start of gradient descent parameter optimization")
 log.info("Initial parameters: {}".format(param_initialVal))
-res=least_squares(kif4a_coop_scaling, param_initialVal,
+res = least_squares(kif4a_coop_scaling, param_initialVal,
                     bounds=param_bounds, diff_step=step_size,
-                    x_scale='jac', verbose=2, xtol=None)
+                    x_scale='jac', verbose=2)  # , xtol=None)

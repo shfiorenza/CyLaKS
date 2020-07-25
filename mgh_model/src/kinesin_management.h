@@ -42,6 +42,8 @@ public:
   size_t n_runs_desired_{100}; // std::numeric_limits<size_t>::max()};
   size_t n_runs_recorded_{0};
 
+  bool no_internal_force_{false};
+
   size_t step_active_{0};         // KMC step at which motors become active
   bool population_active_{false}; // Switch for motor activity
   bool tethering_active_{false};

@@ -1,12 +1,13 @@
 #!/bin/bash
-SCAN_NAME="lattice_coopR"
+SCAN_NAME="lattice_coopO"
 echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params_processivity.yaml"
 echo Base parameter file is ${PARAM_FILE}
 
 MOT_CONC=(0.02 0.05 0.08 0.120 0.220 0.420)
 CONC_SCALE=(20 50 80 120 220 420)
-N_RUNS=(10 20 30 40 100 150)
+#N_RUNS=(7 18 30 50 100 150)
+N_RUNS=(50 125 200 300 500 800)
 
 BASE_SEED=198261346419
 

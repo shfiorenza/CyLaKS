@@ -1,14 +1,16 @@
 
 clear all;
 
-baseNames = ["lattice_coop_base"]; %, "lattice_coop_justBind"]; %, "lattice_coopH"];
+baseNames = ["kif4a_coop_0"]; %, "kif4a_coop_1"];
+seeds = [0, 1, 2, 3];
+%baseNames = ["lattice_coop_LONG_4"];%, "lattice_coop2_0_4_1", "lattice_coop2_0_4_2"]; %, "lattice_coop2_0_4_3", "lattice_coop2_0_4_4"]; 
 %baseNames = ["lattice_coopH", "lattice_coopM", "lattice_coopN"];
 labelNames = ["Sim. w/ short-range only", "Sim. w/ long-range", ...
               "Sim. w/ long-range (also affects stepping)"];
     
 concentrations = [20, 50, 80, 120, 220, 420];
-dir = "/home/shane/Projects/overlap_analysis/mgh_model";
-
+%dir = "/home/shane/Projects/overlap_analysis/mgh_model";
+dir = ".";
 n_runs = length(baseNames);
 n_concs = length(concentrations);
 
@@ -23,7 +25,7 @@ for i_run = 1 : n_runs
     for i_conc = 1 : n_concs
         conc = int32(concentrations(i_conc));
         simName = sprintf("%s/%s_%i", dir, baseNames(i_run), conc);
-        mot_stats = get_motor_stats(simName);
+        mot_stats = get_motor_stats(simName, seeds);
         runlengths(i_run, i_conc) = mot_stats(1);
         err_runlengths(i_run, i_conc) = mot_stats(2);
         lifetimes(i_run, i_conc) = mot_stats(3);
@@ -42,7 +44,7 @@ exp_velocities = [600, 710, 360, 310, 310, 180];
 exp_err_velocities = [75, 110, 50, 79, 40, 40];
 %} 
 
-color = [0, 0.4470, 0.7410; 0.9290, 0.6940, 0.1250; 0.2660, 0.7740, 0.3880];
+color = [0, 0.4470, 0.7410; 0.9290, 0.6940, 0.1250; 0.2660, 0.7740, 0.3880; 0, 0, 0.5; 0, 0, 0; 0, 0.2, 0; 0.5, 0, 0];
 exp_color = [0.85 0 0];
 
 fig1 = figure();
@@ -115,11 +117,11 @@ end
 xlim([1 2]);
 ylim([1 2]);
 axis off
-if length(baseNames) <= length(labelNames)
-    leg = legend(["Experiment", labelNames], 'location', 'best', 'FontSize', 12);
-else
+%if length(baseNames) <= length(labelNames)
+%    leg = legend(["Experiment", labelNames], 'location', 'best', 'FontSize', 12);
+%else
     leg = legend(["Experiment", baseNames], 'location', 'northwest', 'FontSize', 12);
-end
+%end
 set(leg,'units','normalized');
 set(leg,'position',[0.8,0.805,0.1,0.1])
 

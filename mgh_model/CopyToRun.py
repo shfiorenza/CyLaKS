@@ -26,7 +26,7 @@ print('copy executables to ', exePath)
 os.system('rsync -avP sim '+exePath+'/')
 os.system('rsync -avP Makefile '+exePath+'/')
 os.system('rsync -avP params_processivity.yaml '+exePath+'/')
-os.system('rsync -avP src/get_motor_stats.m '+exePath+'/')
+os.system('rsync -avP analysis_code/get_motor_stats.m '+exePath+'/')
 os.system('rsync -avP gradOpt_lattice_coop.py '+exePath+'/')
 os.system('rsync -avP job_gradOpt_lattice.slurm '+exePath+'/')
 

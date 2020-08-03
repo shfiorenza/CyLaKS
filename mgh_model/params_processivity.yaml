@@ -1,6 +1,6 @@
-seed: 198261346419
-delta_t: 2.0e-05 # 2.5e-05
-n_steps: 505000000
+seed: 1.98261346419e+11
+delta_t: 2e-05
+n_steps: 505000000 # 15000000 # 505000000
 data_threshold: 5000000
 n_datapoints: 100000
 kbT: 4.114
@@ -8,7 +8,7 @@ eta: 0.001
 microtubules:
   count: 1
   length:
-  - 1250 # 2500
+  - 1250
   - 200
   y_dist: 32
   site_size: 8
@@ -23,29 +23,29 @@ microtubules:
   immobile_until:
   - 9500
   - 500
-  applied_force: 0.0
+  applied_force: 0
   printout_on: false
   diffusion_on: false
 motors:
   n_runs_desired: 500
-  lattice_coop_range: 1100 # 867 # 1111
-  lattice_coop_Emax_solo: 0.55 # 1.025 # 0.8803
-  lattice_coop_Emax_bulk: 4.75 # 2.87 # 4.739
-  interaction_energy: 2.25 # 2.45 # 0.985 # 2.219
-  t_active: 0
+  lattice_coop_range: 1000
+  lattice_coop_Emax_solo: 0.95
+  lattice_coop_Emax_bulk: 5.25 # 4.75
+  interaction_energy: 1.6
+  t_active: 0.0
   k_on: 0.000358
-  c_bulk: 0.020 # 1.5
+  c_bulk: 1.5
   c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 95 # 95 for Kif4A or 130 for xklp1
+  k_hydrolyze: 95
   k_off_i: 8
   k_off_ii: 260
   applied_force: 0.0
-  internal_force: 26
+  internal_force: 26.0
   sigma_off_i: 1.0
-  sigma_off_ii: 0.125 # 0.1874
-  sigma_ATP: 1.35 # 4.6
+  sigma_off_ii: 0.125
+  sigma_ATP: 1.15
   k_tether: 0.1
   c_eff_tether: 5000
   k_untether: 0.05
@@ -56,7 +56,7 @@ motors:
   endpausing_active: true
 xlinks:
   k_on: 0.000238
-  c_bulk: 0.0 # 0.05
+  c_bulk: 0
   c_eff_bind: 2500
   k_off_i: 0.143
   k_off_ii: 0.0143

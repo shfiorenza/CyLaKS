@@ -1,43 +1,68 @@
 clear;
 close all;
-simName = 'EndtagC_500';
-n_mts = 1;
-n_sites = 500;
-delta_t = 0.000025;
-n_steps = 60000000;
-n_datapoints = 10000;
-time_per_datapoint = delta_t * n_steps / n_datapoints;
-dwell_time = 6; % in sections
-dwell_points = dwell_time / time_per_datapoint; 
+sim_name = 'data_endtag_fullCoop/endtag_1250_0';
+%sim_name = 'endtag_shortCoop_250_0';
+file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s/%s.log', file_dir, sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, 'count')});
+n_sites = values{contains(params, 'length')};
+n_sites = sscanf(n_sites, '%i');
+% Read in system params
+delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
+total_steps = str2double(values{contains(params, 'n_steps')});
+data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
+if any(contains(params, 'DATA_THRESHOLD') ~= 0)
+   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
+end
+n_steps = total_steps - data_threshold;
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, 'n_datapoints')});
+time_per_datapoint = delta_t * n_steps / n_datapoints;
+% Use actual recorded number of datapoints to parse thru data/etc
+if any(contains(params, 'N_DATAPOINTS') ~= 0)
+   n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
+end
+
+
+dwell_time = 0.5; % in sections
+dwell_points = dwell_time / time_per_datapoint; 
 motor_ID = 2;
 xlink_ID = 1;
 tubulin_ID = 0;
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-occu_fileStruct = '%s_occupancy.file';
-mt_fileStruct = '%s_mt_coord.file';
-motorID_fileStruct = '%s_motorID.file';
-
 % microtubule coordinates - specifically, left edge of MT
-mt_fileName = sprintf(fileDirectory, sprintf(mt_fileStruct, simName));
-mt_data_file = fopen(mt_fileName);
-mt_coords = fread(mt_data_file, [n_datapoints, n_mts], '*int');
-fclose(mt_data_file);
+mt_data = zeros(n_mts, n_datapoints);
+mtFile = sprintf('%s/%s_mt_coord.file', file_dir, sim_name);
+if isfile(mtFile)
+    mt_data_file = fopen(mtFile);
+    mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
+    fclose(mt_data_file);
+    mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
+end
 % occupancy data on each MT
-occu_fileName = sprintf(fileDirectory, sprintf(occu_fileStruct, simName));
-occu_data_file = fopen(occu_fileName);
-occupancy_raw_data = fread(occu_data_file, [n_datapoints * n_mts * n_sites], '*int');
-fclose(occu_data_file);
-occupancy = reshape(occupancy_raw_data, n_sites, n_mts, n_datapoints);
+occupany = zeros(n_sites, n_mts, n_datapoints);
+occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
+if isfile(occuFile)
+    occupancy_file = fopen(occuFile);
+    occu_raw_data = fread(occupancy_file, [n_datapoints * n_mts * n_sites], '*int');
+    occupancy = reshape(occu_raw_data, n_sites, n_mts, n_datapoints);
+    fclose(occupancy_file);
+end
 % motor ID data
-motor_fileName = sprintf(fileDirectory, sprintf(motorID_fileStruct, simName));
-motor_data_file = fopen(motor_fileName);
-motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
-fclose(motor_data_file);
-motor_IDs = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
-
-
+motor_IDs = zeros(n_sites, n_mts, n_datapoints) - 1;
+motorFile = sprintf('%s/%s_motorID.file', file_dir, sim_name);
+if isfile(motorFile)
+    motor_data_file = fopen(motorFile);
+    motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
+    fclose(motor_data_file);
+    motor_IDs = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
+end
 % parameters for making image
 siteLength = 8;
 pixelLength = 150;
@@ -45,9 +70,9 @@ pixelPad = 20;
 gaussSigma = 1.0;
 doPlot = 0;
 
-gaussAmp = 4000;
-bkgLevel = 200;
-noiseStd = 100;
+gaussAmp = 1000;
+bkgLevel = 20;
+noiseStd = 50;
 intensityMax = gaussAmp/2;% + bkgLevel;
 
 % Plot motors
@@ -57,7 +82,7 @@ occupancy(occupancy == motor_ID) = 1;
 matrix = occupancy;
 
 % motors in overlap
-dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points):n_datapoints), 3)';
+dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points): n_datapoints), 3)';
 
 imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
     gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);

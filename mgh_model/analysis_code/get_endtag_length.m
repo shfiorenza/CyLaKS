@@ -1,5 +1,7 @@
 function endtag_length = get_endtag_length(sim_name)
 
+%sim_name = "/home/shane/Projects/overlap_analysis/mgh_model/endtag_250_0";
+
 motor_speciesID = 2;
 xlink_speciesID = 1;
 site_size = 0.008; % in um
@@ -13,6 +15,14 @@ n_sites = values{contains(params, "length")};
 n_sites = sscanf(n_sites, '%i');
 % Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
 n_datapoints = str2double(values{contains(params, "n_datapoints")});
+delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
+total_steps = str2double(values{contains(params, 'n_steps')});
+data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
+if any(contains(params, 'DATA_THRESHOLD') ~= 0)
+   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
+end
+n_steps = total_steps - data_threshold;
+time_per_datapoint = delta_t * n_steps / n_datapoints;
 % Use actual recorded number of datapoints to parse thru data/etc
 if any(contains(params, "N_DATAPOINTS") ~= 0)
    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
@@ -32,8 +42,12 @@ xlink_avg_occupancy = zeros([n_sites 1]);
 xlink_raw_data(xlink_raw_data ~= xlink_speciesID) = 0;
 xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 
-starting_point = 1; % 199 * n_datapoints / 200;
-active_datapoints = n_datapoints - starting_point + 1;
+
+dwell_time = 10;
+dwell_steps = int32(dwell_time / time_per_datapoint);
+
+starting_point = 1; % n_datapoints - dwell_steps;
+active_datapoints = n_datapoints; %double(dwell_steps); % n_datapoints - starting_point + 1;
 
 % Read in and average occupancy data over all datapoints
 for i = starting_point : 1 : n_datapoints

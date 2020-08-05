@@ -172,7 +172,7 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
-fprintf('For sim %s (%i runs):\n ', sim_name, n_runs);
+fprintf('For sim %s (%i runs):', sim_name, n_runs);
 disp(mot_stats);
 
 end

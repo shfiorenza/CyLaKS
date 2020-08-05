@@ -112,7 +112,6 @@ void KinesinManagement::SetParameters() {
   p_avg_unbind_ii_ = k_off_ii * delta_t * weight_internal_off_ii;
   if (no_internal_force_) {
     p_avg_bind_ATP_ii_ = 0.0;
-    p_avg_unbind_ii_ *= exp(26 * 0.35 / kbT);
   }
   double k_off_i{parameters_->motors.k_off_i};
   p_avg_unbind_i_ = k_off_i * delta_t;

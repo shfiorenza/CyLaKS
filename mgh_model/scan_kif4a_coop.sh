@@ -1,5 +1,5 @@
 #!/bin/bash
-SCAN_NAME="kif4a_mobility_coop_full"
+SCAN_NAME="kif4a_mobility_coop_nostep"
 echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params_processivity.yaml"
 echo Base parameter file is ${PARAM_FILE}
@@ -14,7 +14,7 @@ BASE_SEED=198261346419
 
 #for E_INT in 2 4 5 6 8 10
 #do
-	for I_CONC in 0 1 2 3 4 5
+	for I_CONC in 3 4 5 # 0 1 2 3 4 5
 	do
 		for SEED_NO in 0 1 2 3
 		do

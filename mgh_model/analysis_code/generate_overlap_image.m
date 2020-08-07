@@ -1,6 +1,6 @@
 clear;
 close all;
-sim_name = 'data_endtag_fullCoop/endtag_1250_0';
+sim_name = 'endtag_fluorescence_6';
 %sim_name = 'endtag_shortCoop_250_0';
 file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
@@ -30,7 +30,8 @@ if any(contains(params, 'N_DATAPOINTS') ~= 0)
 end
 
 
-dwell_time = 0.5; % in sections
+t_start = 39;   % 20 or 40
+dwell_time = 1; % in sections
 dwell_points = dwell_time / time_per_datapoint; 
 motor_ID = 2;
 xlink_ID = 1;
@@ -66,49 +67,32 @@ end
 % parameters for making image
 siteLength = 8;
 pixelLength = 150;
-pixelPad = 20;
-gaussSigma = 1.0;
+pixelPad = 10;
+gaussSigma = 2.0;
 doPlot = 0;
 
 gaussAmp = 1000;
 bkgLevel = 20;
 noiseStd = 50;
-intensityMax = gaussAmp/2;% + bkgLevel;
+intensityMax = gaussAmp/2  + bkgLevel;
 
 % Plot motors
-
 occupancy(occupancy ~= motor_ID) = 0;
 occupancy(occupancy == motor_ID) = 1;
-matrix = occupancy;
-
-% motors in overlap
-dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points): n_datapoints), 3)';
-
+matrix = double(occupancy) * 10;
+dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points - t_start/time_per_datapoint): n_datapoints - t_start/time_per_datapoint), 3)';
 imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
     gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
-
-%{
-figure, imagesc(imageMotors);
-colormap gray; axis image
-set(gca,'Xtick',[]); set(gca,'Ytick',[]);
-%}
 imageMotors = imageMotors/intensityMax; %convert to grayscale
 
 % line for microtubule ??
 lineMatrix = ones(size(dataMatrix));
-%gaussAmp = 5000;
-%noiseStd = 125;
+gaussAmp = 4000;
+noiseStd = 125;
+intensityMax = gaussAmp/2  + bkgLevel;
 imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
     gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
-%imageLine = circshift(imageLine,2,1);
-%{
-figure, hold all
-imagesc(imageLine);
-colormap gray; axis image
-set(gca,'Xtick',[]); set(gca,'Ytick',[]);
-%}
 imageLine = imageLine/intensityMax; %convert to grayscale
-
 % blue channel
 imageBlue = ones(size(imageLine))*bkgLevel + randn(size(imageLine))*noiseStd;
 imageBlue = imageBlue/intensityMax;

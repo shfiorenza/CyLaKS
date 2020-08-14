@@ -1,6 +1,6 @@
 clear;
 close all;
-sim_name = 'endtag_fluorescence_6';
+sim_name = 'run_endtag_baseline/endtag_6nM_1250_0';
 %sim_name = 'endtag_shortCoop_250_0';
 file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
@@ -30,8 +30,8 @@ if any(contains(params, 'N_DATAPOINTS') ~= 0)
 end
 
 
-t_start = 39;   % 20 or 40
-dwell_time = 1; % in sections
+t_start = 20; 
+dwell_time = 0.5; % in sections
 dwell_points = dwell_time / time_per_datapoint; 
 motor_ID = 2;
 xlink_ID = 1;
@@ -79,7 +79,7 @@ intensityMax = gaussAmp/2  + bkgLevel;
 % Plot motors
 occupancy(occupancy ~= motor_ID) = 0;
 occupancy(occupancy == motor_ID) = 1;
-matrix = double(occupancy) * 10;
+matrix = double(occupancy);
 dataMatrix = sum(matrix(:, :, (n_datapoints - dwell_points - t_start/time_per_datapoint): n_datapoints - t_start/time_per_datapoint), 3)';
 imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
     gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);

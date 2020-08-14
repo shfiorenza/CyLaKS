@@ -1,6 +1,6 @@
 function [varargout]=errorbarxy(varargin)
 %   ERRORBARXY is a function to generate errorbars on both x and y axes 
-%   with specified errors modified from codes written by Nils Sjöberg 
+%   with specified errors modified from codes written by Nils Sjï¿½berg 
 %   (http://www.mathworks.com/matlabcentral/fileexchange/5444-xyerrorbar)
 %  
 %   errorbarxy(x, y, lerrx, uerrx, lerry, uerry) plots the data with errorbars on both 

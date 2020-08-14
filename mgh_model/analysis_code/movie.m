@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'lattice_coopM_420';
+sim_name = 'run_mobility_short/mobility_short_10_120_2';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
 movie_name = 'test';
@@ -45,8 +45,8 @@ max_sites = max(mt_lengths);
 xlink_cutoff = 5;
 teth_cutoff = 19;
 
-start_frame = 001;
-frames_per_plot = 100;
+start_frame = 1; %n_datapoints - 1000;
+frames_per_plot = 1000;
 end_frame = n_datapoints;
 
 % Colors

@@ -116,12 +116,12 @@ for i_seed = 1 : n_seeds
                     end_site = find(motor_IDs == motor_ID);
                     start_site = starting_site(motor_ID);
                     delta = abs(end_site(1) - start_site);
-                    run_length = delta * site_size;
+                    run_length = delta * site_size * 1000; % convert to nm
                     % Calculate time bound
                     start_datapoint = starting_datapoint(motor_ID);
                     delta_time = abs(i_data - start_datapoint);
                     run_time = delta_time * time_per_datapoint;
-                    velocity = (run_length / run_time) * 1000; % convert to nm/s
+                    velocity = run_length / run_time;
                     % If time bound is above time cutoff, add to data
                     if delta_time > 0 && end_site(1) > endtag_boundary
                         %if all(jammed_motors(:) ~= motor_ID)
@@ -172,7 +172,7 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
-fprintf('For sim %s (%i runs):', sim_name, n_runs);
+fprintf('For sim %s (%i runs):\n', sim_name, n_runs);
 disp(mot_stats);
 
 end

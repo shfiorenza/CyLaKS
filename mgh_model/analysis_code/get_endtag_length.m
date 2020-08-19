@@ -46,7 +46,7 @@ xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 dwell_time = 10;
 dwell_steps = int32(dwell_time / time_per_datapoint);
 
-starting_point = 1; % n_datapoints - dwell_steps;
+starting_point = 1; % n_datapoints - dwell_steps; % 1
 active_datapoints = n_datapoints; %double(dwell_steps); % n_datapoints - starting_point + 1;
 
 % Read in and average occupancy data over all datapoints

@@ -1,4 +1,4 @@
-
+%{
 clear variables;
 % Data for baseline mobility w/o any cooperativity -- use B set of exp data
 %{
@@ -6,20 +6,31 @@ baseNames = ["mobility_short_0"];
 folder = "run_mobility_short";
 %}
 % Data for short-range coop
-
+%{
 baseNames = ["mobility_short_8"];
 folder = "run_mobility_short";
-
+%}
 % Data for short- & long-range coop that doesn't affect stepping
 %{
 baseNames = ["mobility_both_nostep"];
 folder = "run_mobility_both_nostep";
 %}
-% Data for long-range coop that also affects stepping
+% Data for short- & long-range coop that also affects stepping
 %{
 baseNames = ["mobility_both"];
 folder = "run_mobility_both";
 %}
+% Data for all short-range coop runs
+%{
+baseNames = [];
+for i_energy = 0 : 2 : 10
+   baseNames = [baseNames sprintf("mobility_short_%i", i_energy)]; 
+end
+folder = "run_mobility_short";
+%}
+% Data for long-range coop ONLY 
+baseNames = ["mobility_long", "../run_mobility_both/mobility_both"];
+folder = "run_mobility_long";
 
 concentrations = [20, 50, 80, 120, 220, 420];
 concs_index = [1, 2, 3, 4, 5, 6];
@@ -67,11 +78,13 @@ for i_run = 1 : n_runs
         err_velocities(i_run, i_concs) = mot_stats(6);
     end
 end
-%} 
+%}
 
+%color = [0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
+%    0.494, 0.184, 0.556; 0.466, 0.674, 0.188; 0.301, 0.745, 0.933];
+color = [0 0.447 0.741; 0.266, 0.674, 0.388];
 color_base = [0, 0.4470, 0.7410];
-%color = [0.929, 0.694, 0.125; 0.494, 0.184, 0.556; 0.0, 0.4470, 0.7410]; 
-color_exp = [0.55 0.55 0.55];
+color_exp = [1 0 0]; %[0.55 0.55 0.55];
 color_run = [51 0 255] / 255;
 color_life = [255 153 51] / 255;
 color_vel = [102 0 104] / 255;
@@ -80,9 +93,10 @@ i_start = 1;
 %n_runs = 3;
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 1040, 285])
+set(fig1, 'Position', [50, 50, 1040, 285])  % For 3 subplots
+set(fig1, 'Position', [50, 50, 1440, 285])  % For 4 subplots
 
-subplot(1, 3, 1)
+subplot(1, 4, 1)
 hold all;
 exp_data = errorbar(concs_index, exp_runlengths, exp_err_runlengths, '^', ...
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -90,17 +104,17 @@ exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 exp_data.Color = exp_data.MarkerEdgeColor;
 for i_run = i_start : n_runs
     sim_data = errorbar(concs_index, runlengths(i_run, :), err_runlengths(i_run, :), "o", ... 
-         'MarkerSize', 12,'LineWidth', 2, 'MarkerEdgeColor', color_run);
+         'MarkerSize', 12,'LineWidth', 2, 'MarkerEdgeColor', color(i_run, :)); %color_run);
     sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
     sim_data.Color = sim_data.MarkerEdgeColor;
 end
-%ylabel('Run Length (nm)', 'FontSize', 14);
+ylabel('Run Length (nm)', 'FontSize', 14);
 set(gca, 'FontSize', 14);
 xlim([0 7]);
 xticks(1 : 6);
-%xticklabels({'20', '50', '80', '120', '220', '420'});
-xticklabels({''});
-%xtickangle(45);
+xticklabels({'20', '50', '80', '120', '220', '420'});
+%xticklabels({''});
+xtickangle(45);
 ylim([0 4000]); % 5000]); % for B-set of exp data
 yticks([0 1500 3000]); % 2000 4000]); % for B set of exp data
 %{
@@ -111,7 +125,7 @@ set(leg,'units','normalized');
 set(leg,'position',[0.125,0.8,0.1,0.1])
 %}
 
-subplot(1, 3, 2)
+subplot(1, 4, 2)
 hold all;
 exp_data = errorbar(concs_index, exp_lifetimes, exp_err_lifetimes, '^', ... 
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -119,22 +133,22 @@ exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 exp_data.Color = exp_data.MarkerEdgeColor;
 for i_run = i_start : n_runs
     sim_data = errorbar(concs_index, lifetimes(i_run, :), err_lifetimes(i_run, :), "o", ...
-        'MarkerSize', 12, 'LineWidth', 2, 'MarkerEdgeColor', color_life);
+        'MarkerSize', 12, 'LineWidth', 2, 'MarkerEdgeColor', color(i_run, :)); %color_life);
     sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
     sim_data.Color = sim_data.MarkerEdgeColor;
 end
-%xlabel('Kif4A Concentration (pM)', 'FontSize', 14);
-%ylabel('Life Time (s)', 'FontSize', 14);
+xlabel('Kif4A Concentration (pM)', 'FontSize', 14);
+ylabel('Life Time (s)', 'FontSize', 14);
 set(gca, 'FontSize', 14);
 xlim([0 7]);
 xticks(1 : 6);
-%xticklabels({'20', '50', '80', '120', '220', '420'});
-xticklabels({''});
-%xtickangle(45);
+xticklabels({'20', '50', '80', '120', '220', '420'});
+%xticklabels({''});
+xtickangle(45);
 ylim([-2 24]);
 yticks([0 10 20]);
 
-subplot(1, 3, 3)
+subplot(1, 4, 3)
 hold all;
 exp_data = errorbar(concs_index, exp_velocities, exp_err_velocities, '^', ...
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -142,22 +156,21 @@ exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 exp_data.Color = exp_data.MarkerEdgeColor;
 for i_run = i_start : n_runs
     sim_data = errorbar(concs_index, velocities(i_run, :), err_velocities(i_run, :), "o", ... 
-       'MarkerSize', 12, 'LineWidth', 2, 'MarkerEdgeColor', color_vel);
+       'MarkerSize', 12, 'LineWidth', 2, 'MarkerEdgeColor', color(i_run, :)); %color_vel);
    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
    sim_data.Color = sim_data.MarkerEdgeColor;
 end
-%ylabel('Velocity (nm/s)', 'FontSize', 14);
+ylabel('Velocity (nm/s)', 'FontSize', 14);
 set(gca, 'FontSize', 14);
 xlim([0 7]);
 xticks(1 : 6);
-%xticklabels({'20', '50', '80', '120', '220', '420'});
-xticklabels({''});
-%xtickangle(45);
+xticklabels({'20', '50', '80', '120', '220', '420'});
+%xticklabels({''});
+xtickangle(45);
 ylim([0 900]);
 yticks([0 400 800]);
 
-
-%{
+% Add a fourth 'ghost plot' for legends when needed 
 subplot(1, 4, 4);
 hold all;
 exp_data = errorbar([0, 0], [0, 0], '^', 'LineWidth', 2, 'MarkerSize', 16, ...
@@ -173,17 +186,17 @@ end
 xlim([1 2]);
 ylim([1 2]);
 axis off
-%legendLabel = ["Experiment", "Short-range coop (10 kT)", "Long-range coop", "Long-range coop (stepping)"];
-legendLabel = ["Experiment", "Simulation"];
+% Style stuff for shortScan data -- ensure subplot() calls above change
 %{
-%legendLabel = ["Experiment", "Sim (E = 0 KT)"];
+legendLabel = ["Experiment", "E = 0 KT"];
 for i_energy = 2 : 2 : 10
-    legendLabel = [legendLabel sprintf("Sim (E = -%i kT)", i_energy)];
+    legendLabel = [legendLabel sprintf("E = -%i kT", i_energy)];
 end
 %}
-leg = legend(legendLabel,'location', 'northwest', 'FontSize', 12);
-set(leg,'units','normalized');
-%set(leg,'position',[0.73,0.8,0.1,0.1])
-%set(leg,'position',[0.78,0.8,0.1,0.1])
-set(leg,'position',[0.75,0.77,0.1,0.1])
+% Style stuff for long_only vs both stuff
+legendLabel = ["Experiment", "Long-range only", "Short- and long-range"];
+leg = legend(legendLabel,  'location', 'northwest', 'FontSize', 12);
+set(leg, 'units', 'normalized');
+set(leg, 'position',[0.735,0.775,0.1,0.1]);
+legend('boxoff');
 %}

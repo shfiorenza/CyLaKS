@@ -1,7 +1,7 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'endtag_1000_0';
+sim_name = 'run_endtag_short/endtag_short_8_1750_0';
 file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
 % Open log file and parse it into param labels & their values

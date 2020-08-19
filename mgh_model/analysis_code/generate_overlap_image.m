@@ -1,6 +1,6 @@
 clear;
 close all;
-sim_name = 'run_endtag_baseline/endtag_6nM_1250_0';
+sim_name = 'run_endtag_final/endtag_final_6nM_1250_0';
 %sim_name = 'endtag_shortCoop_250_0';
 file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 
@@ -30,8 +30,8 @@ if any(contains(params, 'N_DATAPOINTS') ~= 0)
 end
 
 
-t_start = 20; 
-dwell_time = 0.5; % in sections
+t_start = 0; 
+dwell_time = 0.05; % in sections
 dwell_points = dwell_time / time_per_datapoint; 
 motor_ID = 2;
 xlink_ID = 1;

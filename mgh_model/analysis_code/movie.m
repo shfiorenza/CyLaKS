@@ -1,6 +1,7 @@
 clear variables;
 
-sim_name = 'run_mobility_short/mobility_short_10_120_2';
+%sim_name = 'run_mobility_baseline_Kif4A/mobility_baseline_Kif4A_80_0';
+sim_name = 'run_mobility_both/mobility_both_50_0';
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
 movie_name = 'test';
@@ -74,11 +75,11 @@ active_frames = end_frame - start_frame;
 v = VideoWriter(movie_name);
 v.FrameRate = (active_frames / frames_per_plot) / movie_duration;
 open(v);
-frame_box = [0 0 1545 200];
+frame_box = [0 0 1445 200];
 
 % Figure details
 fig1 = figure;
-set(fig1, 'Position', [0 100 1600 400]);
+set(fig1, 'Position', [0 100 1500 400]);
 
 mt_data = zeros(n_mts, n_datapoints);
 if isfile(mtFile)

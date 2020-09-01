@@ -1,9 +1,12 @@
 %{
 clear variables;
-% Data for baseline mobility w/o any cooperativity -- use B set of exp data
+% Data for baseline mobility w/o any coop -- Kif4A
+baseNames = ["mobility_baseline_Kif4A"];
+folder = "run_mobility_baseline_Kif4A";
+% Data for baseline mobility w/o any coop -- k401 (use B set of exp data)
 %{
-baseNames = ["mobility_short_0"];
-folder = "run_mobility_short";
+baseNames = ["mobility_baseline_K401"];
+folder = "run_mobility_baseline_K401";
 %}
 % Data for short-range coop
 %{
@@ -29,8 +32,10 @@ end
 folder = "run_mobility_short";
 %}
 % Data for long-range coop ONLY 
+%{
 baseNames = ["mobility_long", "../run_mobility_both/mobility_both"];
 folder = "run_mobility_long";
+%}
 
 concentrations = [20, 50, 80, 120, 220, 420];
 concs_index = [1, 2, 3, 4, 5, 6];
@@ -93,10 +98,10 @@ i_start = 1;
 %n_runs = 3;
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 1040, 285])  % For 3 subplots
-set(fig1, 'Position', [50, 50, 1440, 285])  % For 4 subplots
+set(fig1, 'Position', [50, 50, 1.25*1040, 1.25*285])  % For 3 subplots
+%set(fig1, 'Position', [50, 50, 1440, 285])  % For 4 subplots
 
-subplot(1, 4, 1)
+subplot(1, 3, 1) %4, 1)
 hold all;
 exp_data = errorbar(concs_index, exp_runlengths, exp_err_runlengths, '^', ...
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -117,15 +122,15 @@ xticklabels({'20', '50', '80', '120', '220', '420'});
 xtickangle(45);
 ylim([0 4000]); % 5000]); % for B-set of exp data
 yticks([0 1500 3000]); % 2000 4000]); % for B set of exp data
-%{
+
 legendLabel = ["Experiment", "Simulation"];
 leg = legend(legendLabel,'location', 'northwest', 'FontSize', 12);
 legend('boxoff');
 set(leg,'units','normalized');
-set(leg,'position',[0.125,0.8,0.1,0.1])
+set(leg,'position',[0.14,0.8,0.1,0.1])
 %}
 
-subplot(1, 4, 2)
+subplot(1, 3, 2 ) %4, 2)
 hold all;
 exp_data = errorbar(concs_index, exp_lifetimes, exp_err_lifetimes, '^', ... 
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -138,7 +143,7 @@ for i_run = i_start : n_runs
     sim_data.Color = sim_data.MarkerEdgeColor;
 end
 xlabel('Kif4A Concentration (pM)', 'FontSize', 14);
-ylabel('Life Time (s)', 'FontSize', 14);
+ylabel('Lifetime (s)', 'FontSize', 14);
 set(gca, 'FontSize', 14);
 xlim([0 7]);
 xticks(1 : 6);
@@ -148,7 +153,7 @@ xtickangle(45);
 ylim([-2 24]);
 yticks([0 10 20]);
 
-subplot(1, 4, 3)
+subplot(1, 3, 3) %4, 3)
 hold all;
 exp_data = errorbar(concs_index, exp_velocities, exp_err_velocities, '^', ...
     'MarkerSize', 16, 'LineWidth', 2, 'MarkerEdgeColor', color_exp);
@@ -171,6 +176,7 @@ ylim([0 900]);
 yticks([0 400 800]);
 
 % Add a fourth 'ghost plot' for legends when needed 
+%{
 subplot(1, 4, 4);
 hold all;
 exp_data = errorbar([0, 0], [0, 0], '^', 'LineWidth', 2, 'MarkerSize', 16, ...
@@ -194,7 +200,7 @@ for i_energy = 2 : 2 : 10
 end
 %}
 % Style stuff for long_only vs both stuff
-legendLabel = ["Experiment", "Long-range only", "Short- and long-range"];
+legendLabel = ["Experiment", "Simulation"];
 leg = legend(legendLabel,  'location', 'northwest', 'FontSize', 12);
 set(leg, 'units', 'normalized');
 set(leg, 'position',[0.735,0.775,0.1,0.1]);

@@ -29,7 +29,6 @@ if any(contains(params, 'N_DATAPOINTS') ~= 0)
    n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
 end
 
-
 t_start = 0; 
 dwell_time = 0.05; % in sections
 dwell_points = dwell_time / time_per_datapoint; 

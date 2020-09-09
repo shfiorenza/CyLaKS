@@ -96,9 +96,9 @@ AssociatedProtein::Monomer *AssociatedProtein::GetActiveHead() {
     return &head_one_;
   } else if (head_two_.site_ != nullptr) {
     return &head_two_;
-  } else {
-    wally_->ErrorExit("AssociatedProtein::GetActiveHead [2]");
   }
+  wally_->ErrorExit("AssociatedProtein::GetActiveHead [2]");
+  return nullptr;
 }
 
 double AssociatedProtein::GetAnchorCoordinate() {
@@ -117,9 +117,9 @@ double AssociatedProtein::GetAnchorCoordinate() {
     int mt_coord_two = head_two_.site_->mt_->coord_;
     double coord_two = (double)(mt_coord_two + index_two);
     return (coord_one + coord_two) / 2;
-  } else {
-    wally_->ErrorExit("AssociatedProtein::GetAnchorCoordinate()");
   }
+  wally_->ErrorExit("AssociatedProtein::GetAnchorCoordinate()");
+  return 0.0;
 }
 
 double AssociatedProtein::GetExtensionForce(Tubulin *site) {
@@ -177,6 +177,7 @@ int AssociatedProtein::GetDirectionTowardRest(Tubulin *site) {
     // function instead (multiply by -1 since xlink is the one moving)
     return -1 * motor_->GetDirectionTowardRest();
   }
+  return 0;
 }
 
 void AssociatedProtein::UpdateExtension() {

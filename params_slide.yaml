@@ -49,13 +49,13 @@ motors:
   tethers_active: true
   endpausing_active: true
 xlinks:
-  k_on: 0.0238 # 0.000238
+  k_on: 0.000238
   c_bulk: 0.54
   c_eff_bind: 4500
   k_off_i: 0.143
-  k_off_ii: 143
+  k_off_ii: 0.00286 # 0.0143
   r_0: 32
-  k_spring: 0.453
+  k_spring: 0.453 # 0.06 # 0.1 #0.453
   diffu_coeff_i: 0.131
   diffu_coeff_ii: 0.0655
-  interaction_energy: 2.5
+  interaction_energy: 2.25

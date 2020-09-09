@@ -1,10 +1,10 @@
 clear all;
 % Often-changed variables
-n_sites = 50000;
-simName = 'processivity_20pM_0';
+n_sites = 10000;
+simName = 'xklp1_stats/proc_xklp1';
 % Pseudo-constant variables
 n_mts = 1;
-n_datapoints = 10000;
+n_datapoints = 1000000;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 motorFileStruct = '%s_motorID.file';
@@ -12,36 +12,46 @@ motorFileStruct = '%s_motorID.file';
 fileName = sprintf(fileDirectory, sprintf(motorFileStruct, simName));
 
 data_file = fopen(fileName);
-mt_array = fread(data_file, [n_mts*n_sites, n_datapoints], '*int');
+mt_array = fread(data_file, [n_mts * n_sites, n_datapoints], '*int');
 fclose(data_file);
 
 n_hits_single = 0;
 n_hits_double = 0;
 
-for i_data=1:1:n_datapoints
+for i_data = 1:1:n_datapoints
     mt = mt_array(:, i_data);
-    for i_site=1:1:n_sites
+
+    for i_site = 1:1:n_sites
         ID = mt(i_site);
+
         if ID ~= -1
+
             if i_site == 1
+
                 if mt(i_site + 1) == ID
                     n_hits_double = n_hits_double + 1;
                 else
                     n_hits_single = n_hits_single + 1;
                 end
+
             elseif i_site == n_sites
+
                 if mt(i_site - 1) == ID
                     n_hits_double = n_hits_double + 1;
                 else
                     n_hits_single = n_hits_single + 1;
                 end
+
             elseif (mt(i_site + 1) == ID || mt(i_site - 1) == ID)
                 n_hits_double = n_hits_double + 1;
             else
                 n_hits_single = n_hits_single + 1;
             end
+
         end
+
     end
+
 end
 
 n_hits_double = n_hits_double / 2;

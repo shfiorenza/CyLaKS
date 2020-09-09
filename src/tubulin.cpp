@@ -10,12 +10,14 @@ void Tubulin::Initialize(system_parameters *parameters,
   parameters_ = parameters;
   properties_ = properties;
   index_ = i_site;
-  coord_ = i_site;
   mt_ = mt;
 }
 
 bool Tubulin::EquilibriumInSameDirection() {
 
+  printf("Tubulin functon not implemented\n");
+  exit(1);
+  /*
   if (occupied_ and xlink_head_ != nullptr) {
     if (xlink_head_->xlink_->tethered_ and
         xlink_head_->xlink_->heads_active_ == 2) {
@@ -63,72 +65,7 @@ bool Tubulin::EquilibriumInSameDirection() {
     printf("error in tubulin:spring equil on same side\n");
     exit(1);
   }
-}
-
-void Tubulin::UpdateAffinity() {
-
-  if (motor_head_ != nullptr) {
-    affinity_ = 0;
-    return;
-  }
-  int n_affs{properties_->kinesin4.n_affinities_};
-  if (n_affs <= 1) {
-    affinity_ = 0;
-    return;
-  }
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{range / (n_affs - 1)};
-
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
-        return;
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        affinity_ = (delta - 1) / bin_size;
-        return;
-      }
-    }
-  }
-  affinity_ = n_affs - 1;
-}
-
-int Tubulin::GetAffinityExcluding(Kinesin *motor) {
-
-  int n_affs{properties_->kinesin4.n_affinities_};
-  if (n_affs <= 1) {
-    return 0;
-  }
-  int range{(int)parameters_->motors.lattice_coop_range};
-  int bin_size{0};
-  if (n_affs > 1) {
-    bin_size = range / (n_affs - 1);
-  }
-
-  for (int delta{1}; delta <= range; delta++) {
-    int i_fwd{index_ + delta};
-    if (i_fwd > 0 and i_fwd < mt_->n_sites_) {
-      if (mt_->lattice_[i_fwd].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_fwd].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
-        }
-      }
-    }
-    int i_bck{index_ - delta};
-    if (i_bck > 0 and i_bck < mt_->n_sites_) {
-      if (mt_->lattice_[i_bck].motor_head_ != nullptr) {
-        if (mt_->lattice_[i_bck].motor_head_->motor_ != motor) {
-          return ((delta - 1) / bin_size);
-        }
-      }
-    }
-  }
-  return (n_affs - 1);
+  */
 }
 
 int Tubulin::GetPRC1NeighborCount() {
@@ -155,13 +92,22 @@ int Tubulin::GetKif4ANeighborCount() {
     return 0;
   }
   int n_neighbs{0};
+  Kinesin *motor{nullptr};
+  if (motor_head_ != nullptr) {
+    motor = motor_head_->motor_;
+  }
   int mt_end{mt_->n_sites_ - 1};
   for (int delta{-1}; delta <= 1; delta += 2) {
     int i_scan = index_ + delta;
     if (i_scan < 0 or i_scan > mt_end) {
       continue;
-    } else if (mt_->lattice_[i_scan].motor_head_ != nullptr) {
-      n_neighbs++;
+    }
+    Kinesin::Monomer *head{mt_->lattice_[i_scan].motor_head_};
+    if (head != nullptr) {
+      // Avoid self-cooperativity
+      if (motor != head->motor_) {
+        n_neighbs++;
+      }
     }
   }
   return n_neighbs;

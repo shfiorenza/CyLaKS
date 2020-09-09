@@ -1,0 +1,124 @@
+clear;
+close all;
+sim_name = 'run_mobility_both/mobility_both_80_0';
+movie_name = "movie_final_80pM_end";
+i_start = 45000; % datapoint to start at
+i_end = 50000;
+datapoints_per_plot = 10; % How often to plot the fluorscent image
+datapoints_dwell_time = 1; % Dwell time of virtual 'camera' creating image
+movie_duration = 60; % real life seconds
+scale_factor = 10;  % Controls how bright a single motor is (1 typically)
+
+% parameters for making simulated image (i.e., each frame)
+siteLength = 8;
+pixelLength = 150;
+pixelPad = 20;
+gaussSigma = 1.0;
+doPlot = 0;
+gaussAmp = 4000;
+bkgLevel = 200;
+noiseStd = 100;
+intensityMax = gaussAmp/2;% + bkgLevel;
+
+file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
+% Open log file and parse it into param labels & their values
+log_file = sprintf('%s/%s.log', file_dir, sim_name);
+log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
+params = log{1,1};
+values = log{1,2};
+% Read in number of MTs
+n_mts = str2double(values{contains(params, 'count')});
+n_sites = values{contains(params, 'length')};
+n_sites = sscanf(n_sites, '%i');
+% Read in system params
+delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
+total_steps = str2double(values{contains(params, 'n_steps')});
+data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
+if any(contains(params, 'DATA_THRESHOLD') ~= 0)
+   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
+end
+n_steps = total_steps - data_threshold;
+% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
+n_datapoints = str2double(values{contains(params, 'n_datapoints')});
+time_per_datapoint = delta_t * n_steps / n_datapoints;
+% Use actual recorded number of datapoints to parse thru data/etc
+if any(contains(params, 'N_DATAPOINTS') ~= 0)
+   n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
+end
+
+v = VideoWriter(movie_name);
+v.FrameRate = ((i_end - i_start) / datapoints_per_plot) / movie_duration;
+open(v);
+frame_box = [0 0 1000 300];
+
+fig1 = figure;
+set(fig1, 'Position', [250 300 1000 300]);
+
+% microtubule coordinates - specifically, left edge of MT
+mt_data = zeros(n_mts, n_datapoints);
+mtFile = sprintf('%s/%s_mt_coord.file', file_dir, sim_name);
+if isfile(mtFile)
+    mt_data_file = fopen(mtFile);
+    mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
+    fclose(mt_data_file);
+    mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
+end
+% occupancy data on each MT
+occupany = zeros(n_sites, n_mts, n_datapoints);
+occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
+if isfile(occuFile)
+    occupancy_file = fopen(occuFile);
+    occu_raw_data = fread(occupancy_file, [n_datapoints * n_mts * n_sites], '*int');
+    occupancy = reshape(occu_raw_data, n_sites, n_mts, n_datapoints);
+    fclose(occupancy_file);
+end
+% motor ID data
+motor_IDs = zeros(n_sites, n_mts, n_datapoints) - 1;
+motorFile = sprintf('%s/%s_motorID.file', file_dir, sim_name);
+if isfile(motorFile)
+    motor_data_file = fopen(motorFile);
+    motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
+    fclose(motor_data_file);
+    motor_IDs = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
+end
+
+tubulin_ID = 0;
+xlink_ID = 1;
+motor_ID = 2;
+% Convert occupancy data to binary logic array of motor occupancy
+occupancy(occupancy ~= motor_ID) = 0;
+occupancy(occupancy == motor_ID) = 1;
+matrix = scale_factor * occupancy;
+
+% Run through movie frames and create each one
+for i_data = i_start : datapoints_per_plot: (i_end - datapoints_dwell_time)
+    % Clear figure
+    clf;
+    hold all
+    
+    % green channel - motors
+    dataMatrix = sum(matrix(:, :, i_data:i_data + datapoints_dwell_time), 3)';
+    imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
+        gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
+    imageMotors = imageMotors/intensityMax; %convert to grayscale
+    % red channel - microtubule
+    lineMatrix = ones(size(dataMatrix));
+    imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
+        gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
+    imageLine = imageLine/intensityMax; %convert to grayscale
+    % blue channel - noise
+    imageBlue = ones(size(imageLine))*bkgLevel + randn(size(imageLine))*noiseStd;
+    imageBlue = imageBlue/intensityMax;
+    % merge into RGB image
+    imageRGB = cat(3, imageLine, imageMotors, imageBlue);
+    imagesc(imageRGB); axis image
+    set(gca,'Xtick',[]); set(gca,'Ytick',[]);
+    
+    dim = [0.21 0.62 0.4 0.25];
+    time = (i_data - 1) * time_per_datapoint;
+    str = sprintf('Time: %i seconds', int32(time));
+    annotation('textbox',dim,'String',str,'FitBoxToText','on', 'BackgroundColor', [1 1 1]);
+    drawnow();
+    writeVideo(v, getframe(gcf)); 
+end
+close(v);

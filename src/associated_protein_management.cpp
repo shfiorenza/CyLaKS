@@ -556,7 +556,7 @@ void AssociatedProteinManagement::InitializeLists() {
 
 void AssociatedProteinManagement::InitializeEvents() {
 
-  /* * Function that sets n random indices from the range [0, m) * */
+  // Function that sets n random indices from the range [0, m)
   auto set_ran_indices = [&](int *indices, int n, int m) {
     if (m > 1) {
       properties_->gsl.SetRanIndices(indices, n, m);
@@ -564,14 +564,14 @@ void AssociatedProteinManagement::InitializeEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  // Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
     }
     return properties_->gsl.SampleBinomialDist(p, n);
   };
-  /* * Event entries * */
+  // Event entries
   std::string event_name; // scratch space to construct each event name
   // Diffuse: steps head one site to the left or right
   auto exe_diffuse_fwd = [&](ENTRY_T target) {
@@ -831,6 +831,9 @@ void AssociatedProteinManagement::InitializeEvents() {
     }
   }
   if (tethering_active_) {
+    printf("FIX TETHERING IN AP_MGMT::INIT_EVENTS()\n");
+    exit(1);
+    /*
     // Tether_free: tethers free xlinks to bound motors
     event_name = "tether_free";
     auto exe_tether_free = [&](ENTRY_T target) {
@@ -848,6 +851,7 @@ void AssociatedProteinManagement::InitializeEvents() {
     events_.emplace_back(event_name, p_untether_free_, &n_free_teth_,
                          &free_teth_, exe_untether_sat, binomial,
                          set_ran_indices);
+                         */
   }
 }
 
@@ -884,7 +888,7 @@ void AssociatedProteinManagement::InitializeTestEvents() {
       indices[0] = 0;
     }
   };
-  /* * Binomial probabilitiy distribution; sampled to predict most events * */
+  // Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n == 0) {
       return 0;
@@ -1886,7 +1890,7 @@ void AssociatedProteinManagement::Unbind_I(POP_T *head) {
   }
   properties_->microtubules.FlagForUpdate();
 }
-
+/*
 void AssociatedProteinManagement::Tether_Free(ALT_T *untethered_head) {
 
   if (verbosity_ >= 1) {
@@ -1916,3 +1920,4 @@ void AssociatedProteinManagement::Untether_Free(POP_T *satellite_head) {
   RemoveFromActive(xlink);
   properties_->kinesin4.FlagForUpdate();
 }
+*/

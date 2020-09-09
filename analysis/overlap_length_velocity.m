@@ -9,16 +9,16 @@ fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
 
 log_file = sprintf(fileDirectory, sprintf('%s.log', baseName)); %, seeds(1)));
 % Open log file and parse it into param labels & their values
-log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
-params = log{1,1};
-values = log{1,2};
+log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
+params = log{1, 1};
+values = log{1, 2};
 % Read in number of MTs
 n_mts = str2double(values{contains(params, "count")});
 % Read in length of each MTs
 [length_one, length_two] = values{contains(params, "length")};
 mt_lengths(1) = sscanf(length_one, '%i');
 mt_lengths(2) = sscanf(length_two, '%i');
- %mt_lengths(3) = sscanf(length_three, '%i');
+%mt_lengths(3) = sscanf(length_three, '%i');
 % Read in system parameters
 n_steps = str2double(values{contains(params, "n_steps")});
 delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
@@ -37,38 +37,42 @@ plus_end_velocity = zeros(length(seeds), n_datapoints);
 % Run through raw coord data to get overlap length at every datapoint
 for i_seed = 1:length(seeds)
     simName = baseName;
+
     if length(seeds) > 1
         simName = sprintf("%s_%i", baseName, seeds(i_seed));
     end
+
     % Open mt coordinate file
     mt_coords_file = fopen(sprintf(fileDirectory, sprintf('%s_mt_coord.file', simName)));
     mt_coord_data = fread(mt_coords_file, [n_mts, n_datapoints], 'int');
     fclose(mt_coords_file);
-    for i_data = start_point + 1: n_datapoints
+
+    for i_data = start_point + 1:n_datapoints
         mt_coords = mt_coord_data(:, i_data)';
         mt_endpoints = mt_coords + mt_lengths;
-        
+
         overlap_start = max(mt_coords);
         overlap_end = min(mt_endpoints);
         overlap_length = (overlap_end - overlap_start) * site_size;
         overlap_length_data(i_seed, i_data) = overlap_length;
-        
+
         plus_end_one = mt_coords(1);
         plus_end_two = mt_coords(2) + mt_lengths(2);
         plus_end_dist = abs(plus_end_two - plus_end_one) * site_size;
         plus_end_dist_data(i_seed, i_data) = plus_end_dist;
-        
+
     end
+
 end
 
 % Use gradient function with above spacing to get slope of overlap length
-for i_seed=1:length(seeds)
+for i_seed = 1:length(seeds)
     overlap_length_data(i_seed, :) = smoothdata(overlap_length_data(i_seed, :), 'movmean', 10);
     overlap_velocity(i_seed, :) = smoothdata(gradient(overlap_length_data(i_seed, :), ...
         time_per_datapoint), 'movmean', 100);
     % Convert velocity from um/s to nm/s
     overlap_velocity(i_seed, :) = overlap_velocity(i_seed, :) * 1000;
-    
+
     plus_end_dist_data(i_seed, :) = smoothdata(plus_end_dist_data(i_seed, :), 'movmean', 10);
     plus_end_velocity(i_seed, :) = smoothdata(gradient(plus_end_dist_data(i_seed, :), ...
         time_per_datapoint), 'movmean', 100);
@@ -77,7 +81,7 @@ for i_seed=1:length(seeds)
 end
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 2.5*480, 2.5*300])
+set(fig1, 'Position', [50, 50, 2.5 * 480, 2.5 * 300])
 hold all
 
 % Plot overlap length on top

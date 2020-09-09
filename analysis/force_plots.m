@@ -1,6 +1,6 @@
 clear all;
 % Often-changed variables
-n_sites = [1000,500];
+n_sites = [1000, 500];
 %simName = '2019_11_11_slideScan/slide_scan_500_5000';
 simName = 'test';
 % Pseudo-constant variables
@@ -9,8 +9,8 @@ n_steps = 6000000;
 n_datapoints = 10000;
 delta_t = 0.000025;
 starting_point = 0001;
-unpin_time = 50;           % time at which top MT is able to slide (in sec)
-start_time = (starting_point/n_datapoints) * n_steps * delta_t;
+unpin_time = 50; % time at which top MT is able to slide (in sec)
+start_time = (starting_point / n_datapoints) * n_steps * delta_t;
 end_time = n_steps * delta_t;
 
 fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
@@ -31,7 +31,7 @@ fclose(total_data_file);
 fig1 = figure();
 set(fig1, 'Position', [100, 0, 1200, 750]);
 
-smoothed_xlinks = smooth(xlink_data(1,:), 100);
+smoothed_xlinks = smooth(xlink_data(1, :), 100);
 sub1 = subplot(3, 1, 1);
 plot(linspace(start_time, end_time, n_datapoints), smoothed_xlinks, 'LineWidth', 2);
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');
@@ -53,7 +53,7 @@ grid on
 grid minor
 %axis tight
 
-smoothed_total = smooth(total_data(1,:), 100);
+smoothed_total = smooth(total_data(1, :), 100);
 subplot(3, 1, 3)
 plot(linspace(start_time, end_time, n_datapoints), smoothed_total, 'LineWidth', 2);
 line([unpin_time unpin_time], ylim, 'Linestyle', '--', 'Color', 'red');

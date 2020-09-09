@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-n_mts = 5
+n_mts = 4
 max_tau = 30
 simName = "test"
-delta_t = 2.5e-03
-n_steps = 600000  # 0
+delta_t = 2.5e-5
+n_steps = 6000000
 n_datapoints = 10000
 time_per_datapoint = n_steps * delta_t / n_datapoints
 site_size = 0.008

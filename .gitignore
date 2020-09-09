@@ -1,9 +1,10 @@
 *.file
-*.swp
 *.dat
 *.log
 *.err
 *.out
-*.avi
+*.swp
 *.m~
+*.json
+*.avi
 .vscode/

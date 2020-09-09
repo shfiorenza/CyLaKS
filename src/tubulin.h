@@ -1,5 +1,5 @@
-#ifndef _TUBULIN_
-#define _TUBULIN_
+#ifndef _TUBULIN
+#define _TUBULIN
 #include "associated_protein.h"
 #include "kinesin.h"
 
@@ -14,13 +14,12 @@ private:
 
 public:
   int index_; // Index of tubulin site in MT lattice
-  int coord_; // Absolute coord of tubulin site
   int species_id_ = 0;
-  int affinity_{0};
-
-  int unocc_index_[2] = {-1, -1};
 
   bool occupied_{false};
+
+  double weight_bind_{0.0};
+  double weight_unbind_{0.0};
 
   Microtubule *mt_{nullptr};
   Kinesin::Monomer *motor_head_{nullptr};
@@ -36,10 +35,6 @@ public:
   // and the kinesin 4 tether that attaches to it; this checks
   // if both are in the same direction w.r.t. this site
   bool EquilibriumInSameDirection();
-
-  void UpdateAffinity();
-
-  int GetAffinityExcluding(Kinesin *motor);
 
   int GetPRC1NeighborCount();
   int GetKif4ANeighborCount();

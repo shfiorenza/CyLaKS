@@ -6,26 +6,32 @@ KinesinManagement::KinesinManagement() {}
 void KinesinManagement::Initialize(system_parameters *parameters,
                                    system_properties *properties) {
 
-  // verbosity_ = 1;
   wally_ = &properties->wallace;
   gsl_ = &properties->gsl;
   parameters_ = parameters;
   properties_ = properties;
+  CalculateCutoffs();
   SetParameters();
   GenerateMotors();
   InitializeLists();
   if (wally_->test_mode_ != nullptr) {
     InitializeTestEnvironment();
+    InitializeTestEvents();
+    return;
   }
   InitializeEvents();
 }
 
+void KinesinManagement::CalculateCutoffs() {}
+
 void KinesinManagement::SetParameters() {
 
   n_runs_desired_ = parameters_->motors.n_runs_desired;
-  double kbT{parameters_->kbT};
   double delta_t{parameters_->delta_t};
   step_active_ = (size_t)std::ceil(parameters_->motors.t_active / delta_t);
+  if (parameters_->motors.tethers_active and parameters_->motors.c_bulk > 0.0) {
+    tethering_active_ = true;
+  }
   /*
     For events that result in a change in energy, we use Boltzmann factors to
     scale rates appropriately. Detailed balance is satisfied with the factors:
@@ -34,12 +40,14 @@ void KinesinManagement::SetParameters() {
     for an event and its complement (e.g., binding and unbinding), where lambda
     is a constant that ranges from 0 to 1, delta_E is the change in energy that
     results from the event, kB is Boltzmann's constant, and T is the temperature
- */
-  // Lambda = 0.5 means energy dependence is equal for binding and unbinding
-  double lambda_lattice{0.5}; // Lambda for lattice interactions
-  // Lambda = 1.0 means all energy dependence is in unbinding
-  double lambda_neighb{1.0}; // Lambda for neighbor cooperativity
 
+    Three common values of lambda demonstrate its function:
+        Lambda = 0.0 means all energy dependences is in binding
+        Lambda = 0.5 means energy dependence is equal for binding and unbinding
+        Lambda = 1.0 means all energy dependence is in unbinding
+ */
+  /* Boltzmann weights for neighbor cooperativity */
+  double lambda_neighb{1.0}; // Lambda for neighbor cooperativity
   // Array of Boltzmann weights due to neighbor-neighbor interactions
   double energy_per_neighb{-1 * parameters_->motors.interaction_energy}; // kbT
   weight_neighbs_bind_.resize(max_neighbs_ + 1);
@@ -49,8 +57,10 @@ void KinesinManagement::SetParameters() {
     weight_neighbs_bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * energy);
     weight_neighbs_unbind_[n_neighbs] = exp(lambda_neighb * energy);
   }
-  // Array of maximum possible weights including neighbor interactions and
-  // lattice deformation effects from MULTIPLE motors stacking
+  /* Boltzmann weights for lattice deformation */
+  double lambda_lattice{0.5}; // Lambda for lattice interactions
+  // Array of MAXIMUM possible weights including neighbor interactions and
+  // lattice deformation effects from MULTIPLE motor effects stacking
   double lattice_E_max_tot{-1 * parameters_->motors.lattice_coop_Emax_bulk};
   double wt_lattice_bind_max{exp(-(1.0 - lambda_lattice) * lattice_E_max_tot)};
   double wt_lattice_unbind_max{exp(lambda_lattice * lattice_E_max_tot)};
@@ -87,7 +97,33 @@ void KinesinManagement::SetParameters() {
     weight_lattice_bind_[delta] = exp(-(1.0 - lambda_lattice) * energy);
     weight_lattice_unbind_[delta] = exp(lambda_lattice * energy);
   }
-  // Calculate probabilities for each possible KMC event
+  /* Boltzmann weights for tethering w/ PRC1 crosslinkers */
+  double lambda_teth{0.5}; // Lambda for tethering mechanisms
+  double r_0{parameters_->motors.r_0};
+  double r_y{parameters_->microtubules.y_dist / 2.0}; // Binds to middle of PRC1
+  double k_spring{parameters_->motors.k_spring};
+  double k_slack{parameters_->motors.k_slack};
+  double kbT{parameters_->kbT};
+  weight_teth_bind_.resize(2 * teth_cutoff_ + 1);
+  weight_teth_unbind_.resize(2 * teth_cutoff_ + 1);
+  for (int x_dub{0}; x_dub <= 2 * teth_cutoff_; x_dub++) {
+    if (x_dub < 2 * comp_cutoff_) {
+      weight_teth_bind_[x_dub] = 0.0;
+      weight_teth_unbind_[x_dub] = 0.0;
+      continue;
+    }
+    double r_x{double(x_dub) / 2.0 * site_size};
+    double r{sqrt(r_x * r_x + r_y * r_y)};
+    double dr{r - r_0};
+    double energy{0.5 * k_spring * dr * dr}; //! in pN*nm
+    if (dr < 0.0) {
+      energy = 0.5 * k_slack * dr * dr; //! in pN*nm
+    }
+    weight_teth_bind_[x_dub] = exp(-(1.0 - lambda_teth) * energy / kbT);
+    weight_teth_unbind_[x_dub] = exp(lambda_teth * energy / kbT);
+  }
+
+  /* KMC event probabilities */
   double k_on{parameters_->motors.k_on};
   double c_bulk{parameters_->motors.c_bulk};
   p_avg_bind_i_ = k_on * c_bulk * delta_t;
@@ -151,6 +187,7 @@ void KinesinManagement::SetParameters() {
   p_theory_["bind_ii"] = p_avg_bind_ii_;
   p_theory_["unbind_ii"] = p_avg_unbind_ii_;
   p_theory_["unbind_i"] = p_avg_unbind_i_;
+  /* FIXME -- ADD TETHERING*/
   // READ EM OUT
   for (const auto &entry : p_theory_) {
     auto label = entry.first;
@@ -181,7 +218,7 @@ void KinesinManagement::GenerateMotors() {
 void KinesinManagement::InitializeLists() {
 
   size_t window_size{size_t(scan_window_ / parameters_->delta_t)};
-  motor_densities_.resize(window_size);
+  densities_.resize(window_size);
 
   n_bound_teth_.resize(2 * teth_cutoff_ + 1);
   // 1-D stuff -- indexed by i_motor
@@ -260,6 +297,181 @@ void KinesinManagement::InitializeTestEnvironment() {
   }
 }
 
+void KinesinManagement::InitializeTestEvents() {
+
+  //  Binomial probabilitiy distribution; sampled to predict most events
+  auto binomial = [&](double p, int n) {
+    if (n > 0) {
+      return properties_->gsl.SampleBinomialDist(p, n);
+    } else {
+      return 0;
+    }
+  };
+  // Poisson distribution; sampled to predict events w/ variable probabilities
+  auto poisson = [&](double p, int n) {
+    if (p > 0.0) {
+      return gsl_->SamplePoissonDist(p);
+    } else {
+      return 0;
+    }
+  };
+  // Function that returns a random probability in the range [0.0, 1.0)
+  auto get_ran_prob = [&](void) { return gsl_->GetRanProb(); };
+  //  Function that sets n random indices from the range [0, m)
+  auto set_ran_indices = [&](int *indices, int n, int m) {
+    if (m > 1) {
+      properties_->gsl.SetRanIndices(indices, n, m);
+    } else {
+      indices[0] = 0;
+    }
+  };
+  //  Event entries
+  std::string event_name; // scratch space to construct each event name
+  if (strcmp(wally_->test_mode_, "motor_lattice_bind") == 0) {
+    // Bind_I: bind first motor head to MT and release ADP
+    event_name = "bind_i";
+    auto exe_bind_i = [&](ENTRY_T target) {
+      Tubulin *site{std::get<SITE_T *>(target)};
+      int i_site{site->index_};
+      // 'main' kinesin motor will always be at index_ = lattice_cutoff_
+      int delta{abs(i_site - lattice_cutoff_)};
+      // Just count the event; do not actually bind a motor to this site
+      test_stats_["lattice_bind"][delta].first++;
+      properties_->microtubules.FlagForUpdate();
+    };
+    auto weight_bind_i = [&](ENTRY_T target) {
+      return std::get<SITE_T *>(target)->weight_bind_;
+    };
+    auto poisson_bind_i = [&](double p, int n) {
+      // Each delta distance has 2 sites available to it each timestep
+      // Do not count delta = 0, where 'main' motor is permanently bound to
+      for (int delta{1}; delta <= lattice_cutoff_; delta++) {
+        test_stats_["lattice_bind"][delta].second += 2;
+      }
+      if (p > 0.0) {
+        return gsl_->SamplePoissonDist(p);
+      }
+      return 0;
+    };
+    events_.emplace_back(
+        event_name, p_avg_bind_i_, &properties_->microtubules.n_unocc_motor_,
+        &properties_->microtubules.unocc_motor_, exe_bind_i, weight_bind_i,
+        poisson_bind_i, get_ran_prob, set_ran_indices);
+  }
+  if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
+    // Bind_ATP: bind ATP to motor heads that have released their ADP
+    auto exe_bind_ATP = [&](ENTRY_T target) {
+      Bind_ATP(std::get<POP_T *>(target));
+    };
+    event_name = "bind_ATP_i";
+    events_.emplace_back(event_name, p_bind_ATP_i_, &n_bound_NULL_i_,
+                         &bound_NULL_i_, exe_bind_ATP, binomial,
+                         set_ran_indices);
+    // Bind_ATP_II: bind ATP to doubly-bound motor heads; rate modified by
+    // lattice
+    event_name = "bind_ATP_ii";
+    auto exe_bind_ATP_ii = [&](ENTRY_T target) {
+      try {
+        POP_T *front_head{std::get<POP_T *>(target)};
+        POP_T *rear_head{front_head->GetOtherHead()};
+        wally_->Log(2, "starting unbind_ii\n");
+        Unbind_II(rear_head);
+        wally_->Log(2, "starting bind_ATP\n");
+        Bind_ATP(front_head);
+      } catch (...) {
+        wally_->ErrorExit("K_MGMT::exe_bind_ATP_II");
+      }
+    };
+    auto weight_bind_ATP_ii = [&](ENTRY_T target) {
+      try {
+        return std::get<POP_T *>(target)->motor_->GetWeight_BindATP_II();
+      } catch (...) {
+        wally_->ErrorExit("K_MGMT::weight_bind_ATP_ii");
+        return 0.0;
+      }
+    };
+    events_.emplace_back(event_name, p_avg_bind_ATP_ii_, &n_bound_NULL_ii_,
+                         &bound_NULL_ii_, exe_bind_ATP_ii, weight_bind_ATP_ii,
+                         poisson, get_ran_prob, set_ran_indices);
+    // Hydrolyze: convert ATP to ADPP
+    event_name = "hydrolyze";
+    auto exe_hydrolyze = [&](ENTRY_T target) {
+      Hydrolyze(std::get<POP_T *>(target));
+    };
+    events_.emplace_back(event_name, p_hydrolyze_, &n_bound_ATP_, &bound_ATP_,
+                         exe_hydrolyze, binomial, set_ran_indices);
+    // Bind_II: binds docked motor head to MT and releases its ADP
+    event_name = "bind_ii";
+    auto exe_bind_ii = [&](ENTRY_T target) {
+      test_stats_["lattice_step_bind_ii"][0].first++;
+      // If dock site is plus end, unbind motor and place it on minus end
+      POP_T *docked_head{std::get<POP_T *>(target)};
+      SITE_T *dock_site{docked_head->motor_->GetDockSite()};
+      if (dock_site->index_ == dock_site->mt_->plus_end_) {
+        Unbind_I(docked_head->motor_->GetActiveHead());
+        SITE_T *new_site{&dock_site->mt_->lattice_[dock_site->mt_->minus_end_]};
+        Bind_I(new_site);
+        Bind_ATP(new_site->motor_head_);
+        Hydrolyze(new_site->motor_head_);
+        docked_head = new_site->motor_head_->motor_->GetDockedHead();
+      }
+      Bind_II(docked_head);
+    };
+    auto weight_bind_ii = [&](ENTRY_T target) {
+      return std::get<POP_T *>(target)->motor_->GetWeight_Bind_II();
+    };
+    auto poisson_bind_ii = [&](double p, int n) {
+      test_stats_["lattice_step_bind_ii"][0].second += n_docked_;
+      if (p > 0.0) {
+        return gsl_->SamplePoissonDist(p);
+      }
+      return 0;
+    };
+    events_.emplace_back(event_name, p_avg_bind_ii_, &n_docked_, &docked_,
+                         exe_bind_ii, weight_bind_ii, poisson_bind_ii,
+                         get_ran_prob, set_ran_indices);
+    // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
+    event_name = "unbind_ii";
+    auto exe_unbind_ii = [&](ENTRY_T target) {
+      test_stats_["lattice_step_unbind_ii"][0].first++;
+      Unbind_II(std::get<POP_T *>(target));
+    };
+    auto weight_unbind_ii = [&](ENTRY_T target) {
+      double weight{std::get<POP_T *>(target)->motor_->GetWeight_Unbind_II()};
+      return weight;
+    };
+    auto poisson_unbind_ii = [&](double p, int n) {
+      test_stats_["lattice_step_unbind_ii"][0].second += n_bound_ADPP_ii_;
+      if (p > 0.0) {
+        return gsl_->SamplePoissonDist(p);
+      }
+      return 0;
+    };
+    events_.emplace_back(event_name, p_avg_unbind_ii_, &n_bound_ADPP_ii_,
+                         &bound_ADPP_ii_, exe_unbind_ii, weight_unbind_ii,
+                         poisson_unbind_ii, get_ran_prob, set_ran_indices);
+    // Unbind_I: Converts ADPP to ADP and unbinds a singly-bound head
+    event_name = "unbind_i";
+    auto exe_unbind_i = [&](ENTRY_T target) {
+      // Count stats for unbind_i but do not actually execute it
+      test_stats_["lattice_step_unbind_i"][0].first++;
+    };
+    auto weight_unbind_i = [&](ENTRY_T target) {
+      return std::get<POP_T *>(target)->site_->weight_unbind_;
+    };
+    auto poisson_unbind_i = [&](double p, int n) {
+      test_stats_["lattice_step_unbind_i"][0].second += n_bound_ADPP_i_;
+      if (p > 0.0) {
+        return gsl_->SamplePoissonDist(p);
+      }
+      return 0;
+    };
+    events_.emplace_back(event_name, p_avg_unbind_i_, &n_bound_ADPP_i_,
+                         &bound_ADPP_i_, exe_unbind_i, weight_unbind_i,
+                         poisson_unbind_i, get_ran_prob, set_ran_indices);
+  }
+}
+
 void KinesinManagement::InitializeEvents() {
 
   //  Binomial probabilitiy distribution; sampled to predict most events
@@ -290,154 +502,6 @@ void KinesinManagement::InitializeEvents() {
   };
   //  Event entries
   std::string event_name; // scratch space to construct each event name
-  // If we are testing a mechanism, initialize test events only
-  if (wally_->test_mode_ != nullptr) {
-    if (strcmp(wally_->test_mode_, "motor_lattice_bind") == 0) {
-      // Bind_I: bind first motor head to MT and release ADP
-      event_name = "bind_i";
-      auto exe_bind_i = [&](ENTRY_T target) {
-        Tubulin *site{std::get<SITE_T *>(target)};
-        int i_site{site->index_};
-        // 'main' kinesin motor will always be at index_ = lattice_cutoff_
-        int delta{abs(i_site - lattice_cutoff_)};
-        // Just count the event; do not actually bind a motor to this site
-        test_stats_["lattice_bind"][delta].first++;
-        properties_->microtubules.FlagForUpdate();
-      };
-      auto weight_bind_i = [&](ENTRY_T target) {
-        return std::get<SITE_T *>(target)->weight_bind_;
-      };
-      auto poisson_bind_i = [&](double p, int n) {
-        // Each delta distance has 2 sites available to it each timestep
-        // Do not count delta = 0, where 'main' motor is permanently bound to
-        for (int delta{1}; delta <= lattice_cutoff_; delta++) {
-          test_stats_["lattice_bind"][delta].second += 2;
-        }
-        if (p > 0.0) {
-          return gsl_->SamplePoissonDist(p);
-        }
-        return 0;
-      };
-      events_.emplace_back(
-          event_name, p_avg_bind_i_, &properties_->microtubules.n_unocc_motor_,
-          &properties_->microtubules.unocc_motor_, exe_bind_i, weight_bind_i,
-          poisson_bind_i, get_ran_prob, set_ran_indices);
-    }
-    if (strcmp(wally_->test_mode_, "motor_lattice_step") == 0) {
-      // Bind_ATP: bind ATP to motor heads that have released their ADP
-      auto exe_bind_ATP = [&](ENTRY_T target) {
-        Bind_ATP(std::get<POP_T *>(target));
-      };
-      event_name = "bind_ATP_i";
-      events_.emplace_back(event_name, p_bind_ATP_i_, &n_bound_NULL_i_,
-                           &bound_NULL_i_, exe_bind_ATP, binomial,
-                           set_ran_indices);
-      // Bind_ATP_II: bind ATP to doubly-bound motor heads; rate modified by
-      // lattice
-      event_name = "bind_ATP_ii";
-      auto exe_bind_ATP_ii = [&](ENTRY_T target) {
-        try {
-          POP_T *front_head{std::get<POP_T *>(target)};
-          POP_T *rear_head{front_head->GetOtherHead()};
-          wally_->Log(2, "starting unbind_ii\n");
-          Unbind_II(rear_head);
-          wally_->Log(2, "starting bind_ATP\n");
-          Bind_ATP(front_head);
-        } catch (...) {
-          wally_->ErrorExit("K_MGMT::exe_bind_ATP_II");
-        }
-      };
-      auto weight_bind_ATP_ii = [&](ENTRY_T target) {
-        try {
-          return std::get<POP_T *>(target)->motor_->GetWeight_BindATP_II();
-        } catch (...) {
-          wally_->ErrorExit("K_MGMT::weight_bind_ATP_ii");
-          return 0.0;
-        }
-      };
-      events_.emplace_back(event_name, p_avg_bind_ATP_ii_, &n_bound_NULL_ii_,
-                           &bound_NULL_ii_, exe_bind_ATP_ii, weight_bind_ATP_ii,
-                           poisson, get_ran_prob, set_ran_indices);
-      // Hydrolyze: convert ATP to ADPP
-      event_name = "hydrolyze";
-      auto exe_hydrolyze = [&](ENTRY_T target) {
-        Hydrolyze(std::get<POP_T *>(target));
-      };
-      events_.emplace_back(event_name, p_hydrolyze_, &n_bound_ATP_, &bound_ATP_,
-                           exe_hydrolyze, binomial, set_ran_indices);
-      // Bind_II: binds docked motor head to MT and releases its ADP
-      event_name = "bind_ii";
-      auto exe_bind_ii = [&](ENTRY_T target) {
-        test_stats_["lattice_step_bind_ii"][0].first++;
-        // If dock site is plus end, unbind motor and place it on minus end
-        POP_T *docked_head{std::get<POP_T *>(target)};
-        SITE_T *dock_site{docked_head->motor_->GetDockSite()};
-        if (dock_site->index_ == dock_site->mt_->plus_end_) {
-          Unbind_I(docked_head->motor_->GetActiveHead());
-          SITE_T *new_site{
-              &dock_site->mt_->lattice_[dock_site->mt_->minus_end_]};
-          Bind_I(new_site);
-          Bind_ATP(new_site->motor_head_);
-          Hydrolyze(new_site->motor_head_);
-          docked_head = new_site->motor_head_->motor_->GetDockedHead();
-        }
-        Bind_II(docked_head);
-      };
-      auto weight_bind_ii = [&](ENTRY_T target) {
-        return std::get<POP_T *>(target)->motor_->GetWeight_Bind_II();
-      };
-      auto poisson_bind_ii = [&](double p, int n) {
-        test_stats_["lattice_step_bind_ii"][0].second += n_docked_;
-        if (p > 0.0) {
-          return gsl_->SamplePoissonDist(p);
-        }
-        return 0;
-      };
-      events_.emplace_back(event_name, p_avg_bind_ii_, &n_docked_, &docked_,
-                           exe_bind_ii, weight_bind_ii, poisson_bind_ii,
-                           get_ran_prob, set_ran_indices);
-      // Unbind_II: Converts ADPP to ADP and unbinds a doubly-bound head
-      event_name = "unbind_ii";
-      auto exe_unbind_ii = [&](ENTRY_T target) {
-        test_stats_["lattice_step_unbind_ii"][0].first++;
-        Unbind_II(std::get<POP_T *>(target));
-      };
-      auto weight_unbind_ii = [&](ENTRY_T target) {
-        double weight{std::get<POP_T *>(target)->motor_->GetWeight_Unbind_II()};
-        return weight;
-      };
-      auto poisson_unbind_ii = [&](double p, int n) {
-        test_stats_["lattice_step_unbind_ii"][0].second += n_bound_ADPP_ii_;
-        if (p > 0.0) {
-          return gsl_->SamplePoissonDist(p);
-        }
-        return 0;
-      };
-      events_.emplace_back(event_name, p_avg_unbind_ii_, &n_bound_ADPP_ii_,
-                           &bound_ADPP_ii_, exe_unbind_ii, weight_unbind_ii,
-                           poisson_unbind_ii, get_ran_prob, set_ran_indices);
-      // Unbind_I: Converts ADPP to ADP and unbinds a singly-bound head
-      event_name = "unbind_i";
-      auto exe_unbind_i = [&](ENTRY_T target) {
-        // Count stats for unbind_i but do not actually execute it
-        test_stats_["lattice_step_unbind_i"][0].first++;
-      };
-      auto weight_unbind_i = [&](ENTRY_T target) {
-        return std::get<POP_T *>(target)->site_->weight_unbind_;
-      };
-      auto poisson_unbind_i = [&](double p, int n) {
-        test_stats_["lattice_step_unbind_i"][0].second += n_bound_ADPP_i_;
-        if (p > 0.0) {
-          return gsl_->SamplePoissonDist(p);
-        }
-        return 0;
-      };
-      events_.emplace_back(event_name, p_avg_unbind_i_, &n_bound_ADPP_i_,
-                           &bound_ADPP_i_, exe_unbind_i, weight_unbind_i,
-                           poisson_unbind_i, get_ran_prob, set_ran_indices);
-    }
-    return;
-  }
   // Bind_I: bind first motor head to MT and release ADP
   event_name = "bind_i";
   auto exe_bind_i = [&](ENTRY_T target) {
@@ -630,8 +694,6 @@ void KinesinManagement::ReportProbabilities() {
   }
 }
 
-void KinesinManagement::FlagForUpdate() { return; }
-
 Kinesin *KinesinManagement::GetFreeMotor() {
 
   // Randomly pick a motor from the reservoir
@@ -650,6 +712,24 @@ Kinesin *KinesinManagement::GetFreeMotor() {
     }
   }
   return motor;
+}
+
+void KinesinManagement::FlagForUpdate() { return; }
+
+void KinesinManagement::AddToActive(Kinesin *motor) {
+
+  active_[n_active_] = motor;
+  motor->active_index_ = n_active_;
+  n_active_++;
+}
+
+void KinesinManagement::RemoveFromActive(Kinesin *motor) {
+
+  Kinesin *last_entry{active_[n_active_ - 1]};
+  int this_index{motor->active_index_};
+  active_[this_index] = last_entry;
+  last_entry->active_index_ = this_index;
+  n_active_--;
 }
 
 void KinesinManagement::UpdateLatticeWeights() {
@@ -693,21 +773,21 @@ void KinesinManagement::UpdateLatticeWeights() {
   }
 }
 
-void KinesinManagement::AddToActive(Kinesin *motor) {
+void KinesinManagement::UpdateExtensions() {}
 
-  active_[n_active_] = motor;
-  motor->active_index_ = n_active_;
-  n_active_++;
-}
+void KinesinManagement::UpdateList_Docked() {}
 
-void KinesinManagement::RemoveFromActive(Kinesin *motor) {
+void KinesinManagement::UpdateList_Bound_NULL() {}
 
-  Kinesin *last_entry{active_[n_active_ - 1]};
-  int this_index{motor->active_index_};
-  active_[this_index] = last_entry;
-  last_entry->active_index_ = this_index;
-  n_active_--;
-}
+void KinesinManagement::UpdateList_Bound_NULL_Teth() {}
+
+void KinesinManagement::UpdateList_Bound_ATP() {}
+
+void KinesinManagement::UpdateList_Bound_ADPP() {}
+
+void KinesinManagement::UpdateList_Bound_ADPP_Teth() {}
+
+void KinesinManagement::UpdateList_Bound_Teth() {}
 
 void KinesinManagement::RunKMC() {
 
@@ -740,19 +820,19 @@ void KinesinManagement::CheckEquilibration() {
         wally_->sim_name_, old_density_avg_);
   }
   // Calculate motor density on MT
-  size_t window_size{motor_densities_.size()};
+  size_t window_size{densities_.size()};
   size_t i_entry{properties_->current_step_ % window_size};
   if (i_entry != 0) {
-    motor_densities_[i_entry] = density;
+    densities_[i_entry] = density;
     return;
   }
   double density_avg{0.0};
   for (int i{0}; i < window_size; i++) {
-    density_avg += motor_densities_[i] / window_size;
+    density_avg += densities_[i] / window_size;
   }
   double density_var{0.0};
   for (int i{0}; i < window_size; i++) {
-    double diff{density_avg - motor_densities_[i]};
+    double diff{density_avg - densities_[i]};
     density_var += diff * diff / (window_size - 1);
   }
   double sigma{sqrt(density_var)};
@@ -851,10 +931,6 @@ void KinesinManagement::UpdateLists() {
   }
   wally_->Log(1, " -- finished --\n");
 }
-
-void KinesinManagement::Update_Extensions() { return; }
-
-void KinesinManagement::Update_Bound_Unteth() { return; }
 
 void KinesinManagement::SampleEventStatistics() {
 
@@ -1003,6 +1079,29 @@ void KinesinManagement::Bind_I(SITE_T *site) {
   properties_->microtubules.FlagForUpdate();
 }
 
+/*
+void KinesinManagement::Bind_I_Teth(POP_T *satellite_head) {
+
+  Kinesin *motor{satellite_head->motor_};
+  Tubulin *site{motor->GetWeightedSite_Bind_I_Teth()};
+  if (site == nullptr) {
+    printf("failed to Bind_I_Free_Teth (MOTOR)\n");
+    return;
+  }
+  // Update site details
+  site->motor_head_ = &motor->head_one_;
+  site->occupied_ = true;
+  // Update motor details
+  motor->mt_ = site->mt_;
+  motor->head_one_.site_ = site;
+  motor->head_one_.ligand_ = "NULL";
+  motor->head_one_.trailing_ = false;
+  motor->head_two_.trailing_ = true;
+  motor->heads_active_++;
+  properties_->microtubules.FlagForUpdate();
+}
+*/
+
 void KinesinManagement::Bind_ATP(POP_T *head) {
 
   if (head->ligand_ != "NULL") {
@@ -1085,3 +1184,46 @@ void KinesinManagement::Unbind_I(POP_T *head) {
   // Flag microtubules for update
   properties_->microtubules.FlagForUpdate();
 }
+void KinesinManagement::Tether_Free(ALT_T *untethered_head) {
+
+  Kinesin *motor{GetFreeMotor()};
+  AssociatedProtein *xlink{untethered_head->xlink_};
+  motor->xlink_ = xlink;
+  motor->tethered_ = true;
+  xlink->tethered_ = true;
+  xlink->motor_ = motor;
+  AddToActive(motor);
+  properties_->prc1.FlagForUpdate();
+}
+
+/*
+void KinesinManagement::Tether_Bound(POP_T *bound_head) {
+
+  Kinesin *motor{bound_head->motor_};
+  AssociatedProtein *xlink{motor->GetWeightedXlink_Tether_Bound()};
+  // Update motor and xlink details
+  motor->xlink_ = xlink;
+  motor->tethered_ = true;
+  xlink->tethered_ = true;
+  xlink->motor_ = motor;
+  if (!motor->tethered_) {
+    wally_->ErrorExit("Kin_MGMT::Tether_Bound()");
+  }
+  properties_->prc1.FlagForUpdate();
+}
+
+void KinesinManagement::Untether(POP_T *head) {
+
+  Kinesin *motor{head->motor_};
+  AssociatedProtein *xlink{motor->xlink_};
+  // Update motor and xlink details
+  xlink->motor_ = nullptr;
+  xlink->tethered_ = false;
+  motor->xlink_ = nullptr;
+  motor->tethered_ = false;
+  if (motor->heads_active_ == 0) {
+    RemoveFromActive(motor);
+  }
+  properties_->prc1.FlagForUpdate();
+}
+*/

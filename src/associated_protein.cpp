@@ -58,8 +58,10 @@ void AssociatedProtein::InitializeLookupTables() {
     weight_bind_ii_[n_neighbs].resize(dist_cutoff_ + 1);
     for (int x{0}; x <= dist_cutoff_; x++) {
       weight_bind_ii_[n_neighbs][x] =
-          properties_->prc1.weight_bind_ii_[n_neighbs][x];
+          properties_->prc1.weight_neighbs_bind_[n_neighbs] *
+          properties_->prc1.weight_spring_bind_[x];
     }
+    /*
     weight_bind_i_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
     weight_bind_ii_to_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
     weight_bind_ii_fr_teth_[n_neighbs].resize(2 * teth_cutoff + 1);
@@ -75,6 +77,7 @@ void AssociatedProtein::InitializeLookupTables() {
             properties_->prc1.weight_bind_ii_fr_teth_[n_neighbs][x_dub][x];
       }
     }
+    */
   }
 }
 
@@ -208,73 +211,75 @@ void AssociatedProtein::UpdateExtension() {
 
 void AssociatedProtein::ForceUnbind() {
 
-  // printf("Forced unbind of xlink %i!\n", id_);
-  // Check to see if xlink has a satellite motor (tethered but not bound)
-  bool has_satellite{false};
-  if (tethered_) {
-    if (motor_->heads_active_ == 0) {
-      has_satellite = true;
-    }
-  }
-  // Xlinks with satellites behave as if untethered (no energy from tether)
-  if (!tethered_ or has_satellite) {
-    // If xlink isn't tethered, flip a coin to choose which head to unbind
-    double ran{properties_->gsl.GetRanProb()};
-    if (ran < 0.5) {
-      head_one_.site_->xlink_head_ = nullptr;
-      head_one_.site_->occupied_ = false;
-      head_one_.site_ = nullptr;
-    } else {
-      head_two_.site_->xlink_head_ = nullptr;
-      head_two_.site_->occupied_ = false;
-      head_two_.site_ = nullptr;
-    }
-  }
-  // If xlink is tethered, take energy change of tether into account
-  // (Motor must have at least 1 head bound for tether to store energy)
-  else if (motor_->heads_active_ > 0) {
-    // Unbinding head farthest from teth rest brings teth closer to rest
-    Tubulin *site_to{GetSiteFartherFromTethRest()};
-    int neighbs_to{site_to->GetPRC1NeighborCount()};
-    // Unbinding head closest to teth rest brings teth farther from rest
-    Tubulin *site_fr{GetSiteCloserToTethRest()};
-    int neighbs_fr{site_fr->GetPRC1NeighborCount()};
-    // Calculate relative probabilities of unbinding either head
-    int x{x_dist_};
-    int x_dub{motor_->x_dist_doubled_};
-    double p_to{properties_->prc1.p_unbind_ii_to_teth_[neighbs_to][x_dub][x]};
-    double p_fr{properties_->prc1.p_unbind_ii_fr_teth_[neighbs_fr][x_dub][x]};
-    double p_tot{p_to + p_fr};
-    // Roll a random number to see which should be unbound
-    double ran{properties_->gsl.GetRanProb()};
-    if (ran < p_to / p_tot) {
-      site_to->xlink_head_ = nullptr;
-      site_to->occupied_ = false;
-      if (site_to == head_one_.site_) {
-        head_one_.site_ = nullptr;
-      } else {
-        head_two_.site_ = nullptr;
+  /*
+    // printf("Forced unbind of xlink %i!\n", id_);
+    // Check to see if xlink has a satellite motor (tethered but not bound)
+    bool has_satellite{false};
+    if (tethered_) {
+      if (motor_->heads_active_ == 0) {
+        has_satellite = true;
       }
-    } else {
-      site_fr->xlink_head_ = nullptr;
-      site_fr->occupied_ = false;
-      if (site_fr == head_one_.site_) {
+    }
+    // Xlinks with satellites behave as if untethered (no energy from tether)
+    if (!tethered_ or has_satellite) {
+      // If xlink isn't tethered, flip a coin to choose which head to unbind
+      double ran{properties_->gsl.GetRanProb()};
+      if (ran < 0.5) {
+        head_one_.site_->xlink_head_ = nullptr;
+        head_one_.site_->occupied_ = false;
         head_one_.site_ = nullptr;
       } else {
+        head_two_.site_->xlink_head_ = nullptr;
+        head_two_.site_->occupied_ = false;
         head_two_.site_ = nullptr;
       }
     }
-  }
-  heads_active_--;
-  x_dist_ = 0;
-  extension_ = 0;
-  cosine_ = 0;
-  if (tethered_) {
-    // Update motor extension since anchor coord has changed
-    motor_->UpdateExtension();
-  }
-  properties_->prc1.FlagForUpdate();
-  properties_->kinesin4.FlagForUpdate();
+    // If xlink is tethered, take energy change of tether into account
+    // (Motor must have at least 1 head bound for tether to store energy)
+    else if (motor_->heads_active_ > 0) {
+      // Unbinding head farthest from teth rest brings teth closer to rest
+      Tubulin *site_to{GetSiteFartherFromTethRest()};
+      int neighbs_to{site_to->GetPRC1NeighborCount()};
+      // Unbinding head closest to teth rest brings teth farther from rest
+      Tubulin *site_fr{GetSiteCloserToTethRest()};
+      int neighbs_fr{site_fr->GetPRC1NeighborCount()};
+      // Calculate relative probabilities of unbinding either head
+      int x{x_dist_};
+      int x_dub{motor_->x_dist_doubled_};
+      double p_to{properties_->prc1.p_unbind_ii_to_teth_[neighbs_to][x_dub][x]};
+      double p_fr{properties_->prc1.p_unbind_ii_fr_teth_[neighbs_fr][x_dub][x]};
+      double p_tot{p_to + p_fr};
+      // Roll a random number to see which should be unbound
+      double ran{properties_->gsl.GetRanProb()};
+      if (ran < p_to / p_tot) {
+        site_to->xlink_head_ = nullptr;
+        site_to->occupied_ = false;
+        if (site_to == head_one_.site_) {
+          head_one_.site_ = nullptr;
+        } else {
+          head_two_.site_ = nullptr;
+        }
+      } else {
+        site_fr->xlink_head_ = nullptr;
+        site_fr->occupied_ = false;
+        if (site_fr == head_one_.site_) {
+          head_one_.site_ = nullptr;
+        } else {
+          head_two_.site_ = nullptr;
+        }
+      }
+    }
+    heads_active_--;
+    x_dist_ = 0;
+    extension_ = 0;
+    cosine_ = 0;
+    if (tethered_) {
+      // Update motor extension since anchor coord has changed
+      motor_->UpdateExtension();
+    }
+    properties_->prc1.FlagForUpdate();
+    properties_->kinesin4.FlagForUpdate();
+  */
 }
 
 void AssociatedProtein::UntetherSatellite() {

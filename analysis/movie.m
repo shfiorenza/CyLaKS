@@ -2,7 +2,7 @@ clear variables;
 
 %sim_name = 'run_mobility_baseline_Kif4A/mobility_baseline_Kif4A_80_0';
 sim_name = 'test';
-fileDirectory = '/home/shane/projects/LAT-CAT/%s';
+fileDirectory = '/home/shane/projects/DECAF/%s';
 
 movie_name = 'test';
 movie_duration = 30; % in seconds

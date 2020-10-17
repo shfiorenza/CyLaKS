@@ -74,9 +74,6 @@ public:
   }
   int SampleStatistics() {
     n_opportunities_tot_ += *n_avail_;
-    // if (name_ == "unbind_ii" and *n_avail_ > 0) {
-    //   printf("%i opportunities for unbind_ii\n", *n_avail_);
-    // }
     if (poisson_based_) {
       SampleStatistics_Poisson();
     } else {

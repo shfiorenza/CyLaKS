@@ -35,7 +35,7 @@ public:
 
   /* System equilibration */
   bool equilibrated_{false};
-  double scan_window_{10}; // seconds
+  double scan_window_{0.1}; // seconds
   double old_density_avg_{0.0};
   double old_density_var_{0.0};
   Vec<double> densities_;
@@ -64,8 +64,13 @@ public:
   int teth_cutoff_{0};
   int comp_cutoff_{0};
   double rest_dist_{0.0};
-  Vec<double> weight_teth_bind_;   // Index scheme: [x_dub]
-  Vec<double> weight_teth_unbind_; // Index scheme: [x_dub]
+  Vec<double> dr_teth_;                   // Index scheme: [x_dub]
+  Vec<double> weight_teth_step_with_;     // Force-dependent; Indices: [x_dub]
+  Vec<double> weight_teth_step_anti_;     // Force-dependent; Indices: [x_dub]
+  Vec<double> weight_teth_unbind_i_with_; // Force-dependent; Indices: [x_dub]
+  Vec<double> weight_teth_unbind_i_anti_; // Force-dependent; Indices: [x_dub]
+  Vec<double> weight_teth_bind_;          // Energy-dependent; Indices: [x_dub]
+  Vec<double> weight_teth_unbind_;        // Energy-dependent; Indices: [x_dub]
 
   /* KMC event handling */
   Vec<EVENT_T> events_;    // All possible KMC event objects; arbitrary order
@@ -82,6 +87,7 @@ public:
   double p_avg_unbind_i_;    // For unbinding heads of singly-bound motors
   // Tether jawn
   double p_bind_i_teth_;
+  double p_tether_free_;
   double p_tether_;
   double p_untether_;
 
@@ -97,9 +103,13 @@ public:
   // Tether jawn
   int n_satellites_{0};
   int n_bound_unteth_{0};
-  Vec<int> n_bound_teth_;        // Indices: [x_dub]
-  Vec<int> n_bound_NULL_teth_;   // Indices: [x_dub]
-  Vec<int> n_bound_ADPP_i_teth_; // Indices: [x_dub]
+  int n_bind_i_teth_candidates_{0};
+  int n_tether_bound_candidates_{0};
+  Vec<int> n_bound_teth_;                  // Indices: [x_dub]
+  Vec<int> n_bound_NULL_with_teth_;        // Indices: [x_dub]
+  Vec<int> n_bound_NULL_anti_teth_;        // Indices: [x_dub]
+  Vec<Vec<int>> n_bound_ADPP_i_with_teth_; // Indices: [n_neighbs][x_dub]
+  Vec<Vec<int>> n_bound_ADPP_i_anti_teth_; // Indices: [n_neighbs][x_dub]
 
   /* Population trackers -- 'candidates' are targets for possion events */
   Vec<Kinesin> motors_;   // All motors in system including reservoir; static
@@ -113,10 +123,13 @@ public:
   // Tether jawn
   Vec<ENTRY_T> satellites_;
   Vec<ENTRY_T> bound_unteth_;
-  Vec<Vec<ENTRY_T>> bound_teth_;         // Indices: [x_dub][i]
-  Vec<Vec<ENTRY_T>> bound_NULL_to_teth_; // Indices: [x_dub][i]
-  Vec<Vec<ENTRY_T>> bound_NULL_fr_teth_; // Indices: [x_dub][i]
-  Vec<Vec<ENTRY_T>> bound_ADPP_i_teth_;  // Indices: [x_dub][i]
+  Vec<ENTRY_T> bind_i_teth_candidates_;
+  Vec<ENTRY_T> tether_bound_candidates_;
+  Vec<Vec<ENTRY_T>> bound_teth_;                  // Indices: [x_dub][i]
+  Vec<Vec<ENTRY_T>> bound_NULL_with_teth_;        // Indices: [x_dub][i]
+  Vec<Vec<ENTRY_T>> bound_NULL_anti_teth_;        // Indices: [x_dub][i]
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_with_teth_; // [n_neighbs][x_dub][i]
+  Vec<Vec<Vec<ENTRY_T>>> bound_ADPP_i_anti_teth_; // [n_neighbs][x_dub][i]
 
 private:
   void CalculateCutoffs();
@@ -134,23 +147,16 @@ public:
 
   Kinesin *GetFreeMotor();
 
-  void FlagForUpdate(); // FIXME
+  void FlagForUpdate();
   void AddToActive(Kinesin *motor);
   void RemoveFromActive(Kinesin *motor);
 
   void UpdateLatticeWeights();
-  void UpdateExtensions(); // FIXME
-  void UpdateList_Docked();
-  void UpdateList_Bound_NULL();
-  void UpdateList_Bound_NULL_Teth();
-  void UpdateList_Bound_ATP();
-  void UpdateList_Bound_ADPP();
-  void UpdateList_Bound_ADPP_Teth();
-  void UpdateList_Bound_Teth();
+  void UpdateExtensions();
 
   void RunKMC();
   void CheckEquilibration();
-  void UpdateLists(); // FIXME; add tethered lists
+  void UpdateLists();
   void SampleEventStatistics();
   void GenerateExecutionSequence();
   void ExecuteEvents();

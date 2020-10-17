@@ -122,14 +122,6 @@ public:
   void AddToActive(AssociatedProtein *xlink);
   void RemoveFromActive(AssociatedProtein *xlink);
 
-  void UpdateExtensions();
-  void UpdateList_Bound_I();
-  void UpdateList_Bound_I_Teth();
-  void UpdateList_Bound_II();
-  void UpdateList_Bound_II_Teth();
-  void UpdateList_Bound_Unteth();
-  void UpdateList_Free_Teth();
-
   void RunKMC();
   void CheckEquilibration();
   void UpdateLists();

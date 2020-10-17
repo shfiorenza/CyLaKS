@@ -12,16 +12,6 @@ struct system_parameters;
 class AssociatedProtein {
 private:
   template <typename DATA_T> using Vec = std::vector<DATA_T>;
-  // Index scheme: [x (current)];
-  Vec<double> cosine_lookup_;
-  Vec<double> extension_lookup_;
-  // Index scheme: [n_prc1_neighbs][x (proposed)]
-  Vec<Vec<double>> weight_bind_ii_;
-  // Index scheme: [n_prc1_neighbs][x_dub (proposed)]
-  Vec<Vec<double>> weight_bind_i_teth_;
-  // Index scheme: [n_prc1_neighbs][x_dub (current)][x (proposed)]
-  Vec<Vec<Vec<double>>> weight_bind_ii_to_teth_;
-  Vec<Vec<Vec<double>>> weight_bind_ii_fr_teth_;
   // Neighbor lists for 2nd-stage binding (not to be confused w/ PRC1 neighbs)
   int n_neighbors_bind_ii_{0};
   int n_neighbors_bind_i_teth_{0};
@@ -52,6 +42,7 @@ public:
     }
     int GetPRC1NeighborCount();
   };
+  Monomer head_one_{.xlink_ = this}, head_two_{.xlink_ = this};
 
   // see kinesin header for description of variables
   int id_{-1};
@@ -61,22 +52,15 @@ public:
   // x_dist_ is used to index the xlink extensions for lookup
   // e.g. x_dist_ = 0 means an extension of 3 nm (35 - 32)
   int x_dist_{0};      // in no. of sites; can only be 0 or pos.
-  int rest_dist_{0};   // x_dist at which spring extension is ~0
   int dist_cutoff_{0}; // maximum value x_dist_ can have
-
-  double r_0_{0.0};
-  double k_spring_{0.0};
-  double cosine_{0.0};    // of angle of xlink w/ respect to MT
-  double extension_{0.0}; // current extension of xlink in nm
-
-  Monomer head_one_{.xlink_ = this}, head_two_{.xlink_ = this};
+  int teth_cutoff_{0};
+  int comp_cutoff_{0};
 
   bool tethered_{false};
   Kinesin *motor_{nullptr};
 
 private:
   void SetParameters();
-  void InitializeLookupTables();
   void InitializeNeighborLists();
 
 public:
@@ -85,13 +69,12 @@ public:
   // Functions related to baseline function
   Monomer *GetActiveHead();
   double GetAnchorCoordinate();
-  double GetExtensionForce(Tubulin *site);
-  int GetDirectionTowardRest(Tubulin *site);
   void UpdateExtension();
   void ForceUnbind();
+  int GetDirectionTowardRest(Tubulin *site);
   // Functions related to tethering
-  void UntetherSatellite();
   bool HasSatellite();
+  void UntetherSatellite();
   Tubulin *GetSiteCloserToTethRest();
   Tubulin *GetSiteFartherFromTethRest();
   // Functions related to neighbor lists

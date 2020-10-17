@@ -2,7 +2,7 @@ clear variables;
 
 %sim_name = 'run_mobility_baseline_Kif4A/mobility_baseline_Kif4A_80_0';
 sim_name = 'test';
-fileDirectory = '/home/shane/projects/DECAF/%s';
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
 movie_name = 'test';
 movie_duration = 30; % in seconds
@@ -425,7 +425,6 @@ for i_data = start_frame:frames_per_plot:end_frame
                     xa = start_pos; ya = start_height;
                     xb = end_pos; yb = end_height;
                     ne = 10; a = 10; ro = 0.5;
-                    %{
                     if abs(xa - xb) <= teth_cutoff
                         [xs, ys] = spring(xa, ya, xb, yb, ne, a, ro);
                         plot(xs, ys, 'LineWidth', 1, 'Color', 'black');
@@ -434,14 +433,9 @@ for i_data = start_frame:frames_per_plot:end_frame
                         disp(teth_coords(i_teth));
                         disp(i_teth);
                     end
-
-                    %}
                 end
-
             end
-
         end
-
     end
 
     dim = [0.0105 0.62 .3 .3];

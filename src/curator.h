@@ -10,6 +10,8 @@ struct system_properties;
 
 using sys_clock = std::chrono::steady_clock;
 using sys_timepoint = sys_clock::time_point;
+template <typename DATA_T> using Vec = std::vector<DATA_T>;
+
 class Curator {
 private:
   FILE *log_file_{nullptr};
@@ -27,9 +29,9 @@ public:
   size_t n_datapoints_recorded_{0};
 
   int verbosity_{0};
-  double t_motors_[4];
-  double t_xlinks_[4];
-  double t_MTs_[4];
+  double t_motors_[6];
+  double t_xlinks_[5];
+  double t_MTs_[5];
   char *param_file_{nullptr};
   char *sim_name_{nullptr};
   char *test_mode_{nullptr};

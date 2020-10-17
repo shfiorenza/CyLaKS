@@ -146,10 +146,10 @@ void Curator::GenerateDataFiles() {
       // Open xlink extension file, which stores the number of stage-2
       // xlinks at a certain extension for all possible extensions
       properties_->xlink_extension_file_ = OpenFile(xlink_extension_file, "w");
+      // Open xlink force file, which stores the sum
+      // of forces coming from xlink extensions
+      properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
     }
-    // Open xlink force file, which stores the sum
-    // of forces coming from xlink extensions
-    properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
   }
   if (parameters_->microtubules.diffusion_on) {
     // Open mt coord file, which stores the coordinates
@@ -366,11 +366,12 @@ void Curator::SetLocalParameters() {
   n_steps_per_output_ = n_steps_recorded_ / n_datapoints;
   equil_milestone_ = data_threshold_ / 10;
   data_milestone_ = n_steps_recorded_ / 10;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 5; i++) {
     t_motors_[i] = 0;
     t_xlinks_[i] = 0;
     t_MTs_[i] = 0;
   }
+  t_motors_[5] = 0;
 }
 
 void Curator::InitializeSimObjects() {
@@ -450,9 +451,10 @@ void Curator::OutputData() {
           AssociatedProtein *xlink{motor->xlink_};
           if (xlink->heads_active_ > 0) {
             double anchor_coord = xlink->GetAnchorCoordinate();
+            // printf("wrote teth coord %g\n", anchor_coord);
             tether_coords[i_site] = anchor_coord;
             double stalk_coord = motor->GetStalkCoordinate();
-            double teth_dist = abs(anchor_coord - stalk_coord);
+            double teth_dist = fabs(anchor_coord - stalk_coord);
             if (teth_dist > motor->teth_cutoff_) {
               Log("woah, teth dist is %g\n", teth_dist);
             }
@@ -507,10 +509,11 @@ void Curator::OutputData() {
     }
   }
   if (properties_->prc1.population_active_) {
-    fwrite(xlink_forces, sizeof(double), n_mts, properties_->xlink_force_file_);
     if (properties_->prc1.crosslinking_active_) {
       fwrite(xlink_extensions, sizeof(int), xlink_cutoff + 1,
              properties_->xlink_extension_file_);
+      fwrite(xlink_forces, sizeof(double), n_mts,
+             properties_->xlink_force_file_);
     }
   }
   if (parameters_->microtubules.diffusion_on) {
@@ -530,19 +533,19 @@ void Curator::OutputSimDuration() {
   Log("\nTime to execute sim '%s': %.2f seconds.\n", sim_name_,
       sim_duration / n_per_sec);
   Log(" (%i datapoints recorded)\n", n_datapoints_recorded_);
+  Log("   -KinesinManagement::RunKMC(): %.2f\n", t_motors_[0] / n_per_sec);
+  Log("      -CheckEquilibration(): %.2f\n", t_motors_[1] / n_per_sec);
+  Log("      -UpdateLists(): %.2f\n", t_motors_[2] / n_per_sec);
+  Log("      -SampleEventStatistics(): %.2f\n", t_motors_[3] / n_per_sec);
+  Log("      -GenerateExecutionSequence(): %.2f\n", t_motors_[4] / n_per_sec);
+  Log("      -ExecuteEvents() %.2f\n", t_motors_[4] / n_per_sec);
+  Log("   -AssociatedProteinManagement::RunKMC(): %.2f\n",
+      t_xlinks_[0] / n_per_sec);
+  Log("      -UpdateLists(): %.2f\n", t_xlinks_[1] / n_per_sec);
+  Log("      -SampleEventStatistics(): %.2f\n", t_xlinks_[2] / n_per_sec);
+  Log("      -GenerateExecutionSequence(): %.2f\n", t_xlinks_[3] / n_per_sec);
+  Log("      -ExecuteEvents(): %.2f\n", t_xlinks_[4] / n_per_sec);
   /*
-  Log("   -Motors: %.2f\n", t_motors_[0] / n_per_sec);
-  Log("      -Calculating stats: %.2f\n", t_motors_[1] / n_per_sec);
-  Log("      -Constructing list: %.2f\n", t_motors_[2] / n_per_sec);
-  Log("      -Execution: %.2f\n", t_motors_[3] / n_per_sec);
-  Log("   -Xlinks: %.2f\n", t_xlinks_[0] / n_per_sec);
-  Log("      -Updating lists: %.2f\n", t_xlinks_[1] / n_per_sec);
-  Log("           -Extensions: %.2f\n", t_xlinks_[5] / n_per_sec);
-  Log("           -MT unnocupied sites: %.2f\n", t_xlinks_[6] / n_per_sec);
-  Log("           -Bound_I: %.2f\n", t_xlinks_[7] / n_per_sec);
-  Log("      -Refreshing populations: %.2f\n", t_xlinks_[2] / n_per_sec);
-  Log("      -Generating sequence: %.2f\n", t_xlinks_[3] / n_per_sec);
-  Log("      -Executing events: %.2f\n", t_xlinks_[4] / n_per_sec);
   Log("   -MTs: %.2f\n", t_MTs_[0] / n_per_sec);
   Log("      -Summing forces: %.2f\n", t_MTs_[1] / n_per_sec);
   Log("      -Calculating displacement: %.2f\n", t_MTs_[2] / n_per_sec);

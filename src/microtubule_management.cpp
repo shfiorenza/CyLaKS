@@ -150,8 +150,6 @@ void MicrotubuleManagement::RunDiffusion() {
   double site_size{parameters_->microtubules.site_size};
   // Sum up all forces exerted on each microtubule
   double forces_summed[n_mts];
-  properties_->prc1.UpdateExtensions();
-  properties_->kinesin4.UpdateExtensions();
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
     forces_summed[i_mt] = mt_list_[i_mt].GetNetForce();
     forces_summed[i_mt] += parameters_->microtubules.applied_force;

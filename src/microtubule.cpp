@@ -95,6 +95,7 @@ void Microtubule::UpdateExtensions() {
 
 double Microtubule::GetNetForce() {
 
+  return 0.0; /*
   double forces_summed{0.0};
   for (int i_site{0}; i_site < n_sites_; i_site++) {
     Tubulin *site{&lattice_[i_site]};
@@ -136,10 +137,13 @@ double Microtubule::GetNetForce() {
     }
   }
   return forces_summed;
+  */
 }
 
 double Microtubule::GetNetForce_Motors() {
 
+  return 0.0;
+  /*
   double forces_summed = 0;
   for (int i_site = 0; i_site < n_sites_; i_site++) {
     Tubulin *site = &lattice_[i_site];
@@ -206,10 +210,13 @@ double Microtubule::GetNetForce_Motors() {
     }
   }
   return forces_summed;
+  */
 }
 
 double Microtubule::GetNetForce_Xlinks() {
 
+  return 0.0;
+  /*
   double forces_summed = 0;
   for (int i_site = 0; i_site < n_sites_; i_site++) {
     Tubulin *site = &lattice_[i_site];
@@ -223,4 +230,5 @@ double Microtubule::GetNetForce_Xlinks() {
     }
   }
   return forces_summed;
+  */
 }

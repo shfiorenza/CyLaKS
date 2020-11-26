@@ -1,40 +1,32 @@
-#ifndef _EVENT
-#define _EVENT
-#include <functional>
-#include <string>
-#include <variant>
+#ifndef _CYLAKS_EVENT_HPP_
+#define _CYLAKS_EVENT_HPP_
+#include "definitions.hpp"
+#include "rng_manager.hpp"
+class Object;
 
-template <typename ENTRY_T> class Event {
+enum Distribution { Binomial, Poisson };
+class Event {
 private:
-  // Whether or not this event uses poisson-based statistics
-  bool poisson_based_{false};
-  // Poisson based jawns
-  double poisson_weight_total_;
-  std::vector<double> poisson_weights_;
-  std::function<double(ENTRY_T)> get_weight_;
-  std::function<double(void)> get_ran_prob_;
-  // Pointer to list of available targets to act on; dynamically updated
-  std::vector<ENTRY_T> *target_pool_;
-  // Function that actually executes this event
-  std::function<void(ENTRY_T)> exe_;
-  // Probabilitiy distribution we sample to predict no. of events each timestep
-  std::function<int(double, int)> prob_dist_;
-  // Function that sets n random indices in the range [0, m)
-  std::function<void(int *, int, int)> set_ran_indices_;
+  size_t n_executed_tot_{0};       // # of times event has been executed
+  size_t n_opportunities_tot_{0};  // # of opportunities event had to execute
+  Distribution mode_{Binomial};    // Which distribution we sample from
+  Vec<Object *> *target_pool_;     // Ptr to list of available targets; dynamic
+  Fn<void(Object *)> exe_;         // Function that actually executes this event
+  Fn<int(double, int)> prob_dist_; // Sampled to predict n_events each timestep
+  struct PoissonToolbox {
+    double weight_total_;
+    Vec<double> weights_;
+    Fn<double(Object *)> get_weight_;
+  };
+  PoissonToolbox poisson_;   // Auxiliary resources for poisson mode
+  RandomNumberManager *gsl_; // Pointer to RNG management structure
 
 public:
-  unsigned long n_executed_tot_{0};
-  unsigned long n_opportunities_tot_{0};
-  // Expected number of events to occur for current given timestep
-  int n_expected_{0};
-  // Pointer to no. of specific targets this event can act on; dynamic
-  int *n_avail_{nullptr};
-  // Probability that this event will occur each timestep
-  double p_occur_{0.0};
-  // Name of this event, e.g., "Bind_II_Teth"
-  std::string name_{"bruh"};
-  // Targets that this event will act on this timestep
-  std::vector<ENTRY_T> targets_;
+  Str name_{"bruh"};         // Name of this event, e.g., "Bind_II_Teth"
+  double p_occur_{0.0};      // Probability that event will occur each timestep
+  size_t n_expected_{0};     // Expected # of events to occur any given timestep
+  size_t *n_avail_{nullptr}; // Ptr to # of targets event can act on; dynamic
+  Vec<Object *> targets_;    // Objects this event will act on this timestep
 
 private:
   void SetTargets() {
@@ -42,7 +34,7 @@ private:
       targets_.resize(n_expected_);
     }
     int indices[n_expected_];
-    set_ran_indices_(indices, n_expected_, *n_avail_);
+    gsl_->SetRanIndices(indices, n_expected_, *n_avail_);
     for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
       targets_[i_entry] = target_pool_->at(indices[i_entry]);
     }
@@ -51,30 +43,21 @@ private:
   void SetTargets_Poisson();
 
 public:
-  Event(std::string name, double p_occur, int *n_avail,
-        std::vector<ENTRY_T> *target_pool,
-        std::function<void(ENTRY_T)> exe_funct,
-        std::function<int(double, int)> prob_dist,
-        std::function<void(int *, int, int)> set_ran_indices)
-      : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
-        target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
-        set_ran_indices_{set_ran_indices} {}
-  Event(std::string name, double p_occur, int *n_avail,
-        std::vector<ENTRY_T> *target_pool,
-        std::function<void(ENTRY_T)> exe_funct,
-        std::function<double(ENTRY_T)> get_weight,
-        std::function<int(double, int)> prob_dist,
-        std::function<double(void)> get_ran_prob,
-        std::function<void(int *, int, int)> set_ran_indices)
-      : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
-        target_pool_{target_pool}, exe_{exe_funct}, prob_dist_{prob_dist},
-        get_weight_{get_weight}, get_ran_prob_{get_ran_prob},
-        set_ran_indices_{set_ran_indices} {
-    poisson_based_ = true;
+  Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
+        Fn<int(double, int)> prob_dist, Fn<void(Object *)> exe,
+        RandomNumberManagement *gsl)
+      : gsl_{gsl}, name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
+        target_pool_{target_pool}, prob_dist_{prob_dist}, exe_{exe} {}
+  Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
+        Fn<int(double, int)> prob_dist, Fn<double(Object *)> weight_fn,
+        Fn<void(Object *)> exe, RandomNumberManagement *gsl)
+      : Event(name, p_occur, n_avail, target_pool, prob_dist, exe, gsl) {
+    poisson_.get_weight_ = weight_fn;
+    mode_ = Poisson;
   }
-  int SampleStatistics() {
+  size_t SampleStatistics() {
     n_opportunities_tot_ += *n_avail_;
-    if (poisson_based_) {
+    if (mode_ == Poisson) {
       SampleStatistics_Poisson();
     } else {
       n_expected_ = prob_dist_(p_occur_, *n_avail_);
@@ -82,18 +65,16 @@ public:
     SetTargets();
     return n_expected_;
   }
-  void RemoveTarget(ENTRY_T tar) {
+  void RemoveTarget(Object *tar) {
     for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
       if (tar == targets_[i_entry]) {
-        targets_[i_entry] = targets_[n_expected_ - 1];
-        n_expected_--;
+        targets_[i_entry] = targets_[--n_expected_];
         return;
       }
     }
   }
   void Execute() {
-    exe_(targets_[n_expected_ - 1]);
-    n_expected_--;
+    exe_(targets_[--n_expected_]);
     n_executed_tot_++;
   }
 };

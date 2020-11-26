@@ -1,12 +1,9 @@
-#include "master_header.h"
-#include "protofilament.h"
+#include "protofilament.hpp"
+#include "master_header.hpp"
 
-Protofilament::Protofilament(){
+void Protofilament::GenerateLattice() {
 
-}
-
-void Protofilament::Initialize(system_parameters *parameters, 
-							   system_properties *properties, int i_pf){
-
-
+  for (int i_site{0}; i_site < length_; i_site++) {
+    lattice_.emplace_back(_id_tubulin, wally_->n_sim_objs_++, _r_tubulin, this);
+  }
 }

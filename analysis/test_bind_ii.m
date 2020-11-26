@@ -70,6 +70,7 @@ hold on
 % Plot theoretical avg_occu curve for continuous space using raw params
 %   (note: uses delta_u function defined at the end of this script)
 k_d = k_off_ii / k_on;
+
 avg_occu_theory = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
 fplot(@(x) avg_occu_theory(x), 'LineWidth', 2);
 

@@ -41,13 +41,13 @@ folder = "run_endtag_both_nostep";
 %}
 % Data for full model, sans stepping FX, sans long range, sans short range
 base_names = ["endtag_both", "../run_endtag_both_nostep/endtag_both_nostep", ...
-    "../run_endtag_short/endtag_short_2", "../run_endtag_long/endtag_long"]; 
+    "../run_endtag_both_nobind/endtag_both_nobind", "../run_endtag_long/endtag_long"]; 
 folder = "run_endtag_both";
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
 seeds = [0, 1, 2, 3]; %, 4, 5, 6, 7, 8, 9];
 
-dir = sprintf("/home/shane/projects/DECAF/%s", folder);
+dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
 
 exp_mt_lengths = [2.39, 3.99, 5.57, 7.15, 8.75, 10.33, 13.51]; % in um
 exp_err_mt_lengths =  [0.79, 0.79, 0.79, 0.79, 0.79, 0.79, 0.79]; % in um;
@@ -190,9 +190,9 @@ legend('boxoff');
 
 % Short- & long-range coop w/o stepping FX stylistic stuff
 
-legendLabel = ["Experiment", "Simulation - all cooperative mechanisms active", ...
+legendLabel = ["Experiment", "Simulation", ...
     "Simulation - no long-range stepping cooperativity", ...
-    "Simulation - no long-range binding or stepping cooperativity", ...
+    "Simulation - no long-range binding cooperativity", ...
     "Simulation - no short-range binding cooperativity"];
 legend(legendLabel,'location', 'northwest', 'FontSize', 18);
 legend('boxoff');

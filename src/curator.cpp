@@ -1,42 +1,4 @@
-#include "curator.h"
-#include "master_header.h"
-
-Curator::Curator() {}
-
-void Curator::InitializeSimulation(char *argv[], system_properties *properties,
-                                   system_parameters *parameters) {
-
-  properties_ = properties;
-  parameters_ = parameters;
-  // Check that user-input arguments are valid and parse them if they are
-  CheckArgs(argv);
-  // Log file saves all sim outputs to terminal
-  GenerateLogFile();
-  // Parameters from YAML file are transferred to local parameter structs
-  ParseParameters();
-  // Once parameters are parsed, the Curator's own parameters can be set
-  SetLocalParameters();
-  // Microtubules, motors, and crosslinkers are all initialized at once
-  InitializeSimObjects();
-  // Data files save all pertinent info: occupancy, coords, extensions, etc.
-  GenerateDataFiles();
-}
-
-FILE *Curator::OpenFile(const char *file_name, const char *type) {
-
-  FILE *file_ptr;
-  if ((file_ptr = fopen(file_name, type)) == NULL) {
-    fprintf(stderr, "Cannot open %s\n", file_name);
-    exit(1);
-  }
-  return file_ptr;
-}
-
-bool Curator::FileExists(std::string file_name) {
-
-  struct stat buffer;
-  return (stat(file_name.c_str(), &buffer) != -1);
-}
+#include "curator.hpp"
 
 void Curator::CheckArgs(char *argv[]) {
 
@@ -55,24 +17,25 @@ void Curator::CheckArgs(char *argv[]) {
     printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
     printf("test_mode (optional)\n");
     printf("Currently-implemented test modes are:\n");
-    printf("    xlink_bind_ii\n");
-    printf("    motor_lattice_bind\n");
-    printf("    motor_lattice_step\n");
+    printf("    NONE!\n");
+    // printf("    xlink_bind_ii\n");
+    // printf("    motor_lattice_bind\n");
+    // printf("    motor_lattice_step\n");
     exit(1);
   }
 }
 
 void Curator::GenerateLogFile() {
 
-  char log_file[256];
-  sprintf(log_file, "%s.log", sim_name_);
+  char log_filename[256];
+  sprintf(log_filename, "%s.log", sim_name_);
   // Check to see if sim files already exist
-  if (FileExists(log_file)) {
+  if (FileExists(log_filename)) {
     printf("Simulation log file with this name already exists!\n");
     printf("Do you wish to overwrite these data? y/n\n");
     std::string response;
-    bool response_unacceptable{true};
     int n_responses{0};
+    bool response_unacceptable{true};
     while (response_unacceptable) {
       std::getline(std::cin, response);
       if (response == "n" or response == "N") {
@@ -93,74 +56,60 @@ void Curator::GenerateLogFile() {
       }
     }
   }
-  log_file_ = OpenFile(log_file, "w");
+  log_file_ = fopen(log_filename, "w");
+  if (log_file_ == nullptr) {
+    printf("Error; cannot open log file '%s'\n", log_file_name);
+  }
 }
 
 void Curator::GenerateDataFiles() {
 
-  char occupancy_file[256], motor_ID_file[256], xlink_ID_file[256],
-      tether_coord_file[256], mt_coord_file[256], motor_extension_file[256],
-      xlink_extension_file[256], motor_force_file[256], xlink_force_file[256],
-      total_force_file[256], motor_head_status_file[256];
-  // Generate names of output files based on the input simulation name
-  sprintf(occupancy_file, "%s_occupancy.file", sim_name_);
-  sprintf(motor_ID_file, "%s_motorID.file", sim_name_);
-  sprintf(xlink_ID_file, "%s_xlinkID.file", sim_name_);
-  sprintf(tether_coord_file, "%s_tether_coord.file", sim_name_);
-  sprintf(mt_coord_file, "%s_mt_coord.file", sim_name_);
-  sprintf(motor_extension_file, "%s_motor_extension.file", sim_name_);
-  sprintf(xlink_extension_file, "%s_xlink_extension.file", sim_name_);
-  sprintf(motor_force_file, "%s_motor_force.file", sim_name_);
-  sprintf(xlink_force_file, "%s_xlink_force.file", sim_name_);
-  sprintf(total_force_file, "%s_total_force.file", sim_name_);
-  sprintf(motor_head_status_file, "%s_motor_head_status.file", sim_name_);
   // Open occupancy file, which stores the species ID of each occupant
   // (or -1 for none) for all MT sites during data collection (DC)
-  properties_->occupancy_file_ = OpenFile(occupancy_file, "w");
+  data_files_.emplace("occupancy", SysFile(sim_name_, "occupancy"));
   // Motor-related files
-  if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+  if (properties_->kinesin4.step_active_ < params_.n_steps) {
     // Open motor ID file, which stores the unique ID of all bound motors
     // (unbound not tracked) and their respective site indices during DC
-    properties_->motor_ID_file_ = OpenFile(motor_ID_file, "w");
+    data_files_.emplace("motorID", SysFile(sim_name_, "motorID"));
     // bool; simply says if motor head is trailing or not
-    properties_->motor_head_status_file_ =
-        OpenFile(motor_head_status_file, "w");
+    data_files_.emplace("motor_trailing", SysFile(sim_name_, "motor_trailing"));
     if (properties_->kinesin4.tethering_active_) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
-      properties_->tether_coord_file_ = OpenFile(tether_coord_file, "w");
+      data_files_.emplace("tether_coord", SysFile(sim_name_, "tether_coord"));
       // Open motor extension file, which stores the number of motors
       // with a certain tether extension for all possible extensions
-      properties_->motor_extension_file_ = OpenFile(motor_extension_file, "w");
+      data_files_.emplace("motor_dx", SysFile(sim_name_, "motor_dx"));
       // Open motor force file, which stores the sum
       // of forces coming from motor tether extensions
-      properties_->motor_force_file_ = OpenFile(motor_force_file, "w");
+      data_files_.emplace("motor_force", SysFile(sim_name_, "motor_force"));
     }
   }
   // Crosslinker-related files
   if (properties_->prc1.population_active_) {
     // Open xlink ID file, which does the same
     // as the motor ID file but for xlinks
-    properties_->xlink_ID_file_ = OpenFile(xlink_ID_file, "w");
+    data_files_.emplace("xlinkID", SysFile(sim_name_, "xlinkID"));
     if (properties_->prc1.crosslinking_active_) {
       // Open xlink extension file, which stores the number of stage-2
       // xlinks at a certain extension for all possible extensions
-      properties_->xlink_extension_file_ = OpenFile(xlink_extension_file, "w");
+      data_files_.emplace("xlink_dx", SysFile(sim_name_, "xlink_dx"));
       // Open xlink force file, which stores the sum
       // of forces coming from xlink extensions
-      properties_->xlink_force_file_ = OpenFile(xlink_force_file, "w");
+      data_files_.emplace("xlink_force", SysFile(sim_name_, "xlink_force"));
     }
   }
-  if (parameters_->microtubules.diffusion_on) {
+  if (params_.filaments.diffusion_on) {
     // Open mt coord file, which stores the coordinates
     // of the left-most edge of each microtubule during DC
-    properties_->mt_coord_file_ = OpenFile(mt_coord_file, "w");
+    data_files_.emplace("mt_coord", SysFile(sim_name_, "mt_coord"));
   }
   if (properties_->kinesin4.tethering_active_ and
       properties_->prc1.crosslinking_active_) {
     // Open total force file, which stores the sum of ALL
     // forces coming from xlink and motor tether extensions
-    properties_->total_force_file_ = OpenFile(total_force_file, "w");
+    data_files_.emplace("total_force", SysFile(sim_name_, "total_force"));
   }
 }
 
@@ -171,197 +120,195 @@ void Curator::ParseParameters() {
     Log("  Error: parameter file does not exist; aborting\n");
     exit(1);
   }
+  /*
+    // Parse parameter file into a YAML node
+    YAML::Node input = YAML::LoadFile(param_file_);
+    for (auto it : input) {
+      Str key{it->first.as<Str>()};
+      auto val =
+    }
+    */
 
-  // Parse parameter file into a YAML node
-  YAML::Node input = YAML::LoadFile(param_file_);
   // Transfer values from input param node to system_parameters structure
   try {
-    parameters_->seed = input["seed"].as<unsigned long>();
+    params_.seed = input["seed"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
-    parameters_->seed = (unsigned long)(input["seed"].as<double>());
+    params_.seed = (unsigned long)(input["seed"].as<double>());
   }
   try {
-    parameters_->n_steps = input["n_steps"].as<unsigned long>();
+    params_.n_steps = input["n_steps"].as<unsigned long>();
   } catch (const YAML::BadConversion error) {
     try {
-      parameters_->n_steps = (unsigned long)input["n_steps"].as<double>();
+      params_.n_steps = (unsigned long)input["n_steps"].as<double>();
     } catch (const YAML::BadConversion error) {
-      parameters_->n_steps = (unsigned long)input["n_steps"].as<int>();
+      params_.n_steps = (unsigned long)input["n_steps"].as<int>();
     }
   }
-  parameters_->n_datapoints = input["n_datapoints"].as<int>();
-  parameters_->data_threshold = input["data_threshold"].as<int>();
-  parameters_->delta_t = input["delta_t"].as<double>();
-  parameters_->kbT = input["kbT"].as<double>();
-  parameters_->eta = input["eta"].as<double>();
+  params_.n_datapoints = input["n_datapoints"].as<int>();
+  params_.data_threshold = input["data_threshold"].as<int>();
+  params_.delta_t = input["delta_t"].as<double>();
+  params_.kbT = input["kbT"].as<double>();
+  params_.eta = input["eta"].as<double>();
   /* Microtubule parameters below */
-  YAML::Node mts = input["microtubules"];
-  parameters_->microtubules.count = mts["count"].as<int>();
-  parameters_->microtubules.length = mts["length"].as<std::vector<int>>();
-  parameters_->microtubules.y_dist = mts["y_dist"].as<double>();
-  parameters_->microtubules.site_size = mts["site_size"].as<double>();
-  parameters_->microtubules.radius = mts["radius"].as<double>();
-  parameters_->microtubules.elevation = mts["elevation"].as<double>();
-  parameters_->microtubules.start_coord =
-      mts["start_coord"].as<std::vector<double>>();
-  parameters_->microtubules.immobile_until =
+  YAML::Node mts = input["filaments"];
+  params_.filaments.count = mts["count"].as<int>();
+  params_.filaments.length = mts["length"].as<std::vector<int>>();
+  params_.filaments.y_dist = mts["y_dist"].as<double>();
+  params_.filaments.site_size = mts["site_size"].as<double>();
+  params_.filaments.radius = mts["radius"].as<double>();
+  params_.filaments.elevation = mts["elevation"].as<double>();
+  params_.filaments.start_coord = mts["start_coord"].as<std::vector<double>>();
+  params_.filaments.immobile_until =
       mts["immobile_until"].as<std::vector<double>>();
-  parameters_->microtubules.applied_force = mts["applied_force"].as<double>();
-  parameters_->microtubules.printout_on = mts["printout_on"].as<bool>();
-  parameters_->microtubules.diffusion_on = mts["diffusion_on"].as<bool>();
+  params_.filaments.applied_force = mts["applied_force"].as<double>();
+  params_.filaments.printout_on = mts["printout_on"].as<bool>();
+  params_.filaments.diffusion_on = mts["diffusion_on"].as<bool>();
   /* Motor parameters below */
   YAML::Node motors = input["motors"];
-  parameters_->motors.n_runs_desired = motors["n_runs_desired"].as<size_t>();
+  params_.motors.n_runs_desired = motors["n_runs_desired"].as<size_t>();
   try {
-    parameters_->motors.lattice_coop_range =
-        motors["lattice_coop_range"].as<int>();
+    params_.motors.lattice_coop_range = motors["lattice_coop_range"].as<int>();
   } catch (const YAML::BadConversion error) {
-    parameters_->motors.lattice_coop_range =
+    params_.motors.lattice_coop_range =
         (int)std::round(motors["lattice_coop_range"].as<double>());
   }
-  parameters_->motors.lattice_coop_Emax_solo =
+  params_.motors.lattice_coop_Emax_solo =
       motors["lattice_coop_Emax_solo"].as<double>();
-  parameters_->motors.lattice_coop_Emax_bulk =
+  params_.motors.lattice_coop_Emax_bulk =
       motors["lattice_coop_Emax_bulk"].as<double>();
-  parameters_->motors.interaction_energy =
-      motors["interaction_energy"].as<double>();
-  parameters_->motors.t_active = motors["t_active"].as<double>();
-  parameters_->motors.k_on = motors["k_on"].as<double>();
-  parameters_->motors.c_bulk = motors["c_bulk"].as<double>();
-  parameters_->motors.c_eff_bind = motors["c_eff_bind"].as<double>();
-  parameters_->motors.k_on_ATP = motors["k_on_ATP"].as<double>();
-  parameters_->motors.c_ATP = motors["c_ATP"].as<double>();
-  parameters_->motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
-  parameters_->motors.k_off_i = motors["k_off_i"].as<double>();
-  parameters_->motors.k_off_ii = motors["k_off_ii"].as<double>();
-  parameters_->motors.applied_force = motors["applied_force"].as<double>();
-  parameters_->motors.internal_force = motors["internal_force"].as<double>();
-  parameters_->motors.sigma_off_i = motors["sigma_off_i"].as<double>();
-  parameters_->motors.sigma_off_ii = motors["sigma_off_ii"].as<double>();
-  parameters_->motors.sigma_ATP = motors["sigma_ATP"].as<double>();
-  parameters_->motors.k_tether = motors["k_tether"].as<double>();
-  parameters_->motors.c_eff_tether = motors["c_eff_tether"].as<double>();
-  parameters_->motors.k_untether = motors["k_untether"].as<double>();
-  parameters_->motors.r_0 = motors["r_0"].as<double>();
-  parameters_->motors.k_spring = motors["k_spring"].as<double>();
-  parameters_->motors.k_slack = motors["k_slack"].as<double>();
-  parameters_->motors.endpausing_active =
-      motors["endpausing_active"].as<bool>();
-  parameters_->motors.tethers_active = motors["tethers_active"].as<bool>();
+  params_.motors.interaction_energy = motors["interaction_energy"].as<double>();
+  params_.motors.t_active = motors["t_active"].as<double>();
+  params_.motors.k_on = motors["k_on"].as<double>();
+  params_.motors.c_bulk = motors["c_bulk"].as<double>();
+  params_.motors.c_eff_bind = motors["c_eff_bind"].as<double>();
+  params_.motors.k_on_ATP = motors["k_on_ATP"].as<double>();
+  params_.motors.c_ATP = motors["c_ATP"].as<double>();
+  params_.motors.k_hydrolyze = motors["k_hydrolyze"].as<double>();
+  params_.motors.k_off_i = motors["k_off_i"].as<double>();
+  params_.motors.k_off_ii = motors["k_off_ii"].as<double>();
+  params_.motors.applied_force = motors["applied_force"].as<double>();
+  params_.motors.internal_force = motors["internal_force"].as<double>();
+  params_.motors.sigma_off_i = motors["sigma_off_i"].as<double>();
+  params_.motors.sigma_off_ii = motors["sigma_off_ii"].as<double>();
+  params_.motors.sigma_ATP = motors["sigma_ATP"].as<double>();
+  params_.motors.k_tether = motors["k_tether"].as<double>();
+  params_.motors.c_eff_tether = motors["c_eff_tether"].as<double>();
+  params_.motors.k_untether = motors["k_untether"].as<double>();
+  params_.motors.r_0 = motors["r_0"].as<double>();
+  params_.motors.k_spring = motors["k_spring"].as<double>();
+  params_.motors.k_slack = motors["k_slack"].as<double>();
+  params_.motors.endpausing_active = motors["endpausing_active"].as<bool>();
+  params_.motors.tethers_active = motors["tethers_active"].as<bool>();
   /* Xlink parameters below */
   YAML::Node xlinks = input["xlinks"];
-  parameters_->xlinks.k_on = xlinks["k_on"].as<double>();
-  parameters_->xlinks.c_bulk = xlinks["c_bulk"].as<double>();
-  parameters_->xlinks.c_eff_bind = xlinks["c_eff_bind"].as<double>();
-  parameters_->xlinks.k_off_i = xlinks["k_off_i"].as<double>();
-  parameters_->xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
-  parameters_->xlinks.r_0 = xlinks["r_0"].as<double>();
-  parameters_->xlinks.k_spring = xlinks["k_spring"].as<double>();
-  parameters_->xlinks.diffu_coeff_i = xlinks["diffu_coeff_i"].as<double>();
-  parameters_->xlinks.diffu_coeff_ii = xlinks["diffu_coeff_ii"].as<double>();
-  parameters_->xlinks.interaction_energy =
-      xlinks["interaction_energy"].as<double>();
+  params_.xlinks.k_on = xlinks["k_on"].as<double>();
+  params_.xlinks.c_bulk = xlinks["c_bulk"].as<double>();
+  params_.xlinks.c_eff_bind = xlinks["c_eff_bind"].as<double>();
+  params_.xlinks.k_off_i = xlinks["k_off_i"].as<double>();
+  params_.xlinks.k_off_ii = xlinks["k_off_ii"].as<double>();
+  params_.xlinks.r_0 = xlinks["r_0"].as<double>();
+  params_.xlinks.k_spring = xlinks["k_spring"].as<double>();
+  params_.xlinks.diffu_coeff_i = xlinks["diffu_coeff_i"].as<double>();
+  params_.xlinks.diffu_coeff_ii = xlinks["diffu_coeff_ii"].as<double>();
+  params_.xlinks.interaction_energy = xlinks["interaction_energy"].as<double>();
   // Store params pointer as parameters_ in Curator
-  unsigned long n_steps{parameters_->n_steps};
-  double delta_t{parameters_->delta_t};
+  unsigned long n_steps{params_.n_steps};
+  double delta_t{params_.delta_t};
   Log("Reading params from %s:\n\n", param_file_);
   Log("  General simulation parameters:\n");
-  Log("    seed = %lu\n", parameters_->seed);
-  Log("    n_steps = %lu\n", parameters_->n_steps);
-  Log("    n_datapoints = %i\n", parameters_->n_datapoints);
-  Log("    data_threshold = %i steps\n", parameters_->data_threshold);
-  Log("    delta_t = %g s\n", parameters_->delta_t);
-  Log("    kbT = %g pN*nm\n", parameters_->kbT);
-  Log("    eta = %g (pN*s)/um^2\n", parameters_->eta);
+  Log("    seed = %lu\n", params_.seed);
+  Log("    n_steps = %lu\n", params_.n_steps);
+  Log("    n_datapoints = %i\n", params_.n_datapoints);
+  Log("    data_threshold = %i steps\n", params_.data_threshold);
+  Log("    delta_t = %g s\n", params_.delta_t);
+  Log("    kbT = %g pN*nm\n", params_.kbT);
+  Log("    eta = %g (pN*s)/um^2\n", params_.eta);
   Log("\n  Microtubule (mt) parameters:\n");
-  Log("    count = %i\n", parameters_->microtubules.count);
+  Log("    count = %i\n", params_.filaments.count);
   // Check to make sure there are enough vector entries for given MT count
-  int n_lengths = input["microtubules"]["length"].size();
-  int n_start_coords = input["microtubules"]["start_coord"].size();
-  int n_immo = input["microtubules"]["immobile_until"].size();
-  if (parameters_->microtubules.count > n_lengths or
-      parameters_->microtubules.count > n_start_coords or
-      parameters_->microtubules.count > n_immo) {
-    Log("\nToo few parameters input for microtubules\n");
+  int n_lengths = input["filaments"]["length"].size();
+  int n_start_coords = input["filaments"]["start_coord"].size();
+  int n_immo = input["filaments"]["immobile_until"].size();
+  if (params_.filaments.count > n_lengths or
+      params_.filaments.count > n_start_coords or
+      params_.filaments.count > n_immo) {
+    Log("\nToo few parameters input for filaments\n");
     ErrorExit("Curator::ParseParameters()");
   }
   for (int i_mt = 0; i_mt < n_lengths; i_mt++) {
-    Log("    length = %i sites for mt %i\n",
-        parameters_->microtubules.length[i_mt], i_mt);
+    Log("    length = %i sites for mt %i\n", params_.filaments.length[i_mt],
+        i_mt);
   }
-  Log("    y_dist = %g nm between MTs\n", parameters_->microtubules.y_dist);
-  Log("    site_size = %g nm\n", parameters_->microtubules.site_size);
-  Log("    radius = %g nm\n", parameters_->microtubules.radius);
-  Log("    elevation = %g nm above surface\n",
-      parameters_->microtubules.elevation);
+  Log("    y_dist = %g nm between MTs\n", params_.filaments.y_dist);
+  Log("    site_size = %g nm\n", params_.filaments.site_size);
+  Log("    radius = %g nm\n", params_.filaments.radius);
+  Log("    elevation = %g nm above surface\n", params_.filaments.elevation);
   for (int i_mt = 0; i_mt < n_start_coords; i_mt++) {
-    double start_coord = parameters_->microtubules.start_coord[i_mt];
+    double start_coord = params_.filaments.start_coord[i_mt];
     Log("    start_coord = %g sites for mt %i\n", start_coord, i_mt);
   }
   for (int i_mt = 0; i_mt < n_immo; i_mt++) {
-    double immo = parameters_->microtubules.immobile_until[i_mt];
+    double immo = params_.filaments.immobile_until[i_mt];
     Log("    immobile until = %g s for mt %i\n", immo, i_mt);
   }
-  Log("    applied_force = %g pN\n", parameters_->microtubules.applied_force);
+  Log("    applied_force = %g pN\n", params_.filaments.applied_force);
   Log("    printout_on = %s\n",
-      parameters_->microtubules.printout_on ? "true" : "false");
+      params_.filaments.printout_on ? "true" : "false");
   Log("    diffusion_on = %s\n",
-      parameters_->microtubules.diffusion_on ? "true" : "false");
+      params_.filaments.diffusion_on ? "true" : "false");
   Log("\n  Kinesin (motor) parameters:\n");
   // Log("    lattice_coop_alpha = %g\n",
-  // parameters_->motors.lattice_coop_alpha);
-  Log("    n_runs_desired = %zu\n", parameters_->motors.n_runs_desired);
-  Log("    lattice_coop_range = %i\n", parameters_->motors.lattice_coop_range);
+  // params_.motors.lattice_coop_alpha);
+  Log("    n_runs_desired = %zu\n", params_.motors.n_runs_desired);
+  Log("    lattice_coop_range = %i\n", params_.motors.lattice_coop_range);
   Log("    lattice_coop_Emax_solo = -%g kbT\n",
-      parameters_->motors.lattice_coop_Emax_solo);
+      params_.motors.lattice_coop_Emax_solo);
   Log("    lattice_coop_Emax_bulk = -%g kbT\n",
-      parameters_->motors.lattice_coop_Emax_bulk);
-  Log("    interaction_energy = -%g kbT\n",
-      parameters_->motors.interaction_energy);
-  Log("    t_active = %g seconds\n", parameters_->motors.t_active);
-  Log("    k_on = %g /(nM*s)\n", parameters_->motors.k_on);
-  Log("    c_bulk = %g nM\n", parameters_->motors.c_bulk);
-  Log("    c_eff_bind = %g nM\n", parameters_->motors.c_eff_bind);
-  Log("    k_on_ATP = %g /(mM*s)\n", parameters_->motors.k_on_ATP);
-  Log("    c_ATP = %g mM\n", parameters_->motors.c_ATP);
-  Log("    k_hydrolyze = %g /s\n", parameters_->motors.k_hydrolyze);
-  Log("    k_off_i = %g /s\n", parameters_->motors.k_off_i);
-  Log("    k_off_ii = %g /s\n", parameters_->motors.k_off_ii);
-  Log("    applied_force = %g pN\n", parameters_->motors.applied_force);
-  Log("    internal_force = %g pN\n", parameters_->motors.internal_force);
-  Log("    sigma_off_i = %g nm\n", parameters_->motors.sigma_off_i);
-  Log("    sigma_off_ii = %g nm\n", parameters_->motors.sigma_off_ii);
-  Log("    sigma_ATP = %g nm\n", parameters_->motors.sigma_ATP);
-  Log("    k_tether = %g /(nM*s)\n", parameters_->motors.k_tether);
-  Log("    c_eff_tether = %g nM\n", parameters_->motors.c_eff_tether);
-  Log("    k_untether = %g /s\n", parameters_->motors.k_untether);
-  Log("    r_0 = %g nm\n", parameters_->motors.r_0);
-  Log("    k_spring = %g pN/nm\n", parameters_->motors.k_spring);
-  Log("    k_slack = %g pN/nm\n", parameters_->motors.k_slack);
+      params_.motors.lattice_coop_Emax_bulk);
+  Log("    interaction_energy = -%g kbT\n", params_.motors.interaction_energy);
+  Log("    t_active = %g seconds\n", params_.motors.t_active);
+  Log("    k_on = %g /(nM*s)\n", params_.motors.k_on);
+  Log("    c_bulk = %g nM\n", params_.motors.c_bulk);
+  Log("    c_eff_bind = %g nM\n", params_.motors.c_eff_bind);
+  Log("    k_on_ATP = %g /(mM*s)\n", params_.motors.k_on_ATP);
+  Log("    c_ATP = %g mM\n", params_.motors.c_ATP);
+  Log("    k_hydrolyze = %g /s\n", params_.motors.k_hydrolyze);
+  Log("    k_off_i = %g /s\n", params_.motors.k_off_i);
+  Log("    k_off_ii = %g /s\n", params_.motors.k_off_ii);
+  Log("    applied_force = %g pN\n", params_.motors.applied_force);
+  Log("    internal_force = %g pN\n", params_.motors.internal_force);
+  Log("    sigma_off_i = %g nm\n", params_.motors.sigma_off_i);
+  Log("    sigma_off_ii = %g nm\n", params_.motors.sigma_off_ii);
+  Log("    sigma_ATP = %g nm\n", params_.motors.sigma_ATP);
+  Log("    k_tether = %g /(nM*s)\n", params_.motors.k_tether);
+  Log("    c_eff_tether = %g nM\n", params_.motors.c_eff_tether);
+  Log("    k_untether = %g /s\n", params_.motors.k_untether);
+  Log("    r_0 = %g nm\n", params_.motors.r_0);
+  Log("    k_spring = %g pN/nm\n", params_.motors.k_spring);
+  Log("    k_slack = %g pN/nm\n", params_.motors.k_slack);
   Log("    tethers_active = %s\n",
-      parameters_->motors.tethers_active ? "true" : "false");
+      params_.motors.tethers_active ? "true" : "false");
   Log("    endpausing_active = %s\n",
-      parameters_->motors.endpausing_active ? "true" : "false");
+      params_.motors.endpausing_active ? "true" : "false");
   Log("\n  Crosslinker (xlink) parameters:\n");
-  Log("    k_on = %g /(nM*s)\n", parameters_->xlinks.k_on);
-  Log("    c_bulk = %g nM\n", parameters_->xlinks.c_bulk);
-  Log("    c_eff_bind = %g nM\n", parameters_->xlinks.c_eff_bind);
-  Log("    k_off_i = %g /s\n", parameters_->xlinks.k_off_i);
-  Log("    k_off_ii = %g /s\n", parameters_->xlinks.k_off_ii);
-  Log("    r_0 = %g nm\n", parameters_->xlinks.r_0);
-  Log("    k_spring = %g pN/nm\n", parameters_->xlinks.k_spring);
-  Log("    diffu_coeff_i = %g um^2/s\n", parameters_->xlinks.diffu_coeff_i);
-  Log("    diffu_coeff_ii = %g um^2/s\n", parameters_->xlinks.diffu_coeff_ii);
-  Log("    interaction_energy = %g kbT\n",
-      parameters_->xlinks.interaction_energy);
+  Log("    k_on = %g /(nM*s)\n", params_.xlinks.k_on);
+  Log("    c_bulk = %g nM\n", params_.xlinks.c_bulk);
+  Log("    c_eff_bind = %g nM\n", params_.xlinks.c_eff_bind);
+  Log("    k_off_i = %g /s\n", params_.xlinks.k_off_i);
+  Log("    k_off_ii = %g /s\n", params_.xlinks.k_off_ii);
+  Log("    r_0 = %g nm\n", params_.xlinks.r_0);
+  Log("    k_spring = %g pN/nm\n", params_.xlinks.k_spring);
+  Log("    diffu_coeff_i = %g um^2/s\n", params_.xlinks.diffu_coeff_i);
+  Log("    diffu_coeff_ii = %g um^2/s\n", params_.xlinks.diffu_coeff_ii);
+  Log("    interaction_energy = %g kbT\n", params_.xlinks.interaction_energy);
   Log("\nTotal simulation duration: %g seconds\n", delta_t * n_steps);
 }
 
 void Curator::SetLocalParameters() {
 
-  size_t n_steps{parameters_->n_steps};
-  int n_datapoints{parameters_->n_datapoints};
-  data_threshold_ = parameters_->data_threshold;
+  size_t n_steps{params_.n_steps};
+  int n_datapoints{params_.n_datapoints};
+  data_threshold_ = params_.data_threshold;
   n_steps_recorded_ = n_steps - data_threshold_;
   n_steps_per_output_ = n_steps_recorded_ / n_datapoints;
   equil_milestone_ = data_threshold_ / 10;
@@ -376,23 +323,53 @@ void Curator::SetLocalParameters() {
 
 void Curator::InitializeSimObjects() {
 
-  // Gsl: wrapper class for GSL library; manages random number generation
-  properties_->gsl.Initialize(parameters_);
-  // Microtubules: discretized 1-D lattice that proteins bind to
-  properties_->microtubules.Initialize(parameters_, properties_);
-  // Kinesin4: active motors that step towards plus-end of MTs
-  properties_->kinesin4.Initialize(parameters_, properties_);
-  // PRC1: passive crosslinkers that can doubly-bind to overlapping MTs
-  properties_->prc1.Initialize(parameters_, properties_);
+  gsl.Initialize(params);
+  filaments.Initialize(this, params;
+  proteins.Initialize(this, params)
+}
+
+void Curator::CheckEquilibration() {
+
+  if (!equilibrating_) {
+    return;
+  }
+  if (i_step_ >= n_steps_equil_) {
+    if (proteins.motors_.equilibrated_ and proteins.xlinks_.equilibrated_) {
+      equilibrated_ = true;
+      n_steps_equil_ = i_step;
+    }
+  }
+}
+
+void Curator::CheckPrintProgress() {
+
+  int p_report{10};
+  if (equilibrating_) {
+    if (i_step_ <= n_steps_preequil_) {
+      if (i_step_ % (n_steps_preequil_ / (100 / p_report)) == 0)
+        Log("Run '%s' pre-equilibration %lu%% complete. (step %lu)\n",
+            sim_name_, i_step_ / n_steps_equil_ * 100, i_step_);
+    }
+  } else {
+    size_t delta{i_step_ - n_steps_equil_};
+    size_t delta_tot{n_steps_tot_ - n_steps_equil_};
+    if (delta % (delta_t / (100 / p_report)) == 0) {
+      Log("Run '%s' data collection %lu%% complete. (step %lu)\n", sim_name_,
+          delta / delta_tot * 100, i_step_);
+    }
+  }
+  if (i_step_ >= n_steps_tot_) {
+    sim_running_ = false;
+  }
 }
 
 void Curator::OutputData() {
 
-  int n_mts{parameters_->microtubules.count};
+  int n_mts{params_.filaments.count};
   int max_length{0};
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-    if (parameters_->microtubules.length[i_mt] > max_length)
-      max_length = parameters_->microtubules.length[i_mt];
+    if (params_.filaments.length[i_mt] > max_length)
+      max_length = params_.filaments.length[i_mt];
   }
   // Create arrays to store data; ptrs to write it to file
   int mt_coords[n_mts];
@@ -407,8 +384,8 @@ void Curator::OutputData() {
   double total_forces[n_mts];
   // Run through all MTs and get data for each
   for (int i_mt{0}; i_mt < n_mts; i_mt++) {
-    int mt_length{parameters_->microtubules.length[i_mt]};
-    Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+    int mt_length{params_.filaments.length[i_mt]};
+    Microtubule *mt = &properties_->filaments.mt_list_[i_mt];
     // Create arrays & ptrs for intraMT data
     int motor_IDs[max_length];
     int xlink_IDs[max_length];
@@ -475,7 +452,7 @@ void Curator::OutputData() {
     total_forces[i_mt] = mt->GetNetForce();
     // Write the data to respective files one microtubule at a time
     fwrite(occupancy, sizeof(int), max_length, properties_->occupancy_file_);
-    if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+    if (properties_->kinesin4.step_active_ < params_.n_steps) {
       fwrite(motor_IDs, sizeof(int), max_length, properties_->motor_ID_file_);
       fwrite(motor_head_status, sizeof(bool), max_length,
              properties_->motor_head_status_file_);
@@ -500,7 +477,7 @@ void Curator::OutputData() {
       xlink_extensions[i_ext] += prc1->n_bound_ii_[n_neighbs][i_ext];
     }
   }
-  if (properties_->kinesin4.step_active_ > parameters_->n_steps) {
+  if (properties_->kinesin4.step_active_ > params_.n_steps) {
     if (properties_->kinesin4.tethering_active_) {
       fwrite(motor_forces, sizeof(double), n_mts,
              properties_->motor_force_file_);
@@ -516,7 +493,7 @@ void Curator::OutputData() {
              properties_->xlink_force_file_);
     }
   }
-  if (parameters_->microtubules.diffusion_on) {
+  if (params_.filaments.diffusion_on) {
     fwrite(mt_coords, sizeof(int), n_mts, properties_->mt_coord_file_);
   }
   if (properties_->kinesin4.tethering_active_ and
@@ -557,7 +534,7 @@ void Curator::CloseDataFiles() {
 
   fclose(log_file_);
   fclose(properties_->occupancy_file_);
-  if (properties_->kinesin4.step_active_ < parameters_->n_steps) {
+  if (properties_->kinesin4.step_active_ < params_.n_steps) {
     fclose(properties_->motor_ID_file_);
     fclose(properties_->motor_head_status_file_);
     if (properties_->kinesin4.tethering_active_) {
@@ -573,7 +550,7 @@ void Curator::CloseDataFiles() {
       fclose(properties_->xlink_force_file_);
     }
   }
-  if (parameters_->microtubules.diffusion_on) {
+  if (params_.filaments.diffusion_on) {
     fclose(properties_->mt_coord_file_);
   }
   if (properties_->kinesin4.tethering_active_ and
@@ -591,46 +568,14 @@ void Curator::ErrorExit(const char *function_name) {
   exit(1);
 }
 
-void Curator::UpdateTimestep() {
+void Curator::EvolveSimulation() {
 
-  // Record current step number and then increment it by one
-  size_t i_step{properties_->current_step_++};
-  // Start global system clock on very first step
-  if (i_step == 0) {
-    start_ = sys_clock::now();
-  }
-  if (properties_->sim_equilibrating_) {
-    if (i_step >= data_threshold_) {
-      properties_->sim_equilibrating_ = false;
-    }
-    if (i_step % equil_milestone_ == 0) {
-      int p{int(i_step / equil_milestone_) * 10};
-      Log("Sim '%s' pre-equilibration is %lu%% complete. (step %lu)\n",
-          sim_name_, p, i_step);
-    }
-    return;
-  }
-  if (!properties_->kinesin4.equilibrated_) {
-    return;
-  }
-  size_t steps_past_threshold{i_step - data_threshold_};
-  // Give updates on status of data collection (every 10 percent)
-  if (steps_past_threshold % data_milestone_ == 0) {
-    unsigned long p{(steps_past_threshold / data_milestone_) * 10};
-    Log("Sim '%s' data collection is %lu%% complete. (step # %lu)\n", sim_name_,
-        p, i_step);
-  }
-  if (i_step >= parameters_->n_steps) {
-    properties_->sim_running_ = false;
-    return;
-  }
-  // Collect data every n_pickup timesteps
-  if (steps_past_threshold % n_steps_per_output_ == 0) {
-    OutputData();
-    n_datapoints_recorded_++;
-  }
+  proteins.RunKMC();
+  filaments.RunBD();
+  CheckPrintProgress();
+  OutputData();
   /*
-  if (parameters_->microtubules.printout_on and i_step % 1000 == 0) {
+  if (params_.filaments.printout_on and i_step % 1000 == 0) {
     PrintMicrotubules(0);
   }
   */
@@ -639,11 +584,11 @@ void Curator::UpdateTimestep() {
 void Curator::PrintMicrotubules() {
 
   /*
-  int n_mts = parameters_->microtubules.count;
+  int n_mts = params_.filaments.count;
   // Figure out which MT is the farthest left
   int leftmost_coord = 0;
   for (int i_mt = 0; i_mt < n_mts; i_mt++) {
-    int mt_coord = properties_->microtubules.mt_list_[i_mt].coord_;
+    int mt_coord = properties_->filaments.mt_list_[i_mt].coord_;
     if (i_mt == 0)
       leftmost_coord = mt_coord;
     else if (mt_coord < leftmost_coord)
@@ -651,8 +596,8 @@ void Curator::PrintMicrotubules() {
   }
   // Print out MTs
   for (int i_mt = n_mts - 1; i_mt >= 0; i_mt--) {
-    int mt_length = parameters_->microtubules.length[i_mt];
-    Microtubule *mt = &properties_->microtubules.mt_list_[i_mt];
+    int mt_length = params_.filaments.length[i_mt];
+    Microtubule *mt = &properties_->filaments.mt_list_[i_mt];
     int mt_coord = mt->coord_;
     int delta = mt_coord - leftmost_coord;
     if (delta < 0) {
@@ -750,8 +695,8 @@ void Curator::PrintMicrotubules() {
 
   /* site coordinate printout below */
   /*
-     int mt1_coord = properties_->microtubules.mt_list_[0].coord_;
-     int mt2_coord = properties_->microtubules.mt_list_[1].coord_;
+     int mt1_coord = properties_->filaments.mt_list_[0].coord_;
+     int mt2_coord = properties_->filaments.mt_list_[1].coord_;
      int greater_coord = 0;
      if(mt1_coord > mt2_coord)
      greater_coord = mt1_coord;
@@ -801,8 +746,8 @@ void Curator::PauseSim(double duration) {
 
 void Curator::StartDataCollection() {
 
-  size_t n_steps{parameters_->n_steps};
-  int n_datapoints{parameters_->n_datapoints};
+  size_t n_steps{params_.n_steps};
+  int n_datapoints{params_.n_datapoints};
   data_threshold_ = properties_->current_step_;
   n_steps_recorded_ = n_steps - data_threshold_;
   n_steps_per_output_ = n_steps_recorded_ / n_datapoints;

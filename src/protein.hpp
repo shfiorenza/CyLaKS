@@ -12,7 +12,7 @@ public:
   LinearSpring spring_;
 
   bool tethered_{false};
-  Object *partner_{nullptr};
+  Protein *partner_{nullptr};
 
 private:
   void InitializeNeighborList();
@@ -35,6 +35,8 @@ public:
   BindingSite *GetNeighbor_Bind_I_Teth();
   BindingSite *GetNeighbor_Bind_II();
   BindingSite *GetNeighbor_Bind_II_Teth();
+
+  virtual double GetAnchorCoordinate();
 
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);

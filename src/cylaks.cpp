@@ -1,4 +1,4 @@
-#include "curator.h"
+#include "curator.hpp"
 
 int main(int argc, char *argv[]) {
 

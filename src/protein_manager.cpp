@@ -49,8 +49,7 @@ void ProteinManager::InitializeWeights() {
   Str name{"neighbs"};
   motors_.weights_.emplace(
       name, Reservoir<Motor>::BoltzmannFactor(name, _n_neighbs_max));
-  xlinks_.weights_.emplace(
-      name, Reservoir<Protein>::BoltzmannFactor(name, _n_neighbs_max));
+  xlinks_.weights_.emplace(name, name, _n_neighbs_max);
   double lambda_neighb{1.0};
   double dE{0.0};
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {

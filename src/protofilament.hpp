@@ -1,20 +1,21 @@
 #ifndef _CYLAKS_PROTOFILAMENT_HPP_
 #define _CYLAKS_PROTOFILAMENT_HPP_
 #include "binding_site.hpp"
-#include "curator.hpp"
 #include "rigid_rod.hpp"
 
+class Curator;
 struct SysParameters;
 
 class Protofilament : public RigidRod {
 protected:
-  Vec<BindingSite> sites_;
-
   Curator *wally_{nullptr};
   SysParameters *params_{nullptr};
 
 public:
   int dx_{0}; // Towards plus end
+  size_t n_sites_;
+  Vec<BindingSite> sites_;
+
   BindingSite *plus_end_{nullptr};
   BindingSite *minus_end_{nullptr};
   Protofilament *neighbor_{nullptr};

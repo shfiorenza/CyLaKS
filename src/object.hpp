@@ -4,10 +4,9 @@
 
 class Object {
 private:
+public:
   size_t unique_id_{0};
   size_t species_id_{0};
-
-protected:
   bool visible_{true};
   Vec<double> pos_;
   int n_neighbors_{0};

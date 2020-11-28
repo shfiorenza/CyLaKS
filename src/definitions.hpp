@@ -3,12 +3,9 @@
 #include <chrono>
 #include <cmath>
 #include <functional>
-#include <gsl/gsl_randist.h>
-#include <gsl/gsl_rng.h>
 #include <map>
 #include <unordered_map>
 #include <vector>
-#include <yaml-cpp/yaml.h>
 
 #define GetVarName(Variable) (#Variable)
 
@@ -27,18 +24,18 @@ template <typename T1, typename T2> using Pair = std::pair<T1, T2>;
 template <typename T1, typename... ARGS> using Fn = std::function<T1(ARGS...)>;
 
 /* Physical constants */
-extern size_t _n_dims_max{2};
-extern size_t _n_neighbs_max{2};
+extern const size_t _n_dims_max{2};
+extern const size_t _n_neighbs_max{2};
 
 /* Protein species IDs */
-extern size_t _id_tubulin{0};
-extern size_t _id_kinesin{1};
-extern size_t _id_crosslinker{2};
+extern const size_t _id_site{0};
+extern const size_t _id_motor{1};
+extern const size_t _id_xlink{2};
 
 /* Protein size constants; in nm */
-extern double _r_generic{1.0};
-extern double _r_tubulin{8.0};
-extern double _r_kinesin{4.0};
-extern double _r_crosslinker{4.0};
+extern const double _r_generic{1.0};
+extern const double _r_site{8.0};
+extern const double _r_motor{4.0};
+extern const double _r_xlink{4.0};
 
 #endif

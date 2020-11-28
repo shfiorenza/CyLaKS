@@ -12,6 +12,8 @@ private:
   CatalyticHead *other_head_{nullptr};
 
 public:
+  bool trailing_{false};
+
 private:
 public:
   CatalyticHead(Object *parent, CatalyticHead *partner, double radius)
@@ -22,5 +24,7 @@ public:
   Motor *GetParent() { return parent_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }
+
+  bool Trailing() { return trailing_; }
 };
 #endif

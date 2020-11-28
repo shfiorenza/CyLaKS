@@ -1,12 +1,13 @@
 #ifndef _CYLAKS_EVENT_HPP_
 #define _CYLAKS_EVENT_HPP_
 #include "definitions.hpp"
-#include "rng_manager.hpp"
+#include "system_rng.hpp"
+
 class Object;
 
-enum Distribution { Binomial, Poisson };
 class Event {
 private:
+  enum Distribution { Binomial, Poisson };
   size_t n_executed_tot_{0};       // # of times event has been executed
   size_t n_opportunities_tot_{0};  // # of opportunities event had to execute
   Distribution mode_{Binomial};    // Which distribution we sample from
@@ -18,8 +19,8 @@ private:
     Vec<double> weights_;
     Fn<double(Object *)> get_weight_;
   };
-  PoissonToolbox poisson_;   // Auxiliary resources for poisson mode
-  RandomNumberManager *gsl_; // Pointer to RNG management structure
+  PoissonToolbox poisson_;     // Auxiliary resources for poisson mode
+  RandomNumberGenerator *gsl_; // Pointer to RNG management structure
 
 public:
   Str name_{"bruh"};         // Name of this event, e.g., "Bind_II_Teth"

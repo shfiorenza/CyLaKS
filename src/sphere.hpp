@@ -7,7 +7,7 @@ private:
   double radius_{0.0};
 
 public:
-  Sphere(Object *parent, double radius)
-      : radius_{radius}, Object(parent->GetSpeciesID(), parent->GetID()) {}
+  Sphere(size_t sid, size_t id, double radius)
+      : radius_{radius}, Object(sid, id) {}
 };
 #endif

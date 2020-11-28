@@ -1,8 +1,8 @@
 #ifndef _CYLAKS_RESERVOIR_HPP_
 #define _CYLAKS_RESERVOIR_HPP_
-#include "curator.hpp"
 #include "definitions.hpp"
 
+class Curator;
 class ProteinManager;
 class FilamentManager;
 
@@ -10,11 +10,11 @@ template <typename ENTRY_T> class Reservoir {
 private:
   friend ProteinManager;
   friend FilamentManager;
+
   size_t species_id_;
   Vec<ENTRY_T> reservoir_;
 
   bool up_to_date_{false};
-  bool equilibrated_{false};
 
   double density_avg_{0.0};
   double density_var_{0.0};
@@ -102,6 +102,11 @@ protected:
   };
 
 public:
+  bool equilibrated_{false};
+
+  bool tethering_active_{false};
+  bool crosslinking_active_{false};
+
   bool active_{false};
   size_t step_active_{0};
   Map<Str, PopEntry> sorted_;

@@ -7,7 +7,7 @@
 
 class Curator;
 class FilamentManager;
-class RandomNumberManager;
+class RandomNumberGenerator;
 struct SysParameters;
 
 class ProteinManager {
@@ -17,7 +17,7 @@ private:
   // WALLACE, MISTA
   Curator *wally_{nullptr};
   // Pointer to class that manages GSL functions (RNG, sampling, etc.)
-  RandomNumberManager *gsl_{nullptr};
+  RandomNumberGenerator *gsl_{nullptr};
   // Pointers to global system params & props; same for all classes
   SysParameters *params_{nullptr};
 
@@ -37,7 +37,7 @@ private:
 
 public:
   ProteinManager();
-  void Initialize(Curator *wallace);
+  void Initialize(Curator *wallace, SysParameters *params);
   void UpdateLatticeDeformation();
   void UpdateExtensions();
   void RunKMC();

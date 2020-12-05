@@ -3,7 +3,7 @@
 #include "event.hpp"
 
 class Curator;
-class RandomNumberManagement;
+struct SysRNG;
 
 class EventManager {
 private:
@@ -11,7 +11,7 @@ private:
   Vec<Event *> events_to_exe_;
 
   Curator *wally_;
-  RandomNumberManagement *gsl_;
+  SysRNG *gsl_;
 
 public:
   Vec<Event> events_;

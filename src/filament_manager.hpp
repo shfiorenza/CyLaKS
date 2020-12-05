@@ -1,34 +1,35 @@
 #ifndef _CYLAKS_FILAMENT_MANAGER_HPP_
 #define _CYLAKS_FILAMENT_MANAGER_HPP_
+#include "population.hpp"
 #include "protofilament.hpp"
-#include "reservoir.hpp"
 
 class BindingSite;
 class Curator;
-struct SysParameters;
+struct SysParams;
+struct SysRNG;
 
 class FilamentManager {
 private:
-  friend Reservoir<BindingSite>;
   bool up_to_date_{false};
 
   Vec<BindingSite *> sites_;
 
-  Curator *wally_;
-  SysParameters *params_;
+  Curator *wally_{nullptr};
+  SysParams *params_{nullptr};
+  SysRNG *gsl_{nullptr};
 
 public:
   bool mobile_{false};
   Vec<Protofilament> list_;
 
-  UMap<Str, Reservoir<BindingSite>::PopEntry> unocc_;
+  UMap<Str, Population<BindingSite>> unocc_;
 
 private:
   void GenerateFilaments();
 
 public:
-  FilamentManager();
-  void Initialize(Curator *wally, SysParameters *params) {
+  FilamentManager() {}
+  void Initialize(Curator *wally, SysParams *params) {
     wally_ = wally;
     params_ = params;
     GenerateFilaments();

@@ -1,7 +1,7 @@
 #ifndef _CYLAKS_SYSTEM_PARAMETERS_HPP_
 #define _CYLAKS_SYSTEM_PARAMETERS_HPP_
 
-struct SysParameters {
+struct SysParams {
   size_t seed; /* Random number seed */
   double kbT;  /* boltzmann constant * temp, in pN * nm */
   double eta;  /* Viscosity of liquid; in (pN/um^2)*s */
@@ -12,7 +12,7 @@ struct SysParameters {
   bool dynamic_equil;
   size_t verbosity;
 
-  struct FilamentParameters {
+  struct FilamentParams {
     size_t count;               // Number of MTs in simulation
     Vec<size_t> length;         // Length of each MT in sites (tubulin dimers)
     Vec<double> start_coord;    // Coords of each MT at sim start; nm
@@ -24,7 +24,7 @@ struct SysParameters {
     double radius;              // Outer radius of MT barrel; nm
   } filaments;
 
-  struct MotorParameters {
+  struct MotorParams {
     size_t n_runs_desired;
     size_t lattice_coop_range;
     double lattice_coop_Emax_solo;

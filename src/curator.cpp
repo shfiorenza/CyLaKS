@@ -133,7 +133,7 @@ void Curator::ParseParameters() {
       params_.filaments.count > params_.filaments.start_coord.size() or
       params_.filaments.count > params_.filaments.applied_force.size() or
       params_.filaments.count > params_.filaments.immobile_until.size() or
-      _n_dims_max > params_.filaments.dim_enabled.size()) {
+      Sys::_n_dims_max > params_.filaments.dim_enabled.size()) {
     Log("\nToo few parameters input for filaments\n");
     ErrorExit("Curator::ParseParameters()");
   }
@@ -146,7 +146,7 @@ void Curator::ParseParameters() {
     Log("    immobile_until[%i] = %g s\n", i_pf,
         params_.filaments.immobile_until[i_pf]);
   }
-  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+  for (int i_dim{0}; i_dim < Sys::_n_dims_max; i_dim++) {
     Log("    dim_enabled[%i] = %s\n", i_dim,
         params_.filaments.dim_enabled[i_dim] ? "true" : "false");
   }
@@ -254,7 +254,7 @@ void Curator::GenerateDataFiles() {
   if (filaments_.mobile_) {
     // Open mt coord file, which stores the coordinates
     // of the left-most edge of each microtubule during DC
-    files_.AddDataFile(sim_name_, "pf_coord");
+    files_.AddDataFile(sim_name_, "filament_coord");
   }
   if (proteins_.motors_.tethering_active_ and
       proteins_.xlinks_.crosslinking_active_) {
@@ -306,8 +306,8 @@ void Curator::OutputData() {
     return;
   }
 
-  int n_pfs{params_.filaments.count};
-  int max_length{0};
+  size_t n_pfs{params_.filaments.count};
+  size_t max_length{0};
   for (int i_pf{0}; i_pf < n_pfs; i_pf++) {
     if (params_.filaments.length[i_pf] > max_length)
       max_length = params_.filaments.length[i_pf];
@@ -341,7 +341,7 @@ void Curator::OutputData() {
         switch (site->occupant_->GetSpeciesID()) {
         // If occupied by motor, store its species ID to occupancy_file,
         // its unique ID to the motor ID file, and -1 to xlink ID file
-        case _id_motor:
+        case Sys::_id_motor:
           motor_IDs[i_site] = site->occupant_->GetID();
           xlink_IDs[i_site] = -1;
           tether_coords[i_site] = -1;
@@ -356,7 +356,7 @@ void Curator::OutputData() {
           break;
         // If occupied by xlink, store its species ID to occupancy_file,
         // its unique ID to the xlink ID file, and -1 to motor ID file
-        case _id_xlink:
+        case Sys::_id_xlink:
           motor_IDs[i_site] = -1;
           xlink_IDs[i_site] = site->occupant_->GetID();
           tether_coords[i_site] = -1;
@@ -365,7 +365,7 @@ void Curator::OutputData() {
       }
     }
     // Pad written data with NULL entries (-1) for shorter MTs
-    for (int i_site{pf->n_sites_}; i_site < max_length; i_site++) {
+    for (size_t i_site{pf->n_sites_}; i_site < max_length; i_site++) {
       occupancy[i_site] = -1;
       motor_IDs[i_site] = -1;
       xlink_IDs[i_site] = -1;
@@ -386,16 +386,17 @@ void Curator::OutputData() {
     }
   }
   if (filaments_.mobile_) {
-    files_.data_["pf_coord"].WriteData(pf_coords, n_pfs);
+    files_.data_["filament_coord"].WriteData(pf_coords, n_pfs);
   }
 }
 
 void Curator::EvolveSimulation() {
 
-  proteins_.RunKMC();
-  filaments_.RunBD();
-  CheckPrintProgress();
-  OutputData();
+  printf("hello walter\n");
+  // proteins_.RunKMC();
+  // filaments_.RunBD();
+  // CheckPrintProgress();
+  // OutputData();
 }
 
 void Curator::TerminateSimulation() {

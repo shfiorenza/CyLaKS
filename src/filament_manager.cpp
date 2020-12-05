@@ -19,3 +19,5 @@ void FilamentManager::UpdateUnoccupied() {
     unocc_["xlinks"].AddEntry(site, site->GetNeighborCount());
   }
 }
+
+void FilamentManager::RunBD() {}

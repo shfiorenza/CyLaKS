@@ -2,8 +2,10 @@
 #define _CYLAKS_CURATOR_HPP_
 #include "filament_manager.hpp"
 #include "protein_manager.hpp"
+#include "system_definitions.hpp"
 #include "system_files.hpp"
 #include "system_parameters.hpp"
+#include "system_rng.hpp"
 
 class Curator {
 private:
@@ -16,9 +18,9 @@ private:
   size_t n_steps_snapshot_{0};
   size_t verbosity_{0};
 
-  ProteinManager proteins_;
   FilamentManager filaments_;
-  FileManager files_;
+  ProteinManager proteins_;
+  SysFiles files_;
   SysTimepoint start_time_;
 
 public:
@@ -33,8 +35,8 @@ public:
   size_t i_step_{0};
   size_t i_datapoint_{0};
 
-  SysParameters params_;
-  RandomNumberGenerator gsl_;
+  SysParams params_;
+  SysRNG gsl_;
 
 private:
   void CheckArgs(char *agrv[]);

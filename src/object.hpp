@@ -1,22 +1,21 @@
 #ifndef _CYLAKS_OBJECT_HPP_
 #define _CYLAKS_OBJECT_HPP_
-#include "definitions.hpp"
+#include "system_definitions.hpp"
 
 class Object {
 private:
-public:
   size_t unique_id_{0};
   size_t species_id_{0};
+
+public:
   bool visible_{true};
   Vec<double> pos_;
-  int n_neighbors_{0};
-  Vec<Object *> neighbors_;
 
 public:
   Object(size_t sid, size_t id) {
     unique_id_ = id;
     species_id_ = sid;
-    pos_.resize(_n_dims_max);
+    pos_.resize(Sys::_n_dims_max);
   }
   virtual ~Object();
 

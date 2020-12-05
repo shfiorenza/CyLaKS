@@ -4,17 +4,17 @@
 #include "rigid_rod.hpp"
 
 class Curator;
-struct SysParameters;
+struct SysParams;
 
 class Protofilament : public RigidRod {
 protected:
   Curator *wally_{nullptr};
-  SysParameters *params_{nullptr};
+  SysParams *params_{nullptr};
 
 public:
   int dx_{0}; // Towards plus end
   size_t n_sites_;
-  Vec<BindingSite> sites_;
+  std::vector<BindingSite> sites_;
 
   BindingSite *plus_end_{nullptr};
   BindingSite *minus_end_{nullptr};
@@ -25,8 +25,9 @@ private:
   void GenerateSites();
 
 public:
-  Protofilament(Curator *wally, size_t sid, size_t id, double length)
-      : wally_{wally}, params_{&wally->params_}, RigidRod(sid, id, length) {
+  Protofilament(Curator *wally, SysParams *params, size_t sid, size_t id,
+                double length)
+      : wally_{wally}, params_{params}, RigidRod(sid, id, length) {
     GenerateSites();
   }
 };

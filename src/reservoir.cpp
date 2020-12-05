@@ -1,4 +1,6 @@
 #include "reservoir.hpp"
+#include "motor.hpp"
+#include "protein.hpp"
 
 template class Reservoir<Protein>;
 template class Reservoir<Motor>;

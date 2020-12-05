@@ -11,8 +11,8 @@ protected:
 public:
   RigidRod(size_t sid, size_t id, double length)
       : length_{length}, Object(sid, id) {
-    force_.resize(_n_dims_max);
-    orientation_.resize(_n_dims_max);
+    force_.resize(Sys::_n_dims_max);
+    orientation_.resize(Sys::_n_dims_max);
   }
   void UpdateForces();
 };

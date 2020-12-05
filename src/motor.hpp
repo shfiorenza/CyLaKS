@@ -16,7 +16,9 @@ public:
 
 private:
 public:
-  Motor(size_t sid, size_t id) : Protein(sid, id) {}
+  Motor(size_t sid, size_t id)
+      : Protein(sid, id), head_one_(this, &head_two_, Sys::_r_motor_head),
+        head_two_(this, &head_one_, Sys::_r_motor_head), tether_(this) {}
   BindingSite *GetDockSite();
   CatalyticHead *GetActiveHead();
   void ChangeConformation();

@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_EVENT_HPP_
 #define _CYLAKS_EVENT_HPP_
-#include "definitions.hpp"
+#include "system_definitions.hpp"
 #include "system_rng.hpp"
 
 class Object;
@@ -19,8 +19,8 @@ private:
     Vec<double> weights_;
     Fn<double(Object *)> get_weight_;
   };
-  PoissonToolbox poisson_;     // Auxiliary resources for poisson mode
-  RandomNumberGenerator *gsl_; // Pointer to RNG management structure
+  PoissonToolbox poisson_; // Auxiliary resources for poisson mode
+  SysRNG *gsl_;            // Pointer to RNG management structure
 
 public:
   Str name_{"bruh"};         // Name of this event, e.g., "Bind_II_Teth"
@@ -45,13 +45,12 @@ private:
 
 public:
   Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
-        Fn<int(double, int)> prob_dist, Fn<void(Object *)> exe,
-        RandomNumberManagement *gsl)
+        Fn<int(double, int)> prob_dist, Fn<void(Object *)> exe, SysRNG *gsl)
       : gsl_{gsl}, name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
         target_pool_{target_pool}, prob_dist_{prob_dist}, exe_{exe} {}
   Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
         Fn<int(double, int)> prob_dist, Fn<double(Object *)> weight_fn,
-        Fn<void(Object *)> exe, RandomNumberManagement *gsl)
+        Fn<void(Object *)> exe, SysRNG *gsl)
       : Event(name, p_occur, n_avail, target_pool, prob_dist, exe, gsl) {
     poisson_.get_weight_ = weight_fn;
     mode_ = Poisson;

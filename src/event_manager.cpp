@@ -1,6 +1,6 @@
 #include "event_manager.hpp"
-#include "curator.h"
-#include "rng_management.h"
+#include "curator.hpp"
+#include "system_rng.hpp"
 
 EventManager::EventManager() {}
 

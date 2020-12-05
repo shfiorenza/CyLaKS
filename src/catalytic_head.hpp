@@ -2,10 +2,12 @@
 #define _CYLAKS_CATALYTIC_HEAD_HPP_
 #include "binding_head.hpp"
 
-enum Ligand { NONE, ATP, ADPP, ADP };
+class BindingSite;
+class Motor;
 
 class CatalyticHead : public BindingHead {
 private:
+  enum Ligand { NONE, ATP, ADPP, ADP };
   Ligand ligand_{ADP};
 
   Motor *parent_{nullptr};
@@ -16,14 +18,14 @@ public:
 
 private:
 public:
-  CatalyticHead(Object *parent, CatalyticHead *partner, double radius)
-      : BindingHead(parent, partner, radius) {}
+  // FIXME sid & id
+  CatalyticHead(Motor *parent, CatalyticHead *other_head, double radius)
+      : BindingHead(1, 1, radius), other_head_{other_head} {}
   virtual ~CatalyticHead();
 
   Ligand GetLigand() { return ligand_; }
   Motor *GetParent() { return parent_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
-  BindingSite *GetSite() { return site_; }
 
   bool Trailing() { return trailing_; }
 };

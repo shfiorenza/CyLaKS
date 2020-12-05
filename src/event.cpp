@@ -22,7 +22,7 @@ void Event::SetTargets_Poisson() {
   // Run through potential candidates and remove those with weight = 0.0
   for (int i_entry{0}; i_entry < *n_avail_; i_entry++) {
     if (poisson_.weights_[i_entry] == 0.0) {
-      int i_last{--*n_avail_};
+      size_t i_last{--*n_avail_};
       if (*n_avail_ == 0) {
         n_expected_ = 0;
         return;
@@ -49,7 +49,7 @@ void Event::SetTargets_Poisson() {
         selected_candidates[i_set] = target_pool_->at(i_entry);
         // Remove selected candidate from target pool so it isn't selected again
         poisson_.weight_total_ -= poisson_.weights_[i_entry];
-        int i_last{--*n_avail_};
+        size_t i_last{--*n_avail_};
         target_pool_->at(i_entry) = target_pool_->at(i_last);
         poisson_.weights_[i_entry] = poisson_.weights_[i_last];
         break;

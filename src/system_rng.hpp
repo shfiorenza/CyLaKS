@@ -1,16 +1,16 @@
-#ifndef _CYLAKS_RNG_HPP_
-#define _CYLAKS_RNG_HPP_
+#ifndef _CYLAKS_SYSTEM_RNG_HPP_
+#define _CYLAKS_SYSTEM_RNG_HPP_
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
 
-class RandomNumberGenerator {
+struct SysRNG {
 private:
   const gsl_rng_type *generator_type_{gsl_rng_mt19937};
   gsl_rng *rng_;
 
 public:
-  RandomNumberGenerator();
-  ~RandomNumberGenerator() { gsl_rng_free(rng_); }
+  SysRNG() {}
+  ~SysRNG() { gsl_rng_free(rng_); }
   void Initialize(int seed) {
     rng_ = gsl_rng_alloc(generator_type_);
     gsl_rng_set(rng_, seed);

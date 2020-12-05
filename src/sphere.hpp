@@ -8,6 +8,6 @@ private:
 
 public:
   Sphere(size_t sid, size_t id, double radius)
-      : radius_{radius}, Object(sid, id) {}
+      : Object(sid, id), radius_{radius} {}
 };
 #endif

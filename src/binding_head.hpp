@@ -2,6 +2,9 @@
 #define _CYLAKS_BINDING_HEAD_HPP_
 #include "sphere.hpp"
 
+class BindingSite;
+class Protein;
+
 class BindingHead : public Sphere {
 protected:
 public:
@@ -12,9 +15,13 @@ public:
 
 private:
 public:
-  BindingHead(Object *parent, BindingHead *partner, double radius)
-      : other_head_{partner}, Sphere(parent, radius) {}
+  // FIXME sid & id
+  BindingHead(Protein *parent, BindingHead *other_head, double radius)
+      : Sphere(0, 0, radius), other_head_{other_head} {}
+  BindingHead(size_t sid, size_t id, double r) : Sphere(sid, id, r) {}
+
   virtual ~BindingHead();
+  virtual bool Trailing() { return false; }
 
   Protein *GetParent() { return parent_; }
   BindingHead *GetOtherHead() { return other_head_; }

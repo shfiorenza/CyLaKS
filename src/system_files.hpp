@@ -1,41 +1,37 @@
-#ifndef _CYLAKS_FILE_MANAGER_HPP_
-#define _CYLAKS_FILE_MANAGER_HPP_
-#include "definitions.hpp"
+#ifndef _CYLAKS_SYSTEM_FILES_HPP_
+#define _CYLAKS_SYSTEM_FILES_HPP_
+#include <filesystem>
+#include <iostream>
+#include <unordered_map>
 
-class FileManager {
+struct SysFiles {
 private:
-  struct SysFile {
-    Str name_{"nope"};
-    Str filename_{"simName_nope.file"};
+  struct DataFile {
     FILE *file_ptr_;
-    SysFile(char *sim_name, char *name) : name_{name} { OpenFile(sim_name); }
-    ~SysFile() { fclose(file_ptr_); }
-    void OpenFile(char *sim_name) {
-      filename_ = *sim_name + "_" + name_ + ".file";
+    std::string name_{"nope"};
+    std::string filename_{"simName_nope.file"};
+    DataFile() {}
+    DataFile(std::string sim_name, std::string name) : name_{name} {
+      filename_ = sim_name + "_" + name_ + ".file";
       file_ptr_ = fopen(filename_.c_str(), "w");
       if (file_ptr_ == nullptr) {
         printf("Error; cannot open '%s'\n", filename_.c_str());
         exit(1);
       }
     }
+    ~DataFile() { fclose(file_ptr_); }
     template <typename DATA_T> void WriteData(DATA_T *array, size_t count) {
-      int n_chars_written{fwrite(array, sizeof(DATA_T), count, file_ptr_)};
-      if (n_chars_written < 0) {
+      size_t n_chars_written{fwrite(array, sizeof(DATA_T), count, file_ptr_)};
+      if (n_chars_written < count) {
         printf("Error writing to '%s'\n", filename_.c_str());
         exit(1);
       }
     }
   };
-  template <typename DATA_T> struct DataType {
-    Str key_{"nope"};
-    Str value_type_{"null"};
-    DATA_T value_;
-    DataType(int val) :
-  };
 
 public:
   FILE *log_;
-  UMap<Str, SysFile> data_;
+  std::unordered_map<Str, DataFile> data_;
 
 private:
 public:
@@ -74,8 +70,8 @@ public:
       printf("Error; cannot open log file '%s'\n", log_filename);
     }
   }
-  void AddDataFile(char *sim_name, char *name) {
-    data_.emplace(name, SysFile(sim_name, name));
+  void AddDataFile(std::string sim_name, std::string name) {
+    data_.emplace(name, DataFile(sim_name, name));
   }
 };
 #endif

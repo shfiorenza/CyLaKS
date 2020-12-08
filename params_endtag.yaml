@@ -4,8 +4,9 @@ eta: 0.001
 dt: 2e-05
 t_run: 1000
 t_equil: 100
-t_snapshot: 0.1 
-dynamic_equil: true 
+t_snapshot: 0.1
+dynamic_equil: false
+dynamic_equil_window: 10
 verbosity: 0
 filaments:
   count: 1

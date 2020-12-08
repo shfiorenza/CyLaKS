@@ -10,6 +10,7 @@ struct SysParams {
   double t_equil;
   double t_snapshot;
   bool dynamic_equil;
+  double dynamic_equil_window;
   size_t verbosity;
 
   struct FilamentParams {

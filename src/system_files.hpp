@@ -19,7 +19,7 @@ private:
         exit(1);
       }
     }
-    ~DataFile() { fclose(file_ptr_); }
+    // ~DataFile() { fclose(file_ptr_); }
     template <typename DATA_T> void WriteData(DATA_T *array, size_t count) {
       size_t n_chars_written{fwrite(array, sizeof(DATA_T), count, file_ptr_)};
       if (n_chars_written < count) {
@@ -68,7 +68,16 @@ public:
     log_ = fopen(log_filename, "w");
     if (log_ == nullptr) {
       printf("Error; cannot open log file '%s'\n", log_filename);
+      exit(1);
     }
+    // Daisy-chain some c/c++ functions to get date/time in a formatted string
+    auto now = std::chrono::system_clock::now();
+    std::time_t now_c = std::chrono::system_clock::to_time_t(now);
+    std::tm now_tm = *std::localtime(&now_c);
+    char now_str[256];
+    strftime(now_str, sizeof now_str, "%c", &now_tm);
+    fprintf(log_, "[Log file auto-generated for simulation '%s' on %s]\n\n",
+            sim_name, now_str);
   }
   void AddDataFile(std::string sim_name, std::string name) {
     data_.emplace(name, DataFile(sim_name, name));

@@ -1,11 +1,10 @@
 #ifndef _CYLAKS_RESERVOIR_HPP_
 #define _CYLAKS_RESERVOIR_HPP_
 #include "population.hpp"
-#include "system_definitions.hpp"
+#include "system_parameters.hpp"
 #include "system_rng.hpp"
 
 class Curator;
-struct SysParams;
 
 template <typename ENTRY_T> class Reservoir {
 private:
@@ -14,9 +13,9 @@ private:
 
   bool up_to_date_{false};
 
-  double density_avg_{0.0};
-  double density_var_{0.0};
-  Vec<double> densities_;
+  double n_bound_avg_{0.0};
+  double n_bound_var_{0.0};
+  Vec<size_t> n_bound_;
 
   size_t n_active_entries_{0};
   Vec<ENTRY_T *> active_entries_;
@@ -66,11 +65,12 @@ protected:
 public:
   bool equilibrated_{false};
 
+  bool active_{false};
+  size_t step_active_{0};
+
   bool tethering_active_{false};
   bool crosslinking_active_{false};
 
-  bool active_{false};
-  size_t step_active_{0};
   Map<Str, Population<ENTRY_T>> sorted_;
   Map<Str, ProbEntry> p_event_;
   UMap<Str, BoltzmannFactor> weights_;
@@ -84,7 +84,8 @@ private:
     */
   }
   void SetParameters();
-  void SetWeights();
+  void CheckEquilibration();
+  void SortPopulations();
 
 public:
   Reservoir() {}
@@ -95,7 +96,6 @@ public:
     species_id_ = sid;
     step_active_ = step_active;
     SetParameters();
-    SetWeights();
     GenerateEntries(n_entries);
   }
   ENTRY_T *GetFreeEntry() {
@@ -121,17 +121,10 @@ public:
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();
   }
-  void FlagForUpdate() { up_to_date_ = false; }
-  void UpdatePopulations() {
-    for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
-      ENTRY_T *entry{active_entries_[i_entry]};
-      for (auto &&pop : sorted_) {
-        pop.second.Sort(entry);
-      }
-    }
-  }
   void AddWeight(Str name, size_t size) {
     weights_.emplace(name, BoltzmannFactor(name, size));
   }
+  void FlagForUpdate() { up_to_date_ = false; }
+  void Update();
 };
 #endif

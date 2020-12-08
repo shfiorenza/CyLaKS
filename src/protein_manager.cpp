@@ -6,6 +6,7 @@
 ProteinManager::ProteinManager() {}
 
 void ProteinManager::Initialize(Curator *wallace, SysParams *params) {
+
   wally_ = wallace;
   gsl_ = &wally_->gsl_;
   params_ = &wally_->params_;
@@ -205,7 +206,7 @@ void ProteinManager::UpdateLatticeDeformation() {}
 
 void ProteinManager::RunKMC() {
 
-  motors_.UpdatePopulations();
-  xlinks_.UpdatePopulations();
+  motors_.Update();
+  xlinks_.Update();
   kmc_.ExecuteEvents();
 }

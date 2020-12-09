@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_EVENT_HPP_
 #define _CYLAKS_EVENT_HPP_
-#include "system_definitions.hpp"
+#include "definitions.hpp"
 #include "system_rng.hpp"
 
 class Object;

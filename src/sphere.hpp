@@ -1,5 +1,5 @@
-#ifndef _CYLAKS_SPHERE_H_
-#define _CYLAKS_SPHERE_H_
+#ifndef _CYLAKS_SPHERE_HPP_
+#define _CYLAKS_SPHERE_HPP_
 #include "object.hpp"
 
 class Sphere : public Object {

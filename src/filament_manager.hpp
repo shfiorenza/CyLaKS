@@ -12,6 +12,8 @@ class FilamentManager {
 private:
   bool up_to_date_{false};
 
+  bool immobile_{true};
+
   Vec<BindingSite *> sites_;
 
   Curator *wally_{nullptr};

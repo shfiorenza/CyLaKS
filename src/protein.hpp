@@ -19,8 +19,8 @@ private:
 
 public:
   Protein(size_t sid, size_t id)
-      : Object(sid, id), head_one_(this, &head_two_, Sys::_r_xlink_head),
-        head_two_(this, &head_one_, Sys::_r_xlink_head), spring_(this) {}
+      : Object(sid, id), head_one_(this, &head_two_, _r_xlink_head),
+        head_two_(this, &head_one_, _r_xlink_head), spring_(this) {}
 
   bool HasSatellite();
   void UntetherSatellite();
@@ -36,7 +36,7 @@ public:
   BindingSite *GetNeighbor_Bind_II();
   BindingSite *GetNeighbor_Bind_II_Teth();
 
-  virtual double GetAnchorCoordinate();
+  virtual double GetAnchorCoordinate() {}
 
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);

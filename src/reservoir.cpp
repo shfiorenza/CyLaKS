@@ -1,10 +1,17 @@
 #include "reservoir.hpp"
-#include "curator.hpp"
 #include "motor.hpp"
 #include "protein.hpp"
 
-template class Reservoir<Protein>;
 template class Reservoir<Motor>;
+template class Reservoir<Protein>;
+
+template <typename ENTRY_T>
+void Reservoir<ENTRY_T>::GenerateEntries(size_t n_entries) {
+
+  for (int i_entry{0}; i_entry < n_entries; i_entry++) {
+    reservoir_.emplace_back(species_id_, Sys::n_unique_objects_++);
+  }
+}
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
 
@@ -26,18 +33,17 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
   if (equilibrated_) {
     return;
   }
-  if (wally_->i_step_ < wally_->n_steps_pre_equil_) {
-    n_bound_avg_ += double(n_active_entries_) / wally_->n_steps_pre_equil_;
+  if (Sys::i_step_ < Sys::n_steps_pre_equil_) {
+    n_bound_avg_ += double(n_active_entries_) / Sys::n_steps_pre_equil_;
     return;
   }
-  if (wally_->i_step_ == wally_->n_steps_pre_equil_) {
-    wally_->Log("Run '%s' species %zu ", wally_->sim_name_, species_id_);
-    wally_->Log("pre-equililibration ended with n_bound_avg = %.3g\n",
-                n_bound_avg_);
+  if (Sys::i_step_ == Sys::n_steps_pre_equil_) {
+    Sys::Log("Species %zu pre-equililibration ended with n_bound_avg = %.3g\n",
+             species_id_, n_bound_avg_);
     return;
   }
   size_t window_size{n_bound_.size()};
-  size_t i_timestep{wally_->i_step_ % window_size};
+  size_t i_timestep{Sys::i_step_ % window_size};
   if (i_timestep != 0) {
     n_bound_[i_timestep] = n_active_entries_;
     return;
@@ -52,16 +58,16 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
     window_var += diff * diff / (window_size - 1);
   }
   double window_sigma{sqrt(window_var)};
-  wally_->Log("Run '%s' species %zu is still ", wally_->sim_name_, species_id_);
-  wally_->Log("equilibrating ... (n_bound_avg = %.3g +/- %.1g)\n", window_avg,
-              window_sigma);
+  Sys::Log(
+      "Species %zu is still equilibrating ... (n_bound_avg = %.3g +/- %.1g)\n ",
+      species_id_, window_avg, window_sigma);
   double delta{std::fabs(n_bound_avg_ - window_avg)};
   double delta_sigma{sqrt(n_bound_var_ + window_var)};
   if (delta < delta_sigma or delta == n_bound_avg_) {
     equilibrated_ = true;
-    wally_->Log("Run '%s' species %zu ", wally_->sim_name_, species_id_);
-    wally_->Log("equilibration is complete (delta = %.2g | sigma = %.2g)\n",
-                delta, delta_sigma);
+    Sys::Log(
+        "Species %zu equilibration is complete(delta = % .2g + / - % .2g)\n",
+        species_id_, delta, delta_sigma);
   }
   n_bound_avg_ = window_avg;
   n_bound_var_ = window_var;
@@ -69,7 +75,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
 
-  if (up_to_date_ or wally_->i_step_ < step_active_) {
+  if (up_to_date_) {
     return;
   }
   up_to_date_ = true;
@@ -83,6 +89,9 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::Update() {
 
+  if (Sys::i_step_ < step_active_) {
+    return;
+  }
   CheckEquilibration();
   SortPopulations();
 }

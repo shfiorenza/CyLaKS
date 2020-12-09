@@ -1,6 +1,7 @@
 #ifndef _CYLAKS_RESERVOIR_HPP_
 #define _CYLAKS_RESERVOIR_HPP_
 #include "population.hpp"
+#include "system_namespace.hpp"
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
@@ -22,7 +23,7 @@ private:
 
   UMap<Str, double> param_vals_;
 
-  Curator *wally_{nullptr};
+  // Curator *wally_{nullptr};
   SysParams *params_{nullptr};
   SysRNG *gsl_{nullptr};
 
@@ -76,13 +77,7 @@ public:
   UMap<Str, BoltzmannFactor> weights_;
 
 private:
-  void GenerateEntries(size_t n_entries) {
-    /*
-    for (int i_entry{0}; i_entry < n_entries; i_entry++) {
-      reservoir_.emplace_back(species_id_, wally_->n_sim_objs_++);
-    }
-    */
-  }
+  void GenerateEntries(size_t n_entries);
   void SetParameters();
   void CheckEquilibration();
   void SortPopulations();
@@ -91,12 +86,12 @@ public:
   Reservoir() {}
   void Initialize(Curator *wallace, SysParams *params, size_t sid,
                   size_t n_entries, size_t step_active) {
-    wally_ = wallace;
+    // wally_ = wallace;
     params_ = params;
     species_id_ = sid;
     step_active_ = step_active;
-    SetParameters();
     GenerateEntries(n_entries);
+    SetParameters();
   }
   ENTRY_T *GetFreeEntry() {
     size_t i_entry = gsl_->GetRanInt(reservoir_.size());

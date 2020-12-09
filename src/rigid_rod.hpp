@@ -1,5 +1,5 @@
-#ifndef _CYLAKS_RIGID_ROD_H_
-#define _CYLAKS_RIGID_ROD_H_
+#ifndef _CYLAKS_RIGID_ROD_HPP_
+#define _CYLAKS_RIGID_ROD_HPP_
 #include "object.hpp"
 
 class RigidRod : public Object {
@@ -10,9 +10,9 @@ protected:
 
 public:
   RigidRod(size_t sid, size_t id, double length)
-      : length_{length}, Object(sid, id) {
-    force_.resize(Sys::_n_dims_max);
-    orientation_.resize(Sys::_n_dims_max);
+      : Object(sid, id), length_{length} {
+    force_.resize(_n_dims_max);
+    orientation_.resize(_n_dims_max);
   }
   void UpdateForces();
 };

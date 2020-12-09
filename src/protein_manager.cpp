@@ -1,6 +1,7 @@
 #include "protein_manager.hpp"
 #include "binding_site.hpp"
 #include "curator.hpp"
+#include "system_namespace.hpp"
 #include "system_rng.hpp"
 
 ProteinManager::ProteinManager() {}
@@ -13,7 +14,7 @@ void ProteinManager::Initialize(Curator *wallace, SysParams *params) {
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  if (wally_->test_mode_ != nullptr) {
+  if (!Sys::test_mode_.empty()) {
     InitializeTestEnvironment();
     InitializeTestEvents();
     return;
@@ -28,9 +29,8 @@ void ProteinManager::GenerateReservoirs() {
     reservoir_size += params_->filaments.length[i_mt];
   }
   size_t step_active{size_t(params_->motors.t_active / params_->dt)};
-  motors_.Initialize(wally_, params_, Sys::_id_motor, reservoir_size,
-                     step_active);
-  xlinks_.Initialize(wally_, params_, Sys::_id_xlink, reservoir_size, 0);
+  motors_.Initialize(wally_, params_, _id_motor, reservoir_size, step_active);
+  xlinks_.Initialize(wally_, params_, _id_xlink, reservoir_size, 0);
 }
 
 void ProteinManager::InitializeWeights() {
@@ -49,11 +49,11 @@ void ProteinManager::InitializeWeights() {
    */
   // Neighbor stuff
   Str name{"neighbs"};
-  motors_.AddWeight(name, Sys::_n_neighbs_max);
-  xlinks_.AddWeight(name, Sys::_n_neighbs_max);
+  motors_.AddWeight(name, _n_neighbs_max);
+  xlinks_.AddWeight(name, _n_neighbs_max);
   double lambda_neighb{1.0};
   double dE{0.0};
-  for (int n_neighbs{0}; n_neighbs <= Sys::_n_neighbs_max; n_neighbs++) {
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     dE = -1 * params_->motors.interaction_energy * n_neighbs;
     motors_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * dE);
     motors_.weights_[name].unbind_[n_neighbs] = exp(lambda_neighb * dE);
@@ -73,8 +73,8 @@ void ProteinManager::SetParameters() {
   name = "bind_i";
   motors_.p_event_[name].val_ =
       params_->motors.k_on * params_->motors.c_bulk * dt;
-  xlinks_.p_event_[name].InitVals(Sys::_n_neighbs_max + 1);
-  for (int n_neighbs{0}; n_neighbs <= Sys::_n_neighbs_max; n_neighbs++) {
+  xlinks_.p_event_[name].InitVals(_n_neighbs_max + 1);
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     xlinks_.p_event_[name].vals_[0][0][n_neighbs] =
         xlinks_.weights_["neighbs"].bind_[n_neighbs] * params_->xlinks.k_on *
         params_->xlinks.c_bulk * dt;
@@ -85,8 +85,8 @@ void ProteinManager::SetParameters() {
   // Unbind_I
   name = "unbind_i";
   motors_.p_event_[name].val_ = params_->motors.k_off_i * dt;
-  xlinks_.p_event_[name].InitVals(Sys::_n_neighbs_max + 1);
-  for (int n_neighbs{0}; n_neighbs <= Sys::_n_neighbs_max; n_neighbs++) {
+  xlinks_.p_event_[name].InitVals(_n_neighbs_max + 1);
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     xlinks_.p_event_[name].vals_[0][0][n_neighbs] =
         xlinks_.weights_["neighbs"].unbind_[n_neighbs] *
         params_->xlinks.k_off_i * dt;

@@ -1,6 +1,10 @@
 #include "filament_manager.hpp"
+#include "curator.hpp"
 
-void FilamentManager::GenerateFilaments() {}
+void FilamentManager::GenerateFilaments() {
+
+  list_.emplace_back(wally_, params_, 0, 0, 5.0);
+}
 
 void FilamentManager::UpdateUnoccupied() {
 
@@ -20,4 +24,10 @@ void FilamentManager::UpdateUnoccupied() {
   }
 }
 
-void FilamentManager::RunBD() {}
+void FilamentManager::RunBD() {
+
+  if (immobile_) {
+    return;
+  }
+  // FIXME take from add_continous_mt_movement branch
+}

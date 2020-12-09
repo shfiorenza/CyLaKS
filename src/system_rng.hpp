@@ -2,7 +2,6 @@
 #define _CYLAKS_SYSTEM_RNG_HPP_
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
-
 struct SysRNG {
 private:
   const gsl_rng_type *generator_type_{gsl_rng_mt19937};

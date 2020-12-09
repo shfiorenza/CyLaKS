@@ -20,7 +20,6 @@ public:
       : Sphere(0, 0, radius), other_head_{other_head} {}
   BindingHead(size_t sid, size_t id, double r) : Sphere(sid, id, r) {}
 
-  virtual ~BindingHead();
   virtual bool Trailing() { return false; }
 
   Protein *GetParent() { return parent_; }

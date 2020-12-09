@@ -1,5 +1,6 @@
 #include "curator.hpp"
 #include "yaml-cpp/yaml.h"
+#include <iostream>
 
 void Curator::CheckArgs(int argc, char *argv[]) {
 
@@ -14,20 +15,68 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     // printf("    motor_lattice_step\n");
     exit(1);
   }
-  param_file_ = argv[1];
-  sim_name_ = argv[2];
-  test_mode_ = argv[3];
+  Sys::yaml_file_ = argv[1];
+  Sys::name_ = argv[2];
+  if (argc == 4) {
+    Sys::test_mode_ = argv[3];
+  }
+}
+
+void Curator::GenerateLog() {
+
+  char log_name[256];
+  sprintf(log_name, "%s.log", Sys::name_.c_str());
+  // Check to see if sim files already exist
+  if (std::filesystem::exists(log_name)) {
+    printf("Log file with this name already exists!\n");
+    printf("Do you wish to overwrite these data? y/n\n");
+    Str response;
+    bool response_unacceptable{true};
+    size_t n_responses{0};
+    while (response_unacceptable) {
+      std::getline(std::cin, response);
+      if (response == "n" or response == "N") {
+        printf("Simulation terminated.\n");
+        exit(1);
+      } else if (response == "y" or response == "Y") {
+        printf("Very well. ");
+        printf("Overwriting data for simulation '%s'\n\n", Sys::name_.c_str());
+        response_unacceptable = false;
+      } else {
+        printf("ayo I said y or n. try again plz\n");
+      }
+      n_responses++;
+      if (n_responses > 5) {
+        printf("aight if u gonna be like that,");
+        printf("let's just cancel this whole thing\n");
+        exit(1);
+      }
+    }
+  }
+  Sys::log_file_ = fopen(log_name, "w");
+  if (Sys::log_file_ == nullptr) {
+    printf("Error; cannot open log file '%s'\n", log_name);
+    exit(1);
+  }
+  // Daisy-chain c/c++ functs to get current date/time in a formatted string
+  auto now{std::chrono::system_clock::now()};
+  std::time_t now_c{std::chrono::system_clock::to_time_t(now)};
+  std::tm now_tm{*std::localtime(&now_c)};
+  char now_str[256];
+  strftime(now_str, sizeof now_str, "%c", &now_tm);
+  fprintf(Sys::log_file_, "[Log file auto-generated for simulation");
+  fprintf(Sys::log_file_, " '%s' on %s]\n\n", Sys::name_.c_str(), now_str);
 }
 
 void Curator::ParseParameters() {
 
   // Check to make sure param file actually exists
-  if (!std::filesystem::exists(param_file_)) {
-    Log("  Error: param file does not exist; aborting \n");
+  if (!std::filesystem::exists(Sys::yaml_file_)) {
+    Sys::Log("  Error: param file does not exist; aborting \n");
     exit(1);
   }
   // Parse parameter file into a YAML node
-  YAML::Node input = YAML::LoadFile(param_file_);
+  YAML::Node input = YAML::LoadFile(Sys::yaml_file_);
   // Transfer values from input param node to system_parameters structure
   try {
     params_.seed = input["seed"].as<size_t>();
@@ -105,106 +154,112 @@ void Curator::ParseParameters() {
   params_.xlinks.r_0 = xlinks["r_0"].as<double>();
   params_.xlinks.k_spring = xlinks["k_spring"].as<double>();
   // Store params pointer as parameters_ in Curator
-  Log("Reading parameters from '%s':\n", param_file_);
-  Log("  General parameters:\n");
-  Log("    seed = %lu\n", params_.seed);
-  Log("    kbT = %g pN*nm\n", params_.kbT);
-  Log("    eta = %g (pN*s)/um^2\n", params_.eta);
-  Log("    dt = %g s\n", params_.dt);
-  Log("    t_run = %g s\n", params_.t_run);
-  Log("    t_equil = %g s\n", params_.t_equil);
-  Log("    t_snapshot = %g s\n", params_.t_snapshot);
-  Log("    dynamic_equil = %s\n", params_.dynamic_equil ? "true" : "false");
-  Log("    dynamic_equil_window = %g s\n", params_.dynamic_equil_window);
-  Log("    verbosity = %zu\n", params_.verbosity);
-  Log("  Filament parameters:\n");
-  Log("    count = %i\n", params_.filaments.count);
+  Sys::Log("Reading parameters from '%s':\n", Sys::yaml_file_);
+  Sys::Log("  General parameters:\n");
+  Sys::Log("    seed = %lu\n", params_.seed);
+  Sys::Log("    kbT = %g pN*nm\n", params_.kbT);
+  Sys::Log("    eta = %g (pN*s)/um^2\n", params_.eta);
+  Sys::Log("    dt = %g s\n", params_.dt);
+  Sys::Log("    t_run = %g s\n", params_.t_run);
+  Sys::Log("    t_equil = %g s\n", params_.t_equil);
+  Sys::Log("    t_snapshot = %g s\n", params_.t_snapshot);
+  Sys::Log("    dynamic_equil = %s\n",
+           params_.dynamic_equil ? "true" : "false");
+  Sys::Log("    dynamic_equil_window = %g s\n", params_.dynamic_equil_window);
+  Sys::Log("    verbosity = %zu\n", params_.verbosity);
+  Sys::Log("  Filament parameters:\n");
+  Sys::Log("    count = %i\n", params_.filaments.count);
   // Check to make sure there are enough vector entries for given MT count
   if (params_.filaments.count > params_.filaments.length.size() or
       params_.filaments.count > params_.filaments.start_coord.size() or
       params_.filaments.count > params_.filaments.applied_force.size() or
       params_.filaments.count > params_.filaments.immobile_until.size() or
-      Sys::_n_dims_max > params_.filaments.dim_enabled.size()) {
-    ErrorExit("Curator::ParseParameters()");
+      _n_dims_max > params_.filaments.dim_enabled.size()) {
+    Sys::ErrorExit("Curator::ParseParameters()");
   }
   for (int i_fil{0}; i_fil < params_.filaments.count; i_fil++) {
-    Log("    length[%i] = %i sites\n", i_fil, params_.filaments.length[i_fil]);
-    Log("    start_coord[%i] = %g sites\n", i_fil,
-        params_.filaments.start_coord[i_fil]);
-    Log("    applied_force[%i] = %g pN\n", i_fil,
-        params_.filaments.applied_force[i_fil]);
-    Log("    immobile_until[%i] = %g s\n", i_fil,
-        params_.filaments.immobile_until[i_fil]);
+    Sys::Log("    length[%i] = %i sites\n", i_fil,
+             params_.filaments.length[i_fil]);
+    Sys::Log("    start_coord[%i] = %g sites\n", i_fil,
+             params_.filaments.start_coord[i_fil]);
+    Sys::Log("    applied_force[%i] = %g pN\n", i_fil,
+             params_.filaments.applied_force[i_fil]);
+    Sys::Log("    immobile_until[%i] = %g s\n", i_fil,
+             params_.filaments.immobile_until[i_fil]);
   }
-  for (int i_dim{0}; i_dim < Sys::_n_dims_max; i_dim++) {
-    Log("    dim_enabled[%i] = %s\n", i_dim,
-        params_.filaments.dim_enabled[i_dim] ? "true" : "false");
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    Sys::Log("    dim_enabled[%i] = %s\n", i_dim,
+             params_.filaments.dim_enabled[i_dim] ? "true" : "false");
   }
-  Log("    y_dist_init = %g nm between MTs\n", params_.filaments.y_dist_init);
-  Log("    site_size = %g nm\n", params_.filaments.site_size);
-  Log("    radius = %g nm\n", params_.filaments.radius);
-  Log("  Kinesin (motor) parameters:\n");
-  Log("    n_runs_desired = %zu\n", params_.motors.n_runs_desired);
-  Log("    lattice_coop_range = %i\n", params_.motors.lattice_coop_range);
-  Log("    lattice_coop_Emax_solo = -%g kbT\n",
-      params_.motors.lattice_coop_Emax_solo);
-  Log("    lattice_coop_Emax_bulk = -%g kbT\n",
-      params_.motors.lattice_coop_Emax_bulk);
-  Log("    interaction_energy = -%g kbT\n", params_.motors.interaction_energy);
-  Log("    t_active = %g seconds\n", params_.motors.t_active);
-  Log("    k_on = %g /(nM*s)\n", params_.motors.k_on);
-  Log("    c_bulk = %g nM\n", params_.motors.c_bulk);
-  Log("    c_eff_bind = %g nM\n", params_.motors.c_eff_bind);
-  Log("    k_on_ATP = %g /(mM*s)\n", params_.motors.k_on_ATP);
-  Log("    c_ATP = %g mM\n", params_.motors.c_ATP);
-  Log("    k_hydrolyze = %g /s\n", params_.motors.k_hydrolyze);
-  Log("    k_off_i = %g /s\n", params_.motors.k_off_i);
-  Log("    k_off_ii = %g /s\n", params_.motors.k_off_ii);
-  Log("    applied_force = %g pN\n", params_.motors.applied_force);
-  Log("    internal_force = %g pN\n", params_.motors.internal_force);
-  Log("    sigma_off_i = %g nm\n", params_.motors.sigma_off_i);
-  Log("    sigma_off_ii = %g nm\n", params_.motors.sigma_off_ii);
-  Log("    sigma_ATP = %g nm\n", params_.motors.sigma_ATP);
-  Log("    k_tether = %g /(nM*s)\n", params_.motors.k_tether);
-  Log("    c_eff_tether = %g nM\n", params_.motors.c_eff_tether);
-  Log("    k_untether = %g /s\n", params_.motors.k_untether);
-  Log("    r_0 = %g nm\n", params_.motors.r_0);
-  Log("    k_spring = %g pN/nm\n", params_.motors.k_spring);
-  Log("    k_slack = %g pN/nm\n", params_.motors.k_slack);
-  Log("    tethers_active = %s\n",
-      params_.motors.tethers_active ? "true" : "false");
-  Log("    endpausing_active = %s\n",
-      params_.motors.endpausing_active ? "true" : "false");
-  Log("  Crosslinker (xlink) parameters:\n");
-  Log("    interaction_energy = %g kbT\n", params_.xlinks.interaction_energy);
-  Log("    t_active = %g seconds\n", params_.xlinks.t_active);
-  Log("    k_on = %g /(nM*s)\n", params_.xlinks.k_on);
-  Log("    c_bulk = %g nM\n", params_.xlinks.c_bulk);
-  Log("    c_eff_bind = %g nM\n", params_.xlinks.c_eff_bind);
-  Log("    k_off_i = %g /s\n", params_.xlinks.k_off_i);
-  Log("    k_off_ii = %g /s\n", params_.xlinks.k_off_ii);
-  Log("    r_0 = %g nm\n", params_.xlinks.r_0);
-  Log("    k_spring = %g pN/nm\n", params_.xlinks.k_spring);
-  Log("    d_i = %g um^2/s\n", params_.xlinks.d_i);
-  Log("    d_ii = %g um^2/s\n", params_.xlinks.d_ii);
+  Sys::Log("    y_dist_init = %g nm between MTs\n",
+           params_.filaments.y_dist_init);
+  Sys::Log("    site_size = %g nm\n", params_.filaments.site_size);
+  Sys::Log("    radius = %g nm\n", params_.filaments.radius);
+  Sys::Log("  Kinesin (motor) parameters:\n");
+  Sys::Log("    n_runs_desired = %zu\n", params_.motors.n_runs_desired);
+  Sys::Log("    lattice_coop_range = %i\n", params_.motors.lattice_coop_range);
+  Sys::Log("    lattice_coop_Emax_solo = -%g kbT\n",
+           params_.motors.lattice_coop_Emax_solo);
+  Sys::Log("    lattice_coop_Emax_bulk = -%g kbT\n",
+           params_.motors.lattice_coop_Emax_bulk);
+  Sys::Log("    interaction_energy = -%g kbT\n",
+           params_.motors.interaction_energy);
+  Sys::Log("    t_active = %g seconds\n", params_.motors.t_active);
+  Sys::Log("    k_on = %g /(nM*s)\n", params_.motors.k_on);
+  Sys::Log("    c_bulk = %g nM\n", params_.motors.c_bulk);
+  Sys::Log("    c_eff_bind = %g nM\n", params_.motors.c_eff_bind);
+  Sys::Log("    k_on_ATP = %g /(mM*s)\n", params_.motors.k_on_ATP);
+  Sys::Log("    c_ATP = %g mM\n", params_.motors.c_ATP);
+  Sys::Log("    k_hydrolyze = %g /s\n", params_.motors.k_hydrolyze);
+  Sys::Log("    k_off_i = %g /s\n", params_.motors.k_off_i);
+  Sys::Log("    k_off_ii = %g /s\n", params_.motors.k_off_ii);
+  Sys::Log("    applied_force = %g pN\n", params_.motors.applied_force);
+  Sys::Log("    internal_force = %g pN\n", params_.motors.internal_force);
+  Sys::Log("    sigma_off_i = %g nm\n", params_.motors.sigma_off_i);
+  Sys::Log("    sigma_off_ii = %g nm\n", params_.motors.sigma_off_ii);
+  Sys::Log("    sigma_ATP = %g nm\n", params_.motors.sigma_ATP);
+  Sys::Log("    k_tether = %g /(nM*s)\n", params_.motors.k_tether);
+  Sys::Log("    c_eff_tether = %g nM\n", params_.motors.c_eff_tether);
+  Sys::Log("    k_untether = %g /s\n", params_.motors.k_untether);
+  Sys::Log("    r_0 = %g nm\n", params_.motors.r_0);
+  Sys::Log("    k_spring = %g pN/nm\n", params_.motors.k_spring);
+  Sys::Log("    k_slack = %g pN/nm\n", params_.motors.k_slack);
+  Sys::Log("    tethers_active = %s\n",
+           params_.motors.tethers_active ? "true" : "false");
+  Sys::Log("    endpausing_active = %s\n",
+           params_.motors.endpausing_active ? "true" : "false");
+  Sys::Log("  Crosslinker (xlink) parameters:\n");
+  Sys::Log("    interaction_energy = %g kbT\n",
+           params_.xlinks.interaction_energy);
+  Sys::Log("    t_active = %g seconds\n", params_.xlinks.t_active);
+  Sys::Log("    k_on = %g /(nM*s)\n", params_.xlinks.k_on);
+  Sys::Log("    c_bulk = %g nM\n", params_.xlinks.c_bulk);
+  Sys::Log("    c_eff_bind = %g nM\n", params_.xlinks.c_eff_bind);
+  Sys::Log("    k_off_i = %g /s\n", params_.xlinks.k_off_i);
+  Sys::Log("    k_off_ii = %g /s\n", params_.xlinks.k_off_ii);
+  Sys::Log("    d_i = %g um^2/s\n", params_.xlinks.d_i);
+  Sys::Log("    d_ii = %g um^2/s\n", params_.xlinks.d_ii);
+  Sys::Log("    r_0 = %g nm\n", params_.xlinks.r_0);
+  Sys::Log("    k_spring = %g pN/nm\n", params_.xlinks.k_spring);
 }
 
 void Curator::InitializeSimulation() {
 
+  // Calculate and/or set system parameters
+  Sys::verbosity_ = params_.verbosity;
+  Sys::n_steps_pre_equil_ = (size_t)std::round(params_.t_equil / params_.dt);
+  Sys::n_steps_equil_ = Sys::n_steps_pre_equil_;
+  Sys::n_steps_run_ = (size_t)std::round(params_.t_run / params_.dt);
+  n_steps_per_snapshot_ = (size_t)std::round(params_.t_snapshot / params_.dt);
   start_time_ = SysClock::now();
-  // Calculate local parameters
-  n_steps_pre_equil_ = (size_t)std::round(params_.t_equil / params_.dt);
-  n_steps_equil_ = n_steps_pre_equil_;
-  n_steps_run_ = (size_t)std::round(params_.t_run / params_.dt);
-  n_steps_snapshot_ = (size_t)std::round(params_.t_snapshot / params_.dt);
-  verbosity_ = params_.verbosity;
-  // Log local parameters
-  Log("  Curator parameters:\n");
-  Log("    n_steps_run = %zu\n", n_steps_run_);
-  Log("    n_steps_equil = %zu\n", n_steps_pre_equil_);
-  Log("    n_steps_snapshot = %zu\n", n_steps_snapshot_);
-  Log("    n_datapoints = %zu\n", n_steps_run_ / n_steps_snapshot_);
-  Log("\n");
+  // Log system parameters
+  Sys::Log("  System parameters:\n");
+  Sys::Log("    n_steps_run = %zu\n", Sys::n_steps_run_);
+  Sys::Log("    n_steps_equil = %zu\n", Sys::n_steps_equil_);
+  Sys::Log("    n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
+  Sys::Log("    n_datapoints = %zu\n",
+           Sys::n_steps_run_ / n_steps_per_snapshot_);
+  Sys::Log("\n");
   // Initialize sim objects
   gsl_.Initialize(params_.seed);
   proteins_.Initialize(this, &params_);
@@ -215,50 +270,50 @@ void Curator::GenerateDataFiles() {
 
   // Open occupancy file, which stores the species ID of each occupant
   // (or -1 for none) for all MT sites during data collection (DC)
-  files_.AddDataFile(sim_name_, "occupancy");
+  AddDataFile("occupancy");
   // Motor-related files
   if (proteins_.motors_.active_) {
     // Open motor ID file, which stores the unique ID of all bound motors
     // (unbound not tracked) and their respective site indices during DC
-    files_.AddDataFile(sim_name_, "motorID");
+    AddDataFile("motorID");
     // bool; simply says if motor head is trailing or not
-    files_.AddDataFile(sim_name_, "motor_trailing");
+    AddDataFile("motor_trailing");
     if (proteins_.motors_.tethering_active_) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
-      files_.AddDataFile(sim_name_, "tether_coord");
+      AddDataFile("tether_coord");
       // Open motor extension file, which stores the number of motors
       // with a certain tether extension for all possible extensions
-      // // files_.AddDataFile(sim_name_, "motor_dx");
+      AddDataFile("motor_dx");
       // Open motor force file, which stores the sum
       // of forces coming from motor tether extensions
-      // // files_.AddDataFile(sim_name_, "motor_force");
+      AddDataFile("motor_force");
     }
   }
   // Crosslinker-related files
   if (proteins_.xlinks_.active_) {
     // Open xlink ID file, which does the same
     // as the motor ID file but for xlinks
-    files_.AddDataFile(sim_name_, "xlinkID");
+    AddDataFile("xlinkID");
     if (proteins_.xlinks_.crosslinking_active_) {
       // Open xlink extension file, which stores the number of stage-2
       // xlinks at a certain extension for all possible extensions
-      // // files_.AddDataFile(sim_name_, "xlink_dx");
+      AddDataFile("xlink_dx");
       // Open xlink force file, which stores the sum
       // of forces coming from xlink extensions
-      // // files_.AddDataFile(sim_name_, "xlink_force");
+      AddDataFile("xlink_force");
     }
   }
   if (filaments_.mobile_) {
     // Open mt coord file, which stores the coordinates
     // of the left-most edge of each microtubule during DC
-    files_.AddDataFile(sim_name_, "filament_coord");
+    AddDataFile("filament_coord");
   }
   if (proteins_.motors_.tethering_active_ and
       proteins_.xlinks_.crosslinking_active_) {
     // Open total force file, which stores the sum of ALL
     // forces coming from xlink and motor tether extensions
-    // // files_.AddDataFile(sim_name_, "total_force");
+    AddDataFile("total_force");
   }
 }
 
@@ -268,47 +323,50 @@ void Curator::CheckPrintProgress() {
   int p_report{10};
   double dt{params_.dt};
   // Advance simulation forward one site (or 1 dt in real time)
-  i_step_++;
+  Sys::i_step_++;
   // If still equilibrating, report progress and check protein equil. status
-  if (sim_equilibrating_) {
-    if (i_step_ % (n_steps_pre_equil_ / (100 / p_report)) == 0 and
-        i_step_ <= n_steps_pre_equil_) {
-      Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
-          double(i_step_) / n_steps_pre_equil_ * 100, i_step_, i_step_ * dt);
+  if (Sys::equilibrating_) {
+    if (Sys::i_step_ % (Sys::n_steps_pre_equil_ / (100 / p_report)) == 0 and
+        Sys::i_step_ <= Sys::n_steps_pre_equil_) {
+      Sys::Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
+               double(Sys::i_step_) / Sys::n_steps_pre_equil_ * 100,
+               Sys::i_step_, Sys::i_step_ * dt);
     }
     if (proteins_.motors_.equilibrated_ and proteins_.xlinks_.equilibrated_ and
-        i_step_ >= n_steps_pre_equil_) {
-      n_steps_equil_ = i_step_;
-      sim_equilibrating_ = false;
+        Sys::i_step_ >= Sys::n_steps_pre_equil_) {
+      Sys::n_steps_equil_ = Sys::i_step_;
+      Sys::equilibrating_ = false;
       if (params_.dynamic_equil) {
-        Log("Dynamic equilibration is complete. (t = %g s)\n", i_step_ * dt);
-        Log("   N_STEPS_EQUIL = %zu\n", n_steps_equil_);
+        Sys::Log("Dynamic equilibration is complete. (t = %g s)\n",
+                 Sys::i_step_ * dt);
+        Sys::Log("   N_STEPS_EQUIL = %zu\n", Sys::n_steps_equil_);
       }
     }
   }
   // Otherwise data collection must be active; simply report on that
   else {
-    size_t n_steps_so_far{i_step_ - n_steps_equil_};
-    if (n_steps_so_far % (n_steps_run_ / (100 / p_report)) == 0) {
-      Log("Data collection %g%% complete. (step #%zu | t = %g s)\n",
-          double(n_steps_so_far) / n_steps_run_ * 100, i_step_, i_step_ * dt);
+    size_t n_steps_so_far{Sys::i_step_ - Sys::n_steps_equil_};
+    if (n_steps_so_far % (Sys::n_steps_run_ / (100 / p_report)) == 0) {
+      Sys::Log("Data collection %g%% complete. (step #%zu | t = %g s)\n",
+               double(n_steps_so_far) / Sys::n_steps_run_ * 100, Sys::i_step_,
+               Sys::i_step_ * dt);
     }
   }
   // Terminate simulation once a sufficient number of steps has been taken
-  if (i_step_ >= n_steps_run_ + n_steps_equil_) {
-    sim_running_ = false;
-    double sim_dur{(double)(SysClock::now() - start_time_).count()};
-    Log("Simulation complete. Total time to execute: %.2f s.\n",
-        sim_dur / SysClock::period::den);
+  if (Sys::i_step_ >= Sys::n_steps_run_ + Sys::n_steps_equil_) {
+    Sys::running_ = false;
+    long clock_ticks{(SysClock::now() - start_time_).count()};
+    size_t ticks_per_second{SysClock::period::den};
+    Sys::Log("Simulation complete. Total time to execute: %.2f s.\n",
+             double(clock_ticks) / ticks_per_second);
   }
 }
 
 void Curator::OutputData() {
 
-  if (sim_equilibrating_ or i_step_ % n_steps_snapshot_ != 0) {
+  if (Sys::equilibrating_ or Sys::i_step_ % n_steps_per_snapshot_ != 0) {
     return;
   }
-
   size_t n_pfs{params_.filaments.count};
   size_t max_length{0};
   for (int i_fil{0}; i_fil < n_pfs; i_fil++) {
@@ -344,7 +402,7 @@ void Curator::OutputData() {
         switch (site->occupant_->GetSpeciesID()) {
         // If occupied by motor, store its species ID to occupancy_file,
         // its unique ID to the motor ID file, and -1 to xlink ID file
-        case Sys::_id_motor:
+        case _id_motor:
           motor_IDs[i_site] = site->occupant_->GetID();
           xlink_IDs[i_site] = -1;
           tether_coords[i_site] = -1;
@@ -359,7 +417,7 @@ void Curator::OutputData() {
           break;
         // If occupied by xlink, store its species ID to occupancy_file,
         // its unique ID to the xlink ID file, and -1 to motor ID file
-        case Sys::_id_xlink:
+        case _id_xlink:
           motor_IDs[i_site] = -1;
           xlink_IDs[i_site] = site->occupant_->GetID();
           tether_coords[i_site] = -1;
@@ -377,22 +435,22 @@ void Curator::OutputData() {
     pf_coords[i_fil] = pf->GetPos(0);
     /*
     // Write the data to respective files one microtubule at a time
-    files_.data_["occupancy"].WriteData(occupancy, max_length);
+    data_files_["occupancy"].WriteData(occupancy, max_length);
     if (proteins_.motors_.active_) {
-      files_.data_["motorID"].WriteData(motor_IDs, max_length);
-      files_.data_["motor_trailing"].WriteData(motor_head_status, max_length);
+      data_files_["motorID"].WriteData(motor_IDs, max_length);
+      data_files_["motor_trailing"].WriteData(motor_head_status, max_length);
       if (proteins_.motors_.tethering_active_) {
-        files_.data_["tether_coord"].WriteData(tether_coords, max_length);
+        data_files_["tether_coord"].WriteData(tether_coords, max_length);
       }
     }
     if (proteins_.xlinks_.active_) {
-      files_.data_["xlinkID"].WriteData(xlink_IDs, max_length);
+      data_files_["xlinkID"].WriteData(xlink_IDs, max_length);
     }
   */
   }
   /*
   if (filaments_.mobile_) {
-    files_.data_["filament_coord"].WriteData(pf_coords, n_pfs);
+    data_files_["filament_coord"].WriteData(pf_coords, n_pfs);
   }
   */
 }

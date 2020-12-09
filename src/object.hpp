@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_OBJECT_HPP_
 #define _CYLAKS_OBJECT_HPP_
-#include "system_definitions.hpp"
+#include "definitions.hpp"
 
 class Object {
 private:
@@ -9,15 +9,15 @@ private:
 
 public:
   bool visible_{true};
-  Vec<double> pos_;
+  Vec<double> pos_; // COM position in lab frame
 
 public:
   Object(size_t sid, size_t id) {
     unique_id_ = id;
     species_id_ = sid;
-    pos_.resize(Sys::_n_dims_max);
+    pos_.resize(_n_dims_max);
   }
-  virtual ~Object();
+  virtual ~Object() {}
 
   size_t GetID() { return unique_id_; }
   size_t GetSpeciesID() { return species_id_; }

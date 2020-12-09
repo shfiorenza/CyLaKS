@@ -1,5 +1,5 @@
-#ifndef _CYLAKS_HOOKEAN_SPRING_H_
-#define _CYLAKS_HOOKEAN_SPRING_H_
+#ifndef _CYLAKS_LINEAR_SPRING_HPP_
+#define _CYLAKS_LINEAR_SPRING_HPP_
 #include "object.hpp"
 
 class LinearSpring : public Object {

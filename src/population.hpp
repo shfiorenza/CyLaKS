@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_POPULATION_HPP_
 #define _CYLAKS_POPULATION_HPP_
-#include "system_definitions.hpp"
+#include "definitions.hpp"
 
 template <typename ENTRY_T> struct Population {
   Str name_;

@@ -1,5 +1,6 @@
 #include "event_manager.hpp"
 #include "curator.hpp"
+#include "system_namespace.hpp"
 #include "system_rng.hpp"
 
 EventManager::EventManager() {}
@@ -71,7 +72,7 @@ void EventManager::GenerateExecutionSequence() {
     }
   }
   if (i_array != n_events_to_exe_) {
-    wally_->ErrorExit("K_MGMT::GenerateExecutionSequence()");
+    Sys::ErrorExit("K_MGMT::GenerateExecutionSequence()");
   }
   if (n_events_to_exe_ > 1) {
     gsl_->Shuffle(pre_array, n_events_to_exe_, sizeof(Event *));

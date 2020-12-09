@@ -21,7 +21,6 @@ public:
   // FIXME sid & id
   CatalyticHead(Motor *parent, CatalyticHead *other_head, double radius)
       : BindingHead(1, 1, radius), other_head_{other_head} {}
-  virtual ~CatalyticHead();
 
   Ligand GetLigand() { return ligand_; }
   Motor *GetParent() { return parent_; }

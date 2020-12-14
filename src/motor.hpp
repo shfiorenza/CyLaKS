@@ -16,9 +16,14 @@ public:
 
 private:
 public:
-  Motor(size_t sid, size_t id)
-      : Protein(sid, id), head_one_(this, &head_two_, _r_motor_head),
-        head_two_(this, &head_one_, _r_motor_head), tether_(this) {}
+  Motor() {}
+  void Initialize(size_t sid, size_t id) {
+    Object::Initialize(sid, id);
+    head_one_.Initialize(sid, id, _r_motor_head, this, &head_two_);
+    head_two_.Initialize(sid, id, _r_motor_head, this, &head_one_);
+    tether_.Initialize(sid, id, this);
+  }
+
   BindingSite *GetDockSite();
   CatalyticHead *GetActiveHead();
   void ChangeConformation();

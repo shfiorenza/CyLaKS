@@ -12,12 +12,12 @@ public:
   Vec<double> pos_; // COM position in lab frame
 
 public:
-  Object(size_t sid, size_t id) {
+  Object() {}
+  void Initialize(size_t sid, size_t id) {
     unique_id_ = id;
     species_id_ = sid;
     pos_.resize(_n_dims_max);
   }
-  virtual ~Object() {}
 
   size_t GetID() { return unique_id_; }
   size_t GetSpeciesID() { return species_id_; }

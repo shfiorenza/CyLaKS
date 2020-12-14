@@ -5,8 +5,6 @@
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
-class Curator;
-
 template <typename ENTRY_T> class Reservoir {
 private:
   size_t species_id_;
@@ -23,8 +21,6 @@ private:
 
   UMap<Str, double> param_vals_;
 
-  // Curator *wally_{nullptr};
-  SysParams *params_{nullptr};
   SysRNG *gsl_{nullptr};
 
 protected:
@@ -84,13 +80,10 @@ private:
 
 public:
   Reservoir() {}
-  void Initialize(Curator *wallace, SysParams *params, size_t sid,
-                  size_t n_entries, size_t step_active) {
-    // wally_ = wallace;
-    params_ = params;
+  void Initialize(size_t sid, size_t size, size_t i_active) {
     species_id_ = sid;
-    step_active_ = step_active;
-    GenerateEntries(n_entries);
+    step_active_ = i_active;
+    GenerateEntries(size);
     SetParameters();
   }
   ENTRY_T *GetFreeEntry() {
@@ -120,6 +113,12 @@ public:
     weights_.emplace(name, BoltzmannFactor(name, size));
   }
   void FlagForUpdate() { up_to_date_ = false; }
-  void Update();
+  void PrepForKMC() {
+    if (Sys::i_step_ < step_active_) {
+      return;
+    }
+    CheckEquilibration();
+    SortPopulations();
+  }
 };
 #endif

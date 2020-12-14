@@ -4,33 +4,16 @@
 #include "system_namespace.hpp"
 #include "system_rng.hpp"
 
-ProteinManager::ProteinManager() {}
-
-void ProteinManager::Initialize(Curator *wallace, SysParams *params) {
-
-  wally_ = wallace;
-  gsl_ = &wally_->gsl_;
-  params_ = &wally_->params_;
-  GenerateReservoirs();
-  InitializeWeights();
-  SetParameters();
-  if (!Sys::test_mode_.empty()) {
-    InitializeTestEnvironment();
-    InitializeTestEvents();
-    return;
-  }
-  InitializeEvents();
-}
-
 void ProteinManager::GenerateReservoirs() {
 
   size_t reservoir_size{0};
-  for (int i_mt{0}; i_mt < params_->filaments.count; i_mt++) {
-    reservoir_size += params_->filaments.length[i_mt];
+  for (int i_mt{0}; i_mt < Params::Filaments::count; i_mt++) {
+    reservoir_size += Params::Filaments::n_sites[i_mt];
   }
-  size_t step_active{size_t(params_->motors.t_active / params_->dt)};
-  motors_.Initialize(wally_, params_, _id_motor, reservoir_size, step_active);
-  xlinks_.Initialize(wally_, params_, _id_xlink, reservoir_size, 0);
+  size_t motor_step_active{size_t(Params::Motors::t_active / Params::dt)};
+  size_t xlink_step_active(size_t(Params::Xlinks::t_active / Params::dt));
+  motors_.Initialize(_id_motor, reservoir_size, motor_step_active);
+  xlinks_.Initialize(_id_xlink, reservoir_size, xlink_step_active);
 }
 
 void ProteinManager::InitializeWeights() {
@@ -54,10 +37,10 @@ void ProteinManager::InitializeWeights() {
   double lambda_neighb{1.0};
   double dE{0.0};
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
-    dE = -1 * params_->motors.interaction_energy * n_neighbs;
+    dE = -1 * Params::Motors::neighb_neighb_energy * n_neighbs;
     motors_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * dE);
     motors_.weights_[name].unbind_[n_neighbs] = exp(lambda_neighb * dE);
-    dE = -1 * params_->xlinks.interaction_energy * n_neighbs;
+    dE = -1 * Params::Xlinks::neighb_neighb_energy * n_neighbs;
     xlinks_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - lambda_neighb) * dE);
     xlinks_.weights_[name].unbind_[n_neighbs] = exp(lambda_neighb * dE);
   }
@@ -66,30 +49,30 @@ void ProteinManager::InitializeWeights() {
 void ProteinManager::SetParameters() {
 
   Str name{"bruh"};
-  double dt{params_->dt};
-  double kbT{params_->kbT};
+  double dt{Params::dt};
+  double kbT{Params::kbT};
 
   // Bind I
   name = "bind_i";
   motors_.p_event_[name].val_ =
-      params_->motors.k_on * params_->motors.c_bulk * dt;
+      Params::Motors::k_on * Params::Motors::c_bulk * dt;
   xlinks_.p_event_[name].InitVals(_n_neighbs_max + 1);
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     xlinks_.p_event_[name].vals_[0][0][n_neighbs] =
-        xlinks_.weights_["neighbs"].bind_[n_neighbs] * params_->xlinks.k_on *
-        params_->xlinks.c_bulk * dt;
+        xlinks_.weights_["neighbs"].bind_[n_neighbs] * Params::Xlinks::k_on *
+        Params::Xlinks::c_bulk * dt;
   }
   // Bind_I_Teth
   // Bind_II
   // Unbind_II
   // Unbind_I
   name = "unbind_i";
-  motors_.p_event_[name].val_ = params_->motors.k_off_i * dt;
+  motors_.p_event_[name].val_ = Params::Motors::k_off_i * dt;
   xlinks_.p_event_[name].InitVals(_n_neighbs_max + 1);
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     xlinks_.p_event_[name].vals_[0][0][n_neighbs] =
         xlinks_.weights_["neighbs"].unbind_[n_neighbs] *
-        params_->xlinks.k_off_i * dt;
+        Params::Xlinks::k_off_i * dt;
   }
   // Unbind_I_Teth
   // Tether_Free
@@ -200,13 +183,4 @@ void ProteinManager::InitializeEvents() {
   // Diffusion
   // Bind_II_Teth
   // Unbind_II_Teth
-}
-
-void ProteinManager::UpdateLatticeDeformation() {}
-
-void ProteinManager::RunKMC() {
-
-  motors_.Update();
-  xlinks_.Update();
-  kmc_.ExecuteEvents();
 }

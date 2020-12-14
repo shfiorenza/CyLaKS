@@ -7,7 +7,10 @@ private:
   double radius_{0.0};
 
 public:
-  Sphere(size_t sid, size_t id, double radius)
-      : Object(sid, id), radius_{radius} {}
+  Sphere() {}
+  void Initialize(size_t sid, size_t id, double radius) {
+    Object::Initialize(sid, id);
+    radius_ = radius;
+  }
 };
 #endif

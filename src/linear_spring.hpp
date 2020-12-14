@@ -13,8 +13,11 @@ public:
 
 private:
 public:
-  LinearSpring(Object *parent)
-      : Object(parent->GetSpeciesID(), parent->GetID()), parent_{parent} {}
+  LinearSpring() {}
+  void Initialize(size_t sid, size_t id, Object *parent) {
+    Object::Initialize(sid, id);
+    parent_ = parent;
+  }
   void SetSpringConstant(double k_spring) { k_spring_ = k_spring; }
   void SetForce();
 };

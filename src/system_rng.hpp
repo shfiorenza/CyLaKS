@@ -24,6 +24,9 @@ public:
   double GetGaussianPDF(double x, double sigma) {
     return gsl_ran_gaussian_pdf(x, sigma);
   }
+  double GetGaussianNoise(double sigma) {
+    return gsl_ran_gaussian(rng_, sigma);
+  }
   void Shuffle(void *array, int length, int element_size) {
     gsl_ran_shuffle(rng_, array, length, element_size);
   }

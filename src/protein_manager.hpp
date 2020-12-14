@@ -4,28 +4,24 @@
 #include "motor.hpp"
 #include "protein.hpp"
 #include "reservoir.hpp"
+#include "system_namespace.hpp"
+#include "system_parameters.hpp"
+#include "system_rng.hpp"
 
-class Curator;
 class FilamentManager;
-struct SysParams;
-struct SysRNG;
 
 class ProteinManager {
 private:
   UMap<Str, Vec<double>> test_ref_;
   UMap<Str, Vec<Pair<size_t, size_t>>> test_stats_;
-  // WALLACE, MISTA
-  Curator *wally_{nullptr};
-  // Pointer to class that manages GSL functions (RNG, sampling, etc.)
-  // Pointers to global system params & props; same for all classes
-  SysParams *params_{nullptr};
+
   SysRNG *gsl_{nullptr};
+  FilamentManager *filaments_{nullptr};
 
 public:
-  EventManager kmc_;
   Reservoir<Motor> motors_;
   Reservoir<Protein> xlinks_;
-  FilamentManager *filaments_;
+  EventManager kmc_;
 
 private:
   void GenerateReservoirs();
@@ -36,11 +32,27 @@ private:
   void InitializeEvents();
 
 public:
-  ProteinManager();
-  void Initialize(Curator *wallace, SysParams *params);
-  void UpdateLatticeDeformation();
-  void UpdateExtensions();
-  void RunKMC();
+  ProteinManager() {}
+  void Initialize(SysRNG *gsl, FilamentManager *filaments) {
+    gsl_ = gsl;
+    filaments_ = filaments;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
+    if (!Sys::test_mode_.empty()) {
+      InitializeTestEnvironment();
+      InitializeTestEvents();
+      return;
+    }
+    InitializeEvents();
+  }
+  void UpdateLatticeDeformation() {}
+  void UpdateExtensions() {}
+  void RunKMC() {
+    motors_.PrepForKMC();
+    xlinks_.PrepForKMC();
+    kmc_.ExecuteEvents();
+  }
 };
 
 #endif

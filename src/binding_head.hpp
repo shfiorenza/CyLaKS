@@ -15,10 +15,16 @@ public:
 
 private:
 public:
-  // FIXME sid & id
-  BindingHead(Protein *parent, BindingHead *other_head, double radius)
-      : Sphere(0, 0, radius), other_head_{other_head} {}
-  BindingHead(size_t sid, size_t id, double r) : Sphere(sid, id, r) {}
+  BindingHead() {}
+  void Initialize(size_t sid, size_t id, double radius, Protein *parent_ptr,
+                  BindingHead *other_head_ptr) {
+    Sphere::Initialize(sid, id, radius);
+    parent_ = parent_ptr;
+    other_head_ = other_head_ptr;
+  }
+  void Initialize(size_t sid, size_t id, double radius) {
+    Sphere::Initialize(sid, id, radius);
+  }
 
   virtual bool Trailing() { return false; }
 

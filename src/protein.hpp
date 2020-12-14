@@ -18,9 +18,13 @@ private:
   void InitializeNeighborList();
 
 public:
-  Protein(size_t sid, size_t id)
-      : Object(sid, id), head_one_(this, &head_two_, _r_xlink_head),
-        head_two_(this, &head_one_, _r_xlink_head), spring_(this) {}
+  Protein() {}
+  void Initialize(size_t sid, size_t id) {
+    Object::Initialize(sid, id);
+    head_one_.Initialize(sid, id, _r_xlink_head, this, &head_two_);
+    head_two_.Initialize(sid, id, _r_xlink_head, this, &head_one_);
+    spring_.Initialize(sid, id, this);
+  }
 
   bool HasSatellite();
   void UntetherSatellite();

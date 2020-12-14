@@ -11,19 +11,22 @@ protected:
   double weight_unbind_{0.0};
 
 public:
-  bool occupied_{false};
+  size_t index_{0};
   BindingHead *occupant_{nullptr};
   Protofilament *filament_{nullptr};
 
 private:
 public:
-  BindingSite(size_t sid, size_t id, double radius, Protofilament *filament)
-      : Sphere(sid, id, radius), filament_{filament} {}
+  BindingSite() {}
+  void Initialize(size_t sid, size_t id, double radius, size_t index,
+                  Protofilament *filament) {
+    Sphere::Initialize(sid, id, radius);
+    index_ = index;
+    filament_ = filament;
+  }
 
   double GetWeight_Bind() { return weight_bind_; }
   double GetWeight_Unbind() { return weight_unbind_; }
-
-  bool HeadTrailing();
 
   size_t GetNeighborCount() { return 0; }
 };

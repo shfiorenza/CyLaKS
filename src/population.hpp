@@ -3,6 +3,7 @@
 #include "definitions.hpp"
 
 template <typename ENTRY_T> struct Population {
+private:
   Str name_;
   bool one_d_{true};
   Vec<int> min_indices_;
@@ -11,6 +12,8 @@ template <typename ENTRY_T> struct Population {
   Vec<ENTRY_T *> entries_;
   Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
   Fn<void(ENTRY_T *)> sort_;
+
+public:
   Population() {}
   Population(Str name, Vec3D<size_t> sizes, Vec4D<ENTRY_T *> entries,
              Fn<void(ENTRY_T *)> sort, Vec<double> i_min)

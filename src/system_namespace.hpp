@@ -4,7 +4,7 @@
 
 namespace Sys {
 
-inline std::string name_;
+inline std::string sim_name_;
 inline std::string test_mode_;
 inline std::string yaml_file_;
 
@@ -25,16 +25,9 @@ inline size_t i_step_{0};
 inline size_t i_datapoint_{0};
 
 template <typename... Args>
-inline void Log(size_t tier, const char *msg, const Args... args) {
-  if (verbosity_ < tier) {
-    return;
-  }
-  Log(msg, args...);
-}
-template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
   // Tag each log pintout in terminal w/ simulation name
-  printf("[%s] ", name_.c_str());
+  printf("[%s] ", sim_name_.c_str());
   // This is technically a horrendous vulnerability, but we don't care about
   // 'hackers' in our sim; also should never be linked to input
   int chars_printed{printf(msg, args..., "MISSING STRING")};
@@ -44,6 +37,13 @@ inline void Log(const char *msg, const Args... args) {
     fprintf(log_file_, "Fatal error in Curator::Log()\n *** EXITING ***\n");
     exit(1);
   }
+}
+template <typename... Args>
+inline void Log(size_t tier, const char *msg, const Args... args) {
+  if (verbosity_ < tier) {
+    return;
+  }
+  Log(msg, args...);
 }
 inline void ErrorExit(const char *fn_name) {
   Log("Fatal error in simulation.\n");

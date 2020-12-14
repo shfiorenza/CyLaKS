@@ -18,9 +18,13 @@ public:
 
 private:
 public:
-  // FIXME sid & id
-  CatalyticHead(Motor *parent, CatalyticHead *other_head, double radius)
-      : BindingHead(1, 1, radius), other_head_{other_head} {}
+  CatalyticHead() {}
+  void Initialize(size_t sid, size_t id, double radius, Motor *parent_ptr,
+                  CatalyticHead *other_head_ptr) {
+    BindingHead::Initialize(sid, id, radius);
+    parent_ = parent_ptr;
+    other_head_ = other_head_ptr;
+  }
 
   Ligand GetLigand() { return ligand_; }
   Motor *GetParent() { return parent_; }

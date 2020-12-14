@@ -1,10 +1,12 @@
 clear variables;
 
-%sim_name = 'run_mobility_baseline_Kif4A/mobility_baseline_Kif4A_80_0';
-sim_name = 'test';
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
+sim_name = 'test';
 movie_name = 'test';
+
+start_frame = 1; 
+frames_per_plot = 1000;
 movie_duration = 30; % in seconds
 
 % Open log file and parse it into param labels & their values
@@ -13,66 +15,35 @@ log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
 % Read in number of MTs
-n_mts = str2double(values{contains(params, "count")});
-
-if n_mts == 1
-    length_one = values{contains(params, "length")};
-    mt_lengths = sscanf(length_one, '%i');
-elseif n_mts == 2
-    [length_one, length_two] = values{contains(params, "length")};
-    mt_lengths(1) = sscanf(length_one, '%i');
-    mt_lengths(2) = sscanf(length_two, '%i');
-else
-    disp("Error -- more than 2 MTs not implemented yet")
-    return
+n_mts = str2double(values{contains(params, "count ")});
+mt_lengths = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+   string = sprintf("n_sites[%i] ", i_mt - 1);
+   mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
 end
-
 % Read in system params
-delta_t = sscanf(values{contains(params, "delta_t")}, '%g');
-total_steps = str2double(values{contains(params, "n_steps")});
-data_threshold = sscanf(values{contains(params, "data_threshold")}, '%g');
-
-if any(contains(params, "DATA_THRESHOLD") ~= 0)
-    data_threshold = str2double(values{contains(params, "DATA_THRESHOLD")});
-end
-
-n_steps = total_steps - data_threshold;
-% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-n_datapoints = str2double(values{contains(params, "n_datapoints")});
-time_per_datapoint = delta_t * n_steps / n_datapoints;
+dt = sscanf(values{contains(params, "dt ")}, '%g');
+steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
+time_per_datapoint = dt * steps_per_datapoint;
+n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 % Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, "N_DATAPOINTS") ~= 0)
-    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
+if any(contains(params, "N_DATAPOINTS ") ~= 0)
+    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
-
+n_dims = 2;
 site_size = 0.008; % in um
 max_sites = max(mt_lengths);
 xlink_cutoff = 5;
 teth_cutoff = 19;
 
-start_frame = 1; %n_datapoints - 1000;
-frames_per_plot = 1000;
-end_frame = n_datapoints;
-
 % Colors
 blue = [30 144 255] / 255;
 purple = [128 0 128] / 255;
 
-% File info
-mtFileName = '%s_mt_coord.file';
-motorFileName = '%s_motorID.file';
-motorHeadFileName = '%s_motor_head_status.file';
-xlinkFileName = '%s_xlinkID.file';
-tethFileName = '%s_tether_coord.file';
-mtFile = sprintf(fileDirectory, sprintf(mtFileName, sim_name));
-motorFile = sprintf(fileDirectory, sprintf(motorFileName, sim_name));
-motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, sim_name));
-xlinkFile = sprintf(fileDirectory, sprintf(xlinkFileName, sim_name));
-tethFile = sprintf(fileDirectory, sprintf(tethFileName, sim_name));
-
 % Figure parameters (i.e., how they appear)
 site_height = 1;
 site_width = 1;
+end_frame = n_datapoints;
 active_frames = end_frame - start_frame;
 
 % Videowriter details
@@ -85,62 +56,60 @@ frame_box = [0 0 1445 200];
 fig1 = figure;
 set(fig1, 'Position', [0 100 1500 400]);
 
-mt_data = zeros(n_mts, n_datapoints);
+% File info
+filamentFileName = '%s_filament_pos.file';
+proteinFileName = '%s_protein_id.file';
+tethFileName = '%s_tether_anchor_pos.file';
+motorHeadFileName = '%s_motor_head_trailing.file';
+filamentFile = sprintf(fileDirectory, sprintf(filamentFileName, sim_name));
+proteinFile = sprintf(fileDirectory, sprintf(proteinFileName, sim_name));
+tethFile = sprintf(fileDirectory, sprintf(tethFileName, sim_name));
+motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, sim_name));
 
-if isfile(mtFile)
-    mt_data_file = fopen(mtFile);
-    mt_raw_data = fread(mt_data_file, [n_mts * n_datapoints], '*int');
-    fclose(mt_data_file);
-    mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
+filament_pos = zeros(n_mts, n_datapoints);
+if isfile(filamentFile)
+    file = fopen(filamentFile);
+    data = fread(file, 2*n_dims * n_mts * n_datapoints, '*double');
+    fclose(file);
+    filament_pos = reshape(data, n_dims,2, n_mts, n_datapoints);
 end
-
-motor_data = zeros(max_sites, n_mts, n_datapoints) - 1;
-
-if isfile(motorFile)
-    motor_data_file = fopen(motorFile);
-    motor_raw_data = fread(motor_data_file, [n_mts * max_sites * n_datapoints], '*int');
-    fclose(motor_data_file);
-    motor_data = reshape(motor_raw_data, max_sites, n_mts, n_datapoints);
+protein_ids = zeros(max_sites, n_mts, n_datapoints) - 1;
+if isfile(proteinFile)
+    %{
+    file = fopen(proteinFile);
+    data = fread(file, n_mts * max_sites * n_datapoints, '*int');
+    fclose(file);
+    protein_ids = reshape(data, max_sites, n_mts, n_datapoints);
+    %}
 end
-
-motor_head_data = zeros(max_sites, n_mts, n_datapoints);
-
-if isfile(motorHeadFile)
-    motor_head_status_file = fopen(motorHeadFile);
-    motor_head_raw_data = fread(motor_head_status_file, [n_mts * max_sites * n_datapoints], '*bool');
-    fclose(motor_head_status_file);
-    motor_head_data = reshape(motor_head_raw_data, max_sites, n_mts, n_datapoints);
-end
-
-xlink_data = zeros(max_sites, n_mts, n_datapoints) - 1;
-
-if isfile(xlinkFile)
-    xlink_data_file = fopen(xlinkFile);
-    xlink_raw_data = fread(xlink_data_file, [n_mts * max_sites * n_datapoints], '*int');
-    fclose(xlink_data_file);
-    xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
-end
-
 teth_data = zeros(max_sites, n_mts, n_datapoints) - 1;
-
 if isfile(tethFile)
-    teth_data_file = fopen(tethFile);
-    teth_raw_data = fread(teth_data_file, [n_mts * max_sites * n_datapoints], '*double');
-    fclose(teth_data_file);
-    teth_data = reshape(teth_raw_data, max_sites, n_mts, n_datapoints);
+    %{
+    file = fopen(tethFile);
+    data = fread(file, [n_mts * max_sites * n_datapoints], '*double');
+    fclose(file);
+    teth_data = reshape(data, max_sites, n_mts, n_datapoints);
+    %}
+end
+motor_trailing = zeros(max_sites, n_mts, n_datapoints);
+if isfile(motorHeadFile)
+    %{
+    file = fopen(motorHeadFile);
+    data = fread(file, [n_mts * max_sites * n_datapoints], '*bool');
+    fclose(file);
+    motor_trailing = reshape(data, max_sites, n_mts, n_datapoints);
+    %}
 end
 
 % Run through all datapoints; each one is a frame in our movie
-for i_data = start_frame:frames_per_plot:end_frame
-
+for i_data = start_frame : frames_per_plot : end_frame
     % Clear figure so that it only displays figures from current datapoint
     clf;
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
     hold all;
     ax.XLim = [0 (max_sites + 1)];
-    % ax.Xlim = [0 250];
-    ax.YLim = [-1 11];
+    ax.YLim = [-1 100];
     ax.TickLength = [0 0];
     ax.XTick = [0:(max_sites / 5):max_sites];
     ax.XTickLabel = {0, 0.008 * max_sites / 5, 0.008 * 2 * max_sites / 5, ...
@@ -152,12 +121,13 @@ for i_data = start_frame:frames_per_plot:end_frame
     for i_mt = 1:1:n_mts
         n_sites = mt_lengths(i_mt);
 
-        mt_pos = double(mt_data(i_mt, i_data) * site_width);
-        first_pos = mt_data(1, i_data) * site_width;
+           %{
+        mt_pos = double(filament_pos(i_mt, i_data) * site_width);
+        first_pos = filament_pos(1, i_data) * site_width;
         mt_height = 8 * (i_mt - 1) * site_height;
 
         if (n_mts > 1)
-            second_pos = mt_data(2, i_data) * site_width + 1;
+            second_pos = filament_pos(2, i_data) * site_width + 1;
             %{
             left = first_pos;
             right = second_pos + n_sites + 1;
@@ -177,13 +147,19 @@ for i_data = start_frame:frames_per_plot:end_frame
             %ax.XLim = [first_pos-1 first_pos + 250];
             ax.XLim = [first_pos (first_pos + n_sites + 1)];
         end
+        %}
+       % rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...
+        %    'FaceColor', [0.8 0.8 0.8], 'Curvature', [0 0]);
+        
+        plus_pos = filament_pos(:, 1, i_mt, i_data);
+        minus_pos = filament_pos(:, 2, i_mt, i_data);
+        
+        line([plus_pos(1), minus_pos(1)],[plus_pos(2), minus_pos(2)], 'LineWidth', 2);
 
-        rectangle('Position', [mt_pos mt_height (n_sites + 1) site_height], ...
-            'FaceColor', [0.8 0.8 0.8], 'Curvature', [0 0]);
-
+           %{
         % Draw motors
-        motor_IDs = motor_data(:, i_mt, i_data);
-        motor_head_trailing = motor_head_data(:, i_mt, i_data);
+        motor_IDs = protein_ids(:, i_mt, i_data);
+        motor_head_trailing = motor_trailing(:, i_mt, i_data);
 
         for i_motor = 1:1:n_sites
             motor_pos = i_motor * site_width + mt_pos - 1;
@@ -311,11 +287,11 @@ for i_data = start_frame:frames_per_plot:end_frame
 
             if (mod(i_mt, 2) == 0)
                 neighb_IDs = xlink_data(:, i_mt - 1, i_data);
-                neighb_mt_pos = mt_data(i_mt - 1, i_data) * site_width;
+                neighb_mt_pos = filament_pos(i_mt - 1, i_data) * site_width;
                 neighb_mt_height = 8 * (i_mt - 2) * site_height;
             else
                 neighb_IDs = xlink_data(:, i_mt + 1, i_data);
-                neighb_mt_pos = mt_data(i_mt + 1, i_data) * site_width;
+                neighb_mt_pos = filament_pos(i_mt + 1, i_data) * site_width;
                 neighb_mt_height = 8 * (i_mt) * site_height;
             end
 
@@ -436,8 +412,8 @@ for i_data = start_frame:frames_per_plot:end_frame
                 end
             end
         end
+      %}
     end
-
     dim = [0.0105 0.62 .3 .3];
     time = (i_data - 1) * time_per_datapoint;
     %time = time - 500;
@@ -449,3 +425,4 @@ for i_data = start_frame:frames_per_plot:end_frame
 end
 
 close(v);
+%}

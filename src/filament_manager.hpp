@@ -2,44 +2,79 @@
 #define _CYLAKS_FILAMENT_MANAGER_HPP_
 #include "population.hpp"
 #include "protofilament.hpp"
+#include "system_namespace.hpp"
+#include "system_parameters.hpp"
+#include "system_rng.hpp"
 
-class BindingSite;
-class Curator;
-struct SysParams;
-struct SysRNG;
+class ProteinManager;
 
 class FilamentManager {
 private:
   bool up_to_date_{false};
 
-  bool immobile_{true};
+  size_t n_bd_iterations_{0};
+  double dt_eff_{0.0};
 
   Vec<BindingSite *> sites_;
 
-  Curator *wally_{nullptr};
-  SysParams *params_{nullptr};
   SysRNG *gsl_{nullptr};
+  ProteinManager *proteins_{nullptr};
 
 public:
   bool mobile_{false};
-  Vec<Protofilament> list_;
+  Vec<Protofilament> proto_;
 
-  UMap<Str, Population<BindingSite>> unocc_;
+  UMap<Str, Population<BindingSite>> unoccupied_;
 
 private:
+  void SetParameters();
   void GenerateFilaments();
+  void InitializeTestEnvironment();
+
+  bool NoMobileFilamentsYet();
+
+  void UpdateProteins();
+  void UpdateLattice();
 
 public:
   FilamentManager() {}
-  void Initialize(Curator *wally, SysParams *params) {
-    wally_ = wally;
-    params_ = params;
+  void Initialize(SysRNG *gsl, ProteinManager *proteins) {
+    gsl_ = gsl;
+    proteins_ = proteins;
+    if (!Sys::test_mode_.empty()) {
+      return;
+    }
+    SetParameters();
     GenerateFilaments();
   }
-
   void FlagForUpdate() { up_to_date_ = false; }
-  void UpdateUnoccupied();
-
-  void RunBD();
+  void UpdateUnoccupied() {
+    if (up_to_date_) {
+      return;
+    }
+    up_to_date_ = true;
+    for (auto &&pop : unoccupied_) {
+      pop.second.ZeroOut();
+    }
+    for (auto &&site : sites_) {
+      if (site->occupant_ != nullptr) {
+        continue;
+      }
+      unoccupied_["motors"].AddEntry(site);
+      unoccupied_["xlinks"].AddEntry(site, site->GetNeighborCount());
+    }
+    UpdateLattice();
+  }
+  void RunBD() {
+    if (NoMobileFilamentsYet()) {
+      return;
+    }
+    for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
+      UpdateProteins();
+      for (auto &&filament : proto_) {
+        filament.UpdatePosition(dt_eff_);
+      }
+    }
+  }
 };
 #endif

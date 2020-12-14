@@ -15,7 +15,7 @@ private:
     FILE *fileptr_;
     DataFile() {}
     DataFile(Str name) : name_{name} {
-      filename_ = Sys::name_ + "_" + name_ + ".file";
+      filename_ = Sys::sim_name_ + "_" + name_ + ".file";
       fileptr_ = fopen(filename_.c_str(), "w");
       if (fileptr_ == nullptr) {
         printf("Error; cannot open '%s'\n", filename_.c_str());
@@ -31,15 +31,15 @@ private:
     }
   };
   UMap<Str, DataFile> data_files_;
-  size_t n_steps_per_snapshot_;
+  size_t n_steps_per_snapshot_{0};
+
+  size_t n_sites_max_{0};
 
   SysTimepoint start_time_;
 
 public:
   ProteinManager proteins_;
   FilamentManager filaments_;
-
-  SysParams params_;
   SysRNG gsl_;
 
 private:

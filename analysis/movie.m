@@ -2,11 +2,11 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test';
-movie_name = 'test';
+sim_name = 'test2';
 
+movie_name = 'test';
 start_frame = 1; 
-frames_per_plot = 1000;
+frames_per_plot = 1;
 movie_duration = 30; % in seconds
 
 % Open log file and parse it into param labels & their values
@@ -54,7 +54,7 @@ frame_box = [0 0 1445 200];
 
 % Figure details
 fig1 = figure;
-set(fig1, 'Position', [0 100 1500 400]);
+set(fig1, 'Position', [0 100 400 400]);
 
 % File info
 filamentFileName = '%s_filament_pos.file';
@@ -108,20 +108,22 @@ for i_data = start_frame : frames_per_plot : end_frame
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.01 0.16 0.98 0.76]);
     hold all;
-    ax.XLim = [0 (max_sites + 1)];
-    ax.YLim = [-1 100];
+    ax.XLim = [-500 500];
+    ax.YLim = [-500 500];
+    %{
     ax.TickLength = [0 0];
     ax.XTick = [0:(max_sites / 5):max_sites];
     ax.XTickLabel = {0, 0.008 * max_sites / 5, 0.008 * 2 * max_sites / 5, ...
                     0.008 * 3 * max_sites / 5, 0.008 * 4 * max_sites / 5, 0.008 * max_sites};
     ax.YTickLabel = {};
     ax.XLabel.String = 'Distance from plus-end (microns)';
+    %}
 
     % Draw MTs
     for i_mt = 1:1:n_mts
+        %{
         n_sites = mt_lengths(i_mt);
-
-           %{
+ 
         mt_pos = double(filament_pos(i_mt, i_data) * site_width);
         first_pos = filament_pos(1, i_data) * site_width;
         mt_height = 8 * (i_mt - 1) * site_height;
@@ -153,6 +155,8 @@ for i_data = start_frame : frames_per_plot : end_frame
         
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
+        
+        length = sqrt((plus_pos(1) - minus_pos(1))^2 + (plus_pos(2) - minus_pos(2))^2)
         
         line([plus_pos(1), minus_pos(1)],[plus_pos(2), minus_pos(2)], 'LineWidth', 2);
 

@@ -21,8 +21,6 @@ private:
 
   UMap<Str, double> param_vals_;
 
-  SysRNG *gsl_{nullptr};
-
 protected:
   struct ProbEntry {
     Str event_name_;
@@ -87,7 +85,7 @@ public:
     SetParameters();
   }
   ENTRY_T *GetFreeEntry() {
-    size_t i_entry = gsl_->GetRanInt(reservoir_.size());
+    size_t i_entry = SysRNG::GetRanInt(reservoir_.size());
     ENTRY_T *entry = &reservoir_[i_entry];
     while (entry->n_heads_active_ > 0 or entry->tethered_) {
       i_entry++;

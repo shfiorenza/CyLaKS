@@ -303,20 +303,14 @@ void Curator::InitializeSimulation() {
   Log("    n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
   Log("    n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
   // Initialize sim objects
-  gsl_.Initialize(seed);
-  proteins_.Initialize(&gsl_, &filaments_);
-  filaments_.Initialize(&gsl_, &proteins_);
-  // Sys::Log("---\n");
+  SysRNG::Initialize(seed);
+  proteins_.Initialize(&filaments_);
+  filaments_.Initialize(&proteins_);
   for (auto const &pf : filaments_.proto_) {
     if (pf.sites_.size() > n_sites_max_) {
       n_sites_max_ = pf.sites_.size();
     }
-    Sys::Log("plus-end: (%g, %g)\n", pf.plus_end_->pos_[0],
-             pf.plus_end_->pos_[1]);
-    Sys::Log("minus_end: (%g, %g)\n", pf.minus_end_->pos_[0],
-             pf.minus_end_->pos_[1]);
   }
-  // exit(1);
   Log("\n");
 }
 

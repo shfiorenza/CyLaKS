@@ -12,6 +12,7 @@ void Protofilament::SetParameters() {
   polarity_ = polarity[index_];
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   immobile_until_ = immobile_until[index_] / dt;
+  dt_eff_ = dt / n_bd_per_kmc;
   double ar{length_ / (2 * radius)};                // unitless aspect ratio
   double eta_adj{eta * 1e-06};                      // pN*s/nm^2
   double pi{M_PI};                                  // literally just pi
@@ -50,6 +51,59 @@ void Protofilament::GenerateSites() {
   center_index_ = double(n_sites - 1) / 2;
 }
 
+void Protofilament::UpdateRodPosition() {
+
+  // Independent terms for rod trans/rotational diffusion
+  double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
+  double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
+  double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
+  // Construct body_frame matrix, which transforms rod body to lab frame
+  // First row is a unit vector (in lab frame) along length of rod
+  // Second row is a unit vector (in lab frame) perpendicular to length of rod
+  // Third row (in 3-D only) is the same as 2nd, but also perpendicular to that
+  double body_frame[2][_n_dims_max];
+  body_frame[0][0] = orientation_[0];
+  body_frame[0][1] = orientation_[1];
+  body_frame[1][0] = orientation_[1];
+  body_frame[1][1] = -orientation_[0];
+  /* c.f. Tao et al., J. Chem. Phys. (2005); doi.org/10.1063/1.1940031 */
+  // Construct xi tensor
+  double xi[_n_dims_max][_n_dims_max];
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    for (int j_dim{i_dim}; j_dim < _n_dims_max; j_dim++) {
+      double uiuj{orientation_[i_dim] * orientation_[j_dim]};
+      xi[i_dim][j_dim] = xi[j_dim][i_dim] = uiuj * (gamma_[0] - gamma_[1]);
+      if (i_dim == j_dim) {
+        xi[i_dim][j_dim] += gamma_[1];
+      }
+    }
+  }
+  // Calculate inverse of xi tensor, which will be used to find velocity
+  double xi_inv[_n_dims_max][_n_dims_max];
+  double det{xi[0][0] * xi[1][1] - xi[0][1] * xi[1][0]};
+  xi_inv[0][0] = xi[1][1] / det;
+  xi_inv[0][1] = -xi[1][0] / det;
+  xi_inv[1][0] = -xi[0][1] / det;
+  xi_inv[1][1] = xi[0][0] / det;
+  // Apply translationl and rotational displacements
+  Vec<double> torque_proj{Cross(torque_, orientation_)};
+  double u_norm{0.0};
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    for (int j_dim{0}; j_dim < _n_dims_max; j_dim++) {
+      pos_[i_dim] += xi_inv[i_dim][j_dim] * force_[j_dim] * dt_eff_;
+    }
+    pos_[i_dim] += body_frame[0][i_dim] * noise_par;
+    pos_[i_dim] += body_frame[1][i_dim] * noise_perp;
+    orientation_[i_dim] += torque_proj[i_dim] * dt_eff_ / gamma_[2];
+    orientation_[i_dim] += body_frame[1][i_dim] * noise_rot;
+    u_norm += Square(orientation_[i_dim]);
+  }
+  // Re-normalize orientation vector
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    orientation_[i_dim] /= sqrt(u_norm);
+  }
+}
+
 void Protofilament::UpdateSitePositions() {
 
   for (auto &&site : sites_) {
@@ -59,11 +113,7 @@ void Protofilament::UpdateSitePositions() {
       dist *= Params::Filaments::site_size; // convert to nm
       // Orientation always points towards increasing site index
       site.pos_[i_dim] = pos_[i_dim] + dist * Dot(orientation_, i_dim);
-      // Sys::Log("%g\n", Dot(orientation_, i_dim));
-      // Sys::Log("%g\n", dist);
-      // Sys::Log("%g\n", site.pos_[i_dim]);
     }
-    // Sys::Log("site %i: (%g, %g)\n", site.index_, site.pos_[0], site.pos_[1]);
   }
   /*
   Sys::Log("%zu & %zu\n", plus_end_->pos_.size(), minus_end_->pos_.size());

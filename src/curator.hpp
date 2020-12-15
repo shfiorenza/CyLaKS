@@ -32,7 +32,6 @@ private:
   };
   UMap<Str, DataFile> data_files_;
   size_t n_steps_per_snapshot_{0};
-
   size_t n_sites_max_{0};
 
   SysTimepoint start_time_;
@@ -40,7 +39,6 @@ private:
 public:
   ProteinManager proteins_;
   FilamentManager filaments_;
-  SysRNG gsl_;
 
 private:
   void CheckArgs(int argc, char *agrv[]);
@@ -63,8 +61,8 @@ public:
     GenerateDataFiles();
   }
   void EvolveSimulation() {
-    proteins_.RunKMC();
     filaments_.RunBD();
+    proteins_.RunKMC();
     CheckPrintProgress();
     OutputData();
   }

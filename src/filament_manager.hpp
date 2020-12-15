@@ -17,7 +17,6 @@ private:
 
   Vec<BindingSite *> sites_;
 
-  SysRNG *gsl_{nullptr};
   ProteinManager *proteins_{nullptr};
 
 public:
@@ -38,8 +37,7 @@ private:
 
 public:
   FilamentManager() {}
-  void Initialize(SysRNG *gsl, ProteinManager *proteins) {
-    gsl_ = gsl;
+  void Initialize(ProteinManager *proteins) {
     proteins_ = proteins;
     if (!Sys::test_mode_.empty()) {
       return;
@@ -72,7 +70,7 @@ public:
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
       UpdateProteins();
       for (auto &&filament : proto_) {
-        filament.UpdatePosition(dt_eff_);
+        filament.UpdatePosition();
       }
     }
   }

@@ -41,7 +41,7 @@ void Event::SetTargets_Poisson() {
   // Select n_expected_ entries at random
   for (int i_set{0}; i_set < n_expected_; i_set++) {
     double p_cum{0.0};
-    double ran{gsl_->GetRanProb()};
+    double ran{SysRNG::GetRanProb()};
     for (int i_entry{0}; i_entry < *n_avail_; i_entry++) {
       p_cum += poisson_.weights_[i_entry] / poisson_.weight_total_;
       if (ran < p_cum) {

@@ -61,4 +61,8 @@ inline double Dot(Vec<double> a, int i_dim) {
     break;
   }
 }
+// Pseudo cross-product in 2-D (torque is a scalar; in/out of page)
+inline Vec<double> Cross(double tq, Vec<double> u) {
+  return {-tq * u[1], tq * u[0]};
+}
 #endif

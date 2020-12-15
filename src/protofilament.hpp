@@ -9,9 +9,8 @@
 class Protofilament : public RigidRod {
 private:
   size_t polarity_{0};
+  double dt_eff_{0.0};
   double center_index_{0.0};
-
-  SysRNG *gsl_{nullptr};
 
 public:
   size_t index_{0};
@@ -28,7 +27,8 @@ private:
   void SetParameters();
   void GenerateSites();
 
-  double GetNetForce();
+  void UpdateRodPosition();
+  void UpdateSitePositions();
 
 public:
   Protofilament() {}
@@ -38,15 +38,13 @@ public:
     SetParameters();
     GenerateSites();
     UpdateSitePositions();
-    Sys::Log("plus-end: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
-    Sys::Log("minus_end: (%g, %g)\n", minus_end_->pos_[0], minus_end_->pos_[1]);
   }
-  void UpdateSitePositions();
-  void UpdatePosition(double dt) {
-    // FIXME only for x-dim as of now
-    // double velocity{GetNetForce() / gamma_par_};
-    // double noise{gsl_->GetGaussianNoise(sigma_par_)};
-    // pos_[0] += velocity * dt + noise;
+  void UpdatePosition() {
+    if (Sys::i_step_ < immobile_until_) {
+      return;
+    }
+    UpdateRodPosition();
+    UpdateSitePositions();
   }
 };
 #endif

@@ -100,7 +100,7 @@ void ProteinManager::InitializeEvents() {
   //  Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n > 0) {
-      return gsl_->SampleBinomial(p, n);
+      return SysRNG::SampleBinomial(p, n);
     } else {
       return 0;
     }
@@ -108,7 +108,7 @@ void ProteinManager::InitializeEvents() {
   // Poisson distribution; sampled to predict events w/ variable probabilities
   auto poisson = [&](double p, int n) {
     if (p > 0.0) {
-      return gsl_->SamplePoisson(p);
+      return SysRNG::SamplePoisson(p);
     } else {
       return 0;
     }

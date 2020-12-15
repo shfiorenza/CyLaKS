@@ -10,6 +10,7 @@ protected:
   Vec<double> sigma_;  // Indicies: 0->par, 1->perp, 2->rot
 
 public:
+  double torque_{0.0};
   Vec<double> force_;       // In pN; zero'd out every timestep
   Vec<double> orientation_; // Unit vector
 

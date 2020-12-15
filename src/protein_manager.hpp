@@ -15,7 +15,6 @@ private:
   UMap<Str, Vec<double>> test_ref_;
   UMap<Str, Vec<Pair<size_t, size_t>>> test_stats_;
 
-  SysRNG *gsl_{nullptr};
   FilamentManager *filaments_{nullptr};
 
 public:
@@ -33,8 +32,7 @@ private:
 
 public:
   ProteinManager() {}
-  void Initialize(SysRNG *gsl, FilamentManager *filaments) {
-    gsl_ = gsl;
+  void Initialize(FilamentManager *filaments) {
     filaments_ = filaments;
     GenerateReservoirs();
     InitializeWeights();

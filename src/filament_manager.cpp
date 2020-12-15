@@ -9,6 +9,8 @@ void FilamentManager::SetParameters() {
       mobile_ = true;
     }
   }
+  n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
+  dt_eff_ = Params::dt / n_bd_iterations_;
 }
 
 void FilamentManager::GenerateFilaments() {

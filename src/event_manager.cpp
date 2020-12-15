@@ -5,11 +5,7 @@
 
 EventManager::EventManager() {}
 
-void EventManager::Initialize(Curator *wally) {
-
-  wally_ = wally;
-  // gsl_ = w
-}
+void EventManager::Initialize() {}
 
 void EventManager::SampleEventStatistics() {
 
@@ -41,7 +37,7 @@ void EventManager::SampleEventStatistics() {
       if (tar_i == tar_j) {
         double p_one{event_i->p_occur_};
         double p_two{event_j->p_occur_};
-        double ran{gsl_->GetRanProb()};
+        double ran{SysRNG::GetRanProb()};
         if (ran < p_one / (p_one + p_two)) {
           event_i->RemoveTarget(active_events[i_entry].second);
           active_events[i_entry] = active_events[n_events_to_exe_ - 1];
@@ -75,7 +71,7 @@ void EventManager::GenerateExecutionSequence() {
     Sys::ErrorExit("K_MGMT::GenerateExecutionSequence()");
   }
   if (n_events_to_exe_ > 1) {
-    gsl_->Shuffle(pre_array, n_events_to_exe_, sizeof(Event *));
+    SysRNG::Shuffle(pre_array, n_events_to_exe_, sizeof(Event *));
   }
   if (n_events_to_exe_ > events_to_exe_.size()) {
     events_to_exe_.resize(n_events_to_exe_);

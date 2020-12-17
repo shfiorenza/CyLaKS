@@ -25,9 +25,16 @@ public:
     filament_ = filament;
   }
 
+  bool IsOccupied() {
+    if (occupant_ == nullptr) {
+      return false;
+    }
+    return true;
+  }
+
   double GetWeight_Bind() { return weight_bind_; }
   double GetWeight_Unbind() { return weight_unbind_; }
 
-  size_t GetNeighborCount() { return 0; }
+  int GetNeighborCount() { return 0; }
 };
 #endif

@@ -15,15 +15,14 @@ private:
   size_t n_bd_iterations_{0};
   double dt_eff_{0.0};
 
-  Vec<BindingSite *> sites_;
-
   ProteinManager *proteins_{nullptr};
 
 public:
   bool mobile_{false};
   Vec<Protofilament> proto_;
+  Vec<BindingSite *> sites_;
 
-  UMap<Str, Population<BindingSite>> unoccupied_;
+  Map<Str, Population<Object>> unoccupied_;
 
 private:
   void SetParameters();
@@ -45,6 +44,14 @@ public:
     SetParameters();
     GenerateFilaments();
   }
+  void AddPop(Str name, Fn<bool(Object *)> sort) {
+    unoccupied_.emplace(name, Population<Object>(name, sort, sites_.size()));
+  }
+  void AddPop(Str name, Fn<bool(Object *)> sort, Vec<size_t> i_size,
+              Vec<int> i_min, Fn<Vec<int>(Object *)> get_i) {
+    Vec<size_t> sz{i_size[0], i_size[1], i_size[2], sites_.size()};
+    unoccupied_.emplace(name, Population<Object>(name, sort, sz, i_min, get_i));
+  }
   void FlagForUpdate() { up_to_date_ = false; }
   void UpdateUnoccupied() {
     if (up_to_date_) {
@@ -54,24 +61,22 @@ public:
     for (auto &&pop : unoccupied_) {
       pop.second.ZeroOut();
     }
-    for (auto &&site : sites_) {
-      if (site->occupant_ != nullptr) {
-        continue;
+    for (auto const &site : sites_) {
+      for (auto &&pop : unoccupied_) {
+        pop.second.Sort(site);
       }
-      unoccupied_["motors"].AddEntry(site);
-      unoccupied_["xlinks"].AddEntry(site, site->GetNeighborCount());
     }
-    UpdateLattice();
+    // UpdateLattice();
   }
   void RunBD() {
     if (NoMobileFilamentsYet()) {
       return;
     }
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
-      UpdateProteins();
       for (auto &&filament : proto_) {
         filament.UpdatePosition();
       }
+      UpdateProteins();
     }
   }
 };

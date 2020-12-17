@@ -271,7 +271,8 @@ void Curator::ParseParameters() {
   Sys::Log("    k_spring = %g pN/nm\n", Motors::k_spring);
   Sys::Log("    k_slack = %g pN/nm\n", Motors::k_slack);
   Sys::Log("  Crosslinker (xlink) parameters:\n");
-  Sys::Log("    neighb_neighb_energy = %g kbT\n", Xlinks::neighb_neighb_energy);
+  Sys::Log("    neighb_neighb_energy = -%g kbT\n",
+           Xlinks::neighb_neighb_energy);
   Sys::Log("    t_active = %g seconds\n", Xlinks::t_active);
   Sys::Log("    k_on = %g 1/nM*s\n", Xlinks::k_on);
   Sys::Log("    c_bulk = %g nM\n", Xlinks::c_bulk);
@@ -303,9 +304,9 @@ void Curator::InitializeSimulation() {
   Log("    n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
   Log("    n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
   // Initialize sim objects
-  SysRNG::Initialize(seed);
-  proteins_.Initialize(&filaments_);
   filaments_.Initialize(&proteins_);
+  proteins_.Initialize(&filaments_);
+  SysRNG::Initialize(seed);
   for (auto const &pf : filaments_.proto_) {
     if (pf.sites_.size() > n_sites_max_) {
       n_sites_max_ = pf.sites_.size();
@@ -316,11 +317,9 @@ void Curator::InitializeSimulation() {
 
 void Curator::GenerateDataFiles() {
 
-  if (filaments_.mobile_) {
-    // Open filament pos file, which stores the N-dim coordinates of the two
-    // endpoints of each filament every datapoint
-    AddDataFile("filament_pos");
-  }
+  // Open filament pos file, which stores the N-dim coordinates of the two
+  // endpoints of each filament every datapoint
+  AddDataFile("filament_pos");
   if (proteins_.motors_.active_ or proteins_.xlinks_.active_) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
@@ -414,16 +413,14 @@ void Curator::OutputData() {
     return;
   }
   for (auto &&pf : filaments_.proto_) {
-    if (filaments_.mobile_) {
-      double coord1[_n_dims_max];
-      double coord2[_n_dims_max];
-      for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-        coord1[i_dim] = (double)pf.plus_end_->pos_[i_dim];
-        coord2[i_dim] = (double)pf.minus_end_->pos_[i_dim];
-      }
-      data_files_.at("filament_pos").Write(coord1, _n_dims_max);
-      data_files_.at("filament_pos").Write(coord2, _n_dims_max);
+    double coord1[_n_dims_max];
+    double coord2[_n_dims_max];
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      coord1[i_dim] = (double)pf.plus_end_->pos_[i_dim];
+      coord2[i_dim] = (double)pf.minus_end_->pos_[i_dim];
     }
+    data_files_.at("filament_pos").Write(coord1, _n_dims_max);
+    data_files_.at("filament_pos").Write(coord2, _n_dims_max);
     if (!proteins_.motors_.active_ and !proteins_.xlinks_.active_) {
       continue;
     }

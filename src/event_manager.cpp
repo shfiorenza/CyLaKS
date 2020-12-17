@@ -86,6 +86,9 @@ void EventManager::ExecuteEvents() {
   SampleEventStatistics();
   GenerateExecutionSequence();
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
+    Sys::Log(1, "Executing event %s on protein #%i\n",
+             events_to_exe_[i_event]->name_.c_str(),
+             events_to_exe_[i_event]->targets_[0]->GetID());
     events_to_exe_[i_event]->Execute();
   }
 }

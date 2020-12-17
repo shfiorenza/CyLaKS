@@ -61,8 +61,8 @@ public:
     GenerateDataFiles();
   }
   void EvolveSimulation() {
-    filaments_.RunBD();
     proteins_.RunKMC();
+    filaments_.RunBD();
     CheckPrintProgress();
     OutputData();
   }

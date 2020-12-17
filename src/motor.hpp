@@ -27,8 +27,10 @@ public:
   BindingSite *GetDockSite();
   CatalyticHead *GetActiveHead();
   void ChangeConformation();
-  bool Bind(BindingSite *site, CatalyticHead *head);
-  bool Unbind(CatalyticHead *head);
+  bool Bind(BindingSite *site, CatalyticHead *head) {}
+  bool Unbind(CatalyticHead *head) {}
+
+  void UpdateExtension() {}
 };
 
 #endif

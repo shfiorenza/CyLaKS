@@ -29,6 +29,9 @@ public:
   bool HasSatellite();
   void UntetherSatellite();
 
+  int GetNumHeadsActive() { return n_heads_active_; }
+  int GetNeighborCount() { return 0; }
+
   void UpdateNeighborList();
   Object *GetWeightedNeighbor();
   BindingHead *GetActiveHead();
@@ -41,6 +44,8 @@ public:
   BindingSite *GetNeighbor_Bind_II_Teth();
 
   virtual double GetAnchorCoordinate() {}
+
+  virtual void UpdateExtension() {}
 
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);

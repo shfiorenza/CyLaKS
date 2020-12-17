@@ -4,24 +4,55 @@
 
 template <typename ENTRY_T> struct Population {
 private:
-  Str name_;
   bool one_d_{true};
+  // 1-d stuff
+  Fn<bool(ENTRY_T *)> is_a_member_;
+  // multi-dim stuff
   Vec<int> min_indices_;
-  size_t size_;
-  Vec3D<size_t> bin_size_; // [n_neighbs][x_dub][x]
-  Vec<ENTRY_T *> entries_;
-  Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
-  Fn<void(ENTRY_T *)> sort_;
+  Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;
+
+  void AddEntry(ENTRY_T *entry) { entries_[size_++] = entry; }
+  void AddEntry(ENTRY_T *entry, Vec<int> indices) {
+    int k{indices[0]};
+    int j{indices.size() > 1 ? indices[1] : 0};
+    int i{indices.size() > 2 ? indices[2] : 0};
+    // printf("entry added w/ ijk = %i%i%i\n", i, j, k);
+    bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry;
+    // printf("bin size = %i\n", bin_size_[i][j][k]);
+  }
 
 public:
+  Str name_;
+  size_t size_{0};
+  Vec<ENTRY_T *> entries_;
+  Vec3D<size_t> bin_size_;       // [n_neighbs][x_dub][x]
+  Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
   Population() {}
-  Population(Str name, Vec3D<size_t> sizes, Vec4D<ENTRY_T *> entries,
-             Fn<void(ENTRY_T *)> sort, Vec<double> i_min)
-      : name_{name}, bin_size_{sizes}, bin_entries_{entries}, sort_{sort},
-        min_indices_{i_min}, one_d_{false} {}
-  Population(Str name, size_t size, Vec<ENTRY_T *> entries,
-             Fn<void(ENTRY_T *)> sort)
-      : name_{name}, size_{size}, entries_{entries}, sort_{sort} {}
+  Population(Str name, Fn<bool(ENTRY_T *)> memcheck, size_t size_ceil)
+      : name_{name}, is_a_member_{memcheck} {
+    entries_.resize(size_ceil);
+  }
+  Population(Str name, Fn<bool(ENTRY_T *)> memcheck, Vec<size_t> size_ceil,
+             Vec<int> i_min, Fn<Vec<int>(ENTRY_T *)> getindices)
+      : name_{name}, is_a_member_{memcheck}, min_indices_{i_min},
+        get_bin_indices_{getindices}, one_d_{false} {
+    assert(size_ceil.size() == 4);
+    assert(min_indices_.size() == 3);
+    bin_size_.resize(size_ceil[0]);
+    bin_entries_.resize(size_ceil[0]);
+    for (int i{0}; i < bin_entries_.size(); i++) {
+      bin_size_[i].resize(size_ceil[1]);
+      bin_entries_[i].resize(size_ceil[1]);
+      for (int j{0}; j < bin_entries_[i].size(); j++) {
+        bin_size_[i][j].resize(size_ceil[2]);
+        bin_entries_[i][j].resize(size_ceil[2]);
+        for (int k{0}; k < bin_entries_[i][j].size(); k++) {
+          bin_size_[i][j][k] = 0;
+          bin_entries_[i][j][k].resize(size_ceil[3]);
+        }
+      }
+    }
+  }
   void ZeroOut() {
     if (one_d_) {
       size_ = 0;
@@ -35,10 +66,14 @@ public:
       }
     }
   }
-  void AddEntry(ENTRY_T *entry) { entries_[size_++] = entry; }
-  void AddEntry(ENTRY_T *entry, size_t i) {
-    bin_entries_[0][0][i][bin_size_[0][0][i]++] = entry;
+  void Sort(ENTRY_T *entry) {
+    if (is_a_member_(entry)) {
+      if (one_d_) {
+        AddEntry(entry);
+      } else {
+        AddEntry(entry, get_bin_indices_(entry));
+      }
+    }
   }
-  void Sort(ENTRY_T *entry) { sort_(entry); }
 };
 #endif

@@ -27,6 +27,12 @@ public:
   }
 
   virtual bool Trailing() { return false; }
+  int GetNeighborCount() {
+    printf("head\n");
+    return 0;
+  }
+
+  bool Unbind();
 
   Protein *GetParent() { return parent_; }
   BindingHead *GetOtherHead() { return other_head_; }

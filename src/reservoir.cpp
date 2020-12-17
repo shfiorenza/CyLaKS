@@ -12,6 +12,7 @@ void Reservoir<ENTRY_T>::GenerateEntries(size_t n_entries) {
   for (int i_entry{0}; i_entry < n_entries; i_entry++) {
     reservoir_[i_entry].Initialize(species_id_, Sys::n_unique_objects_++);
   }
+  active_entries_.resize(n_entries);
 }
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
@@ -78,9 +79,15 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
     return;
   }
   up_to_date_ = true;
+  for (auto &&pop : sorted_) {
+    pop.second.ZeroOut();
+  }
   for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
     ENTRY_T *entry{active_entries_[i_entry]};
+    // printf(" entry no %i (ID %i)\n", i_entry, entry->GetID());
+    // entry->UpdateExtension();
     for (auto &&pop : sorted_) {
+      // printf("  sorting %s\n", pop.second.name_.c_str());
       pop.second.Sort(entry);
     }
   }

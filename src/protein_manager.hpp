@@ -30,6 +30,8 @@ private:
   void InitializeTestEvents();
   void InitializeEvents();
 
+  void UpdateFilaments();
+
 public:
   ProteinManager() {}
   void Initialize(FilamentManager *filaments) {
@@ -47,6 +49,7 @@ public:
   void UpdateLatticeDeformation() {}
   void UpdateExtensions() {}
   void RunKMC() {
+    UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();
     kmc_.ExecuteEvents();

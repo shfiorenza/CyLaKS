@@ -5,7 +5,7 @@
 
 class Object;
 
-class Event {
+struct Event {
 private:
   enum Distribution { Binomial, Poisson };
   size_t n_executed_tot_{0};       // # of times event has been executed

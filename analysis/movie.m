@@ -2,11 +2,11 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test2';
+sim_name = 'test';
 
 movie_name = 'test';
 start_frame = 1; 
-frames_per_plot = 1;
+frames_per_plot = 10;
 movie_duration = 30; % in seconds
 
 % Open log file and parse it into param labels & their values
@@ -66,21 +66,19 @@ proteinFile = sprintf(fileDirectory, sprintf(proteinFileName, sim_name));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, sim_name));
 motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, sim_name));
 
-filament_pos = zeros(n_mts, n_datapoints);
+filament_pos = zeros(n_dims, 2, n_mts, n_datapoints);
 if isfile(filamentFile)
     file = fopen(filamentFile);
     data = fread(file, 2*n_dims * n_mts * n_datapoints, '*double');
     fclose(file);
-    filament_pos = reshape(data, n_dims,2, n_mts, n_datapoints);
+    filament_pos = reshape(data, n_dims, 2, n_mts, n_datapoints);
 end
 protein_ids = zeros(max_sites, n_mts, n_datapoints) - 1;
 if isfile(proteinFile)
-    %{
     file = fopen(proteinFile);
     data = fread(file, n_mts * max_sites * n_datapoints, '*int');
     fclose(file);
     protein_ids = reshape(data, max_sites, n_mts, n_datapoints);
-    %}
 end
 teth_data = zeros(max_sites, n_mts, n_datapoints) - 1;
 if isfile(tethFile)
@@ -121,9 +119,9 @@ for i_data = start_frame : frames_per_plot : end_frame
 
     % Draw MTs
     for i_mt = 1:1:n_mts
-        %{
+        
         n_sites = mt_lengths(i_mt);
- 
+        %{
         mt_pos = double(filament_pos(i_mt, i_data) * site_width);
         first_pos = filament_pos(1, i_data) * site_width;
         mt_height = 8 * (i_mt - 1) * site_height;
@@ -156,9 +154,17 @@ for i_data = start_frame : frames_per_plot : end_frame
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         
-        length = sqrt((plus_pos(1) - minus_pos(1))^2 + (plus_pos(2) - minus_pos(2))^2)
+        %length = sqrt((plus_pos(1) - minus_pos(1))^2 + (plus_pos(2) - minus_pos(2))^2)
         
         line([plus_pos(1), minus_pos(1)],[plus_pos(2), minus_pos(2)], 'LineWidth', 2);
+        
+        for i_site = 1 : n_sites
+            if(protein_ids(i_site, i_mt, i_data) ~= -1)
+                disp('BOOYA')
+                pos = [(i_site/n_sites - n_sites/2)*8 -25 50 50];
+                 rectangle('Position',pos,'FaceColor', purple, 'Curvature', [1 1]);
+            end
+        end
 
            %{
         % Draw motors
@@ -168,7 +174,7 @@ for i_data = start_frame : frames_per_plot : end_frame
         for i_motor = 1:1:n_sites
             motor_pos = i_motor * site_width + mt_pos - 1;
             motor_height = mt_height + site_height;
-            pseudo_height = motor_height + 1/2 * site_height;
+            pseudo_height = motor_height + 1/2 * site_height; i
             pseudo_dx = site_width;
             mt_dx = 1;
             motor_center_y = motor_height + site_height / 2;

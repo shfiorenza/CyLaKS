@@ -27,11 +27,11 @@ void Protofilament::SetParameters() {
   for (int i_dim{0}; i_dim < 3; i_dim++) {
     sigma_[i_dim] = sqrt(2 * kbT * dt_eff / gamma_[i_dim]); // nm or rad
     diffusion_const[i_dim] = kbT / gamma_[i_dim];           // nm^2/s or rad^2/s
-    Sys::Log(1, "     gamma_%s = %g pN*s%s\n", label[i_dim].c_str(),
+    Sys::Log(1, "    gamma_%s = %g pN*s%s\n", label[i_dim].c_str(),
              gamma_[i_dim], i_dim < 2 ? "/nm" : "*nm");
-    Sys::Log(1, "      sigma_%s = %g %s\n", label[i_dim].c_str(), sigma_[i_dim],
+    Sys::Log(2, "     sigma_%s = %g %s\n", label[i_dim].c_str(), sigma_[i_dim],
              i_dim < 2 ? "nm" : "rad");
-    Sys::Log(1, "       D_%s = %g %s^2/s\n", label[i_dim].c_str(),
+    Sys::Log(2, "      D_%s = %g %s^2/s\n", label[i_dim].c_str(),
              diffusion_const[i_dim], i_dim < 2 ? "nm" : "rad");
   }
 }
@@ -46,8 +46,8 @@ void Protofilament::GenerateSites() {
   }
   plus_end_ = &sites_[(n_sites - 1) * polarity_];
   minus_end_ = &sites_[(n_sites - 1) * (1.0 - polarity_)];
-  Sys::Log("    plus_end = site %i\n", plus_end_->index_);
-  Sys::Log("    minus_end = site %i\n", minus_end_->index_);
+  Sys::Log(2, "     plus_end = site %i\n", plus_end_->index_);
+  Sys::Log(2, "     minus_end = site %i\n", minus_end_->index_);
   center_index_ = double(n_sites - 1) / 2;
 }
 

@@ -1,12 +1,13 @@
 #ifndef _CYLAKS_POPULATION_HPP_
 #define _CYLAKS_POPULATION_HPP_
 #include "definitions.hpp"
+#include "system_namespace.hpp"
 
 template <typename ENTRY_T> struct Population {
 private:
   bool one_d_{true};
   // 1-d stuff
-  Fn<bool(ENTRY_T *)> is_a_member_;
+  Fn<ENTRY_T *(ENTRY_T *)> get_member_;
   // multi-dim stuff
   Vec<int> min_indices_;
   Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;
@@ -16,9 +17,12 @@ private:
     int k{indices[0]};
     int j{indices.size() > 1 ? indices[1] : 0};
     int i{indices.size() > 2 ? indices[2] : 0};
-    // printf("entry added w/ ijk = %i%i%i\n", i, j, k);
+    Sys::Log(1, "entry added w/ ijk = %i%i%i\n", i, j, k);
     bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry;
-    // printf("bin size = %i\n", bin_size_[i][j][k]);
+    if (entry->GetNumHeadsActive() == 2) {
+      bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry->GetOtherHead();
+    }
+    Sys::Log(1, "bin size = %i\n", bin_size_[i][j][k]);
   }
 
 public:
@@ -28,13 +32,14 @@ public:
   Vec3D<size_t> bin_size_;       // [n_neighbs][x_dub][x]
   Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
   Population() {}
-  Population(Str name, Fn<bool(ENTRY_T *)> memcheck, size_t size_ceil)
-      : name_{name}, is_a_member_{memcheck} {
+  Population(Str name, Fn<ENTRY_T *(ENTRY_T *)> getmember, size_t size_ceil)
+      : name_{name}, get_member_{getmember} {
     entries_.resize(size_ceil);
   }
-  Population(Str name, Fn<bool(ENTRY_T *)> memcheck, Vec<size_t> size_ceil,
-             Vec<int> i_min, Fn<Vec<int>(ENTRY_T *)> getindices)
-      : name_{name}, is_a_member_{memcheck}, min_indices_{i_min},
+  Population(Str name, Fn<ENTRY_T *(ENTRY_T *)> getmember,
+             Vec<size_t> size_ceil, Vec<int> i_min,
+             Fn<Vec<int>(ENTRY_T *)> getindices)
+      : name_{name}, get_member_{getmember}, min_indices_{i_min},
         get_bin_indices_{getindices}, one_d_{false} {
     assert(size_ceil.size() == 4);
     assert(min_indices_.size() == 3);
@@ -67,11 +72,12 @@ public:
     }
   }
   void Sort(ENTRY_T *entry) {
-    if (is_a_member_(entry)) {
+    ENTRY_T *member{get_member_(entry)};
+    if (member != nullptr) {
       if (one_d_) {
-        AddEntry(entry);
+        AddEntry(member);
       } else {
-        AddEntry(entry, get_bin_indices_(entry));
+        AddEntry(member, get_bin_indices_(member));
       }
     }
   }

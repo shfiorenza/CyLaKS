@@ -39,6 +39,7 @@ public:
     GenerateSites();
     UpdateSitePositions();
   }
+  BindingSite *GetNeighb(BindingSite *site, int delta);
   void UpdatePosition() {
     if (Sys::i_step_ < immobile_until_) {
       return;

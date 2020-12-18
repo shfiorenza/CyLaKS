@@ -101,10 +101,13 @@ public:
     }
     p_event_.emplace(name, ProbEntry(name, vals));
   }
-  void AddPop(Str name, Fn<bool(Object *)> sort) {
+  void AddProb(Str name, Vec3D<double> vals) {
+    p_event_.emplace(name, ProbEntry(name, vals));
+  }
+  void AddPop(Str name, Fn<Object *(Object *)> sort) {
     sorted_.emplace(name, Population<Object>(name, sort, reservoir_.size()));
   }
-  void AddPop(Str name, Fn<bool(Object *)> sort, Vec<size_t> dimsize,
+  void AddPop(Str name, Fn<Object *(Object *)> sort, Vec<size_t> dimsize,
               Vec<int> i_min, Fn<Vec<int>(Object *)> get_i) {
     Vec<size_t> sz{dimsize[0], dimsize[1], dimsize[2], reservoir_.size()};
     sorted_.emplace(name, Population<Object>(name, sort, sz, i_min, get_i));

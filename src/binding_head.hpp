@@ -27,15 +27,16 @@ public:
   }
 
   virtual bool Trailing() { return false; }
-  int GetNeighborCount() {
-    printf("head\n");
-    return 0;
-  }
 
-  bool Unbind();
+  int GetDirectionTowardRest();
+  virtual int GetNumHeadsActive();
+  virtual int GetNeighborCount();
 
-  Protein *GetParent() { return parent_; }
   BindingHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }
+
+  virtual void UntetherSatellite();
+  virtual bool Unbind();
+  virtual bool Diffuse(int dir);
 };
 #endif

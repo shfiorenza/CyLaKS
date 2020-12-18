@@ -2,7 +2,7 @@
 #define _CYLAKS_OBJECT_HPP_
 #include "definitions.hpp"
 
-class Protein;
+class BindingHead;
 
 class Object {
 private:
@@ -24,10 +24,11 @@ public:
   size_t GetID() { return unique_id_; }
   size_t GetSpeciesID() { return species_id_; }
 
+  virtual bool IsOccupied() { return true; }
   virtual int GetNumHeadsActive() { return -1; }
   virtual int GetNeighborCount() { return -1; }
-  virtual bool IsOccupied() { return true; }
-
-  virtual bool Unbind() {}
+  virtual Object *GetHeadOne() { return nullptr; }
+  virtual Object *GetActiveHead() { return nullptr; }
+  virtual Object *GetOtherHead() { return nullptr; }
 };
 #endif

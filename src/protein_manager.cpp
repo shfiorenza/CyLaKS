@@ -52,33 +52,49 @@ void ProteinManager::SetParameters() {
   using namespace Params;
 
   // Bind I -- motors
-  auto is_unoccupied = [&](Object *base) { return !base->IsOccupied(); };
-  // filaments_->AddPop("motors", is_unoccupied);
+  auto get_unocc = [&](Object *site) -> Object * {
+    if (!site->IsOccupied()) {
+      return site;
+    }
+    return nullptr;
+  };
+  // filaments_->AddPop("motors", get_unocc);
   // motors_.AddProb("bind_i", Motors::k_on * Motors::c_bulk * dt);
   // Bind I -- xlinks
   Vec<int> i_min{0, 0, 0};
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
-  auto get_n_neighbs = [](Object *site) {
-    Vec<int> indices_vec{site->GetNeighborCount()};
+  auto get_n_neighbs = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNeighborCount()};
     return indices_vec;
   };
-  filaments_->AddPop("xlinks", is_unoccupied, dim_size, i_min, get_n_neighbs);
+  filaments_->AddPop("xlinks", get_unocc, dim_size, i_min, get_n_neighbs);
   xlinks_.AddProb("bind_i", Xlinks::k_on * Xlinks::c_bulk * dt, "neighbs", 0);
 
   // Bind_I_Teth
   // Bind_II
-  // Unbind_II
-  // Unbind_I -- motors
-  auto is_docked = [](Object *base) {
-    if (base->GetNumHeadsActive() == 1) {
-      return true;
+  auto is_singly_bound = [](Object *protein) -> Object * {
+    if (protein->GetNumHeadsActive() == 1) {
+      return protein->GetActiveHead();
     }
-    return false;
+    return nullptr;
   };
+  xlinks_.AddPop("bind_ii_candidates", is_singly_bound);
+  xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
+  // Unbind_II
+  auto is_doubly_bound = [](Object *protein) -> Object * {
+    if (protein->GetNumHeadsActive() == 2) {
+      return protein->GetHeadOne();
+    }
+    return nullptr;
+  };
+  xlinks_.AddPop("bound_ii", is_doubly_bound);
+  xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
+
+  // Unbind_I -- motors
   // motors_.AddPop("bound_ADPP_i", is_docked);
   // motors_.AddProb("unbind_i", Motors::k_off_i * dt);
   // Unbind I -- xlinks
-  xlinks_.AddPop("bound_i", is_docked, dim_size, i_min, get_n_neighbs);
+  xlinks_.AddPop("bound_i", is_singly_bound, dim_size, i_min, get_n_neighbs);
   xlinks_.AddProb("unbind_i", Xlinks::k_off_i * dt, "neighbs", 1);
 
   // motors_.sorted_.emplace(pop_name,
@@ -106,6 +122,23 @@ void ProteinManager::SetParameters() {
 
   // vv xlinks only vv
   // Diffusion
+  double x_sq{Square(Filaments::site_size / 1000)}; // in um^2
+  double tau_i{x_sq / (2 * Xlinks::d_i)};
+  double tau_ii{x_sq / (2 * Xlinks::d_ii)};
+  double p_diffuse_i{dt / tau_i};
+  double p_diffuse_ii{dt / tau_ii};
+  // diff_fwd and diff_bck are two separate events, which effectively
+  // doubles the probability to diffuse. Thus we divide p_diff by 2.
+  p_diffuse_i /= 2.0;
+  p_diffuse_ii /= 2.0;
+  Vec3D<double> vec_diff_i(
+      1, Vec2D<double>(1, Vec<double>(_n_neighbs_max + 1, p_diffuse_i)));
+  vec_diff_i[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
+  vec_diff_i[0][0][2] = 0.0;
+  xlinks_.AddProb("diffuse_i_fwd", vec_diff_i);
+  xlinks_.AddProb("diffuse_i_bck", vec_diff_i);
+  xlinks_.AddProb("diffuse_ii_to_rest", p_diffuse_ii);
+  xlinks_.AddProb("diffuse_ii_from_rest", p_diffuse_ii);
   // Bind_II_Teth
   // Unbind_II_Teth
 }
@@ -155,9 +188,6 @@ void ProteinManager::InitializeEvents() {
     }
     auto site{dynamic_cast<BindingSite *>(base)};
     auto xlink{xlinks_.GetFreeEntry()};
-    // printf("xlink id is %i\n", xlink->GetID());
-    // printf("site id is %i\n", site->GetID());
-    // printf("%li active entries\n", xlinks_.n_active_entries_);
     bool executed{xlink->Bind(site, &xlink->head_one_)};
     if (executed) {
       xlinks_.AddToActive(xlink);
@@ -179,6 +209,24 @@ void ProteinManager::InitializeEvents() {
   }
   // Bind_I_Teth
   // Bind_II
+  auto exe_bind_ii = [&](Object *base_head) {
+    auto bound_head{dynamic_cast<BindingHead *>(base_head)};
+    auto head{bound_head->GetOtherHead()};
+    auto site{head->parent_->GetNeighbor_Bind_II()};
+    auto executed{head->parent_->Bind(site, head)};
+    if (executed) {
+      xlinks_.FlagForUpdate();
+      filaments_->FlagForUpdate();
+    }
+  };
+  auto get_weight_bind_ii = [&](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    return head->parent_->GetTotalWeight_Bind_II();
+  };
+  kmc_.events_.emplace_back("bind_ii", xlinks_.p_event_.at("bind_ii").GetVal(),
+                            &xlinks_.sorted_.at("bind_ii_candidates").size_,
+                            &xlinks_.sorted_.at("bind_ii_candidates").entries_,
+                            poisson, get_weight_bind_ii, exe_bind_ii);
   // Unbind_II
   // Unbind_I: Unbind first (singly bound) head of a protein
   /*
@@ -197,14 +245,12 @@ void ProteinManager::InitializeEvents() {
   };
   */
 
-  // ACTIVE HOLDS PROTS/MOTS NOT HEADS ATM!!
   auto exe_unbind_i = [&](Object *base) {
-    // auto head{dynamic_cast<BindingHead *>(base)};
-    auto xlink{dynamic_cast<Protein *>(base)};
-    bool executed{xlink->Unbind(xlink->GetActiveHead())};
+    auto head{dynamic_cast<BindingHead *>(base)};
+    bool executed{head->Unbind()};
     if (executed) {
-      xlink->UntetherSatellite();
-      xlinks_.RemoveFromActive(xlink);
+      head->UntetherSatellite();
+      xlinks_.RemoveFromActive(head->parent_);
       filaments_->FlagForUpdate();
     }
   };
@@ -233,6 +279,33 @@ void ProteinManager::InitializeEvents() {
 
   // vv xlinks only vv
   // Diffusion
+  auto exe_diffuse_i_fwd = [&](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    bool executed{head->Diffuse(1)};
+    if (executed) {
+      filaments_->FlagForUpdate();
+    }
+  };
+  auto exe_diffuse_i_bck = [&](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    bool executed{head->Diffuse(-1)};
+    if (executed) {
+      filaments_->FlagForUpdate();
+    }
+  };
+  for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "diffuse_i_fwd", xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        exe_diffuse_i_fwd);
+    kmc_.events_.emplace_back(
+        "diffuse_i_bck", xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        exe_diffuse_i_bck);
+  }
+  auto exe_diffuse_ii = [&](Object *base) {};
   // Bind_II_Teth
   // Unbind_II_Teth
 

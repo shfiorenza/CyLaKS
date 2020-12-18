@@ -40,9 +40,21 @@ void Protofilament::GenerateSites() {
 
   size_t n_sites{Params::Filaments::n_sites[index_]};
   sites_.resize(n_sites);
+  // Initialize sites
   for (int i_entry{0}; i_entry < n_sites; i_entry++) {
     sites_[i_entry].Initialize(_id_site, Sys::n_unique_objects_++, _r_site,
                                i_entry, this);
+  }
+  // Set site neighbors (immediately forward/behind; 2 max on a 1-D lattice)
+  for (auto &&site : sites_) {
+    int i_fwd{site.index_ + 1};
+    if (i_fwd < sites_.size()) {
+      site.AddNeighbor(&sites_[i_fwd]);
+    }
+    int i_bck{site.index_ - 1};
+    if (i_bck > 0) {
+      site.AddNeighbor(&sites_[i_bck]);
+    }
   }
   plus_end_ = &sites_[(n_sites - 1) * polarity_];
   minus_end_ = &sites_[(n_sites - 1) * (1.0 - polarity_)];
@@ -120,4 +132,16 @@ void Protofilament::UpdateSitePositions() {
   Sys::Log("plus-end: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
   Sys::Log("minus_end: (%g, %g)\n", minus_end_->pos_[0], minus_end_->pos_[1]);
   */
+}
+
+BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
+
+  double pos_x{site->pos_[0]};
+  int i_delta{
+      (int)std::round((pos_[0] - pos_x) / Params::Filaments::site_size)};
+  int i_site{i_delta + (int)center_index_};
+  if (i_site < 0 or i_site > sites_.size() - 1) {
+    return nullptr;
+  }
+  return &sites_[i_site];
 }

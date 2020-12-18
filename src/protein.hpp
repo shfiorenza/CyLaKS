@@ -5,6 +5,10 @@
 
 class Protein : public Object {
 protected:
+  int dist_cutoff_{10};
+  int n_neighbors_bind_ii_{0};
+  Vec<BindingSite *> neighbors_bind_ii_;
+
 public:
   size_t active_index_{0};
   size_t n_heads_active_{0};
@@ -24,21 +28,25 @@ public:
     head_one_.Initialize(sid, id, _r_xlink_head, this, &head_two_);
     head_two_.Initialize(sid, id, _r_xlink_head, this, &head_one_);
     spring_.Initialize(sid, id, this);
+    neighbors_bind_ii_.resize(2 * dist_cutoff_ + 1);
   }
 
   bool HasSatellite();
   void UntetherSatellite();
 
   int GetNumHeadsActive() { return n_heads_active_; }
-  int GetNeighborCount() { return 0; }
-
-  void UpdateNeighborList();
-  Object *GetWeightedNeighbor();
   BindingHead *GetActiveHead();
+  BindingHead *GetHeadOne() { return &head_one_; }
 
-  double GetWeight_Bind_I_Teth();
-  double GetWeight_Bind_II();
-  double GetWeight_Bind_II_Teth();
+  // void UpdateNeighborList();
+  // Object *GetWeightedNeighbor();
+
+  void UpdateNeighbors_Bind_II();
+  double GetWeight_Bind_II(BindingSite *neighb);
+
+  double GetTotalWeight_Bind_I_Teth();
+  double GetTotalWeight_Bind_II();
+  double GetTotalWeight_Bind_II_Teth();
   BindingSite *GetNeighbor_Bind_I_Teth();
   BindingSite *GetNeighbor_Bind_II();
   BindingSite *GetNeighbor_Bind_II_Teth();
@@ -49,6 +57,8 @@ public:
 
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
+  virtual bool Diffuse(BindingHead *head, int dir);
+
   virtual bool Tether();
   virtual bool Untether();
 };

@@ -327,6 +327,9 @@ void Curator::GenerateDataFiles() {
     // Open protein ID file, which stores the unique ID of all bound proteins
     // (unbound not tracked) at their respective site indices during DC
     AddDataFile("protein_id");
+    if (proteins_.xlinks_.crosslinking_active_) {
+      AddDataFile("partner_index");
+    }
   }
   if (proteins_.motors_.active_) {
     // bool; simply says if motor head is trailing or not
@@ -426,11 +429,13 @@ void Curator::OutputData() {
     }
     int occupancy[n_sites_max_];
     int protein_id[n_sites_max_];
+    int partner_index[n_sites_max_];
     bool motor_trailing[n_sites_max_];
     double tether_anchor_pos[n_sites_max_];
     for (int i_site{0}; i_site < n_sites_max_; i_site++) {
       occupancy[i_site] = _id_site;
       protein_id[i_site] = -1;
+      partner_index[i_site] = -1;
       motor_trailing[i_site] = false;
       tether_anchor_pos[i_site] = -1.0;
     }
@@ -441,7 +446,12 @@ void Curator::OutputData() {
       const size_t species_id{site.occupant_->GetSpeciesID()};
       occupancy[site.index_] = species_id;
       protein_id[site.index_] = site.occupant_->GetID();
-      if (species_id == _id_motor) {
+      if (species_id == _id_xlink) {
+        if (site.occupant_->parent_->n_heads_active_ == 2) {
+          partner_index[site.index_] =
+              site.occupant_->GetOtherHead()->site_->index_;
+        }
+      } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
         if (site.occupant_->parent_->tethered_) {
           auto partner{site.occupant_->parent_->partner_};
@@ -454,6 +464,9 @@ void Curator::OutputData() {
     }
     data_files_.at("occupancy").Write(occupancy, n_sites_max_);
     data_files_.at("protein_id").Write(protein_id, n_sites_max_);
+    if (proteins_.xlinks_.crosslinking_active_) {
+      data_files_.at("partner_index").Write(partner_index, n_sites_max_);
+    }
     if (!proteins_.motors_.active_) {
       continue;
     }

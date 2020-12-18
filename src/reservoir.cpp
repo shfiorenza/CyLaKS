@@ -27,6 +27,9 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
     size_t window_size{(size_t)std::round(dynamic_equil_window / dt)};
     n_bound_.resize(window_size);
   }
+  if (species_id_ == _id_xlink and Params::Filaments::count > 1) {
+    crosslinking_active_ = true;
+  }
 }
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
@@ -84,10 +87,10 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
   }
   for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
     ENTRY_T *entry{active_entries_[i_entry]};
-    // printf(" entry no %i (ID %i)\n", i_entry, entry->GetID());
+    Sys::Log(1, " entry no %i (ID %i)\n", i_entry, entry->GetID());
     // entry->UpdateExtension();
     for (auto &&pop : sorted_) {
-      // printf("  sorting %s\n", pop.second.name_.c_str());
+      Sys::Log(1, "  sorting into %s\n", pop.second.name_.c_str());
       pop.second.Sort(entry);
     }
   }

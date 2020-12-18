@@ -49,6 +49,10 @@ void FilamentManager::GenerateFilaments() {
       sites_.emplace_back(&site);
     }
   }
+  if (proto_.size() == 2) {
+    proto_[0].neighbor_ = &proto_[1];
+    proto_[1].neighbor_ = &proto_[0];
+  }
   /*
   Sys::Log("***\n");
   Sys::Log(" %zu \n", proto_.size());

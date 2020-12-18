@@ -27,7 +27,6 @@ public:
   }
 
   Ligand GetLigand() { return ligand_; }
-  Motor *GetParent() { return parent_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
 
   bool Trailing() { return trailing_; }

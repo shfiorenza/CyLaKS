@@ -47,7 +47,7 @@ public:
     InitializeEvents();
   }
   void UpdateLatticeDeformation() {}
-  void UpdateExtensions() {}
+  void UpdateExtensions() { xlinks_.UpdateExtensions(); }
   void RunKMC() {
     UpdateFilaments();
     motors_.PrepForKMC();

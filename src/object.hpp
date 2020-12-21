@@ -26,8 +26,9 @@ public:
 
   virtual bool IsOccupied() { return true; }
   virtual int GetNumHeadsActive() { return -1; }
-  virtual int GetNeighborCount() { return -1; }
+  virtual int GetNumNeighborsOccupied() { return -1; }
   virtual Object *GetHeadOne() { return nullptr; }
+  virtual Object *GetHeadTwo() { return nullptr; }
   virtual Object *GetActiveHead() { return nullptr; }
   virtual Object *GetOtherHead() { return nullptr; }
 };

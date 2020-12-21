@@ -114,6 +114,9 @@ void Protofilament::UpdateRodPosition() {
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     orientation_[i_dim] /= sqrt(u_norm);
   }
+  force_[0] = 0.0;
+  force_[1] = 0.0;
+  torque_ = 0.0;
 }
 
 void Protofilament::UpdateSitePositions() {

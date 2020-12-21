@@ -38,7 +38,7 @@ public:
   double GetWeight_Bind() { return weight_bind_; }
   double GetWeight_Unbind() { return weight_unbind_; }
 
-  int GetNeighborCount() {
+  int GetNumNeighborsOccupied() {
     if (_n_neighbs_max == 0) {
       return 0;
     }
@@ -50,5 +50,6 @@ public:
     }
     return n_neighbs;
   }
+  BindingSite *GetNeighbor(int dir);
 };
 #endif

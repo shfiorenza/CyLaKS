@@ -30,13 +30,15 @@ public:
 
   int GetDirectionTowardRest();
   virtual int GetNumHeadsActive();
-  virtual int GetNeighborCount();
+  virtual int GetNumNeighborsOccupied();
 
   BindingHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }
 
   virtual void UntetherSatellite();
   virtual bool Unbind();
+
+  virtual double GetWeight_Diffuse(int dir);
   virtual bool Diffuse(int dir);
 };
 #endif

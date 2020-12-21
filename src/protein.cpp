@@ -13,8 +13,6 @@ void Protein::UntetherSatellite() {}
 
 // Object *Protein::GetWeightedNeighbor() {}
 
-// int Protein::GetNeighborCount() { return 0; }
-
 BindingHead *Protein::GetActiveHead() {
 
   assert(n_heads_active_ == 1);
@@ -101,9 +99,90 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
+double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
+
+  double lambda_neighb{1.0};
+  double lambda_spring{0.5};
+  if (n_heads_active_ != 2) {
+    Sys::ErrorExit("Protein::GetWeight_diffuse");
+  }
+  BindingSite *old_site{head->site_};
+  int dx{dir * head->GetDirectionTowardRest()};
+  // For xlinks exactly at rest,
+  if (dx == 0) {
+    // Diffuse from rest in a random direction
+    if (dir == -1) {
+      if (SysRNG::GetRanProb() < 0.5) {
+        dx = 1;
+      } else {
+        dx = -1;
+      }
+      // Impossible to diffuse toward rest
+    } else {
+      return 0.0;
+    }
+  }
+  BindingSite *new_site{head->site_->GetNeighbor(dx)};
+  if (new_site == nullptr) {
+    return 0.0;
+  }
+  if (new_site->occupant_ != nullptr) {
+    return 0.0;
+  }
+  BindingSite *other_site{head->GetOtherHead()->site_};
+  if (old_site->filament_ == other_site->filament_) {
+    Sys::ErrorExit("Protein::GetWeight_diffuse [2]");
+  }
+  double r_x{old_site->pos_[0] - other_site->pos_[0]};
+  double r_y{old_site->pos_[1] - other_site->pos_[1]};
+  double r{sqrt(Square(r_x) + Square(r_y))};
+  double dr{r - Params::Xlinks::r_0};
+  double E_old{0.5 * Params::Xlinks::k_spring * Square(dr)};
+  double r_x_new{new_site->pos_[0] - other_site->pos_[0]};
+  double r_y_new{new_site->pos_[1] - other_site->pos_[1]};
+  double r_new{sqrt(Square(r_x_new) + Square(r_y_new))};
+  if (r_new > 45.0) {
+    return 0.0;
+  }
+  double dr_new{r_new - Params::Xlinks::r_0};
+  double E_new{0.5 * Params::Xlinks::k_spring * Square(dr_new)};
+  double dE_spring{E_new - E_old};
+  double weight_spring{0.0};
+  // Diffusing towards rest is considered an unbinding-type event in
+  // regards to Boltzmann factors, since both events let the spring relax
+  if (dE_spring < 0.0) {
+    weight_spring = exp(lambda_spring * fabs(dE_spring) / Params::kbT);
+  }
+  // Diffusing away from rest is considered a binding-type event in
+  // regards to Boltzmann factors, since both events stretch the spring out
+  else {
+    weight_spring = exp(-(1.0 - lambda_spring) * fabs(dE_spring) / Params::kbT);
+  }
+  double E_neighb{old_site->GetNumNeighborsOccupied() * -1.0 *
+                  Params::Xlinks::neighb_neighb_energy};
+  double weight_neighb{exp(lambda_neighb * E_neighb)};
+  // printf("%g & %g\n", weight_spring, weight_neighb);
+  return weight_spring * weight_neighb;
+}
+
 bool Protein::Diffuse(BindingHead *head, int dir) {
 
   int dx{dir * head->GetDirectionTowardRest()};
+  // FIXME ran num MUST be synchronized with one in GetWeight() above
+  // For xlinks exactly at rest,
+  if (dx == 0) {
+    // Diffuse from rest in a random direction
+    if (dir == -1) {
+      if (SysRNG::GetRanProb() < 0.5) {
+        dx = 1;
+      } else {
+        dx = -1;
+      }
+      // Impossible to diffuse toward rest
+    } else {
+      return false;
+    }
+  }
   // printf("dx: %i\n", dx);
   BindingSite *old_site = head->site_;
   // printf("no\n");

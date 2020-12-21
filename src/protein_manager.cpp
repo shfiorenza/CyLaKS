@@ -64,7 +64,7 @@ void ProteinManager::SetParameters() {
   Vec<int> i_min{0, 0, 0};
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
   auto get_n_neighbs = [](Object *entry) {
-    Vec<int> indices_vec{entry->GetNeighborCount()};
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
     return indices_vec;
   };
   filaments_->AddPop("xlinks", get_unocc, dim_size, i_min, get_n_neighbs);
@@ -81,9 +81,17 @@ void ProteinManager::SetParameters() {
   xlinks_.AddPop("bind_ii_candidates", is_singly_bound);
   xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
   // Unbind_II
-  auto is_doubly_bound = [](Object *protein) -> Object * {
+  // FIXME good lord this is awful
+  // Need to figure out a modular way of pushing back members
+  // i.e., a way to push back BOTH heads of a crosslinker
+  auto is_doubly_bound = [&](Object *protein) -> Object * {
     if (protein->GetNumHeadsActive() == 2) {
-      return protein->GetHeadOne();
+      double ran{SysRNG::GetRanProb()};
+      if (ran < 0.5) {
+        return protein->GetHeadOne();
+      } else {
+        return protein->GetHeadTwo();
+      }
     }
     return nullptr;
   };
@@ -137,8 +145,10 @@ void ProteinManager::SetParameters() {
   vec_diff_i[0][0][2] = 0.0;
   xlinks_.AddProb("diffuse_i_fwd", vec_diff_i);
   xlinks_.AddProb("diffuse_i_bck", vec_diff_i);
+  xlinks_.AddPop("diffuse_ii_to_rest_candidates", is_doubly_bound);
+  xlinks_.AddPop("diffuse_ii_fr_rest_candidates", is_doubly_bound);
   xlinks_.AddProb("diffuse_ii_to_rest", p_diffuse_ii);
-  xlinks_.AddProb("diffuse_ii_from_rest", p_diffuse_ii);
+  xlinks_.AddProb("diffuse_ii_fr_rest", p_diffuse_ii);
   // Bind_II_Teth
   // Unbind_II_Teth
 }
@@ -215,19 +225,24 @@ void ProteinManager::InitializeEvents() {
     auto site{head->parent_->GetNeighbor_Bind_II()};
     auto executed{head->parent_->Bind(site, head)};
     if (executed) {
+      head->parent_->UpdateExtension();
       xlinks_.FlagForUpdate();
       filaments_->FlagForUpdate();
     }
   };
-  auto get_weight_bind_ii = [&](Object *base) {
+  auto get_weight_bind_ii = [](Object *base) {
     auto head{dynamic_cast<BindingHead *>(base)};
     return head->parent_->GetTotalWeight_Bind_II();
   };
-  kmc_.events_.emplace_back("bind_ii", xlinks_.p_event_.at("bind_ii").GetVal(),
-                            &xlinks_.sorted_.at("bind_ii_candidates").size_,
-                            &xlinks_.sorted_.at("bind_ii_candidates").entries_,
-                            poisson, get_weight_bind_ii, exe_bind_ii);
+  if (xlinks_.crosslinking_active_) {
+    kmc_.events_.emplace_back(
+        "bind_ii", xlinks_.p_event_.at("bind_ii").GetVal(),
+        &xlinks_.sorted_.at("bind_ii_candidates").size_,
+        &xlinks_.sorted_.at("bind_ii_candidates").entries_, poisson,
+        get_weight_bind_ii, exe_bind_ii);
+  }
   // Unbind_II
+
   // Unbind_I: Unbind first (singly bound) head of a protein
   /*
   auto exe_unbind_i = [&](auto *head, auto *population) {
@@ -279,17 +294,19 @@ void ProteinManager::InitializeEvents() {
 
   // vv xlinks only vv
   // Diffusion
-  auto exe_diffuse_i_fwd = [&](Object *base) {
+  auto exe_diffuse_fwd = [&](Object *base) {
     auto head{dynamic_cast<BindingHead *>(base)};
     bool executed{head->Diffuse(1)};
     if (executed) {
+      head->parent_->UpdateExtension();
       filaments_->FlagForUpdate();
     }
   };
-  auto exe_diffuse_i_bck = [&](Object *base) {
+  auto exe_diffuse_bck = [&](Object *base) {
     auto head{dynamic_cast<BindingHead *>(base)};
     bool executed{head->Diffuse(-1)};
     if (executed) {
+      head->parent_->UpdateExtension();
       filaments_->FlagForUpdate();
     }
   };
@@ -298,14 +315,35 @@ void ProteinManager::InitializeEvents() {
         "diffuse_i_fwd", xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
         &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
         &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
-        exe_diffuse_i_fwd);
+        exe_diffuse_fwd);
     kmc_.events_.emplace_back(
         "diffuse_i_bck", xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
         &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
         &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
-        exe_diffuse_i_bck);
+        exe_diffuse_bck);
   }
-  auto exe_diffuse_ii = [&](Object *base) {};
+  auto get_weight_diff_ii_to = [](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    return head->GetWeight_Diffuse(1);
+  };
+  auto get_weight_diff_ii_fr = [](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    return head->GetWeight_Diffuse(-1);
+  };
+  if (xlinks_.crosslinking_active_) {
+    kmc_.events_.emplace_back(
+        "diffuse_ii_to_rest",
+        xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_to_rest_candidates").size_,
+        &xlinks_.sorted_.at("diffuse_ii_to_rest_candidates").entries_, poisson,
+        get_weight_diff_ii_to, exe_diffuse_fwd);
+    kmc_.events_.emplace_back(
+        "diffuse_ii_fr_rest",
+        xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest_candidates").size_,
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest_candidates").entries_, poisson,
+        get_weight_diff_ii_fr, exe_diffuse_bck);
+  }
   // Bind_II_Teth
   // Unbind_II_Teth
 

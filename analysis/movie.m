@@ -2,7 +2,7 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test';
+sim_name = 'test_rot';
 
 movie_name = 'test';
 start_frame = 1;
@@ -116,23 +116,24 @@ for i_data = start_frame : frames_per_plot : end_frame
     % Clear figure so that it only displays figures from current datapoint
     clf;
     % Set Axes properties
-    ax = axes('Units', 'normalized', 'Position', [0.05 0.075 0.9 0.9]);
+    ax = axes('Units', 'normalized', 'Position', [0.075 0.085 0.9 0.9]);
     hold all;
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
     ax.XLim = [(min_x - 25) (max_x + 25)];
     ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
+    %ax.XLim = [-1000 1000];
+    %ax.YLim = [-600 600];
     ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];
-    ax.XLabel.String = 'Position in vertical dimension (nm)';
-    ax.XLabel.String = 'Position in horizontal dimension (nm)';
+    ax.XLabel.String = 'x position (nm)';
+    ax.YLabel.String = 'y position (nm)';
     % Draw filaments
     for i_mt = 1:1:n_mts
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         line([plus_pos(1), minus_pos(1)],[plus_pos(2), minus_pos(2)], 'LineWidth', 4);
-        %length = sqrt((plus_pos(1) - minus_pos(1))^2 + (plus_pos(2) - minus_pos(2))^2)
         n_sites = mt_lengths(i_mt);
         % Draw proteins
         for i_site = 1 : n_sites
@@ -156,11 +157,13 @@ for i_data = start_frame : frames_per_plot : end_frame
                         neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
                         endpos_x = m_pos(1) + (double(ii_site)/nn_sites)*neighb_vec(1);
                         endpos_y = m_pos(2) + (double(ii_site)/nn_sites)*neighb_vec(2);
-                        %line([pos_x, endpos_x],[pos_y, endpos_y], ...
-                        %    'LineWidth', 1, 'Color', purple);
+                        line([pos_x, endpos_x],[pos_y, endpos_y], ...
+                            'LineWidth', 1, 'Color', purple);
+                        %{
                         ne = 4; a = 2; ro = 4;
                         [xs, ys] = spring(pos_x, pos_y, endpos_x, endpos_y, ne, a, ro);
                         plot(xs, ys, 'LineWidth', 1, 'Color', purple);
+                        %}
                     end
                 end
                 % Draw protein head
@@ -300,9 +303,8 @@ for i_data = start_frame : frames_per_plot : end_frame
         end
         %}
     end
-    dim = [0.0105 0.62 .3 .3];
+    dim = [0.11 0.625 .3 .3];
     time = (i_data - 1) * time_per_datapoint;
-    %time = time - 500;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');
     drawnow();

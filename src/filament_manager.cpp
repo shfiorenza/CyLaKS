@@ -29,7 +29,7 @@ void FilamentManager::SetParameters() {
   Vec<int> i_min{0, 0, 0};
   Vec<size_t> max_size{1, 1, _n_neighbs_max + 1, max_list_size};
   auto get_n_neighbs = [](BindingSite *site) {
-    Vec<int> indices_vec{(int)site->GetNeighborCount()};
+    Vec<int> indices_vec{(int)site->GetNumNeighborsOccupied()};
     return indices_vec;
   };
   unoccupied_.emplace("xlinks",

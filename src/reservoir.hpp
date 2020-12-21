@@ -135,6 +135,11 @@ public:
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();
   }
+  void UpdateExtensions() {
+    for (int i_active{0}; i_active < n_active_entries_; i_active++) {
+      active_entries_[i_active]->UpdateExtension();
+    }
+  }
   void FlagForUpdate() { up_to_date_ = false; }
   void PrepForKMC() {
     if (Sys::i_step_ < step_active_) {

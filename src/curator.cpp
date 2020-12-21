@@ -40,17 +40,15 @@ void Curator::GenerateLog() {
         printf("Simulation terminated.\n");
         exit(1);
       } else if (response == "y" or response == "Y") {
-        printf("Very well. ");
-        printf("Overwriting data for simulation '%s'\n\n",
-               Sys::sim_name_.c_str());
+        printf("Very well. Overwriting data for ");
+        printf("simulation '%s'\n\n", Sys::sim_name_.c_str());
         response_unacceptable = false;
       } else {
-        printf("ayo I said y or n. try again plz\n");
+        printf("Invalid response. Please choose yes or no.\n");
       }
       n_responses++;
       if (n_responses > 5) {
-        printf("aight if u gonna be like that,");
-        printf("let's just cancel this whole thing\n");
+        printf("Too many incorrect inputs; terminating. ");
         exit(1);
       }
     }
@@ -60,7 +58,7 @@ void Curator::GenerateLog() {
     printf("Error; cannot open log file '%s'\n", log_name);
     exit(1);
   }
-  // Daisy-chain c/c++ functs to get current date/time in a formatted string
+  // Daisy-chain some functs to get current date/time in a formatted string
   auto now{std::chrono::system_clock::now()};
   std::time_t now_c{std::chrono::system_clock::to_time_t(now)};
   std::tm now_tm{*std::localtime(&now_c)};
@@ -72,95 +70,130 @@ void Curator::GenerateLog() {
 
 void Curator::ParseParameters() {
 
+  using namespace Sys;
   // Check to make sure param file actually exists
-  if (!std::filesystem::exists(Sys::yaml_file_)) {
-    Sys::Log("  Error: param file does not exist; aborting \n");
+  if (!std::filesystem::exists(yaml_file_)) {
+    Log("  Error: param file does not exist; aborting \n");
     exit(1);
   }
-  YAML::Node input = YAML::LoadFile(Sys::yaml_file_);
-  /*
-  using YamlEntry = YAML::detail::iterator_value;
-  // Parse parameter file into a YAML node
-  // Construct parsing tools via lambda expressions
-  Fn<double(YAML::Node)> parse_scalar = [&](YAML::Node entry) {
-    if (entry.Type() == YAML::NodeType::Sequence) {
+  // Open parameter file
+  Log("Reading parameters from '%s':\n", yaml_file_.c_str());
+  YAML::Node input = YAML::LoadFile(yaml_file_);
+  // Construct function to get values from yaml file and log them
+  auto ParseYAML = [&]<typename DATA_T>(DATA_T *param, Str name, Str units) {
+    // We use '.' as a delimiter between YAML subgroups
+    YAML::Node entry;
+    if (name.find(".") < name.length()) {
+      Str group{name.substr(0, name.find("."))};
+      name = name.substr(name.find(".") + 1, name.length());
+      entry = input[group][name];
+    } else {
+      entry = input[name];
     }
-    // Str key = entry.first.as<Str>();
-    Str val = entry.as<Str>();
-    // std::cout << key << std::endl;
-    std::cout << val << std::endl;
-    return 0.0;
-  };
-  Fn<void(YamlEntry)> parse_sequence = [&](YamlEntry entry) {
-    size_t n_dims{1};
-  };
-  // For recursion to work properly, need to strictly define all types in lambda
-  Fn<double(YamlEntry)> parse_yaml = [&](YamlEntry entry) {
-    switch (entry.second.Type()) {
-    case YAML::NodeType::Scalar:
-      parse_scalar(entry);
-      break;
-    case YAML::NodeType::Sequence:
-      parse_scalar(entry);
-      // for (auto nested_entry : entry.second) {
-      // parse_yaml(nested_entry);
-      // }
-      break;
-    case YAML::NodeType::Map: {
-      YAML::Node nested_node = input[entry.first.as<Str>()];
-      Str key = entry.first.as<Str>();
-      for (YamlEntry nested_entry : nested_node) {
-        std::cout << "[" << key << "] ";
-        parse_yaml(nested_entry);
+    // Sometimes, size_t variables use "e" notation; need to treat as doubles
+    try {
+      *param = entry.as<DATA_T>();
+    } catch (const YAML::BadConversion err) {
+      *param = (DATA_T)entry.as<double>();
+    }
+    // Log values read from parameter file
+    if (entry.Type() == YAML::NodeType::Scalar) {
+      Log("   %s = %s %s\n", name.c_str(), entry.as<Str>().c_str(),
+          units.c_str());
+    } else if (entry.Type() == YAML::NodeType::Sequence) {
+      Str vec_str;
+      for (int i_val{0}; i_val < entry.size(); i_val++) {
+        vec_str += entry[i_val].as<Str>();
+        if (i_val < entry.size() - 1) {
+          vec_str += ", ";
+        }
       }
-      break;
+      Log("   %s = [%s] %s\n", name.c_str(), vec_str.c_str(), units.c_str());
+    } else {
+      ErrorExit("Curator::ParseParameters() -- parser");
     }
-    default:
-      Sys::ErrorExit("Curator::ParseParameters()");
-      break;
-    }
-    return 0.0;
   };
-*/
+  // Parse thru parameters
   using namespace Params;
-  // Transfer values from input param node to system_parameters structure
-  try {
-    seed = input["seed"].as<size_t>();
-  } catch (const YAML::BadConversion error) {
-    seed = (size_t)(input["seed"].as<double>());
+  Log(" General parameters:\n");
+  ParseYAML(&seed, "seed", "");
+  ParseYAML(&kbT, "kbT", "pN*nm");
+  ParseYAML(&eta, "eta", "pN*s/um^2");
+  ParseYAML(&dt, "dt", "s");
+  ParseYAML(&t_run, "t_run", "s");
+  ParseYAML(&t_equil, "t_equil", "s");
+  ParseYAML(&t_snapshot, "t_snapshot", "s");
+  ParseYAML(&dynamic_equil_window, "dynamic_equil_window", "s");
+  ParseYAML(&verbosity, "verbosity", "");
+  Log(" Filament parameters:\n");
+  ParseYAML(&Filaments::count, "filaments.count", "filaments");
+  ParseYAML(&Filaments::radius, "filaments.radius", "nm");
+  ParseYAML(&Filaments::site_size, "filaments.site_size", "nm");
+  ParseYAML(&Filaments::n_bd_per_kmc, "filaments.n_bd_per_kmc", "");
+  ParseYAML(&Filaments::n_sites, "filaments.n_sites", "sites");
+  ParseYAML(&Filaments::polarity, "filaments.polarity", "");
+  ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
+  ParseYAML(&Filaments::y_initial, "filaments.y_initial", "nm");
+  ParseYAML(&Filaments::immobile_until, "filaments.immobile_until", "s");
+  ParseYAML(&Filaments::dimension_enabled, "filaments.dimension_enabled", "");
+  // Check to make sure there are enough vector entries for given MT count
+  if (Filaments::count > Filaments::n_sites.size() or
+      Filaments::count > Filaments::polarity.size() or
+      Filaments::count > Filaments::x_initial.size() or
+      Filaments::count > Filaments::y_initial.size() or
+      Filaments::count > Filaments::immobile_until.size() or
+      _n_dims_max > Filaments::dimension_enabled.size()) {
+    Log("Error! Incorrect number of filament parameters provided.\n");
+    exit(1);
   }
-  kbT = input["kbT"].as<double>();
-  eta = input["eta"].as<double>();
-  dt = input["dt"].as<double>();
-  t_run = input["t_run"].as<double>();
-  t_equil = input["t_equil"].as<double>();
-  t_snapshot = input["t_snapshot"].as<double>();
-  dynamic_equil_window = input["dynamic_equil_window"].as<double>();
-  verbosity = input["verbosity"].as<size_t>();
-  /* Microtubule parameters below */
-  YAML::Node mts = input["filaments"];
-  Filaments::count = mts["count"].as<size_t>();
-  Filaments::radius = mts["radius"].as<double>();
-  Filaments::site_size = mts["site_size"].as<double>();
-  Filaments::n_bd_per_kmc = mts["n_bd_per_kmc"].as<size_t>();
-  Filaments::n_sites = mts["n_sites"].as<Vec<size_t>>();
-  Filaments::polarity = mts["polarity"].as<Vec<size_t>>();
-  Filaments::x_initial = mts["x_initial"].as<Vec<double>>();
-  Filaments::y_initial = mts["y_initial"].as<Vec<double>>();
-  Filaments::immobile_until = mts["immobile_until"].as<Vec<double>>();
-  Filaments::dimension_enabled = mts["dimension_enabled"].as<Vec<bool>>();
-  /* Motor parameters below */
-  YAML::Node motors = input["motors"];
-  Motors::n_runs_desired = motors["n_runs_desired"].as<size_t>();
-  try {
-    Motors::gaussian_range = motors["gaussian_range"].as<size_t>();
-  } catch (const YAML::BadConversion error) {
-    Motors::gaussian_range =
-        (size_t)std::round(motors["gaussian_range"].as<double>());
+  for (int i_fil{0}; i_fil < Filaments::count; i_fil++) {
+    if (Filaments::polarity[i_fil] != 0 and Filaments::polarity[i_fil] != 1) {
+      Log("Error! Polarity must be either 0 or 1.\n");
+      exit(1);
+    }
   }
-  Motors::gaussian_amp_solo = motors["gaussian_amp_solo"].as<double>();
-  Motors::gaussian_ceiling_bulk = motors["gaussian_ceiling_bulk"].as<double>();
-  Motors::neighb_neighb_energy = motors["neighb_neighb_energy"].as<double>();
+  Log(" Kinesin (motor) parameters:\n");
+  ParseYAML(&Motors::n_runs_desired, "motors.n_runs_desired", "runs");
+  ParseYAML(&Motors::gaussian_range, "motors.gaussian_range", "sites");
+  ParseYAML(&Motors::gaussian_amp_solo, "motors.gaussian_amp_solo", "kbT");
+  ParseYAML(&Motors::gaussian_ceiling_bulk, "motors.gaussian_ceiling_bulk",
+            "kbT");
+  ParseYAML(&Motors::neighb_neighb_energy, "motors.neighb_neighb_energy",
+            "kbT");
+  ParseYAML(&Motors::t_active, "motors.t_active", "s");
+  ParseYAML(&Motors::k_on, "motors.k_on", "1/nM*s");
+  ParseYAML(&Motors::c_bulk, "motors.c_bulk", "nM");
+  ParseYAML(&Motors::c_eff_bind, "motors.c_eff_bind", "nM");
+  ParseYAML(&Motors::c_ATP, "motors.c_ATP", "mM");
+  ParseYAML(&Motors::k_hydrolyze, "motors.k_hydrolyze", "1/s");
+  ParseYAML(&Motors::k_off_i, "motors.k_off_i", "1/s");
+  ParseYAML(&Motors::k_off_ii, "motors.k_off_ii", "1/s");
+  ParseYAML(&Motors::applied_force, "motors.applied_force", "pN");
+  ParseYAML(&Motors::internal_force, "motors.internal_force", "pN");
+  ParseYAML(&Motors::sigma_off_i, "motors.sigma_off_i", "nm");
+  ParseYAML(&Motors::sigma_off_ii, "motors.sigma_off_ii", "nm");
+  ParseYAML(&Motors::sigma_ATP, "motors.sigma_ATP", "nm");
+  ParseYAML(&Motors::endpausing_active, "motors.endpausing_active", "");
+  ParseYAML(&Motors::tethers_active, "motors.tethers_active", "");
+  ParseYAML(&Motors::k_tether, "motors.k_tether", "1/nM*s");
+  ParseYAML(&Motors::c_eff_tether, "motors.c_eff_tether", "nM");
+  ParseYAML(&Motors::k_untether, "motors.k_untether", "1/s");
+  ParseYAML(&Motors::r_0, "motors.r_0", "nm");
+  ParseYAML(&Motors::k_spring, "motors.k_spring", "pN/nm");
+  ParseYAML(&Motors::k_slack, "motors.k_slack", "pN/nm");
+  Sys::Log("  Crosslinker (xlink) parameters:\n");
+  ParseYAML(&Xlinks::t_active, "xlinks.t_active", "s");
+  ParseYAML(&Xlinks::k_on, "xlinks.k_on", "1/nM*s");
+  ParseYAML(&Xlinks::c_bulk, "xlinks.c_bulk", "nM");
+  ParseYAML(&Xlinks::c_eff_bind, "xlinks.c_eff_bind", "nM");
+  ParseYAML(&Xlinks::k_off_i, "xlinks.k_off_i", "1/s");
+  ParseYAML(&Xlinks::k_off_ii, "xlinks.k_off_ii", "1/s");
+  ParseYAML(&Xlinks::d_i, "xlinks.d_i", "um^2/s");
+  ParseYAML(&Xlinks::d_ii, "xlinks.d_ii", "um^2/s");
+  ParseYAML(&Xlinks::r_0, "xlinks.r_0", "nm");
+  ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
+  // exit(1);
+  /*
   Motors::t_active = motors["t_active"].as<double>();
   Motors::k_on = motors["k_on"].as<double>();
   Motors::c_bulk = motors["c_bulk"].as<double>();
@@ -183,7 +216,9 @@ void Curator::ParseParameters() {
   Motors::k_slack = motors["k_slack"].as<double>();
   Motors::tethers_active = motors["tethers_active"].as<bool>();
   Motors::endpausing_active = motors["endpausing_active"].as<bool>();
+  */
   /* Xlink parameters below */
+  /*
   YAML::Node xlinks = input["xlinks"];
   Xlinks::neighb_neighb_energy = xlinks["neighb_neighb_energy"].as<double>();
   Xlinks::t_active = xlinks["t_active"].as<double>();
@@ -197,8 +232,6 @@ void Curator::ParseParameters() {
   Xlinks::r_0 = xlinks["r_0"].as<double>();
   Xlinks::k_spring = xlinks["k_spring"].as<double>();
   // Store params pointer as parameters_ in Curator
-  Sys::Log("Reading parameters from '%s':\n", Sys::yaml_file_.c_str());
-  Sys::Log("  General parameters:\n");
   Sys::Log("    seed = %lu\n", seed);
   Sys::Log("    kbT = %g pN*nm\n", kbT);
   Sys::Log("    eta = %g pN*s/um^2\n", eta);
@@ -208,27 +241,12 @@ void Curator::ParseParameters() {
   Sys::Log("    t_snapshot = %g s\n", t_snapshot);
   Sys::Log("    dynamic_equil_window = %g s\n", dynamic_equil_window);
   Sys::Log("    verbosity = %zu\n", verbosity);
-  Sys::Log("  Filament parameters:\n");
   Sys::Log("    count = %i\n", Filaments::count);
   Sys::Log("    radius = %g nm\n", Filaments::radius);
   Sys::Log("    site_size = %g nm\n", Filaments::site_size);
-  // Check to make sure there are enough vector entries for given MT count
-  if (Filaments::count > Filaments::n_sites.size() or
-      Filaments::count > Filaments::polarity.size() or
-      Filaments::count > Filaments::x_initial.size() or
-      Filaments::count > Filaments::y_initial.size() or
-      Filaments::count > Filaments::immobile_until.size() or
-      _n_dims_max > Filaments::dimension_enabled.size()) {
-    Sys::Log("Incorrect number of filament parameters provided.\n");
-    Sys::ErrorExit("Curator::ParseParameters()");
-  }
   for (int i_fil{0}; i_fil < Filaments::count; i_fil++) {
     Sys::Log("    n_sites[%i] = %i \n", i_fil, Filaments::n_sites[i_fil]);
     Sys::Log("    polarity[%i] = %i \n", i_fil, Filaments::polarity[i_fil]);
-    if (Filaments::polarity[i_fil] != 0 and Filaments::polarity[i_fil] != 1) {
-      Sys::Log("Polarity must be either 0 or 1!\n");
-      Sys::ErrorExit("Curator::ParseParameters()\n");
-    }
     Sys::Log("    x_initial[%i] = %g nm\n", i_fil, Filaments::x_initial[i_fil]);
     Sys::Log("    y_initial[%i] = %g nm\n", i_fil, Filaments::y_initial[i_fil]);
     Sys::Log("    immobile_until[%i] = %g s\n", i_fil,
@@ -238,7 +256,6 @@ void Curator::ParseParameters() {
     Sys::Log("    dimension_enabled[%i] = %s\n", i_dim,
              Filaments::dimension_enabled[i_dim] ? "true" : "false");
   }
-  Sys::Log("  Kinesin (motor) parameters:\n");
   Sys::Log("    n_runs_desired = %zu\n", Motors::n_runs_desired);
   Sys::Log("    gaussian_range = %i\n", Motors::gaussian_range);
   Sys::Log("    gaussian_amp_solo = -%g kbT\n", Motors::gaussian_amp_solo);
@@ -270,7 +287,6 @@ void Curator::ParseParameters() {
   Sys::Log("    r_0 = %g nm\n", Motors::r_0);
   Sys::Log("    k_spring = %g pN/nm\n", Motors::k_spring);
   Sys::Log("    k_slack = %g pN/nm\n", Motors::k_slack);
-  Sys::Log("  Crosslinker (xlink) parameters:\n");
   Sys::Log("    neighb_neighb_energy = -%g kbT\n",
            Xlinks::neighb_neighb_energy);
   Sys::Log("    t_active = %g seconds\n", Xlinks::t_active);
@@ -283,6 +299,7 @@ void Curator::ParseParameters() {
   Sys::Log("    d_ii = %g um^2/s\n", Xlinks::d_ii);
   Sys::Log("    r_0 = %g nm\n", Xlinks::r_0);
   Sys::Log("    k_spring = %g pN/nm\n", Xlinks::k_spring);
+  */
 }
 
 void Curator::InitializeSimulation() {
@@ -367,46 +384,44 @@ void Curator::GenerateDataFiles() {
 
 void Curator::CheckPrintProgress() {
 
+  using namespace Sys;
+  using namespace Params;
   // Percent milestone; controls report frequency
   int p_report{10};
-  double dt{Params::dt};
   // Advance simulation forward one site (or 1 dt in real time)
-  Sys::i_step_++;
+  i_step_++;
   // If still equilibrating, report progress and check protein equil. status
-  if (Sys::equilibrating_) {
-    if (Sys::i_step_ % (Sys::n_steps_pre_equil_ / (100 / p_report)) == 0 and
-        Sys::i_step_ <= Sys::n_steps_pre_equil_) {
-      Sys::Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
-               double(Sys::i_step_) / Sys::n_steps_pre_equil_ * 100,
-               Sys::i_step_, Sys::i_step_ * dt);
+  if (equilibrating_) {
+    if (i_step_ % (n_steps_pre_equil_ / (100 / p_report)) == 0 and
+        i_step_ <= n_steps_pre_equil_) {
+      Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
+          double(i_step_) / n_steps_pre_equil_ * 100, i_step_, i_step_ * dt);
     }
     if (proteins_.motors_.equilibrated_ and proteins_.xlinks_.equilibrated_ and
-        Sys::i_step_ >= Sys::n_steps_pre_equil_) {
-      Sys::n_steps_equil_ = Sys::i_step_;
-      Sys::equilibrating_ = false;
-      if (Params::dynamic_equil_window > 0.0) {
-        Sys::Log("Dynamic equilibration is complete. (t = %g s)\n",
-                 Sys::i_step_ * dt);
-        Sys::Log("   N_STEPS_EQUIL = %zu\n", Sys::n_steps_equil_);
+        i_step_ >= n_steps_pre_equil_) {
+      n_steps_equil_ = i_step_;
+      equilibrating_ = false;
+      if (dynamic_equil_window > 0.0) {
+        Log("Dynamic equilibration is complete. (t = %g s)\n", i_step_ * dt);
+        Log("   N_STEPS_EQUIL = %zu\n", n_steps_equil_);
       }
     }
   }
   // Otherwise data collection must be active; simply report on that
   else {
-    size_t n_steps_so_far{Sys::i_step_ - Sys::n_steps_equil_};
-    if (n_steps_so_far % (Sys::n_steps_run_ / (100 / p_report)) == 0) {
-      Sys::Log("Data collection %g%% complete. (step #%zu | t = %g s)\n",
-               double(n_steps_so_far) / Sys::n_steps_run_ * 100, Sys::i_step_,
-               Sys::i_step_ * dt);
+    size_t n_steps_so_far{i_step_ - n_steps_equil_};
+    if (n_steps_so_far % (n_steps_run_ / (100 / p_report)) == 0) {
+      Log("Data collection %g%% complete. (step #%zu | t = %g s)\n",
+          double(n_steps_so_far) / n_steps_run_ * 100, i_step_, i_step_ * dt);
     }
   }
   // Terminate simulation once a sufficient number of steps has been taken
-  if (Sys::i_step_ >= Sys::n_steps_run_ + Sys::n_steps_equil_) {
-    Sys::running_ = false;
+  if (i_step_ >= n_steps_run_ + n_steps_equil_) {
+    running_ = false;
     long clock_ticks{(SysClock::now() - start_time_).count()};
     size_t ticks_per_second{SysClock::period::den};
-    Sys::Log("Simulation complete. Total time to execute: %.2f s\n",
-             double(clock_ticks) / ticks_per_second);
+    Log("Simulation complete. Total time to execute: %.2f s\n",
+        double(clock_ticks) / ticks_per_second);
   }
 }
 
@@ -456,8 +471,8 @@ void Curator::OutputData() {
         if (site.occupant_->parent_->tethered_) {
           auto partner{site.occupant_->parent_->partner_};
           if (partner->n_heads_active_ > 0) {
-            double anchor_coord{partner->GetAnchorCoordinate()};
-            tether_anchor_pos[site.index_] = anchor_coord;
+            // double anchor_coord{partner->GetAnchorCoordinate()};
+            // tether_anchor_pos[site.index_] = anchor_coord;
           }
         }
       }

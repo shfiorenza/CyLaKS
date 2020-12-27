@@ -7,9 +7,12 @@ void FilamentManager::SetParameters() {
   using namespace Filaments;
   // Filaments are mobile so long as at least 1 dimension is enabled
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    if (Params::Filaments::dimension_enabled[i_dim]) {
+    if (Params::Filaments::translation_enabled[i_dim]) {
       mobile_ = true;
     }
+  }
+  if (Params::Filaments::rotation_enabled) {
+    mobile_ = true;
   }
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;

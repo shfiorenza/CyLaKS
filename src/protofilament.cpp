@@ -80,43 +80,57 @@ void Protofilament::UpdateRodPosition() {
   body_frame[1][1] = -orientation_[0];
   /* c.f. Tao et al., J. Chem. Phys. (2005); doi.org/10.1063/1.1940031 */
   // Construct xi tensor
-  double xi[_n_dims_max][_n_dims_max];
+  // double xi[_n_dims_max][_n_dims_max];
+  double xi_inv[_n_dims_max][_n_dims_max];
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     for (int j_dim{i_dim}; j_dim < _n_dims_max; j_dim++) {
       double uiuj{orientation_[i_dim] * orientation_[j_dim]};
-      xi[i_dim][j_dim] = xi[j_dim][i_dim] = uiuj * (gamma_[0] - gamma_[1]);
+      xi_inv[i_dim][j_dim] = xi_inv[j_dim][i_dim] =
+          uiuj * ((1.0 / gamma_[0]) - (1.0 / gamma_[1]));
       if (i_dim == j_dim) {
-        xi[i_dim][j_dim] += gamma_[1];
+        xi_inv[i_dim][j_dim] += 1.0 / gamma_[1];
       }
     }
   }
-  // Calculate inverse of xi tensor, which will be used to find velocity
-  double xi_inv[_n_dims_max][_n_dims_max];
-  double det{xi[0][0] * xi[1][1] - xi[0][1] * xi[1][0]};
-  xi_inv[0][0] = xi[1][1] / det;
-  xi_inv[0][1] = -xi[1][0] / det;
-  xi_inv[1][0] = -xi[0][1] / det;
-  xi_inv[1][1] = xi[0][0] / det;
+  // // Calculate inverse of xi tensor, which will be used to find velocity
+  // double det{xi[0][0] * xi[1][1] - xi[0][1] * xi[1][0]};
+  // printf("det = %g\n", det);
+  // xi_inv[0][0] = xi[1][1] / det;
+  // xi_inv[0][1] = -xi[1][0] / det;
+  // xi_inv[1][0] = -xi[0][1] / det;
+  // xi_inv[1][1] = xi[0][0] / det;
   // Apply translationl and rotational displacements
   Vec<double> torque_proj{Cross(torque_, orientation_)};
   double u_norm{0.0};
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    for (int j_dim{0}; j_dim < _n_dims_max; j_dim++) {
-      pos_[i_dim] += xi_inv[i_dim][j_dim] * force_[j_dim] * dt_eff_;
+    if (Params::Filaments::translation_enabled[i_dim]) {
+      for (int j_dim{0}; j_dim < _n_dims_max; j_dim++) {
+        // printf("f[%i] = %g\n", j_dim, force_[j_dim]);
+        // printf("xi_inv[%i][%i] = %g\n", i_dim, j_dim, xi_inv[i_dim][j_dim]);
+        pos_[i_dim] += xi_inv[i_dim][j_dim] * force_[j_dim] * dt_eff_;
+        if (pos_[i_dim] != pos_[i_dim]) {
+          Sys::ErrorExit("yep");
+        }
+      }
+      pos_[i_dim] += body_frame[0][i_dim] * noise_par;
+      pos_[i_dim] += body_frame[1][i_dim] * noise_perp;
     }
-    pos_[i_dim] += body_frame[0][i_dim] * noise_par;
-    pos_[i_dim] += body_frame[1][i_dim] * noise_perp;
-    orientation_[i_dim] += torque_proj[i_dim] * dt_eff_ / gamma_[2];
-    orientation_[i_dim] += body_frame[1][i_dim] * noise_rot;
-    u_norm += Square(orientation_[i_dim]);
+    if (Params::Filaments::rotation_enabled) {
+      orientation_[i_dim] += torque_proj[i_dim] * dt_eff_ / gamma_[2];
+      orientation_[i_dim] += body_frame[1][i_dim] * noise_rot;
+      u_norm += Square(orientation_[i_dim]);
+    }
   }
-  // Re-normalize orientation vector
-  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    orientation_[i_dim] /= sqrt(u_norm);
+  if (Params::Filaments::rotation_enabled) {
+    // Re-normalize orientation vector
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      orientation_[i_dim] /= sqrt(u_norm);
+    }
   }
   force_[0] = 0.0;
   force_[1] = 0.0;
   torque_ = 0.0;
+  // printf(" *** \n");
 }
 
 void Protofilament::UpdateSitePositions() {

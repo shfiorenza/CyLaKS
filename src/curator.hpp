@@ -9,6 +9,7 @@
 
 class Curator {
 private:
+  Vec<Str> test_modes_{"NONE"};
   struct DataFile {
     Str name_{"example"};
     Str filename_{"simName_example.file"};
@@ -46,8 +47,6 @@ private:
   void ParseParameters();
   void InitializeSimulation();
   void GenerateDataFiles();
-
-  void AddDataFile(Str name) { data_files_.emplace(name, DataFile(name)); }
 
   void CheckPrintProgress();
   void OutputData();

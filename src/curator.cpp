@@ -10,10 +10,9 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
     printf("test_mode (optional)\n");
     printf("Currently-implemented test modes are:\n");
-    printf("    NONE!\n");
-    // printf("    xlink_bind_ii\n");
-    // printf("    motor_lattice_bind\n");
-    // printf("    motor_lattice_step\n");
+    for (auto const &mode : test_modes_) {
+      printf("   %s\n", mode.c_str());
+    }
     exit(1);
   }
   Sys::yaml_file_ = argv[1];
@@ -77,38 +76,40 @@ void Curator::ParseParameters() {
     exit(1);
   }
   // Open parameter file
-  Log("Reading parameters from '%s':\n", yaml_file_.c_str());
-  YAML::Node input = YAML::LoadFile(yaml_file_);
+  Log("Reading parameters from file '%s':\n", yaml_file_.c_str());
+  YAML::Node input{YAML::LoadFile(yaml_file_)};
   // Construct function to get values from yaml file and log them
   auto ParseYAML = [&]<typename DATA_T>(DATA_T *param, Str name, Str units) {
-    // We use '.' as a delimiter between YAML subgroups
-    YAML::Node entry;
+    // Unparsed parameter value from input yaml node
+    YAML::Node val;
+    // The character "." is used to separate group and value labels
+    // If present in the param name, split it into group & name strings
     if (name.find(".") < name.length()) {
       Str group{name.substr(0, name.find("."))};
       name = name.substr(name.find(".") + 1, name.length());
-      entry = input[group][name];
-    } else {
-      entry = input[name];
+      val = input[group][name];
     }
-    // Sometimes, size_t variables use "e" notation; need to treat as doubles
+    // Otherwise, look up value label directly
+    else {
+      val = input[name];
+    }
+    // Sometimes, size_t variables use "e" notation & must be treated as doubles
     try {
-      *param = entry.as<DATA_T>();
+      *param = val.as<DATA_T>();
     } catch (const YAML::BadConversion err) {
-      *param = (DATA_T)entry.as<double>();
+      *param = (DATA_T)val.as<double>();
     }
-    // Log values read from parameter file
-    if (entry.Type() == YAML::NodeType::Scalar) {
-      Log("   %s = %s %s\n", name.c_str(), entry.as<Str>().c_str(),
+    // Convert parameter value into a string that we can easily log
+    // (Since we don't know data types a priori, we can't use Log() aka printf)
+    Str val_str;
+    if (val.Type() == YAML::NodeType::Scalar) {
+      Log("   %s = %s %s\n", name.c_str(), val.as<Str>().c_str(),
           units.c_str());
-    } else if (entry.Type() == YAML::NodeType::Sequence) {
-      Str vec_str;
-      for (int i_val{0}; i_val < entry.size(); i_val++) {
-        vec_str += entry[i_val].as<Str>();
-        if (i_val < entry.size() - 1) {
-          vec_str += ", ";
-        }
+    } else if (val.Type() == YAML::NodeType::Sequence) {
+      for (int i_val{0}; i_val < val.size(); i_val++) {
+        Log("   %s[%i] = %s %s\n", name.c_str(), i_val,
+            val[i_val].as<Str>().c_str(), units.c_str());
       }
-      Log("   %s = [%s] %s\n", name.c_str(), vec_str.c_str(), units.c_str());
     } else {
       ErrorExit("Curator::ParseParameters() -- parser");
     }
@@ -135,14 +136,16 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
   ParseYAML(&Filaments::y_initial, "filaments.y_initial", "nm");
   ParseYAML(&Filaments::immobile_until, "filaments.immobile_until", "s");
-  ParseYAML(&Filaments::dimension_enabled, "filaments.dimension_enabled", "");
+  ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
+            "");
+  ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
   // Check to make sure there are enough vector entries for given MT count
   if (Filaments::count > Filaments::n_sites.size() or
       Filaments::count > Filaments::polarity.size() or
       Filaments::count > Filaments::x_initial.size() or
       Filaments::count > Filaments::y_initial.size() or
       Filaments::count > Filaments::immobile_until.size() or
-      _n_dims_max > Filaments::dimension_enabled.size()) {
+      _n_dims_max > Filaments::translation_enabled.size()) {
     Log("Error! Incorrect number of filament parameters provided.\n");
     exit(1);
   }
@@ -192,120 +195,12 @@ void Curator::ParseParameters() {
   ParseYAML(&Xlinks::d_ii, "xlinks.d_ii", "um^2/s");
   ParseYAML(&Xlinks::r_0, "xlinks.r_0", "nm");
   ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
-  // exit(1);
-  /*
-  Motors::t_active = motors["t_active"].as<double>();
-  Motors::k_on = motors["k_on"].as<double>();
-  Motors::c_bulk = motors["c_bulk"].as<double>();
-  Motors::c_eff_bind = motors["c_eff_bind"].as<double>();
-  Motors::k_on_ATP = motors["k_on_ATP"].as<double>();
-  Motors::c_ATP = motors["c_ATP"].as<double>();
-  Motors::k_hydrolyze = motors["k_hydrolyze"].as<double>();
-  Motors::k_off_i = motors["k_off_i"].as<double>();
-  Motors::k_off_ii = motors["k_off_ii"].as<double>();
-  Motors::applied_force = motors["applied_force"].as<double>();
-  Motors::internal_force = motors["internal_force"].as<double>();
-  Motors::sigma_off_i = motors["sigma_off_i"].as<double>();
-  Motors::sigma_off_ii = motors["sigma_off_ii"].as<double>();
-  Motors::sigma_ATP = motors["sigma_ATP"].as<double>();
-  Motors::k_tether = motors["k_tether"].as<double>();
-  Motors::c_eff_tether = motors["c_eff_tether"].as<double>();
-  Motors::k_untether = motors["k_untether"].as<double>();
-  Motors::r_0 = motors["r_0"].as<double>();
-  Motors::k_spring = motors["k_spring"].as<double>();
-  Motors::k_slack = motors["k_slack"].as<double>();
-  Motors::tethers_active = motors["tethers_active"].as<bool>();
-  Motors::endpausing_active = motors["endpausing_active"].as<bool>();
-  */
-  /* Xlink parameters below */
-  /*
-  YAML::Node xlinks = input["xlinks"];
-  Xlinks::neighb_neighb_energy = xlinks["neighb_neighb_energy"].as<double>();
-  Xlinks::t_active = xlinks["t_active"].as<double>();
-  Xlinks::k_on = xlinks["k_on"].as<double>();
-  Xlinks::c_bulk = xlinks["c_bulk"].as<double>();
-  Xlinks::c_eff_bind = xlinks["c_eff_bind"].as<double>();
-  Xlinks::k_off_i = xlinks["k_off_i"].as<double>();
-  Xlinks::k_off_ii = xlinks["k_off_ii"].as<double>();
-  Xlinks::d_i = xlinks["d_i"].as<double>();
-  Xlinks::d_ii = xlinks["d_ii"].as<double>();
-  Xlinks::r_0 = xlinks["r_0"].as<double>();
-  Xlinks::k_spring = xlinks["k_spring"].as<double>();
-  // Store params pointer as parameters_ in Curator
-  Sys::Log("    seed = %lu\n", seed);
-  Sys::Log("    kbT = %g pN*nm\n", kbT);
-  Sys::Log("    eta = %g pN*s/um^2\n", eta);
-  Sys::Log("    dt = %g s\n", dt);
-  Sys::Log("    t_run = %g s\n", t_run);
-  Sys::Log("    t_equil = %g s\n", t_equil);
-  Sys::Log("    t_snapshot = %g s\n", t_snapshot);
-  Sys::Log("    dynamic_equil_window = %g s\n", dynamic_equil_window);
-  Sys::Log("    verbosity = %zu\n", verbosity);
-  Sys::Log("    count = %i\n", Filaments::count);
-  Sys::Log("    radius = %g nm\n", Filaments::radius);
-  Sys::Log("    site_size = %g nm\n", Filaments::site_size);
-  for (int i_fil{0}; i_fil < Filaments::count; i_fil++) {
-    Sys::Log("    n_sites[%i] = %i \n", i_fil, Filaments::n_sites[i_fil]);
-    Sys::Log("    polarity[%i] = %i \n", i_fil, Filaments::polarity[i_fil]);
-    Sys::Log("    x_initial[%i] = %g nm\n", i_fil, Filaments::x_initial[i_fil]);
-    Sys::Log("    y_initial[%i] = %g nm\n", i_fil, Filaments::y_initial[i_fil]);
-    Sys::Log("    immobile_until[%i] = %g s\n", i_fil,
-             Filaments::immobile_until[i_fil]);
-  }
-  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    Sys::Log("    dimension_enabled[%i] = %s\n", i_dim,
-             Filaments::dimension_enabled[i_dim] ? "true" : "false");
-  }
-  Sys::Log("    n_runs_desired = %zu\n", Motors::n_runs_desired);
-  Sys::Log("    gaussian_range = %i\n", Motors::gaussian_range);
-  Sys::Log("    gaussian_amp_solo = -%g kbT\n", Motors::gaussian_amp_solo);
-  Sys::Log("    gaussian_ceiling_bulk = -%g kbT\n",
-           Motors::gaussian_ceiling_bulk);
-  Sys::Log("    neighb_neighb_energy = -%g kbT\n",
-           Motors::neighb_neighb_energy);
-  Sys::Log("    t_active = %g s\n", Motors::t_active);
-  Sys::Log("    k_on = %g 1/nM*s\n", Motors::k_on);
-  Sys::Log("    c_bulk = %g nM\n", Motors::c_bulk);
-  Sys::Log("    c_eff_bind = %g nM\n", Motors::c_eff_bind);
-  Sys::Log("    k_on_ATP = %g 1/mM*s\n", Motors::k_on_ATP);
-  Sys::Log("    c_ATP = %g mM\n", Motors::c_ATP);
-  Sys::Log("    k_hydrolyze = %g 1/s\n", Motors::k_hydrolyze);
-  Sys::Log("    k_off_i = %g 1/s\n", Motors::k_off_i);
-  Sys::Log("    k_off_ii = %g 1/s\n", Motors::k_off_ii);
-  Sys::Log("    applied_force = %g pN\n", Motors::applied_force);
-  Sys::Log("    internal_force = %g pN\n", Motors::internal_force);
-  Sys::Log("    sigma_off_i = %g nm\n", Motors::sigma_off_i);
-  Sys::Log("    sigma_off_ii = %g nm\n", Motors::sigma_off_ii);
-  Sys::Log("    sigma_ATP = %g nm\n", Motors::sigma_ATP);
-  Sys::Log("    endpausing_active = %s\n",
-           Motors::endpausing_active ? "true" : "false");
-  Sys::Log("    tethers_active = %s\n",
-           Motors::tethers_active ? "true" : "false");
-  Sys::Log("    k_tether = %g 1/nM*s\n", Motors::k_tether);
-  Sys::Log("    c_eff_tether = %g nM\n", Motors::c_eff_tether);
-  Sys::Log("    k_untether = %g 1/s\n", Motors::k_untether);
-  Sys::Log("    r_0 = %g nm\n", Motors::r_0);
-  Sys::Log("    k_spring = %g pN/nm\n", Motors::k_spring);
-  Sys::Log("    k_slack = %g pN/nm\n", Motors::k_slack);
-  Sys::Log("    neighb_neighb_energy = -%g kbT\n",
-           Xlinks::neighb_neighb_energy);
-  Sys::Log("    t_active = %g seconds\n", Xlinks::t_active);
-  Sys::Log("    k_on = %g 1/nM*s\n", Xlinks::k_on);
-  Sys::Log("    c_bulk = %g nM\n", Xlinks::c_bulk);
-  Sys::Log("    c_eff_bind = %g nM\n", Xlinks::c_eff_bind);
-  Sys::Log("    k_off_i = %g 1/s\n", Xlinks::k_off_i);
-  Sys::Log("    k_off_ii = %g 1/s\n", Xlinks::k_off_ii);
-  Sys::Log("    d_i = %g um^2/s\n", Xlinks::d_i);
-  Sys::Log("    d_ii = %g um^2/s\n", Xlinks::d_ii);
-  Sys::Log("    r_0 = %g nm\n", Xlinks::r_0);
-  Sys::Log("    k_spring = %g pN/nm\n", Xlinks::k_spring);
-  */
 }
 
 void Curator::InitializeSimulation() {
 
-  using namespace Sys;
   using namespace Params;
+  using namespace Sys;
   // Calculate local parameters
   start_time_ = SysClock::now();
   n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
@@ -334,6 +229,9 @@ void Curator::InitializeSimulation() {
 
 void Curator::GenerateDataFiles() {
 
+  auto AddDataFile = [&](Str name) {
+    data_files_.emplace(name, DataFile(name));
+  };
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
@@ -407,7 +305,7 @@ void Curator::CheckPrintProgress() {
       }
     }
   }
-  // Otherwise data collection must be active; simply report on that
+  // Otherwise, data collection must be active; simply report on that
   else {
     size_t n_steps_so_far{i_step_ - n_steps_equil_};
     if (n_steps_so_far % (n_steps_run_ / (100 / p_report)) == 0) {
@@ -430,6 +328,7 @@ void Curator::OutputData() {
   if (Sys::equilibrating_ or Sys::i_step_ % n_steps_per_snapshot_ != 0) {
     return;
   }
+  Sys::i_datapoint_++;
   for (auto &&pf : filaments_.proto_) {
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];

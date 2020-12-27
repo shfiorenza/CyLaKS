@@ -50,7 +50,6 @@ void ProteinManager::InitializeWeights() {
 void ProteinManager::SetParameters() {
 
   using namespace Params;
-
   // Bind I -- motors
   auto get_unocc = [&](Object *site) -> Object * {
     if (!site->IsOccupied()) {

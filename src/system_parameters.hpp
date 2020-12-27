@@ -22,7 +22,8 @@ inline std::vector<size_t> polarity;  // 0 (1): plus-end at i = 0 (n_sites - 1)
 inline std::vector<double> x_initial; // Starting x-coord of filament center; nm
 inline std::vector<double> y_initial; // Starting y-coord of filament center; nm
 inline std::vector<double> immobile_until; // Time at which filament can move; s
-inline std::vector<bool> dimension_enabled; // (x,y) axis movement toggle switch
+inline std::vector<bool> translation_enabled; // translational movement in x,y
+inline bool rotation_enabled; // rotational movement within the x-y plane
 
 }; // namespace Filaments
 namespace Motors {

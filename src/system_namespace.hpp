@@ -28,17 +28,10 @@ inline size_t i_datapoint_{0};
 template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
 
-  // char first = msg[0];
-  // const char first = msg[0];
   // Tag each log pintout in terminal w/ simulation name
-  // (unless line starts with a space, a comma, or a right bracket)
-  // printf("\n ** %c **\n\n", first);
-  // if (first != ',' and first != ']') {
   printf("[%s] ", sim_name_.c_str());
-  // } else {
-  // }
   // This is technically a horrendous vulnerability, but we don't care about
-  // 'hackers' in our sim; also should never be linked to input
+  // 'hackers' in our sim; also Log() is never explicitly linked to input
   int chars_printed{printf(msg, args..., "MISSING STRING")};
   int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
   if (chars_printed < 0 or chars_written < 0) {
@@ -46,7 +39,7 @@ inline void Log(const char *msg, const Args... args) {
     fprintf(log_file_, "Fatal error in Curator::Log()\n *** EXITING ***\n");
     exit(1);
   }
-} // namespace Sys
+}
 template <typename... Args>
 inline void Log(size_t tier, const char *msg, const Args... args) {
   if (verbosity_ < tier) {

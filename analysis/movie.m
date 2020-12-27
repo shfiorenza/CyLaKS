@@ -2,7 +2,7 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test_rot';
+sim_name = 'test';
 
 movie_name = 'test';
 start_frame = 1;
@@ -17,7 +17,7 @@ log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
 % Read in number of MTs
-n_mts = str2double(values{contains(params, "count ")});
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
 mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
@@ -122,8 +122,8 @@ for i_data = start_frame : frames_per_plot : end_frame
     max_x = max(max(filament_pos(1, :, :, i_data)));
     ax.XLim = [(min_x - 25) (max_x + 25)];
     ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
-    %ax.XLim = [-1000 1000];
-    %ax.YLim = [-600 600];
+    %ax.XLim = [-2000 2000];
+    %ax.YLim = [-1200 2000];
     ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];

@@ -12,6 +12,8 @@ int BindingHead::GetNumNeighborsOccupied() {
 
 int BindingHead::GetNumHeadsActive() { return parent_->n_heads_active_; }
 
+void BindingHead::AddForce(Vec<double> f) { site_->AddForce(f); }
+
 void BindingHead::UntetherSatellite() { parent_->UntetherSatellite(); }
 
 bool BindingHead::Unbind() { return parent_->Unbind(this); }

@@ -42,6 +42,13 @@ template <typename T1, typename T2> using Pair = std::pair<T1, T2>;
 /* Common macros */
 inline double Square(double x) { return x * x; }
 inline double Cube(double x) { return x * x * x; }
+template <typename... ARGS> inline double Avg(ARGS... vals) {
+  double sum{0.0};
+  for (auto &&val : {vals...}) {
+    sum += val;
+  }
+  return sum / sizeof...(vals);
+}
 inline double Dot(Vec<double> a, Vec<double> b) {
   assert(a.size() == b.size());
   assert(a.size() <= _n_dims_max);
@@ -62,6 +69,9 @@ inline double Dot(Vec<double> a, int i_dim) {
   }
 }
 // Pseudo cross-product in 2-D (torque is a scalar; in/out of page)
+inline double Cross(Vec<double> a, Vec<double> b) {
+  return a[0] * b[1] - a[1] * b[0];
+}
 inline Vec<double> Cross(double tq, Vec<double> u) {
   return {-tq * u[1], tq * u[0]};
 }

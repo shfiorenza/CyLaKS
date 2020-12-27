@@ -35,6 +35,8 @@ public:
   BindingHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }
 
+  virtual void AddForce(Vec<double> f_applied);
+
   virtual void UntetherSatellite();
   virtual bool Unbind();
 

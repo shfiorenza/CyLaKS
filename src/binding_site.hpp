@@ -50,6 +50,8 @@ public:
     }
     return n_neighbs;
   }
+  void AddForce(Vec<double> f_applied);
+
   BindingSite *GetNeighbor(int dir);
 };
 #endif

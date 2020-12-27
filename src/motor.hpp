@@ -21,7 +21,7 @@ public:
     Object::Initialize(sid, id);
     head_one_.Initialize(sid, id, _r_motor_head, this, &head_two_);
     head_two_.Initialize(sid, id, _r_motor_head, this, &head_one_);
-    tether_.Initialize(sid, id, this);
+    // tether_.Initialize(sid, id, this);
   }
 
   BindingSite *GetDockSite();

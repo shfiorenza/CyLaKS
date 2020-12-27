@@ -72,6 +72,7 @@ public:
     if (NoMobileFilamentsYet()) {
       return;
     }
+    UpdateProteins();
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
       for (auto &&filament : proto_) {
         filament.UpdatePosition();

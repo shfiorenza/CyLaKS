@@ -13,3 +13,5 @@ BindingSite *BindingSite::GetNeighbor(int dir) {
   }
   return nullptr;
 }
+
+void BindingSite::AddForce(Vec<double> f) { filament_->AddForce(this, f); }

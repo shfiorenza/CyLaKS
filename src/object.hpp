@@ -24,12 +24,13 @@ public:
   size_t GetID() { return unique_id_; }
   size_t GetSpeciesID() { return species_id_; }
 
+  virtual void AddForce(Vec<double> f) {}
   virtual bool IsOccupied() { return true; }
-  virtual int GetNumHeadsActive() { return -1; }
   virtual int GetNumNeighborsOccupied() { return -1; }
-  virtual Object *GetHeadOne() { return nullptr; }
-  virtual Object *GetHeadTwo() { return nullptr; }
+  virtual int GetNumHeadsActive() { return -1; }
   virtual Object *GetActiveHead() { return nullptr; }
   virtual Object *GetOtherHead() { return nullptr; }
+  virtual Object *GetHeadOne() { return nullptr; }
+  virtual Object *GetHeadTwo() { return nullptr; }
 };
 #endif

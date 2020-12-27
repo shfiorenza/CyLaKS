@@ -29,9 +29,9 @@ private:
   void GenerateFilaments();
   void InitializeTestEnvironment();
 
-  bool NoMobileFilamentsYet();
+  bool AllFilamentsImmobile();
 
-  void UpdateProteins();
+  void UpdateForces();
   void UpdateLattice();
 
 public:
@@ -69,15 +69,15 @@ public:
     // UpdateLattice();
   }
   void RunBD() {
-    if (NoMobileFilamentsYet()) {
+    if (AllFilamentsImmobile()) {
       return;
     }
-    UpdateProteins();
+    UpdateForces();
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
       for (auto &&filament : proto_) {
         filament.UpdatePosition();
       }
-      UpdateProteins();
+      UpdateForces();
     }
   }
 };

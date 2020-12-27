@@ -96,6 +96,7 @@ public:
     // If spring is still attached after update, apply forces
     spring_.ApplyForces();
   }
+  virtual double GetWeight_Unbind_II(BindingHead *head);
   virtual double GetWeight_Diffuse(BindingHead *head, int dir);
 
   virtual bool Bind(BindingSite *site, BindingHead *head);

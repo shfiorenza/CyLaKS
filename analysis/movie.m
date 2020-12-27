@@ -2,7 +2,7 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test';
+sim_name = 'test_rot3';
 
 movie_name = 'test';
 start_frame = 1;
@@ -120,10 +120,10 @@ for i_data = start_frame : frames_per_plot : end_frame
     hold all;
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
-    ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
-    %ax.XLim = [-2000 2000];
-    %ax.YLim = [-1200 2000];
+    %ax.XLim = [(min_x - 25) (max_x + 25)];
+    %ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
+    ax.XLim = [-600 600];
+    ax.YLim = [-360 360];
     ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];

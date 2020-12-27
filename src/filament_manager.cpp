@@ -74,7 +74,7 @@ void FilamentManager::GenerateFilaments() {
 
 void FilamentManager::InitializeTestEnvironment() {}
 
-bool FilamentManager::NoMobileFilamentsYet() {
+bool FilamentManager::AllFilamentsImmobile() {
 
   if (!mobile_) {
     return true;
@@ -87,6 +87,14 @@ bool FilamentManager::NoMobileFilamentsYet() {
   return true;
 }
 
-void FilamentManager::UpdateProteins() { proteins_->UpdateExtensions(); }
+void FilamentManager::UpdateForces() {
+  for (auto &&pf : proto_) {
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      pf.force_[i_dim] = 0.0;
+    }
+    pf.torque_ = 0.0;
+  }
+  proteins_->UpdateExtensions();
+}
 
 void FilamentManager::UpdateLattice() { proteins_->UpdateLatticeDeformation(); }

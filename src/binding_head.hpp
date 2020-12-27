@@ -38,6 +38,8 @@ public:
   virtual void AddForce(Vec<double> f_applied);
 
   virtual void UntetherSatellite();
+
+  virtual double GetWeight_Unbind_II();
   virtual bool Unbind();
 
   virtual double GetWeight_Diffuse(int dir);

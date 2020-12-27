@@ -99,6 +99,31 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
+double Protein::GetWeight_Unbind_II(BindingHead *head) {
+
+  if (n_heads_active_ != 2) {
+    Sys::ErrorExit("wut\n");
+  }
+
+  double lambda_neighb{1.0};
+  double lambda_spring{0.5};
+  BindingSite *site{head->site_};
+  BindingSite *other_site{head->GetOtherHead()->site_};
+  double r_x{site->pos_[0] - other_site->pos_[0]};
+  double r_y{site->pos_[1] - other_site->pos_[1]};
+  double r{sqrt(Square(r_x) + Square(r_y))};
+  // printf("r = %g\n", r);
+  double dr{r - Params::Xlinks::r_0};
+  double E_spring{0.5 * Params::Xlinks::k_spring * Square(dr)};
+  // printf("E = %g\n", E_spring);
+  double weight_spring{exp(lambda_spring * fabs(E_spring) / Params::kbT)};
+  double E_neighb{site->GetNumNeighborsOccupied() * -1.0 *
+                  Params::Xlinks::neighb_neighb_energy};
+  double weight_neighb{exp(lambda_neighb * E_neighb)};
+  // printf("wt is %g * %g\n", weight_spring, weight_neighb);
+  return weight_spring * weight_neighb;
+}
+
 double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
 
   double lambda_neighb{1.0};
@@ -137,6 +162,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   double r_y{old_site->pos_[1] - other_site->pos_[1]};
   double r{sqrt(Square(r_x) + Square(r_y))};
   double dr{r - Params::Xlinks::r_0};
+  // FIXME incorporate k_slack
   double E_old{0.5 * Params::Xlinks::k_spring * Square(dr)};
   double r_x_new{new_site->pos_[0] - other_site->pos_[0]};
   double r_y_new{new_site->pos_[1] - other_site->pos_[1]};

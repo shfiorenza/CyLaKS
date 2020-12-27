@@ -44,12 +44,10 @@ public:
       return;
     }
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      // printf("added %g pN at site %i\n", f_applied[i_dim], location->index_);
       force_[i_dim] += f_applied[i_dim];
     }
     if (Params::Filaments::rotation_enabled) {
-      // Construct vector pointing from rod COM to site
-      Vec<double> r(_n_dims_max, 0.0);
+      Vec<double> r(_n_dims_max, 0.0); // Points from rod COM to site COM
       for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
         r[i_dim] = location->pos_[i_dim] - pos_[i_dim];
       }

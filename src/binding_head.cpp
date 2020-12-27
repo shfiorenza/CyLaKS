@@ -16,6 +16,10 @@ void BindingHead::AddForce(Vec<double> f) { site_->AddForce(f); }
 
 void BindingHead::UntetherSatellite() { parent_->UntetherSatellite(); }
 
+double BindingHead::GetWeight_Unbind_II() {
+  return parent_->GetWeight_Unbind_II(this);
+}
+
 bool BindingHead::Unbind() { return parent_->Unbind(this); }
 
 double BindingHead::GetWeight_Diffuse(int dir) {

@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 50
+t_run: 20
 t_equil: 100 # 0
 t_snapshot: 0.1
 dynamic_equil_window: -1
@@ -12,7 +12,7 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [99, 99]
+  n_sites: [1000, 500]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]

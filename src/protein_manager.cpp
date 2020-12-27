@@ -241,6 +241,28 @@ void ProteinManager::InitializeEvents() {
         get_weight_bind_ii, exe_bind_ii);
   }
   // Unbind_II
+  auto exe_unbind_ii = [&](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    bool executed{head->Unbind()};
+    if (executed) {
+      xlinks_.FlagForUpdate();
+      filaments_->FlagForUpdate();
+    }
+  };
+  auto get_weight_unbind_ii = [](Object *base) {
+    auto head{dynamic_cast<BindingHead *>(base)};
+    double weight{head->GetWeight_Unbind_II()};
+    // printf("weight is %g\n", weight);
+    return weight;
+    // return head->GetWeight_Unbind_II();
+  };
+  if (xlinks_.crosslinking_active_) {
+    kmc_.events_.emplace_back("unbind_ii",
+                              xlinks_.p_event_.at("unbind_ii").GetVal(),
+                              &xlinks_.sorted_.at("bound_ii").size_,
+                              &xlinks_.sorted_.at("bound_ii").entries_, poisson,
+                              get_weight_unbind_ii, exe_unbind_ii);
+  }
 
   // Unbind_I: Unbind first (singly bound) head of a protein
   /*

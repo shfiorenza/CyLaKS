@@ -65,59 +65,45 @@ void Protofilament::GenerateSites() {
 
 void Protofilament::UpdateRodPosition() {
 
+  // FIXME update efficienty; e.g., noise_rot shouldnt be calculated in all sims
   // Independent terms for rod trans/rotational diffusion
   double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
-  // Construct body_frame matrix, which transforms rod body to lab frame
+
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
-  // Third row (in 3-D only) is the same as 2nd, but also perpendicular to that
-  double body_frame[2][_n_dims_max];
-  body_frame[0][0] = orientation_[0];
-  body_frame[0][1] = orientation_[1];
-  body_frame[1][0] = orientation_[1];
-  body_frame[1][1] = -orientation_[0];
+  Vec2D<double> rod_basis{GetOrthonormalBasis(orientation_)};
   /* c.f. Tao et al., J. Chem. Phys. (2005); doi.org/10.1063/1.1940031 */
-  // Construct xi tensor
-  // double xi[_n_dims_max][_n_dims_max];
-  double xi_inv[_n_dims_max][_n_dims_max];
-  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    for (int j_dim{i_dim}; j_dim < _n_dims_max; j_dim++) {
-      double uiuj{orientation_[i_dim] * orientation_[j_dim]};
-      xi_inv[i_dim][j_dim] = xi_inv[j_dim][i_dim] =
-          uiuj * ((1.0 / gamma_[0]) - (1.0 / gamma_[1]));
-      if (i_dim == j_dim) {
-        xi_inv[i_dim][j_dim] += 1.0 / gamma_[1];
+  Vec2D<double> xi_inv(_n_dims_max, Vec<double>(_n_dims_max, 0.0));
+  // double xi_inv[_n_dims_max][_n_dims_max];
+  for (int i{0}; i < _n_dims_max; i++) {
+    for (int j{i}; j < _n_dims_max; j++) {
+      double uiuj{orientation_[i] * orientation_[j]};
+      xi_inv[i][j] = xi_inv[j][i] = uiuj * (1.0 / gamma_[0] - 1.0 / gamma_[1]);
+      if (i == j) {
+        xi_inv[i][j] += 1.0 / gamma_[1];
       }
     }
   }
-  // // Calculate inverse of xi tensor, which will be used to find velocity
-  // double det{xi[0][0] * xi[1][1] - xi[0][1] * xi[1][0]};
-  // printf("det = %g\n", det);
-  // xi_inv[0][0] = xi[1][1] / det;
-  // xi_inv[0][1] = -xi[1][0] / det;
-  // xi_inv[1][0] = -xi[0][1] / det;
-  // xi_inv[1][1] = xi[0][0] / det;
   // Apply translationl and rotational displacements
   Vec<double> torque_proj{Cross(torque_, orientation_)};
   double u_norm{0.0};
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
-      for (int j_dim{0}; j_dim < _n_dims_max; j_dim++) {
-        // printf("f[%i] = %g\n", j_dim, force_[j_dim]);
-        // printf("xi_inv[%i][%i] = %g\n", i_dim, j_dim, xi_inv[i_dim][j_dim]);
-        pos_[i_dim] += xi_inv[i_dim][j_dim] * force_[j_dim] * dt_eff_;
-        if (pos_[i_dim] != pos_[i_dim]) {
-          Sys::ErrorExit("yep");
-        }
+      pos_[i_dim] += Dot(xi_inv[i_dim], force_) * dt_eff_;
+      pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
+      pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
+      // Check for NaN positions
+      if (pos_[i_dim] != pos_[i_dim]) {
+        Sys::ErrorExit("Protofilament::UpdateRodPositions()");
       }
-      pos_[i_dim] += body_frame[0][i_dim] * noise_par;
-      pos_[i_dim] += body_frame[1][i_dim] * noise_perp;
     }
+    // Only update orientation if rotation is enabled
     if (Params::Filaments::rotation_enabled) {
-      orientation_[i_dim] += torque_proj[i_dim] * dt_eff_ / gamma_[2];
-      orientation_[i_dim] += body_frame[1][i_dim] * noise_rot;
+      orientation_[i_dim] += torque_proj[i_dim] / gamma_[2] * dt_eff_;
+      orientation_[i_dim] += rod_basis[1][i_dim] * noise_rot;
       u_norm += Square(orientation_[i_dim]);
     }
   }
@@ -127,10 +113,6 @@ void Protofilament::UpdateRodPosition() {
       orientation_[i_dim] /= sqrt(u_norm);
     }
   }
-  force_[0] = 0.0;
-  force_[1] = 0.0;
-  torque_ = 0.0;
-  // printf(" *** \n");
 }
 
 void Protofilament::UpdateSitePositions() {

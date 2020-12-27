@@ -10,9 +10,6 @@
 
 #define GetVarName(Variable) (#Variable)
 
-/* Lab coordinate vectors */
-inline static const std::vector<double> _x_hat{1.0, 0.0};
-inline static const std::vector<double> _y_hat{0.0, 1.0};
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};
@@ -24,6 +21,9 @@ inline static const size_t _id_xlink{2};
 inline static const double _r_site{8.0};
 inline static const double _r_motor_head{4.0};
 inline static const double _r_xlink_head{4.0};
+/* Lab frame coordinate vectors */
+inline static const std::vector<double> _x_hat{1.0, 0.0};
+inline static const std::vector<double> _y_hat{0.0, 1.0};
 
 /* Stylistic stuff */
 using SysClock = std::chrono::steady_clock;
@@ -62,10 +62,8 @@ inline double Dot(Vec<double> a, int i_dim) {
   switch (i_dim) {
   case 0:
     return Dot(a, _x_hat);
-    break;
   case 1:
     return Dot(a, _y_hat);
-    break;
   }
 }
 // Pseudo cross-product in 2-D (torque is a scalar; in/out of page)
@@ -75,4 +73,17 @@ inline double Cross(Vec<double> a, Vec<double> b) {
 inline Vec<double> Cross(double tq, Vec<double> u) {
   return {-tq * u[1], tq * u[0]};
 }
+inline Vec2D<double> Outer(Vec<double> a, Vec<double> b) {
+  Vec2D<double> matrix(a.size(), Vec<double>(b.size(), 0.0));
+  for (int i{0}; i < a.size(); i++) {
+    for (int j{0}; j < b.size(); j++) {
+      matrix[i][j] = a[i] * b[j];
+    }
+  }
+}
+inline Vec2D<double> GetProjectionMatrix(Vec<double> a) { return Outer(a, a); }
+inline Vec2D<double> GetOrthonormalBasis(Vec<double> a) {
+  return {{a[0], a[1]}, {a[1], -a[0]}};
+}
+
 #endif

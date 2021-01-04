@@ -32,7 +32,7 @@ void Protein::UpdateNeighbors_Bind_II() {
   BindingSite *site{GetActiveHead()->site_};
   Protofilament *neighb_fil{site->filament_->neighbor_};
   for (int delta{-dist_cutoff_}; delta <= dist_cutoff_; delta++) {
-    BindingSite *neighb = neighb_fil->GetNeighb(site, delta);
+    BindingSite *neighb{neighb_fil->GetNeighb(site, delta)};
     if (neighb == nullptr) {
       continue;
     }
@@ -69,10 +69,14 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
   double weight_tot{GetTotalWeight_Bind_II()};
   double ran{SysRNG::GetRanProb()};
   double p_cum{0.0};
+  Sys::Log(2, "%i NEIGHBS\n", n_neighbors_bind_ii_);
+  Sys::Log(2, "ran = %g\n", ran);
   for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
     BindingSite *neighb{neighbors_bind_ii_[i_neighb]};
     p_cum += GetWeight_Bind_II(neighb) / weight_tot;
+    Sys::Log(2, "p_cum = %g\n", p_cum);
     if (ran < p_cum) {
+      Sys::Log(2, "*** chose neighb %i ***\n\n", neighb->index_);
       return neighb;
     }
   }

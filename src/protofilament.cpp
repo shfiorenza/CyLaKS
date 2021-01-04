@@ -135,12 +135,17 @@ void Protofilament::UpdateSitePositions() {
 
 BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
 
-  double pos_x{site->pos_[0]};
-  int i_delta{
-      (int)std::round((pos_[0] - pos_x) / Params::Filaments::site_size)};
-  int i_site{i_delta + (int)center_index_};
-  if (i_site < 0 or i_site > sites_.size() - 1) {
+  using namespace Params;
+  // printf("i_site = %i, delta = %i\n", site->index_, delta);
+  // First, we find which site best aligns vertically w/ given site
+  int site_x{site->pos_[0]};
+  // x-coords equal, so site_pos_x = (i_align - center_index) * site_size + pos
+  int i_aligned{int((site_x - pos_[0]) / Filaments::site_size + center_index_)};
+  // Scan relative to aligned site using given delta value
+  int i_neighb{i_aligned + delta};
+  // printf("i_neighb is %i\n", i_neighb);
+  if (i_neighb < 0 or i_neighb > sites_.size() - 1) {
     return nullptr;
   }
-  return &sites_[i_site];
+  return &sites_[i_neighb];
 }

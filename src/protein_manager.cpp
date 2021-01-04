@@ -4,6 +4,8 @@
 #include "filament_manager.hpp"
 #include "system_namespace.hpp"
 #include "system_rng.hpp"
+#include <iostream>
+#include <string>
 
 void ProteinManager::GenerateReservoirs() {
 
@@ -51,11 +53,11 @@ void ProteinManager::SetParameters() {
 
   using namespace Params;
   // Bind I -- motors
-  auto get_unocc = [&](Object *site) -> Object * {
+  auto is_unocc = [&](Object *site) -> Vec<Object *> {
     if (!site->IsOccupied()) {
-      return site;
+      return {site};
     }
-    return nullptr;
+    return {};
   };
   // filaments_->AddPop("motors", get_unocc);
   // motors_.AddProb("bind_i", Motors::k_on * Motors::c_bulk * dt);
@@ -66,33 +68,26 @@ void ProteinManager::SetParameters() {
     Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
     return indices_vec;
   };
-  filaments_->AddPop("xlinks", get_unocc, dim_size, i_min, get_n_neighbs);
+  filaments_->AddPop("xlinks", is_unocc, dim_size, i_min, get_n_neighbs);
+
   xlinks_.AddProb("bind_i", Xlinks::k_on * Xlinks::c_bulk * dt, "neighbs", 0);
 
   // Bind_I_Teth
   // Bind_II
-  auto is_singly_bound = [](Object *protein) -> Object * {
+  auto is_singly_bound = [](Object *protein) -> Vec<Object *> {
     if (protein->GetNumHeadsActive() == 1) {
-      return protein->GetActiveHead();
+      return {protein->GetActiveHead()};
     }
-    return nullptr;
+    return {};
   };
   xlinks_.AddPop("bind_ii_candidates", is_singly_bound);
   xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
   // Unbind_II
-  // FIXME good lord this is awful
-  // Need to figure out a modular way of pushing back members
-  // i.e., a way to push back BOTH heads of a crosslinker
-  auto is_doubly_bound = [&](Object *protein) -> Object * {
+  auto is_doubly_bound = [&](Object *protein) -> Vec<Object *> {
     if (protein->GetNumHeadsActive() == 2) {
-      double ran{SysRNG::GetRanProb()};
-      if (ran < 0.5) {
-        return protein->GetHeadOne();
-      } else {
-        return protein->GetHeadTwo();
-      }
+      return {protein->GetHeadOne(), protein->GetHeadTwo()};
     }
-    return nullptr;
+    return {};
   };
   xlinks_.AddPop("bound_ii", is_doubly_bound);
   xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
@@ -152,9 +147,173 @@ void ProteinManager::SetParameters() {
   // Unbind_II_Teth
 }
 
-void ProteinManager::InitializeTestEnvironment() {}
+void ProteinManager::InitializeTestEnvironment() {
 
-void ProteinManager::InitializeTestEvents() {}
+  Sys::Log(" ** Initializing test '%s'\n", Sys::test_mode_.c_str());
+  using namespace Params;
+  if (Sys::test_mode_ == "xlink_bind_ii") {
+    Sys::Log("Enter xlink spring cutoff in nm: ");
+    Str input;
+    std::getline(std::cin, input);
+    double dist_cutoff{std::stod(input)};
+    printf("input = %g\n", dist_cutoff);
+    // Initialize statistics
+    double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
+    if (r_y > dist_cutoff) {
+      Sys::Log("Error; filament distance greater than spring cutoff\n");
+      exit(1);
+    }
+    double r_x_cutoff{sqrt(Square(dist_cutoff) - Square(r_y))};
+    printf("r_x_max = %g\n", r_x_cutoff);
+    size_t x_max((size_t)std::ceil(r_x_cutoff / Filaments::site_size));
+    printf("x_max = %zu\n", x_max);
+    // Calculate event probability (sans energy effects) and store it
+    xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
+    xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
+    Vec<double> p_bind(x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
+    Vec<double> p_unbind(x_max + 1, xlinks_.p_event_.at("unbind_ii").GetVal());
+    for (int x{0}; x <= x_max; x++) {
+      double lambda{0.5};
+      double r_x{x * Filaments::site_size};
+      double r{sqrt(Square(r_x) + Square(r_y))};
+      double dr{r - Params::Xlinks::r_0};
+      double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
+      // printf("dE[%i] = %.3g\n", x, dE);
+      p_bind[x] *= exp(-(1.0 - lambda) * dE / Params::kbT);
+      p_unbind[x] *= exp(lambda * dE / Params::kbT);
+      printf("p[%i] = %.3g (%.3g)\n", x, p_bind[x], p_unbind[x]);
+    }
+    test_ref_.emplace("bind_ii", p_bind);
+    test_ref_.emplace("unbind_ii", p_unbind);
+    Vec<Pair<size_t, size_t>> zeros(x_max + 1, {0, 0});
+    test_stats_.emplace("bind_ii", zeros);
+    test_stats_.emplace("unbind_ii", zeros);
+    // Initialize filament environment
+    Filaments::count = 2;
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
+    Filaments::translation_enabled[0] = false;
+    Filaments::translation_enabled[1] = false;
+    Filaments::rotation_enabled = false;
+    filaments_->Initialize(this);
+    // FIXME -- shouldn't matter, but we cant have this in SetParams
+    // filaments_->AddPop("xlinks", get_unocc, dim_size, i_min, get_n_neighbs);
+
+    // Place first xlink head on lower MT; remains static for entire sim
+    int i_site{x_max};
+    BindingSite *site{&filaments_->proto_[0].sites_[i_site]};
+    Protein *xlink{xlinks_.GetFreeEntry()};
+    bool executed{xlink->Bind(site, &xlink->head_one_)};
+    if (executed) {
+      xlinks_.AddToActive(xlink);
+      filaments_->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
+    }
+  }
+}
+
+void ProteinManager::InitializeTestEvents() {
+
+  using namespace Params;
+  // Str name{};
+  if (Sys::test_mode_ == "xlink_bind_ii") {
+    // KMC Event -- Bind_II
+    // name = "bind_ii";
+    // Add population tracker for potential targets of Bind_II event
+    auto is_singly_bound = [](Object *protein) -> Vec<Object *> {
+      if (protein->GetNumHeadsActive() == 1) {
+        return {protein->GetActiveHead()};
+      }
+      return {};
+    };
+    xlinks_.AddPop("bind_ii", is_singly_bound);
+    // Helper functions for Bind_II event structure
+    auto poisson_bind_ii = [&](double p, int n) {
+      for (int x{0}; x < test_stats_.at("bind_ii").size(); x++) {
+        int c{x == 0 ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
+        int n_entries{c * xlinks_.sorted_.at("bind_ii").size_};
+        test_stats_.at("bind_ii")[x].second += n_entries;
+      }
+      if (p == 0.0) {
+        return 0;
+      }
+      return SysRNG::SamplePoisson(p);
+    };
+    auto get_weight_bind_ii = [](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      return head->parent_->GetTotalWeight_Bind_II();
+    };
+    auto exe_bind_ii = [&](Object *base_head) {
+      auto bound_head{dynamic_cast<BindingHead *>(base_head)};
+      auto head{bound_head->GetOtherHead()};
+      auto site{head->parent_->GetNeighbor_Bind_II()};
+      auto executed{head->parent_->Bind(site, head)};
+      if (executed) {
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        head->parent_->UpdateExtension();
+        double r_x{head->pos_[0] - bound_head->pos_[0]};
+        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        test_stats_.at("bind_ii")[x].first++;
+      } else {
+        Sys::ErrorExit("Bind_II (TEST)");
+      }
+    };
+    // Construct KMC event fr Bind_II
+    kmc_.events_.emplace_back("bind_ii",
+                              xlinks_.p_event_.at("bind_ii").GetVal(),
+                              &xlinks_.sorted_.at("bind_ii").size_,
+                              &xlinks_.sorted_.at("bind_ii").entries_,
+                              poisson_bind_ii, get_weight_bind_ii, exe_bind_ii);
+    // KMC event -- Unbind_II
+    // name = "unbind_ii";
+    auto is_doubly_bound = [&](Object *protein) -> Vec<Object *> {
+      // Only ever unbind second head
+      if (protein->GetNumHeadsActive() == 2) {
+        return {protein->GetHeadTwo()};
+      }
+      return {};
+    };
+    xlinks_.AddPop("unbind_ii", is_doubly_bound);
+    auto poisson_unbind_ii = [&](double p, int n) {
+      if (xlinks_.sorted_.at("unbind_ii").size_ > 0) {
+        auto head{xlinks_.sorted_.at("unbind_ii").entries_[0]};
+        double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
+        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        test_stats_.at("unbind_ii")[x].second += 1;
+      }
+      if (p == 0.0) {
+        return 0;
+      }
+      return SysRNG::SamplePoisson(p);
+    };
+    auto get_weight_unbind_ii = [](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      return head->GetWeight_Unbind_II();
+    };
+    auto exe_unbind_ii = [&](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      bool executed{head->Unbind()};
+      if (executed) {
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
+        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        test_stats_.at("unbind_ii")[x].first++;
+        head->parent_->UpdateExtension();
+      } else {
+        Sys::ErrorExit("Unbind_II (TEST)");
+      }
+    };
+    kmc_.events_.emplace_back(
+        "unbind_ii", xlinks_.p_event_.at("unbind_ii").GetVal(),
+        &xlinks_.sorted_.at("unbind_ii").size_,
+        &xlinks_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
+        get_weight_unbind_ii, exe_unbind_ii);
+  }
+}
+
+void ProteinManager::InitializePopulations() {}
 
 void ProteinManager::InitializeEvents() {
 
@@ -251,10 +410,7 @@ void ProteinManager::InitializeEvents() {
   };
   auto get_weight_unbind_ii = [](Object *base) {
     auto head{dynamic_cast<BindingHead *>(base)};
-    double weight{head->GetWeight_Unbind_II()};
-    // printf("weight is %g\n", weight);
-    return weight;
-    // return head->GetWeight_Unbind_II();
+    return head->GetWeight_Unbind_II();
   };
   if (xlinks_.crosslinking_active_) {
     kmc_.events_.emplace_back("unbind_ii",

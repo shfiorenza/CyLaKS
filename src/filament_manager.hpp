@@ -27,7 +27,6 @@ public:
 private:
   void SetParameters();
   void GenerateFilaments();
-  void InitializeTestEnvironment();
 
   bool AllFilamentsImmobile();
 
@@ -38,16 +37,13 @@ public:
   FilamentManager() {}
   void Initialize(ProteinManager *proteins) {
     proteins_ = proteins;
-    if (!Sys::test_mode_.empty()) {
-      return;
-    }
     SetParameters();
     GenerateFilaments();
   }
-  void AddPop(Str name, Fn<Object *(Object *)> sort) {
+  void AddPop(Str name, Fn<Vec<Object *>(Object *)> sort) {
     unoccupied_.emplace(name, Population<Object>(name, sort, sites_.size()));
   }
-  void AddPop(Str name, Fn<Object *(Object *)> sort, Vec<size_t> i_size,
+  void AddPop(Str name, Fn<Vec<Object *>(Object *)> sort, Vec<size_t> i_size,
               Vec<int> i_min, Fn<Vec<int>(Object *)> get_i) {
     Vec<size_t> sz{i_size[0], i_size[1], i_size[2], sites_.size()};
     unoccupied_.emplace(name, Population<Object>(name, sort, sz, i_min, get_i));

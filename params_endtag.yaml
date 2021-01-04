@@ -12,13 +12,13 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [1000, 500]
+  n_sites: [200, 100]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
   immobile_until: [500, 110]
   translation_enabled: [true, true]
-  rotation_enabled: true
+  rotation_enabled: false
 motors:
   n_runs_desired: 250
   gaussian_range: 0 # 1000 # 1200 # 1000
@@ -54,7 +54,7 @@ xlinks:
   c_bulk: 50
   c_eff_bind: 5000
   k_off_i: 0.143
-  k_off_ii: 0.0143
+  k_off_ii: 1.43 # 0.0143
   d_i: 0.131
   d_ii: 0.0655
   r_0: 32

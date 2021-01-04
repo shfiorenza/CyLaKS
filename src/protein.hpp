@@ -90,8 +90,8 @@ public:
     // Update spring position
     bool within_cutoff{spring_.UpdatePosition()};
     if (!within_cutoff) {
-      ForceUnbind();
-      return;
+      // ForceUnbind();
+      // return;
     }
     // If spring is still attached after update, apply forces
     spring_.ApplyForces();

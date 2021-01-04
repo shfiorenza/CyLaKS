@@ -7,7 +7,7 @@ template <typename ENTRY_T> struct Population {
 private:
   bool one_d_{true};
   // 1-d stuff
-  Fn<ENTRY_T *(ENTRY_T *)> get_member_;
+  Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_;
   // multi-dim stuff
   Vec<int> min_indices_;
   Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;
@@ -32,14 +32,14 @@ public:
   Vec3D<size_t> bin_size_;       // [n_neighbs][x_dub][x]
   Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
   Population() {}
-  Population(Str name, Fn<ENTRY_T *(ENTRY_T *)> getmember, size_t size_ceil)
-      : name_{name}, get_member_{getmember} {
+  Population(Str name, Fn<Vec<ENTRY_T *>(ENTRY_T *)> getmems, size_t size_ceil)
+      : name_{name}, get_members_{getmems} {
     entries_.resize(size_ceil);
   }
-  Population(Str name, Fn<ENTRY_T *(ENTRY_T *)> getmember,
+  Population(Str name, Fn<Vec<ENTRY_T *>(ENTRY_T *)> getmems,
              Vec<size_t> size_ceil, Vec<int> i_min,
              Fn<Vec<int>(ENTRY_T *)> getindices)
-      : name_{name}, get_member_{getmember}, min_indices_{i_min},
+      : name_{name}, get_members_{getmems}, min_indices_{i_min},
         get_bin_indices_{getindices}, one_d_{false} {
     assert(size_ceil.size() == 4);
     assert(min_indices_.size() == 3);
@@ -72,8 +72,8 @@ public:
     }
   }
   void Sort(ENTRY_T *entry) {
-    ENTRY_T *member{get_member_(entry)};
-    if (member != nullptr) {
+    Vec<ENTRY_T *> members{get_members_(entry)};
+    for (auto const &member : members) {
       if (one_d_) {
         AddEntry(member);
       } else {

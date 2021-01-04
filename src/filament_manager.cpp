@@ -72,8 +72,6 @@ void FilamentManager::GenerateFilaments() {
   */
 }
 
-void FilamentManager::InitializeTestEnvironment() {}
-
 bool FilamentManager::AllFilamentsImmobile() {
 
   if (!mobile_) {

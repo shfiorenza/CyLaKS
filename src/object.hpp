@@ -32,5 +32,7 @@ public:
   virtual Object *GetOtherHead() { return nullptr; }
   virtual Object *GetHeadOne() { return nullptr; }
   virtual Object *GetHeadTwo() { return nullptr; }
+
+  virtual bool Unbind() { return false; };
 };
 #endif

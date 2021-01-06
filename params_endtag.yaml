@@ -3,7 +3,7 @@ kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
 t_run: 20
-t_equil: 100 # 0
+t_equil: 10 # 0
 t_snapshot: 0.1
 dynamic_equil_window: -1
 verbosity: 0
@@ -16,9 +16,9 @@ filaments:
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  immobile_until: [500, 110]
+  immobile_until: [500, 20]
   translation_enabled: [true, true]
-  rotation_enabled: false
+  rotation_enabled: true
 motors:
   n_runs_desired: 250
   gaussian_range: 0 # 1000 # 1200 # 1000
@@ -54,7 +54,7 @@ xlinks:
   c_bulk: 50
   c_eff_bind: 5000
   k_off_i: 0.143
-  k_off_ii: 1.43 # 0.0143
+  k_off_ii: 0.0143
   d_i: 0.131
   d_ii: 0.0655
   r_0: 32

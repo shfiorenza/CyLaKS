@@ -11,14 +11,13 @@ template <typename ENTRY_T> struct Reservoir {
 private:
   size_t species_id_;
   Vec<ENTRY_T> reservoir_;
+  Vec<ENTRY_T *> active_entries_;
 
   bool up_to_date_{false};
 
   double n_bound_avg_{0.0};
   double n_bound_var_{0.0};
   Vec<size_t> n_bound_;
-
-  Vec<ENTRY_T *> active_entries_;
 
 protected:
   struct ProbEntry {
@@ -49,19 +48,18 @@ protected:
   };
 
 public:
-  size_t n_active_entries_{0};
-  bool equilibrated_{false};
-
   bool active_{false};
   size_t step_active_{0};
+  bool equilibrated_{false};
+
+  size_t n_active_entries_{0};
 
   bool tethering_active_{false};
   bool crosslinking_active_{false};
 
-  int comp_cutoff_{0};
-  int ext_cutoff_{0};
-  Vec<double> possible_extensions_;
-  Vec<double> possible_cosines_;
+  double r_min_{0.0};
+  double r_rest_{0.0};
+  double r_max_{0.0};
 
   Map<Str, ProbEntry> p_event_;
   Map<Str, BoltzmannFactor> weights_;
@@ -135,10 +133,15 @@ public:
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();
   }
-  void UpdateExtensions() {
+  bool UpdateExtensions() {
+    bool force_unbind_occurred{false};
     for (int i_active{0}; i_active < n_active_entries_; i_active++) {
-      active_entries_[i_active]->UpdateExtension();
+      bool successful{active_entries_[i_active]->UpdateExtension()};
+      if (!successful) {
+        force_unbind_occurred = true;
+      }
     }
+    return force_unbind_occurred;
   }
   void FlagForUpdate() { up_to_date_ = false; }
   void PrepForKMC() {

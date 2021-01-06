@@ -9,10 +9,13 @@ template <typename ENTRY_T>
 void Reservoir<ENTRY_T>::GenerateEntries(size_t n_entries) {
 
   reservoir_.resize(n_entries);
+  active_entries_.resize(n_entries);
   for (int i_entry{0}; i_entry < n_entries; i_entry++) {
     reservoir_[i_entry].Initialize(species_id_, Sys::n_unique_objects_++);
   }
-  active_entries_.resize(n_entries);
+  r_min_ = reservoir_[0].spring_.r_min_;
+  r_rest_ = reservoir_[0].spring_.r_rest_;
+  r_max_ = reservoir_[0].spring_.r_max_;
 }
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {

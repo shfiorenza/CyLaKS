@@ -28,9 +28,9 @@ private:
   void SetParameters();
   void InitializeTestEnvironment();
   void InitializeTestEvents();
-  void InitializePopulations();
   void InitializeEvents();
 
+  void FlagFilamentsForUpdate();
   void UpdateFilaments();
 
 public:
@@ -51,18 +51,26 @@ public:
     filaments_ = filaments;
     GenerateReservoirs();
     InitializeWeights();
-    // SetParameters();
+    SetParameters();
     if (!Sys::test_mode_.empty()) {
       InitializeTestEnvironment();
       InitializeTestEvents();
       return;
     }
-    // InitializePopulations();
     InitializeEvents();
   }
   void UpdateLatticeDeformation() {}
-  void UpdateExtensions() { xlinks_.UpdateExtensions(); }
+  void UpdateExtensions() {
+    bool forced_unbind{xlinks_.UpdateExtensions()};
+    if (forced_unbind) {
+      xlinks_.FlagForUpdate();
+      FlagFilamentsForUpdate();
+    }
+  }
   void RunKMC() {
+    // if (Sys::i_step_ > 1002470) {
+    //   Sys::verbosity_ = 2;
+    // }
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();

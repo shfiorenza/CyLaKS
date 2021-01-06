@@ -9,13 +9,13 @@
 
 class Protein : public Object {
 protected:
-  int dist_cutoff_{10};
   int n_neighbors_bind_ii_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
 
 public:
   size_t active_index_{0};
   size_t n_heads_active_{0};
+
   BindingHead head_one_, head_two_;
   LinearSpring spring_;
 
@@ -24,17 +24,19 @@ public:
 
 private:
   void InitializeNeighborList();
-  void ForceUnbind() {}
 
 public:
   Protein() {}
   void Initialize(size_t sid, size_t id) {
-    using namespace Params::Xlinks;
+    using namespace Params;
     Object::Initialize(sid, id);
     head_one_.Initialize(sid, id, _r_xlink_head, this, &head_two_);
     head_two_.Initialize(sid, id, _r_xlink_head, this, &head_one_);
-    spring_.Initialize(sid, id, &head_one_, &head_two_, r_0, k_spring);
-    neighbors_bind_ii_.resize(2 * dist_cutoff_ + 1);
+    spring_.Initialize(sid, id, &head_one_, &head_two_, Xlinks::k_spring,
+                       Xlinks::r_0, Xlinks::k_spring);
+    // Maximum possible x_distance of spring will occur when r_y = 0
+    size_t x_max{(size_t)std::ceil(spring_.r_max_ / Filaments::site_size)};
+    neighbors_bind_ii_.resize(2 * x_max + 1);
   }
 
   bool HasSatellite();
@@ -78,9 +80,9 @@ public:
     }
     return 0;
   }
-  virtual void UpdateExtension() {
+  virtual bool UpdateExtension() {
     if (n_heads_active_ != 2) {
-      return;
+      return true;
     }
     // Update head positions
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -90,11 +92,11 @@ public:
     // Update spring position
     bool within_cutoff{spring_.UpdatePosition()};
     if (!within_cutoff) {
-      // ForceUnbind();
-      // return;
+      return false;
     }
     // If spring is still attached after update, apply forces
     spring_.ApplyForces();
+    return true;
   }
   virtual double GetWeight_Unbind_II(BindingHead *head);
   virtual double GetWeight_Diffuse(BindingHead *head, int dir);

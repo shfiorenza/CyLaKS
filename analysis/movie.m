@@ -9,7 +9,7 @@ start_frame = 1;
 frames_per_plot = 10;
 movie_duration = 30; % in seconds
 
-r_prot = 3;
+r_prot = 10;
 
 % Open log file and parse it into param labels & their values
 log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
@@ -18,13 +18,12 @@ params = log{1, 1};
 values = log{1, 2};
 % Read in number of MTs
 n_mts = sscanf(values{contains(params, "count ")}, '%g');
-mt_lengths = [9, 9]; %zeros(1, n_mts);
-%{
+mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
     mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
 end
-%}
+
 % Read in system params
 dt = sscanf(values{contains(params, "dt ")}, '%g');
 steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
@@ -122,10 +121,10 @@ for i_data = start_frame : frames_per_plot : end_frame
     hold all;
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
-    %ax.XLim = [(min_x - 25) (max_x + 25)];
-    %ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
-    ax.XLim = [-33 33];
-    ax.YLim = [-4 36];
+    ax.XLim = [(min_x - 25) (max_x + 25)];
+    ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
+    %ax.XLim = [-33 33];
+    %ax.YLim = [-4 36];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     %ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];

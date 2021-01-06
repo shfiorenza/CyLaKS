@@ -50,6 +50,7 @@ inline void Log(size_t tier, const char *msg, const Args... args) {
 inline void ErrorExit(const char *fn_name) {
   Log("Fatal error in simulation.\n");
   Log("   Function name: %s\n", fn_name);
+  Log("   I_STEP = %zu\n", i_step_);
   Log("   N_STEPS = %zu\n", i_step_ - n_steps_equil_);
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   exit(1);

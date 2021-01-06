@@ -30,7 +30,7 @@ public:
   bool Bind(BindingSite *site, CatalyticHead *head) {}
   bool Unbind(CatalyticHead *head) {}
 
-  void UpdateExtension() {}
+  bool UpdateExtension() { return false; }
 };
 
 #endif

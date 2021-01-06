@@ -31,7 +31,10 @@ void Protein::UpdateNeighbors_Bind_II() {
   n_neighbors_bind_ii_ = 0;
   BindingSite *site{GetActiveHead()->site_};
   Protofilament *neighb_fil{site->filament_->neighbor_};
-  for (int delta{-dist_cutoff_}; delta <= dist_cutoff_; delta++) {
+  double r_y{site->filament_->pos_[1] - neighb_fil->pos_[1]};
+  double r_x_max{sqrt(Square(spring_.r_max_) - Square(r_y))};
+  int delta_max{(int)std::ceil(r_x_max / Params::Filaments::site_size)};
+  for (int delta{-delta_max}; delta <= delta_max; delta++) {
     BindingSite *neighb{neighb_fil->GetNeighb(site, delta)};
     if (neighb == nullptr) {
       continue;
@@ -49,6 +52,9 @@ double Protein::GetWeight_Bind_II(BindingSite *neighb) {
   double r_x{neighb->pos_[0] - site->pos_[0]};
   double r_y{neighb->pos_[1] - site->pos_[1]};
   double r{sqrt(Square(r_x) + Square(r_y))};
+  if (r < spring_.r_min_ or r > spring_.r_max_) {
+    return 0.0;
+  }
   double dr{r - Params::Xlinks::r_0};
   double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
   return exp(-(1.0 - lambda) * dE / Params::kbT);
@@ -108,7 +114,6 @@ double Protein::GetWeight_Unbind_II(BindingHead *head) {
   if (n_heads_active_ != 2) {
     Sys::ErrorExit("wut\n");
   }
-
   double lambda_neighb{1.0};
   double lambda_spring{0.5};
   BindingSite *site{head->site_};

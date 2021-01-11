@@ -92,6 +92,7 @@ void Protofilament::UpdateRodPosition() {
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
+      // printf("f[%i] = %g\n", i_dim, force_[i_dim]);
       pos_[i_dim] += Dot(xi_inv[i_dim], force_) * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;

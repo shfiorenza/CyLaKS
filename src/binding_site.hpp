@@ -50,7 +50,9 @@ public:
     }
     return n_neighbs;
   }
+
   void AddForce(Vec<double> f_applied);
+  void AddTorque(double tq);
 
   BindingSite *GetNeighbor(int dir);
 };

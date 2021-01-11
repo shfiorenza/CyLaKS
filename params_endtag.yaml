@@ -2,9 +2,9 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 20
-t_equil: 10 # 0
-t_snapshot: 0.1
+t_run: 1 #0.1
+t_equil: 0
+t_snapshot: 0.01
 dynamic_equil_window: -1
 verbosity: 0
 filaments:
@@ -12,11 +12,11 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [200, 100]
+  n_sites: [100, 100]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  immobile_until: [500, 20]
+  immobile_until: [500, 15]
   translation_enabled: [true, true]
   rotation_enabled: true
 motors:
@@ -59,3 +59,5 @@ xlinks:
   d_ii: 0.0655
   r_0: 32
   k_spring: 0.453
+  theta_0: 90
+  k_rot: 0 # 1000

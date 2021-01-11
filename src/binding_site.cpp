@@ -15,3 +15,4 @@ BindingSite *BindingSite::GetNeighbor(int dir) {
 }
 
 void BindingSite::AddForce(Vec<double> f) { filament_->AddForce(this, f); }
+void BindingSite::AddTorque(double tq) { filament_->AddTorque(tq); }

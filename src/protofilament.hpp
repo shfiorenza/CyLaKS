@@ -39,12 +39,18 @@ public:
     GenerateSites();
     UpdateSitePositions();
   }
+  BindingSite *GetNeighb(BindingSite *site, int delta);
+  Vec<double> GetPolarOrientation() {
+    double c{polarity_ == 0 ? -1 : 1};
+    return {c * orientation_[0], c * orientation_[1]};
+  }
   void AddForce(BindingSite *location, Vec<double> f_applied) {
     if (Sys::i_step_ < immobile_until_) {
       return;
     }
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       force_[i_dim] += f_applied[i_dim];
+      // printf("f[%i] += %g\n", i_dim, f_applied[i_dim]);
     }
     if (Params::Filaments::rotation_enabled) {
       Vec<double> r(_n_dims_max, 0.0); // Points from rod COM to site COM
@@ -54,7 +60,12 @@ public:
       torque_ += Cross(r, f_applied);
     }
   }
-  BindingSite *GetNeighb(BindingSite *site, int delta);
+  void AddTorque(double torque_applied) {
+    if (Sys::i_step_ < immobile_until_) {
+      return;
+    }
+    torque_ += torque_applied;
+  }
   void UpdatePosition() {
     if (Sys::i_step_ < immobile_until_) {
       return;

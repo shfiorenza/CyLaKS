@@ -14,7 +14,7 @@ void ProteinManager::GenerateReservoirs() {
     reservoir_size += Params::Filaments::n_sites[i_mt];
   }
   size_t motor_step_active{size_t(Params::Motors::t_active / Params::dt)};
-  size_t xlink_step_active(size_t(Params::Xlinks::t_active / Params::dt));
+  size_t xlink_step_active{size_t(Params::Xlinks::t_active / Params::dt)};
   motors_.Initialize(_id_motor, reservoir_size, motor_step_active);
   xlinks_.Initialize(_id_xlink, reservoir_size, xlink_step_active);
 }
@@ -22,16 +22,15 @@ void ProteinManager::GenerateReservoirs() {
 void ProteinManager::InitializeWeights() {
 
   /*
-    For events that result in a change in energy dE, we use Boltzmann factors to
-    scale rates appropriately. Detailed balance is satisfied by the factors:
-                  exp{-(1.0 - lambda) * dE / kBT}, and
-                  exp{lambda * dE / kBT}
-    for forward and reverse pathways, respectively, (e.g., binding and
-    unbinding), where lambda is a constant that ranges from 0 to 1, and kBT is
-    thermal energy of the system. 3 values of lambda demonstrate its function:
-        Lambda = 0.0 means all energy dependences is in binding
-        Lambda = 0.5 means energy dependence is equal for binding and unbinding
-        Lambda = 1.0 means all energy dependence is in unbinding
+    For events that result in a change in energy dE, we use Boltzmann factors
+    to scale rates appropriately. Detailed balance is satisfied by the
+    factors: exp{-(1.0 - lambda) * dE / kBT}, and exp{lambda * dE / kBT} for
+    forward and reverse pathways, respectively, (e.g., binding and unbinding),
+    where lambda is a constant that ranges from 0 to 1, and kBT is thermal
+    energy of the system. 3 values of lambda demonstrate its function: Lambda
+    = 0.0 means all energy dependences is in binding Lambda = 0.5 means energy
+    dependence is equal for binding and unbinding Lambda = 1.0 means all
+    energy dependence is in unbinding
    */
   // Neighbor stuff
   Str name{"neighbs"};
@@ -124,7 +123,7 @@ void ProteinManager::InitializeTestEnvironment() {
       double dr{r - Params::Xlinks::r_0};
       double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
       p_bind[x] *= exp(-(1.0 - lambda) * dE / Params::kbT);
-      p_unbind[x] *= exp(lambda * dE / Params::kbT);
+      p_unbind[x] *= 100 * exp(lambda * dE / Params::kbT);
     }
     test_ref_.emplace("bind_ii", p_bind);
     test_ref_.emplace("unbind_ii", p_unbind);
@@ -134,13 +133,12 @@ void ProteinManager::InitializeTestEnvironment() {
     // Initialize filament environment
     Filaments::count = 2;
     Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
+    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
+    Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
     Filaments::translation_enabled[0] = false;
     Filaments::translation_enabled[1] = false;
     Filaments::rotation_enabled = false;
     filaments_->Initialize(this);
-    // FIXME -- shouldn't matter, but we cant have this in SetParams
-    // filaments_->AddPop("xlinks", get_unocc, dim_size, i_min, get_n_neighbs);
-
     // Place first xlink head on lower MT; remains static for entire sim
     int i_site{x_max};
     BindingSite *site{&filaments_->proto_[0].sites_[i_site]};
@@ -151,6 +149,53 @@ void ProteinManager::InitializeTestEnvironment() {
       filaments_->FlagForUpdate();
     } else {
       Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
+    }
+  } else if (Sys::test_mode_ == "filament_separation") {
+    // Initialize filament environment
+    if (Filaments::n_sites[0] != Filaments::n_sites[1]) {
+      printf("\nError! Filaments must be the same length.\n");
+      exit(1);
+    }
+    Filaments::immobile_until[0] = 0.0;
+    Filaments::immobile_until[1] = 0.0;
+    Filaments::translation_enabled[0] = true;
+    Filaments::translation_enabled[1] = true;
+    Filaments::rotation_enabled = true;
+    filaments_->Initialize(this);
+    Str response;
+    printf("\nEnter number of crosslinkers: ");
+    std::getline(std::cin, response);
+    int n_xlinks{(int)std::stoi(response)};
+    Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
+    int n_places{(int)filaments_->sites_.size() / 2};
+    if (n_xlinks > n_places) {
+      printf("\nError! Too many crosslinkers for filament length used.\n");
+      exit(1);
+    }
+    // Randomly place crosslinkers on filaments w/ x = 0
+    int site_indices[n_places];
+    for (int index{0}; index < n_places; index++) {
+      site_indices[index] = index;
+    }
+    SysRNG::Shuffle(site_indices, n_places, sizeof(int));
+    for (int i_xlink{0}; i_xlink < n_xlinks; i_xlink++) {
+      Protein *xlink{xlinks_.GetFreeEntry()};
+      int i_site{site_indices[i_xlink]};
+      BindingSite *site_one{&filaments_->proto_[0].sites_[i_site]};
+      BindingSite *site_two{&filaments_->proto_[1].sites_[i_site]};
+      bool exe_one{xlink->Bind(site_one, &xlink->head_one_)};
+      bool exe_two{xlink->Bind(site_two, &xlink->head_two_)};
+      if (exe_one and exe_two) {
+        bool still_attached{xlink->UpdateExtension()};
+        if (still_attached) {
+          xlinks_.AddToActive(xlink);
+          filaments_->FlagForUpdate();
+        } else {
+          Sys::ErrorExit("ProteinManager::InitializeTestEnvironment() [2]");
+        }
+      } else {
+        Sys::ErrorExit("ProteinManager::InitializeTestEnvironment() [1]");
+      }
     }
   }
 }
@@ -182,7 +227,7 @@ void ProteinManager::InitializeTestEvents() {
     };
     auto get_weight_bind_ii = [](Object *base) {
       auto head{dynamic_cast<BindingHead *>(base)};
-      return head->parent_->GetTotalWeight_Bind_II();
+      return head->parent_->GetWeight_Bind_II();
     };
     auto exe_bind_ii = [&](Object *base_head) {
       auto bound_head{dynamic_cast<BindingHead *>(base_head)};
@@ -249,10 +294,74 @@ void ProteinManager::InitializeTestEvents() {
       }
     };
     kmc_.events_.emplace_back(
-        "unbind_ii", xlinks_.p_event_.at("unbind_ii").GetVal(),
+        "unbind_ii", 100 * xlinks_.p_event_.at("unbind_ii").GetVal(),
         &xlinks_.sorted_.at("unbind_ii").size_,
         &xlinks_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
         get_weight_unbind_ii, exe_unbind_ii);
+  } else if (Sys::test_mode_ == "filament_separation") {
+    // Poisson distribution; sampled to predict events w/ variable probabilities
+    auto poisson = [&](double p, int n) {
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto is_doubly_bound = [&](Object *protein) -> Vec<Object *> {
+      if (protein->GetNumHeadsActive() == 2) {
+        return {protein->GetHeadOne(), protein->GetHeadTwo()};
+      }
+      return {};
+    };
+    xlinks_.AddPop("diffuse_ii_to_rest", is_doubly_bound);
+    xlinks_.AddPop("diffuse_ii_fr_rest", is_doubly_bound);
+    auto exe_diffuse_fwd = [&](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      bool executed{head->Diffuse(1)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+        if (!still_attached) {
+        }
+        // FIXME had to move this from if statement above -- why ?
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+      }
+    };
+    auto exe_diffuse_bck = [&](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      bool executed{head->Diffuse(-1)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+        if (!still_attached) {
+        }
+        // FIXME had to move this from if statement above -- why ?
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+      }
+    };
+    auto get_weight_diff_ii_to = [](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      return head->GetWeight_Diffuse(1);
+    };
+    auto get_weight_diff_ii_fr = [](Object *base) {
+      auto head{dynamic_cast<BindingHead *>(base)};
+      return head->GetWeight_Diffuse(-1);
+    };
+    kmc_.events_.emplace_back(
+        "diffuse_ii_to_rest",
+        xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+        &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_, poisson,
+        get_weight_diff_ii_to, exe_diffuse_fwd);
+    kmc_.events_.emplace_back(
+        "diffuse_ii_fr_rest",
+        xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson,
+        get_weight_diff_ii_fr, exe_diffuse_bck);
+  }
+  for (auto const &event : kmc_.events_) {
+    printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
   }
 }
 
@@ -338,7 +447,7 @@ void ProteinManager::InitializeEvents() {
   };
   auto get_weight_bind_ii = [](Object *base) {
     auto head{dynamic_cast<BindingHead *>(base)};
-    return head->parent_->GetTotalWeight_Bind_II();
+    return head->parent_->GetWeight_Bind_II();
   };
   if (xlinks_.crosslinking_active_) {
     kmc_.events_.emplace_back("bind_ii",

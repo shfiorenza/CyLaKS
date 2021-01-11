@@ -19,6 +19,20 @@ void Curator::CheckArgs(int argc, char *argv[]) {
   Sys::sim_name_ = argv[2];
   if (argc == 4) {
     Sys::test_mode_ = argv[3];
+    bool valid_mode{false};
+    for (auto const &mode : test_modes_) {
+      if (Sys::test_mode_ == mode) {
+        valid_mode = true;
+      }
+    }
+    if (!valid_mode) {
+      printf("\nError! Invalid test mode.\n");
+      printf("Currently-implemented test modes are:\n");
+      for (auto const &mode : test_modes_) {
+        printf("   %s\n", mode.c_str());
+      }
+      exit(1);
+    }
   }
 }
 
@@ -195,6 +209,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Xlinks::d_ii, "xlinks.d_ii", "um^2/s");
   ParseYAML(&Xlinks::r_0, "xlinks.r_0", "nm");
   ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
+  ParseYAML(&Xlinks::theta_0, "xlinks.theta_0", "degrees");
+  ParseYAML(&Xlinks::k_rot, "xlinks.k_rot", "pN*nm/rad");
 }
 
 void Curator::InitializeSimulation() {
@@ -208,6 +224,9 @@ void Curator::InitializeSimulation() {
   verbosity_ = verbosity;
   n_steps_pre_equil_ = (size_t)std::round(t_equil / dt);
   n_steps_equil_ = n_steps_pre_equil_;
+  if (n_steps_pre_equil_ == 0) {
+    equilibrating_ = false;
+  }
   n_steps_run_ = (size_t)std::round(t_run / dt);
   // Log parameters
   Log("  System parameters:\n");
@@ -228,7 +247,7 @@ void Curator::InitializeSimulation() {
       n_sites_max_ = pf.sites_.size();
     }
   }
-  Log("\n");
+  printf("\n");
 }
 
 void Curator::GenerateDataFiles() {
@@ -286,6 +305,7 @@ void Curator::GenerateDataFiles() {
 
 void Curator::CheckPrintProgress() {
 
+  // FIXME report t_sim & t_elapsed_irl each milestone; not step #
   using namespace Sys;
   using namespace Params;
   // Percent milestone; controls report frequency
@@ -294,6 +314,9 @@ void Curator::CheckPrintProgress() {
   i_step_++;
   // If still equilibrating, report progress and check protein equil. status
   if (equilibrating_) {
+    if (i_step_ == 1) {
+      Log("Pre-equilibration is 0%% complete.\n");
+    }
     if (i_step_ % (n_steps_pre_equil_ / (100 / p_report)) == 0 and
         i_step_ <= n_steps_pre_equil_) {
       Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
@@ -312,8 +335,11 @@ void Curator::CheckPrintProgress() {
   // Otherwise, data collection must be active; simply report on that
   else {
     size_t n_steps_so_far{i_step_ - n_steps_equil_};
+    if (n_steps_so_far == 1) {
+      Log("Data collection is 0%% complete.\n");
+    }
     if (n_steps_so_far % (n_steps_run_ / (100 / p_report)) == 0) {
-      Log("Data collection %g%% complete. (step #%zu | t = %g s)\n",
+      Log("Data collection is %g%% complete. (step #%zu | t = %g s)\n",
           double(n_steps_so_far) / n_steps_run_ * 100, i_step_, i_step_ * dt);
     }
   }

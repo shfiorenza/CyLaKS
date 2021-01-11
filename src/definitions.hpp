@@ -44,7 +44,7 @@ inline double Square(double x) { return x * x; }
 inline double Cube(double x) { return x * x * x; }
 template <typename... ARGS> inline double Avg(ARGS... vals) {
   double sum{0.0};
-  for (auto &&val : {vals...}) {
+  for (auto const &val : {vals...}) {
     sum += val;
   }
   return sum / sizeof...(vals);
@@ -70,8 +70,11 @@ inline double Dot(Vec<double> a, int i_dim) {
 inline double Cross(Vec<double> a, Vec<double> b) {
   return a[0] * b[1] - a[1] * b[0];
 }
-inline Vec<double> Cross(double tq, Vec<double> u) {
-  return {-tq * u[1], tq * u[0]};
+inline Vec<double> Cross(double a, Vec<double> b) {
+  return {-a * b[1], a * b[0]};
+}
+inline Vec<double> Cross(Vec<double> a, double b) {
+  return {b * a[1], -b * a[0]};
 }
 inline Vec2D<double> Outer(Vec<double> a, Vec<double> b) {
   Vec2D<double> matrix(a.size(), Vec<double>(b.size(), 0.0));

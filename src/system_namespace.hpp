@@ -27,7 +27,6 @@ inline size_t i_datapoint_{0};
 
 template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
-
   // Tag each log pintout in terminal w/ simulation name
   printf("[%s] ", sim_name_.c_str());
   // This is technically a horrendous vulnerability, but we don't care about

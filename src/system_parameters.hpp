@@ -68,7 +68,8 @@ inline double d_i;        // Diffusion coefficient; um^2/s
 inline double d_ii;       // Diffusion coefficient; um^2/s
 inline double r_0;        // Rest length of coiled-coil domain; nm
 inline double k_spring;   // Spring constant of CC-domain; pN/nm
-
+inline double theta_0;
+inline double k_rot;
 }; // namespace Xlinks
 }; // namespace Params
 

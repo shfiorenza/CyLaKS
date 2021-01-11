@@ -68,9 +68,6 @@ public:
     }
   }
   void RunKMC() {
-    // if (Sys::i_step_ > 1002470) {
-    //   Sys::verbosity_ = 2;
-    // }
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();

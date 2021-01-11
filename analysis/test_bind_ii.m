@@ -1,23 +1,24 @@
 clear all;
-sim_name = 'xlink_bind_ii_test';
+sim_name = 'test';
+
 kbT = 4.114;                    % pN * nm
 k_on = 0.000238;                % 1/(nM*s)
-c_bind = 4500;                  % nM
-k_off_ii = 14.3;                % 1/s
+c_bind = 5000;                  % nM
+k_off_ii = 1.43;                % 1/s
 dist_cutoff = 4;                % no. sites
 mt_coords = [0, 0];
-n_datapoints = 1000000;
+n_datapoints = 100000;
 % 'reported' probabilities are from sim's built-in probability tracker
 p_bind_reported = [2.69e-05, 2.61e-05, 1.81e-05, 4.61e-06, 2.16e-07];
 p_unbind_reported = [0.000357, 0.000369, 0.000529, 0.00208, 0.0450];
 
-speciesID = 1;
+speciesID = 2;
 static_head_pos = dist_cutoff;
 mt_lengths = [2*dist_cutoff + 1, 2*dist_cutoff + 1];
 n_mts = length(mt_lengths);
 max_length = max(mt_lengths);
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
 fileStruct = '%s_occupancy.file';
 data_file = fopen(sprintf(fileDirectory, sprintf(fileStruct, sim_name)));
 raw_data = fread(data_file, max_length * n_mts * n_datapoints, '*int');
@@ -73,7 +74,6 @@ k_d = k_off_ii / k_on;
 
 avg_occu_theory = @(x) c_bind / (c_bind + k_d*exp(delta_u(x)/kbT));
 fplot(@(x) avg_occu_theory(x), 'LineWidth', 2);
-
 %{
 % Plot theoretical avg_occu at each point using p values reported by sim
 for x_dist = 0 : dist_cutoff

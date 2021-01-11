@@ -9,7 +9,7 @@
 
 class Curator {
 private:
-  Vec<Str> test_modes_{"xlink_bind_ii"};
+  Vec<Str> test_modes_{"xlink_bind_ii", "filament_separation"};
   struct DataFile {
     Str name_{"example"};
     Str filename_{"simName_example.file"};

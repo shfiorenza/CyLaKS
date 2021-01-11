@@ -9,21 +9,61 @@ bool Protein::HasSatellite() {}
 
 void Protein::UntetherSatellite() {}
 
-// void Protein::UpdateNeighborList() {}
-
-// Object *Protein::GetWeightedNeighbor() {}
-
-BindingHead *Protein::GetActiveHead() {
-
-  assert(n_heads_active_ == 1);
-  // printf("get_active: %i heads active\n", n_heads_active_);
-  if (head_one_.site_ != nullptr) {
-    return &head_one_;
-  } else if (head_two_.site_ != nullptr) {
-    return &head_two_;
-  } else {
-    Sys::ErrorExit("AssociatedProtein::GetActiveHead");
+bool Protein::UpdateExtension() {
+  if (n_heads_active_ != 2) {
+    return true;
   }
+  // Update head positions
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    head_one_.pos_[i_dim] = head_one_.site_->pos_[i_dim];
+    head_two_.pos_[i_dim] = head_two_.site_->pos_[i_dim];
+  }
+  // printf("r1 = (%g, %g)\n", head_one_.pos_[0], head_one_.pos_[1]);
+  // printf("r2 = (%g, %g)\n", head_two_.pos_[0], head_two_.pos_[1]);
+  // Update spring position
+  bool spring_attached{spring_.UpdatePosition()};
+  if (!spring_attached) {
+    return false;
+  }
+  // bool head_one_attached{pivot_one_.UpdatePosition()};
+  // if (!head_one_attached) {
+  //   return false;
+  // }
+  // bool head_two_attached{pivot_two_.UpdatePosition()};
+  // if (!head_two_attached) {
+  //   return false;
+  // }
+  // If spring is still attached after updates, apply forces & torques
+  spring_.ApplyForces();
+  // pivot_one_.ApplyForces();
+  // pivot_two_.ApplyForces();
+  // printf("**\n\n");
+  return true;
+}
+
+int Protein::GetDirectionTowardRest(BindingHead *head) {
+  if (n_heads_active_ == 1) {
+    return 1;
+  } else if (n_heads_active_ == 2) {
+    // printf("%g > %g?\n", head->site_->pos_[0], GetAnchorCoordinate(0));
+    if (head->site_->pos_[0] > GetAnchorCoordinate(0)) {
+      return -1;
+    } else if (head->site_->pos_[0] < GetAnchorCoordinate(0)) {
+      return 1;
+    } else {
+      return 0;
+    }
+  } else {
+    Sys::ErrorExit("Protein::GetDirToRest()\n");
+  }
+  return 0;
+}
+
+double Protein::GetAnchorCoordinate(int i_dim) {
+  if (n_heads_active_ != 2) {
+    Sys::ErrorExit("Protein::GetAnchorCoord()");
+  }
+  return (head_one_.site_->pos_[i_dim] + head_two_.site_->pos_[i_dim]) / 2;
 }
 
 void Protein::UpdateNeighbors_Bind_II() {
@@ -45,7 +85,7 @@ void Protein::UpdateNeighbors_Bind_II() {
   }
 }
 
-double Protein::GetWeight_Bind_II(BindingSite *neighb) {
+double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
 
   double lambda{0.5};
   BindingSite *site{GetActiveHead()->site_};
@@ -60,26 +100,16 @@ double Protein::GetWeight_Bind_II(BindingSite *neighb) {
   return exp(-(1.0 - lambda) * dE / Params::kbT);
 }
 
-double Protein::GetTotalWeight_Bind_II() {
-
-  double tot_weight{0.0};
-  UpdateNeighbors_Bind_II();
-  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
-    tot_weight += GetWeight_Bind_II(neighbors_bind_ii_[i_neighb]);
-  }
-  return tot_weight;
-}
-
 BindingSite *Protein::GetNeighbor_Bind_II() {
 
-  double weight_tot{GetTotalWeight_Bind_II()};
+  double weight_tot{GetWeight_Bind_II()};
   double ran{SysRNG::GetRanProb()};
   double p_cum{0.0};
   Sys::Log(2, "%i NEIGHBS\n", n_neighbors_bind_ii_);
   Sys::Log(2, "ran = %g\n", ran);
   for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
     BindingSite *neighb{neighbors_bind_ii_[i_neighb]};
-    p_cum += GetWeight_Bind_II(neighb) / weight_tot;
+    p_cum += GetSoloWeight_Bind_II(neighb) / weight_tot;
     Sys::Log(2, "p_cum = %g\n", p_cum);
     if (ran < p_cum) {
       Sys::Log(2, "*** chose neighb %i ***\n\n", neighb->index_);
@@ -87,50 +117,6 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
     }
   }
   return nullptr;
-}
-
-bool Protein::Bind(BindingSite *site, BindingHead *head) {
-
-  if (site->occupant_ != nullptr) {
-    return false;
-  }
-  site->occupant_ = head;
-  head->site_ = site;
-  n_heads_active_++;
-  return true;
-}
-
-bool Protein::Unbind(BindingHead *head) {
-
-  BindingSite *site{head->site_};
-  site->occupant_ = nullptr;
-  head->site_ = nullptr;
-  n_heads_active_--;
-  return true;
-}
-
-double Protein::GetWeight_Unbind_II(BindingHead *head) {
-
-  if (n_heads_active_ != 2) {
-    Sys::ErrorExit("wut\n");
-  }
-  double lambda_neighb{1.0};
-  double lambda_spring{0.5};
-  BindingSite *site{head->site_};
-  BindingSite *other_site{head->GetOtherHead()->site_};
-  double r_x{site->pos_[0] - other_site->pos_[0]};
-  double r_y{site->pos_[1] - other_site->pos_[1]};
-  double r{sqrt(Square(r_x) + Square(r_y))};
-  // printf("r = %g\n", r);
-  double dr{r - Params::Xlinks::r_0};
-  double E_spring{0.5 * Params::Xlinks::k_spring * Square(dr)};
-  // printf("E = %g\n", E_spring);
-  double weight_spring{exp(lambda_spring * fabs(E_spring) / Params::kbT)};
-  double E_neighb{site->GetNumNeighborsOccupied() * -1.0 *
-                  Params::Xlinks::neighb_neighb_energy};
-  double weight_neighb{exp(lambda_neighb * E_neighb)};
-  // printf("wt is %g * %g\n", weight_spring, weight_neighb);
-  return weight_spring * weight_neighb;
 }
 
 double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
@@ -176,9 +162,9 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   double r_x_new{new_site->pos_[0] - other_site->pos_[0]};
   double r_y_new{new_site->pos_[1] - other_site->pos_[1]};
   double r_new{sqrt(Square(r_x_new) + Square(r_y_new))};
-  if (r_new > 45.0) {
-    return 0.0;
-  }
+  // if (r_new < spring_.r_min_ or r_new > spring_.r_max_) {
+  //   return 0.0;
+  // }
   double dr_new{r_new - Params::Xlinks::r_0};
   double E_new{0.5 * Params::Xlinks::k_spring * Square(dr_new)};
   double dE_spring{E_new - E_old};
@@ -197,6 +183,40 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
                   Params::Xlinks::neighb_neighb_energy};
   double weight_neighb{exp(lambda_neighb * E_neighb)};
   // printf("%g & %g\n", weight_spring, weight_neighb);
+  return weight_spring * weight_neighb;
+}
+
+double Protein::GetWeight_Bind_II() {
+
+  double tot_weight{0.0};
+  UpdateNeighbors_Bind_II();
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {
+    tot_weight += GetSoloWeight_Bind_II(neighbors_bind_ii_[i_neighb]);
+  }
+  return tot_weight;
+}
+
+double Protein::GetWeight_Unbind_II(BindingHead *head) {
+
+  if (n_heads_active_ != 2) {
+    Sys::ErrorExit("wut\n");
+  }
+  double lambda_neighb{1.0};
+  double lambda_spring{0.5};
+  BindingSite *site{head->site_};
+  BindingSite *other_site{head->GetOtherHead()->site_};
+  double r_x{site->pos_[0] - other_site->pos_[0]};
+  double r_y{site->pos_[1] - other_site->pos_[1]};
+  double r{sqrt(Square(r_x) + Square(r_y))};
+  // printf("r = %g\n", r);
+  double dr{r - Params::Xlinks::r_0};
+  double E_spring{0.5 * Params::Xlinks::k_spring * Square(dr)};
+  // printf("E = %g\n", E_spring);
+  double weight_spring{exp(lambda_spring * fabs(E_spring) / Params::kbT)};
+  double E_neighb{site->GetNumNeighborsOccupied() * -1.0 *
+                  Params::Xlinks::neighb_neighb_energy};
+  double weight_neighb{exp(lambda_neighb * E_neighb)};
+  // printf("wt is %g * %g\n", weight_spring, weight_neighb);
   return weight_spring * weight_neighb;
 }
 
@@ -235,6 +255,26 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   new_site->occupant_ = head;
   head->site_ = new_site;
   // printf("frfr\n\n");
+  return true;
+}
+
+bool Protein::Bind(BindingSite *site, BindingHead *head) {
+
+  if (site->occupant_ != nullptr) {
+    return false;
+  }
+  site->occupant_ = head;
+  head->site_ = site;
+  n_heads_active_++;
+  return true;
+}
+
+bool Protein::Unbind(BindingHead *head) {
+
+  BindingSite *site{head->site_};
+  site->occupant_ = nullptr;
+  head->site_ = nullptr;
+  n_heads_active_--;
   return true;
 }
 

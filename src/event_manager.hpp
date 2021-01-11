@@ -17,10 +17,10 @@ private:
 public:
   EventManager();
   ~EventManager() {
-    for (auto &&event : events_) {
-      printf("p_%s = %g\n", event.name_.c_str(),
-             double(event.n_executed_tot_) / event.n_opportunities_tot_);
-    }
+    // for (auto &&event : events_) {
+    //   printf("p_%s = %g\n", event.name_.c_str(),
+    //          double(event.n_executed_tot_) / event.n_opportunities_tot_);
+    // }
   }
   void Initialize();
   void ExecuteEvents();

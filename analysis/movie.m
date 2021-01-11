@@ -6,7 +6,7 @@ sim_name = 'test';
 
 movie_name = 'test';
 start_frame = 1;
-frames_per_plot = 10;
+frames_per_plot = 1;
 movie_duration = 30; % in seconds
 
 r_prot = 10;
@@ -22,6 +22,10 @@ mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
     mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
 end
 
 % Read in system params
@@ -121,16 +125,26 @@ for i_data = start_frame : frames_per_plot : end_frame
     hold all;
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
+    min_y = min(min(filament_pos(2, :, :, i_data)));
+    max_y = max(max(filament_pos(2, :, :, i_data)));
+    y_avg = (min_y + max_y)/2;
+    width = (max_x - min_x) + 50;
+    height = (3/5 * width); 
     ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.YLim = [(3/5)*(min_x - 25) (3/5)*(max_x + 25)];
-    %ax.XLim = [-33 33];
-    %ax.YLim = [-4 36];
+    ax.YLim = [y_avg - height/2 y_avg + height/2];
+    %ax.XLim = [0 800];
+    %ax.YLim = [-400 400];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     %ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';
     % Draw filaments
+    if(n_mts > 1)
+        com_y_one = (filament_pos(2, 1, 1, i_data) + filament_pos(2, 2, 1, i_data))/2;
+        com_y_two = (filament_pos(2, 1, 2, i_data) + filament_pos(2, 2, 2, i_data))/2;
+        disp(com_y_one - com_y_two);
+    end
     for i_mt = 1:1:n_mts
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
@@ -305,7 +319,7 @@ for i_data = start_frame : frames_per_plot : end_frame
         %}
     end
     dim = [0.11 0.625 .3 .3];
-    time = (i_data - 1) * time_per_datapoint;
+    time = (i_data - start_frame) * time_per_datapoint;
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');
     drawnow();

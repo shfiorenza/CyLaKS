@@ -16,29 +16,13 @@ void FilamentManager::SetParameters() {
   }
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;
-  /*
-  auto is_unoccupied = [](BindingSite *site) {
-    if (site->occupant_ == nullptr) {
-      return true;
-    }
-    return false;
-  };
-  size_t max_list_size{0};
-  for (int i_fil{0}; i_fil < count; i_fil++) {
-    max_list_size += n_sites[i_fil];
+  weight_neighbs_bind_.resize(_n_neighbs_max + 1);
+  weight_neighbs_unbind_.resize(_n_neighbs_max + 1);
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    double dE{n_neighbs * -Xlinks::neighb_neighb_energy};
+    weight_neighbs_bind_[n_neighbs] = exp(-(1.0 - _lambda_neighb) * dE);
+    weight_neighbs_unbind_[n_neighbs] = exp(_lambda_neighb * dE);
   }
-  unoccupied_.emplace("motors", Population<BindingSite>("motors", is_unoccupied,
-                                                        max_list_size));
-  Vec<int> i_min{0, 0, 0};
-  Vec<size_t> max_size{1, 1, _n_neighbs_max + 1, max_list_size};
-  auto get_n_neighbs = [](BindingSite *site) {
-    Vec<int> indices_vec{(int)site->GetNumNeighborsOccupied()};
-    return indices_vec;
-  };
-  unoccupied_.emplace("xlinks",
-                      Population<BindingSite>("xlinks", is_unoccupied, max_size,
-                                              i_min, get_n_neighbs));
-                                              */
 }
 
 void FilamentManager::GenerateFilaments() {

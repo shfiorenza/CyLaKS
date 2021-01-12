@@ -2,9 +2,9 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 1 #0.1
+t_run: 10 #0.1
 t_equil: 0
-t_snapshot: 0.01
+t_snapshot: 0.1
 dynamic_equil_window: -1
 verbosity: 0
 filaments:
@@ -51,7 +51,7 @@ xlinks:
   neighb_neighb_energy: 2.25
   t_active: 0
   k_on: 0.000238
-  c_bulk: 50
+  c_bulk: 5
   c_eff_bind: 5000
   k_off_i: 0.143
   k_off_ii: 0.0143

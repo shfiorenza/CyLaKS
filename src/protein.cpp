@@ -87,7 +87,6 @@ void Protein::UpdateNeighbors_Bind_II() {
 
 double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
 
-  double lambda{0.5};
   BindingSite *site{GetActiveHead()->site_};
   double r_x{neighb->pos_[0] - site->pos_[0]};
   double r_y{neighb->pos_[1] - site->pos_[1]};
@@ -95,9 +94,9 @@ double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
   if (r < spring_.r_min_ or r > spring_.r_max_) {
     return 0.0;
   }
-  double dr{r - Params::Xlinks::r_0};
-  double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
-  return exp(-(1.0 - lambda) * dE / Params::kbT);
+  double weight_spring{spring_.GetWeight_Bind(r)};
+  double weight_site{neighb->GetWeight_Bind()};
+  return weight_spring * weight_site;
 }
 
 BindingSite *Protein::GetNeighbor_Bind_II() {
@@ -121,12 +120,9 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
 
 double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
 
-  double lambda_neighb{1.0};
-  double lambda_spring{0.5};
   if (n_heads_active_ != 2) {
     Sys::ErrorExit("Protein::GetWeight_diffuse");
   }
-  BindingSite *old_site{head->site_};
   int dx{dir * head->GetDirectionTowardRest()};
   // For xlinks exactly at rest,
   if (dx == 0) {
@@ -142,47 +138,23 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
       return 0.0;
     }
   }
-  BindingSite *new_site{head->site_->GetNeighbor(dx)};
-  if (new_site == nullptr) {
+  BindingSite *new_loc{head->site_->GetNeighbor(dx)};
+  if (new_loc == nullptr) {
     return 0.0;
   }
-  if (new_site->occupant_ != nullptr) {
+  if (new_loc->occupant_ != nullptr) {
     return 0.0;
   }
-  BindingSite *other_site{head->GetOtherHead()->site_};
-  if (old_site->filament_ == other_site->filament_) {
+  BindingSite *old_loc{head->site_};
+  if (old_loc->GetNumNeighborsOccupied() == _n_neighbs_max) {
+    return 0.0;
+  }
+  BindingSite *static_loc{head->GetOtherHead()->site_};
+  if (old_loc->filament_ == static_loc->filament_) {
     Sys::ErrorExit("Protein::GetWeight_diffuse [2]");
   }
-  double r_x{old_site->pos_[0] - other_site->pos_[0]};
-  double r_y{old_site->pos_[1] - other_site->pos_[1]};
-  double r{sqrt(Square(r_x) + Square(r_y))};
-  double dr{r - Params::Xlinks::r_0};
-  // FIXME incorporate k_slack
-  double E_old{0.5 * Params::Xlinks::k_spring * Square(dr)};
-  double r_x_new{new_site->pos_[0] - other_site->pos_[0]};
-  double r_y_new{new_site->pos_[1] - other_site->pos_[1]};
-  double r_new{sqrt(Square(r_x_new) + Square(r_y_new))};
-  // if (r_new < spring_.r_min_ or r_new > spring_.r_max_) {
-  //   return 0.0;
-  // }
-  double dr_new{r_new - Params::Xlinks::r_0};
-  double E_new{0.5 * Params::Xlinks::k_spring * Square(dr_new)};
-  double dE_spring{E_new - E_old};
-  double weight_spring{0.0};
-  // Diffusing towards rest is considered an unbinding-type event in
-  // regards to Boltzmann factors, since both events let the spring relax
-  if (dE_spring < 0.0) {
-    weight_spring = exp(lambda_spring * fabs(dE_spring) / Params::kbT);
-  }
-  // Diffusing away from rest is considered a binding-type event in
-  // regards to Boltzmann factors, since both events stretch the spring out
-  else {
-    weight_spring = exp(-(1.0 - lambda_spring) * fabs(dE_spring) / Params::kbT);
-  }
-  double E_neighb{old_site->GetNumNeighborsOccupied() * -1.0 *
-                  Params::Xlinks::neighb_neighb_energy};
-  double weight_neighb{exp(lambda_neighb * E_neighb)};
-  // printf("%g & %g\n", weight_spring, weight_neighb);
+  double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
+  double weight_neighb{head->site_->GetWeight_Unbind()};
   return weight_spring * weight_neighb;
 }
 
@@ -199,25 +171,11 @@ double Protein::GetWeight_Bind_II() {
 double Protein::GetWeight_Unbind_II(BindingHead *head) {
 
   if (n_heads_active_ != 2) {
-    Sys::ErrorExit("wut\n");
+    Sys::ErrorExit("Protein::GetWeight_Unbind_II()\n");
   }
-  double lambda_neighb{1.0};
-  double lambda_spring{0.5};
-  BindingSite *site{head->site_};
-  BindingSite *other_site{head->GetOtherHead()->site_};
-  double r_x{site->pos_[0] - other_site->pos_[0]};
-  double r_y{site->pos_[1] - other_site->pos_[1]};
-  double r{sqrt(Square(r_x) + Square(r_y))};
-  // printf("r = %g\n", r);
-  double dr{r - Params::Xlinks::r_0};
-  double E_spring{0.5 * Params::Xlinks::k_spring * Square(dr)};
-  // printf("E = %g\n", E_spring);
-  double weight_spring{exp(lambda_spring * fabs(E_spring) / Params::kbT)};
-  double E_neighb{site->GetNumNeighborsOccupied() * -1.0 *
-                  Params::Xlinks::neighb_neighb_energy};
-  double weight_neighb{exp(lambda_neighb * E_neighb)};
-  // printf("wt is %g * %g\n", weight_spring, weight_neighb);
-  return weight_spring * weight_neighb;
+  double weight_spring{spring_.GetWeight_Unbind()};
+  double weight_site{head->site_->GetWeight_Unbind()};
+  return weight_spring * weight_site;
 }
 
 bool Protein::Diffuse(BindingHead *head, int dir) {

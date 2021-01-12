@@ -12,8 +12,8 @@ class FilamentManager;
 
 class ProteinManager {
 private:
-  Map<Str, Vec<double>> test_ref_;
   Map<Str, Vec<Pair<size_t, size_t>>> test_stats_;
+  Map<Str, Vec<double>> test_ref_;
 
   FilamentManager *filaments_{nullptr};
 

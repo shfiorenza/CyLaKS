@@ -35,6 +35,8 @@ public:
     return true;
   }
 
+  void SetWeight_Bind(double val) { weight_bind_ = val; }
+  void SetWeight_Unbind(double val) { weight_unbind_ = val; }
   double GetWeight_Bind() { return weight_bind_; }
   double GetWeight_Unbind() { return weight_unbind_; }
 

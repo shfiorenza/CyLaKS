@@ -12,6 +12,9 @@ class FilamentManager {
 private:
   bool up_to_date_{false};
 
+  Vec<double> weight_neighbs_bind_;
+  Vec<double> weight_neighbs_unbind_;
+
   size_t n_bd_iterations_{0};
   double dt_eff_{0.0};
 
@@ -57,10 +60,14 @@ public:
     for (auto &&pop : unoccupied_) {
       pop.second.ZeroOut();
     }
-    for (auto const &site : sites_) {
+    // Add sites to unoccupied_ and update weights
+    for (auto &&site : sites_) {
       for (auto &&pop : unoccupied_) {
         pop.second.Sort(site);
       }
+      int n_neighbs{site->GetNumNeighborsOccupied()};
+      site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
+      site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
     }
     // UpdateLattice();
   }

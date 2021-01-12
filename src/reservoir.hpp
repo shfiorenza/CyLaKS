@@ -49,9 +49,8 @@ protected:
 
 public:
   bool active_{false};
-  size_t step_active_{0};
   bool equilibrated_{false};
-
+  size_t step_active_{0};
   size_t n_active_entries_{0};
 
   bool tethering_active_{false};

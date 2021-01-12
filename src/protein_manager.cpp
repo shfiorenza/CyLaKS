@@ -160,7 +160,7 @@ void ProteinManager::InitializeTestEnvironment() {
     Filaments::immobile_until[1] = 0.0;
     Filaments::translation_enabled[0] = true;
     Filaments::translation_enabled[1] = true;
-    Filaments::rotation_enabled = true;
+    Filaments::rotation_enabled = false; // true;
     filaments_->Initialize(this);
     Str response;
     printf("\nEnter number of crosslinkers: ");

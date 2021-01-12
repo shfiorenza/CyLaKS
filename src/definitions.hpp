@@ -13,6 +13,8 @@
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};
+inline static const double _lambda_spring{0.5};
+inline static const double _lambda_neighb{1.0};
 /* Protein species IDs */
 inline static const size_t _id_site{0};
 inline static const size_t _id_motor{1};

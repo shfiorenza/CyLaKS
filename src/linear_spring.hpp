@@ -5,13 +5,15 @@
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
+class BindingSite;
+
 class LinearSpring : public Object {
 private:
   double k_slack_{0.0};  // For when r < r_0; pN/nm
   double k_spring_{0.0}; // For when r > r_0; pN/nm
-
   double k_rot_{0.0};
 
+  double dr_{0.0};
   Vec<double> torque_;
   Vec2D<double> f_vec_; // Vector of force for each endpoint (points to center)
 
@@ -106,8 +108,8 @@ public:
       // printf("  torque[%i] = %g\n", i_endpoint, torque_[i_endpoint]);
     }
     */
-    double dr{r_mag - r_rest_};
-    double f_mag{dr > 0.0 ? -k_spring_ * dr : -k_slack_ * dr};
+    dr_ = r_mag - r_rest_;
+    double f_mag{dr_ > 0.0 ? -k_spring_ * dr_ : -k_slack_ * dr_};
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Radial forces
       f_vec_[0][i_dim] = f_mag * r_hat[i_dim];
@@ -126,6 +128,45 @@ public:
     for (int i_endpoint{0}; i_endpoint < endpoints_.size(); i_endpoint++) {
       endpoints_[i_endpoint]->AddForce(f_vec_[i_endpoint]);
       endpoints_[i_endpoint]->AddTorque(torque_[i_endpoint]);
+    }
+  }
+  double GetWeight_Bind(double r) {
+    if (r < r_min_ or r > r_max_) {
+      return 0.0;
+    }
+    double dr{r - r_rest_};
+    double energy{dr > 0.0 ? 0.5 * k_spring_ * Square(dr)
+                           : 0.5 * k_slack_ * Square(dr)};
+    return exp(-(1.0 - _lambda_spring) * energy / Params::kbT);
+  }
+  double GetWeight_Unbind() {
+    double energy{dr_ > 0.0 ? 0.5 * k_spring_ * Square(dr_)
+                            : 0.5 * k_slack_ * Square(dr_)};
+    return exp(_lambda_spring * energy / Params::kbT);
+  }
+  double GetWeight_Shift(Object *static_site, Object *old_site,
+                         Object *new_site) {
+    double energy_old{dr_ > 0.0 ? 0.5 * k_spring_ * Square(dr_)
+                                : 0.5 * k_slack_ * Square(dr_)};
+    double r_x_new{new_site->pos_[0] - static_site->pos_[0]};
+    double r_y_new{new_site->pos_[1] - static_site->pos_[1]};
+    double r_new{sqrt(Square(r_x_new) + Square(r_y_new))};
+    if (r_new < r_min_ or r_new > r_max_) {
+      return 0.0;
+    }
+    double dr_new{r_new - r_rest_};
+    double energy_new{dr_new > 0.0 ? 0.5 * k_spring_ * Square(dr_new)
+                                   : 0.5 * k_slack_ * Square(dr_new)};
+    double dE{energy_new - energy_old};
+    // Diffusing towards rest is considered an unbinding-type event in
+    // regards to Boltzmann factors, since both events let the spring relax
+    if (dE < 0.0) {
+      return exp(_lambda_spring * fabs(dE) / Params::kbT);
+    }
+    // Diffusing away from rest is considered a binding-type event in
+    // regards to Boltzmann factors, since both events stretch the spring out
+    else {
+      return exp(-(1.0 - _lambda_spring) * fabs(dE) / Params::kbT);
     }
   }
 };

@@ -23,14 +23,34 @@ public:
     head_two_.Initialize(sid, id, _r_motor_head, this, &head_one_);
     // tether_.Initialize(sid, id, this);
   }
-
-  BindingSite *GetDockSite();
-  CatalyticHead *GetActiveHead() {}
   void ChangeConformation();
-  bool Bind(BindingSite *site, CatalyticHead *head) {}
-  bool Unbind(CatalyticHead *head) {}
+  BindingSite *GetDockSite();
+  CatalyticHead *GetDockedHead();
+  CatalyticHead *GetHeadOne() { return &head_one_; }
+  CatalyticHead *GetHeadTwo() { return &head_two_; }
+  CatalyticHead *GetActiveHead() {
+    if (head_one_.site_ != nullptr) {
+      return &head_one_;
+    } else if (head_two_.site_ != nullptr) {
+      return &head_two_;
+    } else {
+      Sys::ErrorExit("Motor::GetActiveHead");
+    }
+  }
+  BindingSite *GetNeighbor_Bind_II() { return GetDockSite(); }
 
   bool UpdateExtension() { return false; }
+
+  double GetWeight_Bind_II();
+  double GetWeight_Unbind_II(CatalyticHead *head);
+  double GetWeight_Unbind_I();
+
+  bool Bind(BindingSite *site, CatalyticHead *head);
+  bool Bind_ATP(CatalyticHead *head);
+  bool Hydrolyze(CatalyticHead *head);
+  bool Unbind(CatalyticHead *head);
+  bool Tether();
+  bool Untether();
 };
 
 #endif

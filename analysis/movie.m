@@ -2,14 +2,21 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'huh';
+sim_name = 'testo';
 
 movie_name = 'test';
 start_frame = 1;
 frames_per_plot = 10;
 movie_duration = 30; % in seconds
 
-r_prot = 10;
+sid_site = 0;
+sid_xlink = 1;
+sid_motor = 2;
+
+% Colors
+blue = [30 144 255] / 255;
+purple = [128 0 128] / 255;
+color = [purple; blue];
 
 % Open log file and parse it into param labels & their values
 log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
@@ -38,14 +45,12 @@ if any(contains(params, "N_DATAPOINTS ") ~= 0)
     n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
 n_dims = 2;
-site_size = 0.008; % in um
+site_size = 0.0082; % in um
 max_sites = max(mt_lengths);
 xlink_cutoff = 5;
 teth_cutoff = 19;
 
-% Colors
-blue = [30 144 255] / 255;
-purple = [128 0 128] / 255;
+r_prot = (site_size*1000);
 
 % Figure parameters (i.e., how they appear)
 site_height = 1;
@@ -66,11 +71,13 @@ set(fig1, 'Position', [50 50 1000 600]);
 % File info
 filamentFileName = '%s_filament_pos.file';
 proteinFileName = '%s_protein_id.file';
-partnerFileName = '%s_partner_index.file';
-tethFileName = '%s_tether_anchor_pos.file';
+occupancyFileName = '%s_occupancy.file';
+partnerFileName = '%s_partner_index.file'; % not needed?
+tethFileName = '%s_tether_anchor_pos.file'; % not needed?
 motorHeadFileName = '%s_motor_head_trailing.file';
 filamentFile = sprintf(fileDirectory, sprintf(filamentFileName, sim_name));
 proteinFile = sprintf(fileDirectory, sprintf(proteinFileName, sim_name));
+occupancyFile = sprintf(fileDirectory, sprintf(occupancyFileName, sim_name));
 partnerFile = sprintf(fileDirectory, sprintf(partnerFileName, sim_name));
 tethFile = sprintf(fileDirectory, sprintf(tethFileName, sim_name));
 motorHeadFile = sprintf(fileDirectory, sprintf(motorHeadFileName, sim_name));
@@ -88,6 +95,13 @@ if isfile(proteinFile)
     data = fread(file, n_mts * max_sites * n_datapoints, '*int');
     fclose(file);
     protein_ids = reshape(data, max_sites, n_mts, n_datapoints);
+end
+occupancy = zeros(max_sites, n_mts, n_datapoints) - 1;
+if isfile(occupancyFile)
+    file = fopen(occupancyFile);
+    data = fread(file, n_mts * max_sites * n_datapoints, '*int');
+    fclose(file);
+    occupancy = reshape(data, max_sites, n_mts, n_datapoints);
 end
 partner_indices = zeros(max_sites, n_mts, n_datapoints) - 1;
 if isfile(partnerFile)
@@ -108,12 +122,11 @@ if isfile(tethFile)
 end
 motor_trailing = zeros(max_sites, n_mts, n_datapoints);
 if isfile(motorHeadFile)
-    %{
     file = fopen(motorHeadFile);
     data = fread(file, [n_mts * max_sites * n_datapoints], '*bool');
     fclose(file);
     motor_trailing = reshape(data, max_sites, n_mts, n_datapoints);
-    %}
+    
 end
 
 % Run through all datapoints; each one is a frame in our movie
@@ -148,175 +161,86 @@ for i_data = start_frame : frames_per_plot : end_frame
     for i_mt = 1:1:n_mts
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
-        line([plus_pos(1), minus_pos(1)],[plus_pos(2), minus_pos(2)], 'LineWidth', 4);
+        line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
+            'LineWidth', height / 100, 'Color', [0.7 0.7 0.7]);
         n_sites = mt_lengths(i_mt);
         % Draw proteins
         for i_site = 1 : n_sites
-            if(protein_ids(i_site, i_mt, i_data) ~= -1)
+            id = protein_ids(i_site, i_mt, i_data);
+            sid = occupancy(i_site, i_mt, i_data);
+            if(id ~= -1)
                 if i_mt == 1
+                    dx = -1;
+                    mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
                     pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 else
+                    dx = 1;
+                    mt_dir = -1;
                     line_vec = [plus_pos(1) - minus_pos(1), plus_pos(2) - minus_pos(2)];
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
-                % Draw spring connecting crosslinker if appropriate
-                if(n_mts > 1 && i_mt == 1)
-                    if(partner_indices(i_site, i_mt, i_data) ~= -1)
-                        ii_site = partner_indices(i_site, i_mt, i_data);
-                        nn_sites = mt_lengths(2); 
-                        p_pos = filament_pos(:, 1, 2, i_data);
-                        m_pos = filament_pos(:, 2, 2, i_data); 
-                        neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
-                        endpos_x = m_pos(1) + (double(ii_site)/nn_sites)*neighb_vec(1);
-                        endpos_y = m_pos(2) + (double(ii_site)/nn_sites)*neighb_vec(2);
-                        line([pos_x, endpos_x],[pos_y, endpos_y], ...
-                            'LineWidth', 1, 'Color', purple);
-                        %{
-                        ne = 4; a = 2; ro = 4;
-                        [xs, ys] = spring(pos_x, pos_y, endpos_x, endpos_y, ne, a, ro);
-                        plot(xs, ys, 'LineWidth', 1, 'Color', purple);
-                        %}
+                if sid == sid_xlink
+                    % Draw spring connecting crosslinker if appropriate
+                    if(n_mts > 1 && i_mt == 1)
+                        if(partner_indices(i_site, i_mt, i_data) ~= -1)
+                            ii_site = partner_indices(i_site, i_mt, i_data);
+                            nn_sites = mt_lengths(2);
+                            p_pos = filament_pos(:, 1, 2, i_data);
+                            m_pos = filament_pos(:, 2, 2, i_data);
+                            neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
+                            endpos_x = m_pos(1) + (double(ii_site)/nn_sites)*neighb_vec(1);
+                            endpos_y = m_pos(2) + (double(ii_site)/nn_sites)*neighb_vec(2);
+                            line([pos_x, endpos_x],[pos_y, endpos_y], ...
+                                'LineWidth', 1, 'Color', purple);
+                        end
+                    end
+                elseif sid == sid_motor
+                    singly_bound = true;
+                    i_fwd = i_site + 1;
+                    if i_fwd <= n_sites
+                        if protein_ids(i_fwd, i_mt, i_data) == id
+                            endpos_x = pos_x + r_prot/2;
+                            endpos_y = pos_y + mt_dir * r_prot;
+                            line([pos_x, endpos_x], [pos_y, endpos_y], ...
+                                'LineWidth', 1, 'Color', blue);
+                            singly_bound = false;
+                        end
+                    end
+                    i_bck = i_site - 1;
+                    if i_bck > 0
+                        if protein_ids(i_bck, i_mt, i_data) == id
+                            endpos_x = pos_x - r_prot/2;
+                            endpos_y = pos_y + mt_dir  * r_prot;
+                            line([pos_x, endpos_x], [pos_y, endpos_y], ...
+                                'LineWidth', 1, 'Color', blue);
+                            singly_bound = false;
+                        end
+                    end
+                    if singly_bound
+                        endpos_x = pos_x;
+                        endpos_y = pos_y + mt_dir * 1.12 * r_prot;
+                        line([pos_x, endpos_x], [pos_y, endpos_y], ...
+                            'LineWidth', 1, 'Color', blue);
+                        dir = -dx; 
+                        if motor_trailing(i_site, i_mt, i_data)
+                           dir = dx; 
+                        end
+                        dockpos_x = pos_x + 1.045 * r_prot * dir;
+                        dockpos_y = endpos_y - mt_dir * r_prot / 4;
+                        line([endpos_x, dockpos_x], [endpos_y, dockpos_y], ...
+                            'LineWidth', 1, 'Color', blue);
+                        rectangle('Position', [dockpos_x - r_prot/2 dockpos_y - r_prot/2 r_prot r_prot], ...
+                            'FaceColor', color(sid, :), 'Curvature', [1 1]);
                     end
                 end
                 % Draw protein head
                 pos = [pos_x-(r_prot/2) pos_y-(r_prot/2) r_prot r_prot];
-                rectangle('Position', pos,'FaceColor', purple, 'Curvature', [1 1]);
+                rectangle('Position', pos,'FaceColor', color(sid, :), 'Curvature', [1 1]);
             end 
         end
-        
-        
-        %{
-        if (n_mts > 1)
-            
-            if (mod(i_mt, 2) == 0)
-                neighb_IDs = xlink_data(:, i_mt - 1, i_data);
-                neighb_mt_pos = filament_pos(i_mt - 1, i_data) * site_width;
-                neighb_mt_height = 8 * (i_mt - 2) * site_height;
-            else
-                neighb_IDs = xlink_data(:, i_mt + 1, i_data);
-                neighb_mt_pos = filament_pos(i_mt + 1, i_data) * site_width;
-                neighb_mt_height = 8 * (i_mt) * site_height;
-            end
-            
-        end
-        
-        % Scan thru MTs and plot all xlinks
-        for i_xlink = 1:1:n_sites
-            xlink_pos = mt_pos + i_xlink * site_width - 1;
-            xlink_height = mt_height + site_height;
-            xlink_center_x = xlink_pos + site_width / 2;
-            xlink_center_y = xlink_height + site_height / 2;
-            
-            if (mod(i_mt, 2) == 0)
-                xlink_height = mt_height - site_height;
-                xlink_center_y = xlink_height - site_height / 2;
-            end
-            
-            if (xlink_IDs(i_xlink) ~= -1)
-                double_bound = false;
-                
-                for i_scan = -xlink_cutoff:1:xlink_cutoff
-                    i_neighb = i_xlink + i_scan + mt_pos - neighb_mt_pos;
-                    
-                    if i_neighb < 1
-                        i_neighb = 1;
-                    elseif i_neighb > n_sites
-                        i_neighb = n_sites;
-                    end
-                    
-                    if (xlink_IDs(i_xlink) == neighb_IDs(i_neighb))
-                        neighb_center_x = neighb_mt_pos + (i_neighb - 1/2) * site_width;
-                        neighb_center_y = neighb_mt_height + 3 * site_height / 2;
-                        neighb_height = neighb_mt_height + site_height;
-                        
-                        if (mod(i_mt, 2) ~= 0)
-                            neighb_center_y = neighb_mt_height + site_height / 2;
-                            neighb_height = neighb_mt_height;
-                            % To ensure spring is only plotted once per
-                            % xlink, only plot on odd-numbered MTs
-                            xa = xlink_center_x; ya = xlink_height + site_height;
-                            xb = double(neighb_center_x); yb = neighb_height - site_height;
-                            ne = 6; a = 6; ro = 1;
-                            [xs, ys] = spring(xa, ya, xb, yb, ne, a, ro);
-                            plot(xs, ys, 'LineWidth', 1, 'Color', purple);
-                        end
-                        
-                        double_bound = true;
-                        rectangle('Position', [xlink_pos xlink_height site_width site_height], ...
-                            'FaceColor', purple, 'Curvature', [0.5 0.5]);
-                    end
-                    
-                end
-                
-                if (double_bound == false)
-                    rectangle('Position', [xlink_pos xlink_height site_width site_height], ...
-                        'FaceColor', 'm', 'Curvature', [0.5 0.5]);
-                    xa = xlink_center_x; ya = xlink_height + site_height;
-                    xb = xlink_center_x; yb = xlink_height + 4 * site_height;
-                    
-                    if (mod(i_mt, 2) == 0)
-                        ya = xlink_height;
-                        yb = xlink_height - 3 * site_height;
-                    end
-                    
-
-                end
-                
-            end
-            
-        end
-        
-        % Array of tether coords for this MT
-        teth_coords = teth_data(:, i_mt, i_data);
-        
-        for i_teth = 1:1:max_sites - 1
-            
-            if (teth_coords(i_teth) ~= -1)
-                end_height = (mt_height + neighb_mt_height + site_height) / 2;
-                
-                if (n_mts < 2)
-                    end_height = mt_height + 5 * site_height;
-                end
-                
-                start_height = mt_height + 5 * site_height / 2;
-                
-                if (mod(i_mt, 2) == 0)
-                    start_height = mt_height - 3 * site_height / 2;
-                end
-                
-                if (teth_coords(i_teth) ~= teth_coords(i_teth + 1))
-                    start_pos = i_teth * site_width + mt_pos - 1;
-                    
-                    if (i_teth > 1)
-                        
-                        if (motor_IDs(i_teth) ~= motor_IDs(i_teth - 1) ...
-                                && motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
-                            start_pos = start_pos + site_width / 2 - 1;
-                        end
-                        
-                    elseif (motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
-                        start_pos = start_pos + site_width / 2 - 1;
-                    end
-                    
-                    end_pos = teth_coords(i_teth) * site_width + (3/2) * site_width - 1;
-                    xa = start_pos; ya = start_height;
-                    xb = end_pos; yb = end_height;
-                    ne = 10; a = 10; ro = 0.5;
-                    if abs(xa - xb) <= teth_cutoff
-                        [xs, ys] = spring(xa, ya, xb, yb, ne, a, ro);
-                        plot(xs, ys, 'LineWidth', 1, 'Color', 'black');
-                    else
-                        disp(xa - xb);
-                        disp(teth_coords(i_teth));
-                        disp(i_teth);
-                    end
-                end
-            end
-        end
-        %}
     end
     dim = [0.11 0.625 .3 .3];
     time = (i_data - start_frame) * time_per_datapoint;

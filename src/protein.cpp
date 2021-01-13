@@ -1,7 +1,5 @@
 #include "protein.hpp"
-#include "binding_head.hpp"
 #include "protofilament.hpp"
-#include "system_namespace.hpp"
 
 void Protein::InitializeNeighborList() {}
 
@@ -42,6 +40,7 @@ bool Protein::UpdateExtension() {
 }
 
 int Protein::GetDirectionTowardRest(BindingHead *head) {
+
   if (n_heads_active_ == 1) {
     return 1;
   } else if (n_heads_active_ == 2) {
@@ -60,6 +59,7 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
 }
 
 double Protein::GetAnchorCoordinate(int i_dim) {
+
   if (n_heads_active_ != 2) {
     Sys::ErrorExit("Protein::GetAnchorCoord()");
   }

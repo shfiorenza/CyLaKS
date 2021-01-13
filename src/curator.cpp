@@ -181,6 +181,7 @@ void Curator::ParseParameters() {
   ParseYAML(&Motors::k_on, "motors.k_on", "1/nM*s");
   ParseYAML(&Motors::c_bulk, "motors.c_bulk", "nM");
   ParseYAML(&Motors::c_eff_bind, "motors.c_eff_bind", "nM");
+  ParseYAML(&Motors::k_on_ATP, "motors.k_on_ATP", "1/s");
   ParseYAML(&Motors::c_ATP, "motors.c_ATP", "mM");
   ParseYAML(&Motors::k_hydrolyze, "motors.k_hydrolyze", "1/s");
   ParseYAML(&Motors::k_off_i, "motors.k_off_i", "1/s");
@@ -397,6 +398,7 @@ void Curator::OutputData() {
         }
       } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
+        /*
         if (site.occupant_->parent_->tethered_) {
           auto partner{site.occupant_->parent_->partner_};
           if (partner->n_heads_active_ > 0) {
@@ -404,6 +406,7 @@ void Curator::OutputData() {
             // tether_anchor_pos[site.index_] = anchor_coord;
           }
         }
+        */
       }
     }
     data_files_.at("occupancy").Write(occupancy, n_sites_max_);

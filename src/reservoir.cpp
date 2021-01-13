@@ -30,7 +30,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
     size_t window_size{(size_t)std::round(dynamic_equil_window / dt)};
     n_bound_.resize(window_size);
   }
-  if (species_id_ == _id_xlink and Params::Filaments::count > 1) {
+  if (active_ and species_id_ == _id_xlink and Params::Filaments::count > 1) {
     crosslinking_active_ = true;
   }
 }

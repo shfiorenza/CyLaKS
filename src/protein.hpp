@@ -43,9 +43,9 @@ public:
     neighbors_bind_ii_.resize(2 * x_max + 1);
   }
   int GetNumHeadsActive() { return n_heads_active_; }
-  BindingHead *GetHeadOne() { return &head_one_; }
-  BindingHead *GetHeadTwo() { return &head_two_; }
-  BindingHead *GetActiveHead() {
+  virtual BindingHead *GetHeadOne() { return &head_one_; }
+  virtual BindingHead *GetHeadTwo() { return &head_two_; }
+  virtual BindingHead *GetActiveHead() {
     if (head_one_.site_ != nullptr) {
       return &head_one_;
     } else if (head_two_.site_ != nullptr) {

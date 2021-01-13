@@ -7,14 +7,14 @@ class Motor;
 
 class CatalyticHead : public BindingHead {
 private:
+public:
   enum Ligand { NONE, ATP, ADPP, ADP };
   Ligand ligand_{ADP};
 
+  bool trailing_{false};
+
   Motor *parent_{nullptr};
   CatalyticHead *other_head_{nullptr};
-
-public:
-  bool trailing_{false};
 
 private:
 public:
@@ -28,6 +28,9 @@ public:
 
   Ligand GetLigand() { return ligand_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
+
+  double GetWeight_Unbind_II();
+  bool Unbind();
 
   bool Trailing() { return trailing_; }
 };

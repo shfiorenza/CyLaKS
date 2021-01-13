@@ -25,6 +25,9 @@ inline size_t n_steps_run_{0};
 inline size_t i_step_{0};
 inline size_t i_datapoint_{0};
 
+inline std::vector<double> weight_neighb_bind_;
+inline std::vector<double> weight_neighb_unbind_;
+
 template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
   // Tag each log pintout in terminal w/ simulation name

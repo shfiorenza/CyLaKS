@@ -2,11 +2,11 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'name';
+sim_name = 'huh';
 
 movie_name = 'test';
 start_frame = 1;
-frames_per_plot = 1;
+frames_per_plot = 10;
 movie_duration = 30; % in seconds
 
 r_prot = 10;
@@ -132,8 +132,8 @@ for i_data = start_frame : frames_per_plot : end_frame
     height = (3/5 * width); 
     ax.XLim = [(min_x - 25) (max_x + 25)];
     ax.YLim = [y_avg - height/2 y_avg + height/2];
-    %ax.XLim = [0 800];
-    %ax.YLim = [-400 400];
+    %ax.XLim = [-167 167];
+    %ax.YLim = [-100 100];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     %ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];

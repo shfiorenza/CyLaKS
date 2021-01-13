@@ -13,24 +13,25 @@
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};
+/* Lambda values used in Boltzmann factors for various energy-based FX */
 inline static const double _lambda_spring{0.5};
 inline static const double _lambda_neighb{1.0};
 /* Protein species IDs */
 inline static const size_t _id_site{0};
-inline static const size_t _id_motor{1};
-inline static const size_t _id_xlink{2};
+inline static const size_t _id_xlink{1};
+inline static const size_t _id_motor{2};
 /* Protein size constants; in nm */
 inline static const double _r_site{8.0};
-inline static const double _r_motor_head{4.0};
 inline static const double _r_xlink_head{4.0};
+inline static const double _r_motor_head{4.0};
 /* Lab frame coordinate vectors */
 inline static const std::vector<double> _x_hat{1.0, 0.0};
 inline static const std::vector<double> _y_hat{0.0, 1.0};
 
 /* Stylistic stuff */
+using Str = std::string;
 using SysClock = std::chrono::steady_clock;
 using SysTimepoint = SysClock::time_point;
-using Str = std::string;
 template <typename DATA_T> using Vec = std::vector<DATA_T>;
 template <typename DATA_T> using Vec2D = Vec<Vec<DATA_T>>;
 template <typename DATA_T> using Vec3D = Vec<Vec<Vec<DATA_T>>>;

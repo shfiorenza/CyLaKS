@@ -68,7 +68,6 @@ clean:
 clean-output:
 	rm -f *.file *.log
 
-
 $(BINDIR)/sim: $(OBJECTS) $(SIM_OBJ)
 	$(CXX) $^ -o $@ $(LDFLAGS) $(LIBS)
 

@@ -229,12 +229,12 @@ void Curator::InitializeSimulation() {
   }
   n_steps_run_ = (size_t)std::round(t_run / dt);
   // Log parameters
-  Log("  System parameters:\n");
-  Log("    n_steps_run = %zu\n", n_steps_run_);
-  Log("    n_steps_equil = %zu\n", n_steps_equil_);
-  Log("    n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
-  Log("    n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
   Log("\n");
+  Log("  System variables calculated post-initialization:\n");
+  Log("   n_steps_run = %zu\n", n_steps_run_);
+  Log("   n_steps_equil = %zu\n", n_steps_equil_);
+  Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
+  Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
   // Initialize sim objects
   SysRNG::Initialize(seed);
   // If we're running a test, let proteins initialize filament environment

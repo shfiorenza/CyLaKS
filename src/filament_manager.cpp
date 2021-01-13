@@ -27,9 +27,11 @@ void FilamentManager::SetParameters() {
 
 void FilamentManager::GenerateFilaments() {
 
-  proto_.resize(Params::Filaments::count);
+  using namespace Sys;
+  using namespace Params;
+  proto_.resize(Filaments::count);
   for (int i_fil{0}; i_fil < proto_.size(); i_fil++) {
-    proto_[i_fil].Initialize(_id_site, Sys::n_unique_objects_++, i_fil);
+    proto_[i_fil].Initialize(_id_site, n_unique_objects_++, i_fil);
   }
   for (auto &&pf : proto_) {
     for (auto &&site : pf.sites_) {
@@ -40,10 +42,22 @@ void FilamentManager::GenerateFilaments() {
     proto_[0].neighbor_ = &proto_[1];
     proto_[1].neighbor_ = &proto_[0];
   }
+  // FIXME gamma_rot is invalid for MTs that are too short; need better
+  // expression --- do not include for now
+  int n_dims{2}; // 3};
+  Vec<double> D(n_dims, 0.0);
+  Log("  Filament variables calculated post-initialization:\n");
+  for (auto const &pf : proto_) {
+    Log("   length[%i] = %g nm\n", pf.index_, pf.length_);
+  }
+  for (auto const &pf : proto_) {
+    Log("    D_par[%i] = %g nm^2/s\n", pf.index_, kbT / pf.gamma_[0]);
+  }
+  for (auto const &pf : proto_) {
+    Log("     D_perp[%i] = %g nm^2/s\n", pf.index_, kbT / pf.gamma_[1]);
+  }
   /*
-  Sys::Log("***\n");
-  Sys::Log(" %zu \n", proto_.size());
-  for (int i_fil{0}; i_fil < Params::Filaments::count; i_fil++) {
+  for (int i_fil{0}; i_fil < proto; i_fil++) {
     Sys::Log("mt #%i\n", proto_[i_fil].index_);
     Sys::Log("%zu & %zu\n", proto_[i_fil].plus_end_->pos_.size(),
              proto_[i_fil].minus_end_->pos_.size());

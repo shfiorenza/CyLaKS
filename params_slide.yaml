@@ -1,61 +1,63 @@
 seed: 198261346419
-n_steps: 6000000 # 0
-n_datapoints: 10000
-data_threshold: 0
-delta_t: 2.5e-05
 kbT: 4.114
-eta: 0.001
-microtubules:
-  count: 2
-  length:
-  - 1000
-  - 500
-  y_dist: 32
-  site_size: 8
+eta: 0.1 # 0.001
+dt: 0.00002
+t_run: 20 # 200
+t_equil: 0
+t_snapshot: 0.01 # 0.1
+dynamic_equil_window: -1
+verbosity: 0
+filaments:
+  count: 5
   radius: 12.5
-  elevation: 50
-  start_coord:
-  - 0
-  - 0
-  immobile_until:
-  - 9500
-  - 50
-  applied_force: 0.0
-  printout_on: false
-  diffusion_on: true
+  site_size: 8.2
+  n_bd_per_kmc: 10
+  n_sites: [5, 25, 125, 625, 3125]
+  polarity: [0, 1, 0, 1, 0]
+  x_initial: [0, 0, 0, 0, 0]
+  y_initial: [0, 32, 64, 96, 128]
+  immobile_until: [0, 0, 0, 0, 0]
+  translation_enabled: [true, true]
+  rotation_enabled: false
 motors:
-  lattice_coop_amp: 5
-  lattice_coop_range: 750
-  interaction_energy: 1.5
-  t_active: 1000
+  n_runs_desired: 250
+  gaussian_range: 0 # 1000 # 1200 # 1000
+  gaussian_amp_solo: 0.95 # 1.3 # 0.95
+  gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
+  neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
+  t_active: 9500
   k_on: 0.000358
-  c_bulk: 0.0 # 6.0
-  c_eff_bind: 800000
+  c_bulk: 0.0 # 1.5
+  c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 130
-  k_hydrolyze_stalled: 130
-  k_off_i: 2.5
-  k_off_i_stalled: 2.5
-  k_off_ii: 260
+  k_hydrolyze: 95
+  k_off_i: 8
+  k_off_ii: 260 # 2375 # 260
+  applied_force: 0.0
+  internal_force: 26.0 # 0.0 # 26.0
+  sigma_off_i: 1.0
+  sigma_off_ii: 0.125
+  sigma_ATP: 1.15
+  endpausing_active: true
+  tethers_active: true
   k_tether: 0.1
-  c_eff_tether: 5000
+  c_eff_tether: 500
   k_untether: 0.05
   r_0: 120
   k_spring: 0.1325
   k_slack: 0.0265
-  stall_force: 6
-  applied_force: 0
-  tethers_active: true
-  endpausing_active: true
 xlinks:
+  neighb_neighb_energy: 2.25
+  t_active: 0
   k_on: 0.000238
-  c_bulk: 0.54
-  c_eff_bind: 4500
+  c_bulk: 0.0 # 5
+  c_eff_bind: 5000
   k_off_i: 0.143
-  k_off_ii: 0.00286 # 0.0143
+  k_off_ii: 0.0143
+  d_i: 0.131
+  d_ii: 0.0655
   r_0: 32
-  k_spring: 0.453 # 0.06 # 0.1 #0.453
-  diffu_coeff_i: 0.131
-  diffu_coeff_ii: 0.0655
-  interaction_energy: 2.25
+  k_spring: 0.453
+  theta_0: 90
+  k_rot: 0 # 1000

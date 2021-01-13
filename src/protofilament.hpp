@@ -52,6 +52,7 @@ public:
       force_[i_dim] += f_applied[i_dim];
       // printf("f[%i] += %g\n", i_dim, f_applied[i_dim]);
     }
+    /*
     if (Params::Filaments::rotation_enabled) {
       Vec<double> r(_n_dims_max, 0.0); // Points from rod COM to site COM
       for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -59,12 +60,15 @@ public:
       }
       torque_ += Cross(r, f_applied);
     }
+    */
   }
   void AddTorque(double torque_applied) {
-    if (Sys::i_step_ < immobile_until_) {
-      return;
-    }
-    torque_ += torque_applied;
+    /*
+      if (Sys::i_step_ < immobile_until_) {
+        return;
+      }
+      torque_ += torque_applied;
+    */
   }
   void UpdatePosition() {
     if (Sys::i_step_ < immobile_until_) {

@@ -18,21 +18,24 @@ void Protofilament::SetParameters() {
   double pi{M_PI};                                  // literally just pi
   gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
   gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
-  gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8)); // pN*s*nm
+  // gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8));
+  // pN*s*nm
+  /*
+  Sys::Log("   length[%i] = %g nm\n", index_, length_);
   Vec<Str> label{"par", "perp", "rot"};
-  Vec<double> diffusion_const(3, 0.0);
-  double dt_eff{dt / n_bd_per_kmc};
-  Sys::Log("  For filament #%i:\n", index_);
-  Sys::Log("    length = %g nm\n", length_);
-  for (int i_dim{0}; i_dim < 3; i_dim++) {
-    sigma_[i_dim] = sqrt(2 * kbT * dt_eff / gamma_[i_dim]); // nm or rad
-    diffusion_const[i_dim] = kbT / gamma_[i_dim];           // nm^2/s or rad^2/s
+  Vec<double> diffusion_const(n_dims, 0.0);
+  */
+  for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
+    sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
+    /*
+    diffusion_const[i_dim] = kbT / gamma_[i_dim]; // nm^2/s or rad^2/s
+    Sys::Log("     D_%s[%i] = %g %s^2/s\n", label[i_dim].c_str(), index_,
+             diffusion_const[i_dim], i_dim < 2 ? "nm" : "rad");
     Sys::Log(1, "    gamma_%s = %g pN*s%s\n", label[i_dim].c_str(),
              gamma_[i_dim], i_dim < 2 ? "/nm" : "*nm");
-    Sys::Log(2, "     sigma_%s = %g %s\n", label[i_dim].c_str(), sigma_[i_dim],
+    Sys::Log(1, "     sigma_%s = %g %s\n", label[i_dim].c_str(), sigma_[i_dim],
              i_dim < 2 ? "nm" : "rad");
-    Sys::Log(2, "      D_%s = %g %s^2/s\n", label[i_dim].c_str(),
-             diffusion_const[i_dim], i_dim < 2 ? "nm" : "rad");
+    */
   }
 }
 
@@ -69,7 +72,7 @@ void Protofilament::UpdateRodPosition() {
   // Independent terms for rod trans/rotational diffusion
   double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
-  double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
+  // double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
@@ -87,8 +90,10 @@ void Protofilament::UpdateRodPosition() {
     }
   }
   // Apply translationl and rotational displacements
+  /*
   Vec<double> torque_proj{Cross(torque_, orientation_)};
   double u_norm{0.0};
+  */
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
@@ -101,19 +106,23 @@ void Protofilament::UpdateRodPosition() {
         Sys::ErrorExit("Protofilament::UpdateRodPositions()");
       }
     }
+    /*
     // Only update orientation if rotation is enabled
     if (Params::Filaments::rotation_enabled) {
       orientation_[i_dim] += torque_proj[i_dim] / gamma_[2] * dt_eff_;
       orientation_[i_dim] += rod_basis[1][i_dim] * noise_rot;
       u_norm += Square(orientation_[i_dim]);
     }
+    */
   }
+  /*
   if (Params::Filaments::rotation_enabled) {
     // Re-normalize orientation vector
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       orientation_[i_dim] /= sqrt(u_norm);
     }
   }
+  */
 }
 
 void Protofilament::UpdateSitePositions() {

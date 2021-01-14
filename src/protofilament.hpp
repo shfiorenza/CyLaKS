@@ -77,5 +77,9 @@ public:
     UpdateRodPosition();
     UpdateSitePositions();
   }
+  void ForceUpdate() {
+    UpdateRodPosition();
+    UpdateSitePositions();
+  }
 };
 #endif

@@ -59,7 +59,7 @@ public:
     }
     InitializeEvents();
   }
-  void UpdateLatticeDeformation() {}
+  void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {
     bool forced_unbind{xlinks_.UpdateExtensions()};
     if (forced_unbind) {

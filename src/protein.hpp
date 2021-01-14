@@ -58,6 +58,8 @@ public:
   bool HasSatellite();
   void UntetherSatellite();
 
+  virtual void ApplyLatticeDeformation() {}
+
   virtual bool UpdateExtension();
   virtual int GetDirectionTowardRest(BindingHead *head);
   virtual double GetAnchorCoordinate(int i_dim);

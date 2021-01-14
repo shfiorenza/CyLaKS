@@ -41,7 +41,10 @@ public:
 
   bool UpdateExtension() { return false; }
 
+  void ApplyLatticeDeformation();
+
   double GetWeight_Bind_II();
+  double GetWeight_BindATP_II(CatalyticHead *head);
   double GetWeight_Unbind_II(CatalyticHead *head);
   double GetWeight_Unbind_I();
 

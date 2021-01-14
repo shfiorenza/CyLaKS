@@ -53,6 +53,8 @@ public:
   size_t step_active_{0};
   size_t n_active_entries_{0};
 
+  bool lattice_coop_active_{false};
+
   bool tethering_active_{false};
   bool crosslinking_active_{false};
 
@@ -131,6 +133,14 @@ public:
     active_entries_[i_entry] = active_entries_[--n_active_entries_];
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();
+  }
+  void UpdateLatticeDeformation() {
+    if (!lattice_coop_active_) {
+      return;
+    }
+    for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
+      active_entries_[i_entry]->ApplyLatticeDeformation();
+    }
   }
   bool UpdateExtensions() {
     bool force_unbind_occurred{false};

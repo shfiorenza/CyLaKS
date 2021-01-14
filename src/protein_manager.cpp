@@ -57,6 +57,44 @@ void ProteinManager::InitializeWeights() {
     xlinks_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - _lambda_neighb) * dE);
     xlinks_.weights_[name].unbind_[n_neighbs] = exp(_lambda_neighb * dE);
   }
+  // Array of MAXIMUM possible weights including neighbor interactions and
+  // lattice deformation effects from MULTIPLE motor effects stacking
+  double lattice_E_max_tot{-1 * Params::Motors::gaussian_ceiling_bulk};
+  double wt_lattice_bind_max{exp(-(1.0 - _lambda_lattice) * lattice_E_max_tot)};
+  double wt_lattice_unbind_max{exp(_lambda_lattice * lattice_E_max_tot)};
+  Sys::weight_lattice_bind_max_.resize(_n_neighbs_max + 1);
+  Sys::weight_lattice_unbind_max_.resize(_n_neighbs_max + 1);
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    Sys::weight_lattice_bind_max_[n_neighbs] =
+        wt_lattice_bind_max * Sys::weight_neighb_bind_[n_neighbs];
+    Sys::weight_lattice_unbind_max_[n_neighbs] =
+        wt_lattice_unbind_max * Sys::weight_neighb_unbind_[n_neighbs];
+  }
+  // Calculate lattice_alpha based on input range
+  Sys::lattice_cutoff_ = Params::Motors::gaussian_range;
+  double dx_cutoff{(Sys::lattice_cutoff_ + 1) * Params::Filaments::site_size};
+  double lattice_E_0_solo{-1 * Params::Motors::gaussian_amp_solo};
+  double lattice_alpha{-1 * lattice_E_0_solo / (dx_cutoff * dx_cutoff)};
+  if (Sys::lattice_cutoff_ > 0) {
+    Sys::Log("  lattice_cutoff_ is %i\n", Sys::lattice_cutoff_);
+    Sys::Log("  lattice_alpha_ is %g\n", lattice_alpha);
+  } else {
+    Sys::Log("  Lattice cooperativity is disabled.\n");
+  }
+  // Array of binding/unbinding weights due to lattice deformation from a SINGLE
+  // motor; multiplied together to get total weight for any arrangement
+  // Array of binding/unbinding weights due to lattice deformation from a SINGLE
+  // motor; multiplied together to get total weight for any arrangement
+  Sys::weight_lattice_bind_.resize(Sys::lattice_cutoff_ + 1);
+  Sys::weight_lattice_unbind_.resize(Sys::lattice_cutoff_ + 1);
+  for (int delta{0}; delta <= Sys::lattice_cutoff_; delta++) {
+    double dx{delta * Params::Filaments::site_size};
+    double energy{lattice_alpha * dx * dx + lattice_E_0_solo}; // in kbT
+    Sys::weight_lattice_bind_[delta] = exp(-(1.0 - _lambda_lattice) * energy);
+    Sys::weight_lattice_unbind_[delta] = exp(_lambda_lattice * energy);
+    // printf("weight = %#.3g (%#.3g)\n", Sys::weight_lattice_bind_[delta],
+    //        Sys::weight_lattice_unbind_[delta]);
+  }
 }
 
 void ProteinManager::SetParameters() {
@@ -84,7 +122,8 @@ void ProteinManager::SetParameters() {
 
   // Unbind_II
   xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
-  motors_.AddProb("unbind_ii", Motors::k_off_ii * dt);
+  double wt_unbind_ii{exp(Motors::internal_force * Motors::sigma_off_ii / kbT)};
+  motors_.AddProb("unbind_ii", Motors::k_off_ii * dt * wt_unbind_ii);
   // Unbind_II_Teth -- xlinks only
 
   // Unbind I
@@ -120,7 +159,8 @@ void ProteinManager::SetParameters() {
 
 void ProteinManager::InitializeTestEnvironment() {
 
-  Sys::Log(" ** Initializing test '%s'\n", Sys::test_mode_.c_str());
+  Sys::Log("\n");
+  Sys::Log("Initializing test '%s'\n", Sys::test_mode_.c_str());
   using namespace Params;
   if (Sys::test_mode_ == "xlink_bind_ii") {
     double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
@@ -184,7 +224,7 @@ void ProteinManager::InitializeTestEnvironment() {
     Filaments::rotation_enabled = false; // true;
     filaments_->Initialize(this);
     Str response;
-    printf("\nEnter number of crosslinkers: ");
+    printf("Enter number of crosslinkers: ");
     std::getline(std::cin, response);
     int n_xlinks{(int)std::stoi(response)};
     Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
@@ -218,6 +258,46 @@ void ProteinManager::InitializeTestEnvironment() {
         Sys::ErrorExit("ProteinManager::InitializeTestEnvironment() [1]");
       }
     }
+  } else if (Sys::test_mode_ == "filament_ablation") {
+    Filaments::count = 2;
+    Sys::Log("  COUNT = 2\n");
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 125;
+    Filaments::polarity[0] = Filaments::polarity[1] = 0;
+    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
+    Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
+    Filaments::translation_enabled[0] = false;
+    Filaments::translation_enabled[1] = false;
+    Filaments::rotation_enabled = false;
+    Filaments::x_initial[0] = 0.0;
+    Filaments::x_initial[1] =
+        (Filaments::n_sites[0] - 1) * Filaments::site_size;
+    Filaments::y_initial[0] = Filaments::y_initial[1] = 0.0;
+    Motors::endpausing_active = false;
+    printf("Enter ablation time: ");
+    Str response;
+    std::getline(std::cin, response);
+    double t_ablate{(double)std::stod(response)};
+    Sys::ablation_step_ = size_t(std::round(t_ablate / dt));
+    filaments_->Initialize(this);
+  } else if (Sys::test_mode_ == "hetero_tubulin ") {
+    printf("Enter fraction of heterogenous tubulin: ");
+    Str response_one;
+    std::getline(std::cin, response_one);
+    double p_hetero{(double)std::stod(response_one)};
+    if (p_hetero < 0.0 or p_hetero > 1.0) {
+      printf("Invalid fraction, ya dingus!\n");
+      exit(1);
+    }
+    printf("Enter change in binding affinity ");
+    Str response_two;
+    std::getline(std::cin, response_two);
+    double bind_aff{(double)std::stod(response_two)};
+    filaments_->Initialize(this);
+    for (auto &&pf : filaments_->proto_) {
+      for (auto &&site : pf.sites_) {
+      }
+    }
+    exit(1);
   }
 }
 
@@ -380,6 +460,8 @@ void ProteinManager::InitializeTestEvents() {
         &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
         &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson,
         get_weight_diff_ii_fr, exe_diffuse_bck);
+  } else if (Sys::test_mode_ == "filament_ablation") {
+    InitializeEvents();
   }
   /*
   for (auto const &event : kmc_.events_) {
@@ -662,7 +744,54 @@ void ProteinManager::InitializeEvents() {
         [&](Object *base) {
           exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
-    // auto is_ATP_ii_bound = [](auto *motor) {};
+    auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
+      auto *rear_head{front_head->GetOtherHead()};
+      if (front_head->trailing_) {
+        return;
+      }
+      bool unbound{rear_head->Unbind()};
+      bool executed{front_head->parent_->Bind_ATP(front_head)};
+      if (executed) {
+        pop->FlagForUpdate();
+        fil->FlagForUpdate();
+      }
+    };
+    auto weight_bind_ATP_ii = [](auto *head) {
+      return head->parent_->GetWeight_BindATP_II(head);
+    };
+    auto is_NULL_ii_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 2) {
+        bool found_head{false};
+        CatalyticHead *chosen_head{nullptr};
+        if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
+          chosen_head = &motor->head_one_;
+        }
+        if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
+          if (chosen_head != nullptr) {
+            Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
+          }
+          chosen_head = &motor->head_two_;
+        }
+        if (chosen_head != nullptr) {
+          return {chosen_head};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("bound_ii_NULL", [&](Object *base) {
+      return is_NULL_ii_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
+        &motors_.sorted_.at("bound_ii_NULL").size_,
+        &motors_.sorted_.at("bound_ii_NULL").entries_, poisson,
+        [&](Object *base) {
+          return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
+        },
+        [&](Object *base) {
+          exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                          filaments_);
+        });
   }
   // Hydrolyze_ATP
   if (motors_.active_) {
@@ -759,11 +888,21 @@ void ProteinManager::InitializeEvents() {
   }
   // Bind_II_Teth
   // Unbind_II_Teth
-  for (auto const &event : kmc_.events_) {
-    printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
-  }
+  // for (auto const &event : kmc_.events_) {
+  //   printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
+  // }
 }
 
 void ProteinManager::FlagFilamentsForUpdate() { filaments_->FlagForUpdate(); }
 
-void ProteinManager::UpdateFilaments() { filaments_->UpdateUnoccupied(); }
+void ProteinManager::UpdateFilaments() {
+  filaments_->UpdateUnoccupied();
+  if (Sys::test_mode_.empty()) {
+    return;
+  }
+  if (Sys::i_step_ == Sys::ablation_step_) {
+    filaments_->proto_[1].pos_[0] += 200.0;
+    filaments_->proto_[1].ForceUpdate();
+    // printf("HELLO\n");
+  }
+}

@@ -69,7 +69,7 @@ public:
       site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
       site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
     }
-    // UpdateLattice();
+    UpdateLattice();
   }
   void RunBD() {
     if (AllFilamentsImmobile()) {

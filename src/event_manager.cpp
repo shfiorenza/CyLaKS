@@ -34,7 +34,7 @@ void EventManager::SampleEventStatistics() {
       // wally_->Log(2, "   event_j = %s\n", event_j->name_.c_str());
       Object *tar_j{active_events[j_entry].second};
       // If event_i and event_j target the same motor or motor head, remove one
-      if (tar_i == tar_j) {
+      if (tar_i->GetID() == tar_j->GetID()) {
         double p_one{event_i->p_occur_};
         double p_two{event_j->p_occur_};
         double ran{SysRNG::GetRanProb()};

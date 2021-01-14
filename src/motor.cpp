@@ -6,14 +6,34 @@ void Motor::ChangeConformation() {
   if (n_heads_active_ != 1) {
     Sys::ErrorExit("Motor::ChangeConformation()");
   }
+  /*
+  if (n_heads_active_ == 2) {
+    if (head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      Unbind(&head_one_);
+    } else if (head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      Unbind(&head_two_);
+    }
+  }
+  if (n_heads_active_ == 2) {
+    printf("what\n");
+    exit(1);
+  }
+  */
   BindingSite *site{GetActiveHead()->site_};
+  if (site == nullptr) {
+    Sys::ErrorExit("Motor::ChangeConformation() [2]");
+  }
+  //   printf("site %i\n", site->index_);
   if (site == site->filament_->plus_end_ and
       Params::Motors::endpausing_active) {
-    return;
+    if (Sys::test_mode_.empty() or site->filament_->index_ == 0) {
+      return;
+    }
   }
   //   printf("ChangeConformation for motor %i!\n", GetID());
   head_one_.trailing_ = !head_one_.trailing_;
   head_two_.trailing_ = !head_two_.trailing_;
+  //   printf("wut\n");
 }
 
 BindingSite *Motor::GetDockSite() {
@@ -26,7 +46,19 @@ BindingSite *Motor::GetDockSite() {
   int dir{active_head->trailing_ ? 1 : -1};
   int i_dock{site->index_ + dir * site->filament_->dx_};
   if (i_dock < 0 or i_dock > site->filament_->sites_.size() - 1) {
-    return nullptr;
+    if (Sys::test_mode_.empty()) {
+      return nullptr;
+    }
+    if (Sys::i_step_ > Sys::ablation_step_) {
+      //   Params::Motors::endpausing_active = false;
+      return nullptr;
+    }
+    if (i_dock == -1 and site->filament_->index_ == 1) {
+      BindingSite *minus_end{site->filament_->neighbor_->minus_end_};
+      return site->filament_->neighbor_->minus_end_;
+    } else {
+      return nullptr;
+    }
   }
   return &site->filament_->sites_[i_dock];
 }
@@ -42,6 +74,34 @@ CatalyticHead *Motor::GetDockedHead() {
     }
   }
   return nullptr;
+}
+
+void Motor::ApplyLatticeDeformation() {
+
+  if (n_heads_active_ == 0) {
+    return;
+  }
+  //   printf("hi\n");
+  BindingSite *epicenter{nullptr};
+  if (n_heads_active_ == 1) {
+    epicenter = GetActiveHead()->site_;
+  } else if (head_one_.trailing_) {
+    epicenter = head_one_.site_;
+  } else {
+    epicenter = head_two_.site_;
+  }
+  int i_epicenter{epicenter->index_};
+  for (int delta{1}; delta <= Sys::lattice_cutoff_; delta++) {
+    for (int dir{-1}; dir <= 1; dir += 2) {
+      int i_scan{i_epicenter + dir * delta};
+      if (i_scan < 0 or i_scan > epicenter->filament_->sites_.size() - 1) {
+        continue;
+      }
+      BindingSite *site{&epicenter->filament_->sites_[i_scan]};
+      site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
+      site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
+    }
+  }
 }
 
 double Motor::GetWeight_Bind_II() {
@@ -61,12 +121,27 @@ double Motor::GetWeight_Bind_II() {
   return weight_site;
 }
 
+double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
+
+  if (Params::Motors::internal_force == 0.0) {
+    return 0.0;
+  }
+  double weight_site{head->site_->GetWeight_Bind()};
+  int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  // Remove contribution from neighb mechanism
+  return weight_site / Sys::weight_neighb_bind_[n_neighbs];
+}
+
 double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
 
   if (head->ligand_ != CatalyticHead::Ligand::ADPP) {
     Sys::ErrorExit("Motor::GetWeight_Unbind_II()");
   }
   double weight_site{head->site_->GetWeight_Unbind()};
+  // Ensure we use weight from trailing head to avoid self-coop
+  if (!head->trailing_) {
+    weight_site = head->GetOtherHead()->site_->GetWeight_Unbind();
+  }
   // Disregard effects from internal force if it's disabled
   if (Params::Motors::internal_force == 0.0) {
     return weight_site;
@@ -74,6 +149,8 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   double weight_sq{Square(weight_site)};
   // We only want the lattice contribution to be squared; divide out neighb term
   int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  //   double weight{weight_sq / Sys::weight_neighb_unbind_[n_neighbs]};
+  //   printf("weight = %g\n", weight);
   return weight_sq / Sys::weight_neighb_unbind_[n_neighbs];
 }
 

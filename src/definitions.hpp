@@ -14,6 +14,7 @@
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};
 /* Lambda values used in Boltzmann factors for various energy-based FX */
+inline static const double _lambda_lattice{0.5};
 inline static const double _lambda_spring{0.5};
 inline static const double _lambda_neighb{1.0};
 /* Protein species IDs */

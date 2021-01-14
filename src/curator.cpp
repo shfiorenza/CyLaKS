@@ -145,6 +145,7 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::radius, "filaments.radius", "nm");
   ParseYAML(&Filaments::site_size, "filaments.site_size", "nm");
   ParseYAML(&Filaments::n_bd_per_kmc, "filaments.n_bd_per_kmc", "");
+  // ParseYAML(&Filaments::t_ablate, "filaments.t_ablate", "s");
   ParseYAML(&Filaments::n_sites, "filaments.n_sites", "sites");
   ParseYAML(&Filaments::polarity, "filaments.polarity", "");
   ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
@@ -236,6 +237,7 @@ void Curator::InitializeSimulation() {
   Log("   n_steps_equil = %zu\n", n_steps_equil_);
   Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
   Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
+  Log("\n");
   // Initialize sim objects
   SysRNG::Initialize(seed);
   // If we're running a test, let proteins initialize filament environment
@@ -248,7 +250,9 @@ void Curator::InitializeSimulation() {
       n_sites_max_ = pf.sites_.size();
     }
   }
-  printf("\n");
+  if (Sys::test_mode_.empty()) {
+    Log("\n");
+  }
 }
 
 void Curator::GenerateDataFiles() {
@@ -259,13 +263,22 @@ void Curator::GenerateDataFiles() {
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
+  // if (Params::Filaments::t_ablate > 0.0) {
+  //   AddDataFile("filament_pos_postSplit");
+  // }
   if (proteins_.motors_.active_ or proteins_.xlinks_.active_) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
     AddDataFile("occupancy");
+    // if (Params::Filaments::t_ablate > 0.0) {
+    //   AddDataFile("occupancy_postSplit");
+    // }
     // Open protein ID file, which stores the unique ID of all bound proteins
     // (unbound not tracked) at their respective site indices during DC
     AddDataFile("protein_id");
+    // if (Params::Filaments::t_ablate > 0.0) {
+    //   AddDataFile("protein_id_postSplit");
+    // }
     if (proteins_.xlinks_.crosslinking_active_) {
       AddDataFile("partner_index");
     }
@@ -273,6 +286,9 @@ void Curator::GenerateDataFiles() {
   if (proteins_.motors_.active_) {
     // bool; simply says if motor head is trailing or not
     AddDataFile("motor_head_trailing");
+    // if (Params::Filaments::t_ablate > 0.0) {
+    //   AddDataFile("motor_head_trailing_postSplit");
+    // }
     if (proteins_.motors_.tethering_active_) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
@@ -367,6 +383,8 @@ void Curator::OutputData() {
       coord1[i_dim] = (double)pf.plus_end_->pos_[i_dim];
       coord2[i_dim] = (double)pf.minus_end_->pos_[i_dim];
     }
+    // printf("wrote plus_end = (%g, %g)\n", coord1[0], coord1[1]);
+    // printf("wrote minus_end = (%g, %g)\n", coord2[0], coord2[1]);
     data_files_.at("filament_pos").Write(coord1, _n_dims_max);
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
     if (!proteins_.motors_.active_ and !proteins_.xlinks_.active_) {

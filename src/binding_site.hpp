@@ -1,6 +1,7 @@
 #ifndef _CYLAKS_BINDING_SITE_H_
 #define _CYLAKS_BINDING_SITE_H_
 #include "sphere.hpp"
+#include "system_namespace.hpp"
 
 class BindingHead;
 class Protofilament;
@@ -37,6 +38,28 @@ public:
 
   void SetWeight_Bind(double val) { weight_bind_ = val; }
   void SetWeight_Unbind(double val) { weight_unbind_ = val; }
+  void AddWeight_Bind(double val) {
+    int n_neighbs{GetNumNeighborsOccupied()};
+    if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
+      return;
+    }
+    weight_bind_ *= val;
+    if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
+      weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      return;
+    }
+  }
+  void AddWeight_Unbind(double val) {
+    int n_neighbs{GetNumNeighborsOccupied()};
+    if (weight_unbind_ == Sys::weight_lattice_unbind_max_[n_neighbs]) {
+      return;
+    }
+    weight_unbind_ *= val;
+    if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
+      weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      return;
+    }
+  }
   double GetWeight_Bind() { return weight_bind_; }
   double GetWeight_Unbind() { return weight_unbind_; }
 

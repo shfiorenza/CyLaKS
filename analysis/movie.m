@@ -2,11 +2,11 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'testo';
+sim_name = 'test';
 
 movie_name = 'test';
 start_frame = 1;
-frames_per_plot = 10;
+frames_per_plot = 5;
 movie_duration = 30; % in seconds
 
 sid_site = 0;
@@ -25,6 +25,9 @@ params = log{1, 1};
 values = log{1, 2};
 % Read in number of MTs
 n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
 mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
@@ -145,8 +148,8 @@ for i_data = start_frame : frames_per_plot : end_frame
     height = (3/5 * width); 
     ax.XLim = [(min_x - 25) (max_x + 25)];
     ax.YLim = [y_avg - height/2 y_avg + height/2];
-    %ax.XLim = [-167 167];
-    %ax.YLim = [-100 100];
+    %ax.XLim = [-750 1750];
+    %ax.YLim = [-6000/5 6000/5];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     %ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
     ax.TickLength = [0.005 0.005];
@@ -159,22 +162,23 @@ for i_data = start_frame : frames_per_plot : end_frame
         disp(com_y_one - com_y_two);
     end
     for i_mt = 1:1:n_mts
-        plus_pos = filament_pos(:, 1, i_mt, i_data);
-        minus_pos = filament_pos(:, 2, i_mt, i_data);
+        plus_pos = filament_pos(:, 1, i_mt, i_data)
+        minus_pos = filament_pos(:, 2, i_mt, i_data)
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
-            'LineWidth', height / 100, 'Color', [0.7 0.7 0.7]);
+            'LineWidth', 4, 'Color', [0.7 0.7 0.7]);
         n_sites = mt_lengths(i_mt);
         % Draw proteins
         for i_site = 1 : n_sites
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
             if(id ~= -1)
-                if i_mt == 1
+                %if i_mt == 1
                     dx = -1;
                     mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
                     pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
+                %{
                 else
                     dx = 1;
                     mt_dir = -1;
@@ -182,6 +186,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
+                %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
                     if(n_mts > 1 && i_mt == 1)

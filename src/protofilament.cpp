@@ -11,6 +11,7 @@ void Protofilament::SetParameters() {
   length_ = site_size * n_sites[index_]; // nm
   polarity_ = polarity[index_];
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
+  // printf("dx = %i\n", dx_);
   immobile_until_ = immobile_until[index_] / dt;
   dt_eff_ = dt / n_bd_per_kmc;
   double ar{length_ / (2 * radius)};                // unitless aspect ratio
@@ -136,6 +137,11 @@ void Protofilament::UpdateSitePositions() {
       site.pos_[i_dim] = pos_[i_dim] + dist * Dot(orientation_, i_dim);
     }
   }
+  /*
+  printf("pos[0] = %g\n", pos_[0]);
+  printf("plus: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
+  printf("minus: (%g, %g)\n", minus_end_->pos_[0], minus_end_->pos_[1]);
+  */
   /*
   Sys::Log("%zu & %zu\n", plus_end_->pos_.size(), minus_end_->pos_.size());
   Sys::Log("plus-end: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);

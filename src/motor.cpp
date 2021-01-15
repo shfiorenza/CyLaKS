@@ -49,6 +49,9 @@ BindingSite *Motor::GetDockSite() {
     if (Sys::test_mode_.empty()) {
       return nullptr;
     }
+    if (Sys::test_mode_ != "filament_ablation") {
+      return nullptr;
+    }
     if (Sys::i_step_ > Sys::ablation_step_) {
       //   Params::Motors::endpausing_active = false;
       return nullptr;
@@ -103,6 +106,8 @@ void Motor::ApplyLatticeDeformation() {
     }
   }
 }
+
+double Motor::GetWeight_Diffuse(CatalyticHead *head, int dir) { return 0.0; }
 
 double Motor::GetWeight_Bind_II() {
 
@@ -159,6 +164,27 @@ double Motor::GetWeight_Unbind_I() {
   return GetActiveHead()->site_->GetWeight_Unbind();
 }
 
+bool Motor::Diffuse(CatalyticHead *head, int dir) {
+
+  BindingSite *old_site = head->site_;
+  // printf("no\n");
+  int i_new{old_site->index_ + dir};
+  // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
+  if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
+    return false;
+  }
+  // printf("chaching\n");
+  BindingSite *new_site{&old_site->filament_->sites_[i_new]};
+  if (new_site->occupant_ != nullptr) {
+    return false;
+  }
+  old_site->occupant_ = nullptr;
+  new_site->occupant_ = head;
+  head->site_ = new_site;
+  // printf("frfr\n\n");
+  return true;
+}
+
 // FIXME see if we can down-cast to bindinghead & call Protein's Bind() funct
 bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
 
@@ -174,6 +200,14 @@ bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
     head->GetOtherHead()->trailing_ = true;
   }
   n_heads_active_++;
+  if (Sys::test_mode_.empty()) {
+    return true;
+  }
+  if (Sys::test_mode_ == "kinesin_mutant") {
+    if (head == &head_two_) {
+      head->ligand_ = CatalyticHead::Ligand::ADPP;
+    }
+  }
   return true;
 }
 
@@ -216,6 +250,16 @@ bool Motor::Unbind(CatalyticHead *head) {
     }
   }
   n_heads_active_--;
+  if (Sys::test_mode_.empty()) {
+    return true;
+  }
+  if (Sys::test_mode_ == "kinesin_mutant") {
+    if (n_heads_active_ == 1 and head == &head_one_) {
+      //   printf("bang\n");
+      //   printf("head_")
+      ChangeConformation();
+    }
+  }
   return true;
 }
 

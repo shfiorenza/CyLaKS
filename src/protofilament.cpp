@@ -104,6 +104,7 @@ void Protofilament::UpdateRodPosition() {
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
       // Check for NaN positions
       if (pos_[i_dim] != pos_[i_dim]) {
+        printf("force = %g\n", force_[i_dim]);
         Sys::ErrorExit("Protofilament::UpdateRodPositions()");
       }
     }

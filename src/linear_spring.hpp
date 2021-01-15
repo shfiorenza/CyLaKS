@@ -109,6 +109,7 @@ public:
     }
     */
     dr_ = r_mag - r_rest_;
+    // printf("dr = %g\n", dr_);
     double f_mag{dr_ > 0.0 ? -k_spring_ * dr_ : -k_slack_ * dr_};
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Radial forces

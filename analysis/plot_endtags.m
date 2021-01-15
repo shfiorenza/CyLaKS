@@ -1,5 +1,7 @@
-%{
+
 clear variables;
+base_names = [];
+folder = "run_endtag_vs_coop";
 % Data for initial plot that compares to previous paper
 %{
 base_names = ["endtag_1.5nM"];
@@ -40,12 +42,14 @@ base_names = ["endtag_both_nostep", "../run_endtag_both/endtag_both"];
 folder = "run_endtag_both_nostep";
 %}
 % Data for full model, sans stepping FX, sans long range, sans short range
+%{
 base_names = ["endtag_both", "../run_endtag_both_nostep/endtag_both_nostep", ...
     "../run_endtag_both_nobind/endtag_both_nobind", "../run_endtag_long/endtag_long"]; 
 folder = "run_endtag_both";
+%}
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
-seeds = [0, 1, 2, 3]; %, 4, 5, 6, 7, 8, 9];
+seeds = [0, 1, 2]; %, 3]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
 
@@ -65,7 +69,8 @@ for i_run = 1 : n_runs
     endtag_lengths = zeros(n_mts, n_seeds);
     for i_mt = 1 : n_mts
         for i_seed = 1 : n_seeds
-            sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
+            sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run),conc, seeds(i_seed));
+            %sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
             endtag_lengths(i_mt, i_seed) = get_endtag_length(sim_name);
         end
     end

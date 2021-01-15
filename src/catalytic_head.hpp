@@ -26,11 +26,17 @@ public:
     other_head_ = other_head_ptr;
   }
 
+  int GetNumNeighborsOccupied();
+  int GetNumHeadsActive();
+
   Ligand GetLigand() { return ligand_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
 
   double GetWeight_Unbind_II();
   bool Unbind();
+
+  double GetWeight_Diffuse(int dir);
+  bool Diffuse(int dir);
 
   bool Trailing() { return trailing_; }
 };

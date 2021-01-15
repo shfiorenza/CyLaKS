@@ -1,9 +1,10 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'test';
-steps_per_plot = 1;
-movie_name = 'mov_1nM_1000.avi';
+sim_name = 'test_tubulin1invMEGA';
+sim_name = 'run_endtag_vs_coop/endtag_2_10_0';
+steps_per_plot = 100;
+movie_name = 'endtag_2_10_0';
 file_dir = '/home/shane/projects/CyLaKS';
 %file_dir='.';
 
@@ -38,36 +39,6 @@ site_size = 0.0082; % in um
 max_sites = max(mt_lengths);
 
 
-%{
-% Open log file and parse it into param labels & their values
-log_file = sprintf('%s/%s.log', file_dir, sim_name);
-log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
-params = log{1, 1};
-values = log{1, 2};
-% Read in system params
-n_mts = str2double(values{contains(params, "count")});
-n_sites = values{contains(params, "length")};
-n_sites = sscanf(n_sites, '%i');
-delta_t = sscanf(values{contains(params, "dt")}, '%g');
-total_steps = str2double(values{contains(params, "n_steps")});
-data_threshold = sscanf(values{contains(params, "data_threshold")}, '%g');
-
-if any(contains(params, "DATA_THRESHOLD") ~= 0)
-    data_threshold = str2double(values{contains(params, "DATA_THRESHOLD")});
-end
-
-n_steps = total_steps - data_threshold;
-% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-n_datapoints = str2double(values{contains(params, "n_datapoints")});
-time_per_datapoint = delta_t * n_steps / n_datapoints;
-% Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, "N_DATAPOINTS") ~= 0)
-    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
-end
-
-
-%}
-
 % Pseudo-constant variables
 motor_speciesID = 2;
 xlink_speciesID = 1;
@@ -76,7 +47,7 @@ fileStruct = '%s_occupancy.file';
 legendLabel = {'Fractional occupancy of motors'}; %, 'Crosslinkers', 'Combined'};
 % Videowriter details
 v = VideoWriter(movie_name);
-v.FrameRate = (n_datapoints / steps_per_plot) / 30;
+v.FrameRate = (n_datapoints / steps_per_plot) / 15;
 open(v);
 frame_box = [0, 0, 1.5 * 480, 1.5 * 300];
 
@@ -98,7 +69,7 @@ fig1 = figure(1);
 set(fig1, 'Position', [50, 50, 1200, 600])
 
 % Read in and average occupancy data over all datapoints
-for i = 1:1:int32(n_datapoints / 3)
+for i = 1:1:int32(n_datapoints)
     motor_avg_occupancy(:, 1) = motor_avg_occupancy(:, 1) + double(motor_raw_data(:, i)) ./ steps_per_plot;
     xlink_avg_occupancy(:, 1) = xlink_avg_occupancy(:, 1) + double(xlink_raw_data(:, i)) ./ steps_per_plot;
 

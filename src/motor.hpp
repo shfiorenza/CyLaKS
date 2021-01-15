@@ -43,11 +43,13 @@ public:
 
   void ApplyLatticeDeformation();
 
+  double GetWeight_Diffuse(CatalyticHead *head, int dir);
   double GetWeight_Bind_II();
   double GetWeight_BindATP_II(CatalyticHead *head);
   double GetWeight_Unbind_II(CatalyticHead *head);
   double GetWeight_Unbind_I();
 
+  bool Diffuse(CatalyticHead *head, int dir);
   bool Bind(BindingSite *site, CatalyticHead *head);
   bool Bind_ATP(CatalyticHead *head);
   bool Hydrolyze(CatalyticHead *head);

@@ -114,12 +114,17 @@ public:
   ENTRY_T *GetFreeEntry() {
     size_t i_entry = SysRNG::GetRanInt(reservoir_.size());
     ENTRY_T *entry = &reservoir_[i_entry];
+    size_t n_attempts{0};
     while (entry->n_heads_active_ > 0 or entry->tethered_) {
+      if (n_attempts > reservoir_.size()) {
+        return nullptr;
+      }
       i_entry++;
       if (i_entry == reservoir_.size()) {
         i_entry = 0;
       }
       entry = &reservoir_[i_entry];
+      n_attempts++;
     }
     return entry;
   }

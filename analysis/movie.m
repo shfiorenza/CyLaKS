@@ -2,12 +2,15 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'test';
+sim_name = 'run_endtag_vs_coop/endtag_6_10_0';
+sim_name = 'test_separation3';
 
-movie_name = 'test';
+movie_name = 'separation3';
+%movie_name = 'wut';
 start_frame = 1;
-frames_per_plot = 5;
-movie_duration = 30; % in seconds
+
+frames_per_plot = 1;
+movie_duration = 10; % in seconds
 
 sid_site = 0;
 sid_xlink = 1;
@@ -55,10 +58,10 @@ teth_cutoff = 19;
 
 r_prot = (site_size*1000);
 
+end_frame = n_datapoints;
 % Figure parameters (i.e., how they appear)
 site_height = 1;
 site_width = 1;
-end_frame = n_datapoints;
 active_frames = end_frame - start_frame;
 
 % Videowriter details
@@ -172,13 +175,13 @@ for i_data = start_frame : frames_per_plot : end_frame
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
             if(id ~= -1)
-                %if i_mt == 1
+                if i_mt == 1 % comment here
                     dx = -1;
                     mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
                     pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
-                %{
+                 % %{  
                 else
                     dx = 1;
                     mt_dir = -1;
@@ -186,7 +189,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
-                %}
+                 % %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
                     if(n_mts > 1 && i_mt == 1)

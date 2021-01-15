@@ -68,6 +68,10 @@ public:
     }
   }
   void RunKMC() {
+    if (Sys::i_step_ > 2111000) {
+      // printf("%i\n", Sys::i_step_);
+      // Sys::verbosity_ = 5;
+    }
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();

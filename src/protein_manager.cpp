@@ -279,7 +279,7 @@ void ProteinManager::InitializeTestEnvironment() {
     double t_ablate{(double)std::stod(response)};
     Sys::ablation_step_ = size_t(std::round(t_ablate / dt));
     filaments_->Initialize(this);
-  } else if (Sys::test_mode_ == "hetero_tubulin ") {
+  } else if (Sys::test_mode_ == "hetero_tubulin") {
     printf("Enter fraction of heterogenous tubulin: ");
     Str response_one;
     std::getline(std::cin, response_one);
@@ -288,16 +288,39 @@ void ProteinManager::InitializeTestEnvironment() {
       printf("Invalid fraction, ya dingus!\n");
       exit(1);
     }
-    printf("Enter change in binding affinity ");
+    printf("Enter decrease in binding affinity ");
+    printf("(e.g., 2 will cut p_bind in half): ");
     Str response_two;
     std::getline(std::cin, response_two);
     double bind_aff{(double)std::stod(response_two)};
-    filaments_->Initialize(this);
-    for (auto &&pf : filaments_->proto_) {
-      for (auto &&site : pf.sites_) {
-      }
+    if (bind_aff < 0.0) {
+      printf("Error. Fractional change must be positive!\n");
+      exit(1);
     }
-    exit(1);
+    if (bind_aff == 0.0) {
+      printf("You tryna start a damn singularity?!\n");
+      exit(1);
+    }
+    filaments_->Initialize(this);
+    int n_sites{filaments_->sites_.size()};
+    int n_hetero{(int)std::round(n_sites * p_hetero)};
+    // printf("n_hetero = %i\n", n_hetero);
+    // Randomly place heterogeneous sites on lattice
+    int site_indices[n_sites];
+    for (int index{0}; index < n_sites; index++) {
+      site_indices[index] = index;
+      // printf("i = %i\n", index);
+    }
+    SysRNG::Shuffle(site_indices, n_sites, sizeof(int));
+    for (int i_hetero{0}; i_hetero < n_hetero; i_hetero++) {
+      int i_site{site_indices[i_hetero]};
+      // printf("i_site = %i\n", i_site);
+      filaments_->sites_[i_site]->SetBindingAffinity(bind_aff);
+      // printf("SITE %zu IS A HETERO\n", filaments_->sites_[i_site]->index_);
+    }
+    // exit(1);
+  } else if (Sys::test_mode_ == "kinesin_mutant") {
+    filaments_->Initialize(this);
   }
 }
 
@@ -462,6 +485,9 @@ void ProteinManager::InitializeTestEvents() {
         get_weight_diff_ii_fr, exe_diffuse_bck);
   } else if (Sys::test_mode_ == "filament_ablation") {
     InitializeEvents();
+  } else if (Sys::test_mode_ == "hetero_tubulin") {
+    InitializeEvents();
+  } else if (Sys::test_mode_ == "kinesin_mutant") {
   }
   /*
   for (auto const &event : kmc_.events_) {
@@ -898,6 +924,9 @@ void ProteinManager::FlagFilamentsForUpdate() { filaments_->FlagForUpdate(); }
 void ProteinManager::UpdateFilaments() {
   filaments_->UpdateUnoccupied();
   if (Sys::test_mode_.empty()) {
+    return;
+  }
+  if (Sys::test_mode_ != "filament_ablation") {
     return;
   }
   if (Sys::i_step_ == Sys::ablation_step_) {

@@ -8,6 +8,7 @@ class Protofilament;
 
 class BindingSite : public Sphere {
 protected:
+  double binding_affinity_{1.0};
   Vec<BindingSite *> neighbors_;
   double weight_bind_{0.0};
   double weight_unbind_{0.0};
@@ -26,6 +27,8 @@ public:
     index_ = index;
     filament_ = filament;
   }
+
+  void SetBindingAffinity(double val) { binding_affinity_ = val; }
 
   void AddNeighbor(BindingSite *site) { neighbors_.emplace_back(site); }
 
@@ -60,8 +63,8 @@ public:
       return;
     }
   }
-  double GetWeight_Bind() { return weight_bind_; }
-  double GetWeight_Unbind() { return weight_unbind_; }
+  double GetWeight_Bind() { return weight_bind_ / binding_affinity_; }
+  double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
   int GetNumNeighborsOccupied() {
     if (_n_neighbs_max == 0) {

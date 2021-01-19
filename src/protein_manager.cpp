@@ -199,6 +199,9 @@ void ProteinManager::InitializeTestEnvironment() {
     Filaments::translation_enabled[0] = false;
     Filaments::translation_enabled[1] = false;
     Filaments::rotation_enabled = false;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     filaments_->Initialize(this);
     // Place first xlink head on lower MT; remains static for entire sim
     int i_site{x_max};
@@ -207,6 +210,85 @@ void ProteinManager::InitializeTestEnvironment() {
     bool executed{xlink->Bind(site, &xlink->head_one_)};
     if (executed) {
       xlinks_.AddToActive(xlink);
+      filaments_->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
+    }
+  } else if (Sys::test_mode_ == "motor_lattice_bind") {
+    size_t cutoff{Motors::gaussian_range};
+    // Set parameters
+    Xlinks::c_bulk = 0.0;
+    Motors::k_on = 1.0;
+    Motors::c_bulk = 10.0;
+    Motors::neighb_neighb_energy = 0.0;
+    Filaments::count = 1;
+    Filaments::n_sites[0] = 2 * cutoff + 1;
+    // Initialize sim objects
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
+    filaments_->Initialize(this);
+    // Initialize statistic trackers
+    Vec<double> p_theory(cutoff + 1, motors_.p_event_.at("bind_i").GetVal());
+    for (int delta{0}; delta <= Motors::gaussian_range; delta++) {
+      p_theory[delta] *= Sys::weight_lattice_bind_[delta];
+    }
+    test_ref_.emplace("bind", p_theory);
+    Vec<Pair<size_t, size_t>> zeros(cutoff + 1, {0, 0});
+    test_stats_.emplace("bind", zeros);
+    // Bind motor head to middle site
+    int i_site{Motors::gaussian_range};
+    BindingSite *site{&filaments_->proto_[0].sites_[i_site]};
+    Motor *motor{motors_.GetFreeEntry()};
+    bool executed{motor->Bind(site, &motor->head_one_)};
+    if (executed) {
+      motors_.AddToActive(motor);
+      filaments_->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
+    }
+  } else if (Sys::test_mode_ == "motor_lattice_step") {
+    Filaments::count = 1;
+    Filaments::n_sites[0] = 1000;
+    // Initialize sim objects
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
+    filaments_->Initialize(this);
+    printf("Enter test delta (-1 to check against self-coop): ");
+    Str response;
+    std::getline(std::cin, response);
+    int test_delta{(int)std::stoi(response)};
+    double test_weight_bind{1.0};
+    double test_weight_unbind{1.0};
+    if (test_delta > 0) {
+      test_weight_bind = Sys::weight_lattice_bind_[test_delta];
+      test_weight_unbind = Sys::weight_lattice_unbind_[test_delta];
+      for (int delta{0}; delta <= Motors::gaussian_range; delta++) {
+        Sys::weight_lattice_bind_[delta] = test_weight_bind;
+        Sys::weight_lattice_unbind_[delta] = test_weight_unbind;
+      }
+    }
+    // Initialize statistic trackers
+    Vec<Pair<size_t, size_t>> zeros(1, {0, 0});
+    Vec<double> p_theory_bind_ii(1, motors_.p_event_.at("bind_ii").GetVal() *
+                                        test_weight_bind);
+    test_stats_.emplace("bind_ii", zeros);
+    test_ref_.emplace("bind_ii", p_theory_bind_ii);
+    Vec<double> p_theory_unbind_ii(
+        1, motors_.p_event_.at("unbind_ii").GetVal() * test_weight_unbind);
+    test_stats_.emplace("unbind_ii", zeros);
+    test_ref_.emplace("unbind_ii", p_theory_unbind_ii);
+    Vec<double> p_theory_unbind_i(1, motors_.p_event_.at("unbind_i").GetVal() *
+                                         test_weight_unbind);
+    test_stats_.emplace("unbind_i", zeros);
+    test_ref_.emplace("unbind_i", p_theory_unbind_i);
+    // Place motor head on minus end of microtubule
+    BindingSite *site{filaments_->proto_[0].minus_end_};
+    Motor *motor{motors_.GetFreeEntry()};
+    bool executed{motor->Bind(site, &motor->head_one_)};
+    if (executed) {
+      motors_.AddToActive(motor);
       filaments_->FlagForUpdate();
     } else {
       Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
@@ -222,6 +304,9 @@ void ProteinManager::InitializeTestEnvironment() {
     Filaments::translation_enabled[0] = true;
     Filaments::translation_enabled[1] = true;
     Filaments::rotation_enabled = false; // true;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     filaments_->Initialize(this);
     Str response;
     printf("Enter number of crosslinkers: ");
@@ -278,6 +363,9 @@ void ProteinManager::InitializeTestEnvironment() {
     std::getline(std::cin, response);
     double t_ablate{(double)std::stod(response)};
     Sys::ablation_step_ = size_t(std::round(t_ablate / dt));
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     filaments_->Initialize(this);
   } else if (Sys::test_mode_ == "hetero_tubulin") {
     printf("Enter fraction of heterogenous tubulin: ");
@@ -301,6 +389,9 @@ void ProteinManager::InitializeTestEnvironment() {
       printf("You tryna start a damn singularity?!\n");
       exit(1);
     }
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     filaments_->Initialize(this);
     int n_sites{filaments_->sites_.size()};
     int n_hetero{(int)std::round(n_sites * p_hetero)};
@@ -320,6 +411,9 @@ void ProteinManager::InitializeTestEnvironment() {
     }
     // exit(1);
   } else if (Sys::test_mode_ == "kinesin_mutant") {
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     filaments_->Initialize(this);
   }
 }
@@ -1193,9 +1287,9 @@ void ProteinManager::InitializeEvents() {
   }
   // Bind_II_Teth
   // Unbind_II_Teth
-  // for (auto const &event : kmc_.events_) {
-  //   printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
-  // }
+  for (auto const &event : kmc_.events_) {
+    printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
+  }
 }
 
 void ProteinManager::FlagFilamentsForUpdate() { filaments_->FlagForUpdate(); }

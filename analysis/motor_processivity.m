@@ -1,36 +1,40 @@
 clear variables;
-sim_name = "run_mobility_both/mobility_both_220_0";
-file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
+sim_name = "kif4a_processivity";
+file_dir = '/home/shane/projects/CyLaKS/';
 
 % Open log file and parse it into param labels & their values
-log_file = sprintf('%s/%s.log', file_dir, sim_name);
+log_file = sprintf('%s/%s', file_dir, sprintf('%s.log', sim_name));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
 % Read in number of MTs
-n_mts = str2double(values{contains(params, 'count')});
-n_sites = values{contains(params, 'length')};
-n_sites = sscanf(n_sites, '%i');
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+mt_lengths = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("n_sites[%i] ", i_mt - 1);
+    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
+end
+n_sites = max(mt_lengths);
 % Read in system params
-delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
-total_steps = str2double(values{contains(params, 'n_steps')});
-data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
-
-if any(contains(params, 'DATA_THRESHOLD') ~= 0)
-    data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
-end
-
-n_steps = total_steps - data_threshold;
-% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-n_datapoints = str2double(values{contains(params, 'n_datapoints')});
-time_per_datapoint = delta_t * n_steps / n_datapoints;
-site_size = 0.008; % in um
+dt = sscanf(values{contains(params, "dt ")}, '%g');
+steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
+time_per_datapoint = dt * steps_per_datapoint;
+n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 % Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, 'N_DATAPOINTS') ~= 0)
-    n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
+if any(contains(params, "N_DATAPOINTS ") ~= 0)
+    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
+n_dims = 2;
+site_size = 0.0082; % in um
 
-motorFileStruct = '%s_motorID.file';
+motorFileStruct = '%s_protein_id.file';
 motorFileName = sprintf("%s/%s", file_dir, sprintf(motorFileStruct, sim_name));
 motor_data_file = fopen(motorFileName);
 raw_motor_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
@@ -42,12 +46,12 @@ active_motors = zeros([n_mts n_mts * n_sites]);
 n_active = zeros([n_mts 1]);
 
 % motor ID is unique; make following arrays serial w/ ID as index
-runlengths = zeros([(n_mts * n_sites) 1]);
-lifetimes = zeros([(n_mts * n_sites) 1]);
-velocities = zeros([(n_mts * n_sites) 1]);
+runlengths = zeros([(10 * n_mts * n_sites) 1]);
+lifetimes = zeros([(10 * n_mts * n_sites) 1]);
+velocities = zeros([(10 *n_mts * n_sites) 1]);
 n_runs = 0;
-starting_site = zeros([n_mts * n_sites 1]) - 1;
-starting_datapoint = zeros([n_mts * n_sites 1]) - 1;
+starting_site = zeros([10 * n_mts * n_sites 1]) - 1;
+starting_datapoint = zeros([10 * n_mts * n_sites 1]) - 1;
 
 for i_data = 1:n_datapoints - 1
 

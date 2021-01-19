@@ -2,11 +2,9 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'run_endtag_vs_coop/endtag_6_10_0';
-sim_name = 'test_separation3';
+sim_name = 'test';
 
-movie_name = 'separation3';
-%movie_name = 'wut';
+movie_name = 'test';
 start_frame = 1;
 
 frames_per_plot = 1;

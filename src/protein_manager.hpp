@@ -51,12 +51,12 @@ public:
     filaments_ = filaments;
     GenerateReservoirs();
     InitializeWeights();
-    SetParameters();
     if (!Sys::test_mode_.empty()) {
       InitializeTestEnvironment();
       InitializeTestEvents();
       return;
     }
+    SetParameters();
     InitializeEvents();
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }

@@ -4,32 +4,25 @@ function endtag_length = get_endtag_length(sim_name)
 
     motor_speciesID = 2;
     xlink_speciesID = 1;
-    site_size = 0.008; % in um
+    site_size = 0.0082; % in um
 
     % Open log file and parse it into param labels & their values
     log_file = sprintf('%s.log', sim_name);
     log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
     params = log{1, 1};
     values = log{1, 2};
-    n_sites = values{contains(params, "length")};
+    n_sites = values{contains(params, "n_sites[0]")};
     n_sites = sscanf(n_sites, '%i');
-    % Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-    n_datapoints = str2double(values{contains(params, "n_datapoints")});
-    delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
-    total_steps = str2double(values{contains(params, 'n_steps')});
-    data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
-
-    if any(contains(params, 'DATA_THRESHOLD') ~= 0)
-        data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
-    end
-
-    n_steps = total_steps - data_threshold;
-    time_per_datapoint = delta_t * n_steps / n_datapoints;
+    % Read in system params
+    dt = sscanf(values{contains(params, "dt ")}, '%g');
+    steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
+    time_per_datapoint = dt * steps_per_datapoint;
+    n_datapoints = str2double(values{contains(params, "n_datapoints ")});
     % Use actual recorded number of datapoints to parse thru data/etc
-    if any(contains(params, "N_DATAPOINTS") ~= 0)
-        n_datapoints = str2double(values{contains(params, "N_DATAPOINTS")});
+    if any(contains(params, "N_DATAPOINTS ") ~= 0)
+        n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
     end
-
+   
     fileName = sprintf("%s_occupancy.file", sim_name);
     data_file = fopen(fileName);
     motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');

@@ -49,13 +49,13 @@ public:
   }
   void Initialize(FilamentManager *filaments) {
     filaments_ = filaments;
-    GenerateReservoirs();
-    InitializeWeights();
     if (!Sys::test_mode_.empty()) {
       InitializeTestEnvironment();
       InitializeTestEvents();
       return;
     }
+    GenerateReservoirs();
+    InitializeWeights();
     SetParameters();
     InitializeEvents();
   }
@@ -68,10 +68,6 @@ public:
     }
   }
   void RunKMC() {
-    if (Sys::i_step_ > 2111000) {
-      // printf("%i\n", Sys::i_step_);
-      // Sys::verbosity_ = 5;
-    }
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();

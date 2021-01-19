@@ -1,8 +1,8 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'test';
-steps_per_plot = 10;
+sim_name = 'run_endtag_vs_coop/endtag_1250_50_1';
+steps_per_plot = 100;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';
 %file_dir='.';

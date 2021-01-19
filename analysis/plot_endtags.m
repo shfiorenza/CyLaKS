@@ -1,6 +1,6 @@
 
 clear variables;
-base_names = [];
+base_names = ["endtag"];
 folder = "run_endtag_vs_coop";
 % Data for initial plot that compares to previous paper
 %{
@@ -49,6 +49,7 @@ folder = "run_endtag_both";
 %}
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
+ranges = [10, 50, 100, 500];
 seeds = [0, 1, 2]; %, 3]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
@@ -69,8 +70,12 @@ for i_run = 1 : n_runs
     endtag_lengths = zeros(n_mts, n_seeds);
     for i_mt = 1 : n_mts
         for i_seed = 1 : n_seeds
-            sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run),conc, seeds(i_seed));
+            %sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run),conc, seeds(i_seed));
             %sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
+            %for range = i_range : length(ranges)
+            sim_name = sprintf("%s/%s_%i_%i_%i", dir, base_names(i_run), mt_lengths(i_mt),  ...
+                500, seeds(i_seed)); 
+           % end
             endtag_lengths(i_mt, i_seed) = get_endtag_length(sim_name);
         end
     end
@@ -94,21 +99,24 @@ color = [160 160 160; 128 128 128; 96 96 80; 64 64 64; 0 0 0 ] / 255;
 marker = ['o', 's', '^', 'v', 'd'];
 %}
 
-fig1 = figure();
-set(fig1, 'Position', [50, 50, 1080, 720])
+%fig1 = figure();
+%set(fig1, 'Position', [50, 50, 1080, 720])
 hold all;
+%{
 % Plot exp data with just vertical error bars
 exp_data = errorbar(exp_mt_lengths, exp_endtag_lengths, ...
     exp_err_endtag_lengths, 'r^', 'MarkerSize', 16);
 exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 % Plot sim data
+%}
 for i_run = 1 : n_runs
     sim_data = errorbar(mt_lengths * site_size, avg_endtag_length(i_run, :), ...
         err_endtag_length(i_run, :), 'o','MarkerSize', 12, 'LineWidth', 2, ...
-        'MarkerEdgeColor', color(i_run, :));
+        'MarkerEdgeColor', color(4, :));
     sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
     sim_data.Color = sim_data.MarkerFaceColor;
 end
+%{
 % Use 3rd party errorbarxy.m to plot horizontal error bars for exp data 
 errorbarxy(exp_mt_lengths, exp_endtag_lengths, exp_err_mt_lengths, ...
     exp_err_endtag_lengths, {'r^', 'r', 'r'});
@@ -194,7 +202,10 @@ legend('boxoff');
 %}
 
 % Short- & long-range coop w/o stepping FX stylistic stuff
-
+legendLabel = ["10", "50", "100", "500"];
+legend(legendLabel,'location', 'northwest', 'FontSize', 18);
+legend('boxoff');
+%{
 legendLabel = ["Experiment", "Simulation", ...
     "Simulation - no long-range stepping cooperativity", ...
     "Simulation - no long-range binding cooperativity", ...

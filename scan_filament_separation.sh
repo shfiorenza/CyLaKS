@@ -9,7 +9,6 @@ MAX_NUM=13
 N_SEEDS=5;
 
 BASE_SEED=198261346419
-
 for N_XLINKS in $(seq ${MIN_NUM} ${MAX_NUM})
 do
 	for I_SEED in $(seq 0 $((${N_SEEDS}-1)))

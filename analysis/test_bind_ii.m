@@ -1,10 +1,10 @@
 clear all;
-sim_name = 'test';
+sim_name = 'xlink_bind_ii';
 
 kbT = 4.114;                    % pN * nm
 k_on = 0.000238;                % 1/(nM*s)
 c_bind = 5000;                  % nM
-k_off_ii = 1.43;                % 1/s
+k_off_ii = 14.3;                % 1/s
 dist_cutoff = 4;                % no. sites
 mt_coords = [0, 0];
 n_datapoints = 100000;
@@ -12,7 +12,7 @@ n_datapoints = 100000;
 p_bind_reported = [2.69e-05, 2.61e-05, 1.81e-05, 4.61e-06, 2.16e-07];
 p_unbind_reported = [0.000357, 0.000369, 0.000529, 0.00208, 0.0450];
 
-speciesID = 2;
+speciesID = 1;
 static_head_pos = dist_cutoff;
 mt_lengths = [2*dist_cutoff + 1, 2*dist_cutoff + 1];
 n_mts = length(mt_lengths);
@@ -96,7 +96,7 @@ set(gca,'Children',[h(2) h(1)])
 % delta_u function used to get spring energy for avg_occu_theory
 function u = delta_u(x)
     k_spring = 0.453; % pN / nm
-    site_size = 8; % nm
+    site_size = 8.2; % nm
     dr = sqrt(32^2 + (x*site_size)^2) - 32;
     u = 0.5*k_spring*dr*dr;
 end

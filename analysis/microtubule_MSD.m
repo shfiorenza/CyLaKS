@@ -1,9 +1,10 @@
+%{
 clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
 sim_name_base = 'test2';
 seeds = []; %[0, 1, 2, 3, 4]; 
 n_taus = 10;
-i_tau = 0.01; % 10.0;
+i_tau = 0.1; % 10.0;
 
 n_dims = 2;
 % Open log file and parse it into param labels & their values
@@ -152,20 +153,24 @@ for i_mt = 1:n_mts
     errorbar(taus, MSD_par(i_mt, :), MSD_par_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
     plot([0 max_tau], [0 2 * D_par(i_mt) * max_tau], '--', 'LineWidth', 2); %, ...
     % 'Color', [0.5 0.5 0.5]);
+    errorbar(taus, MSD_perp(i_mt, :), MSD_perp_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
+    plot([0 max_tau], [0 2 * D_perp(i_mt) * max_tau], '--', 'LineWidth', 2);
     ax = gca;
     ax.FontSize = 10;
     xlabel("Tau (s)", 'FontSize', 12);
     ylabel("Mean squared displacement (\mum^2)", 'FontSize', 12);
-    title({sprintf("Length = %g", ell(i_mt)/1000) + " \mum", " "}, 'FontSize', 12);
-
+    title({sprintf("L_{MT} = %g", ell(i_mt)/1000) + " \mum", " "}, 'FontSize', 12);
 end
 % Some trickery to give all plots a common legend
 subplot(1, n_mts + 1, n_mts + 1)
 hold on
 errorbar([0, 0], [0, 0], 'o', 'LineWidth', 2, 'MarkerSize', 10);
 plot([0, 0], '--', 'LineWidth', 2);
+errorbar([0, 0], [0, 0], 'o', 'LineWidth', 2, 'MarkerSize', 10);
+plot([0, 0], '--', 'LineWidth', 2);
 xlim([1 2]);
 ylim([1 2]);
 axis off
-legend(["Sim data", "Theory"], 'location', 'northwestoutside', 'FontSize', 10);
+legend(["Par (sim)", "Par (theory)", "Perp (sim)", "Perp (theory)"], ...
+    'location', 'northwestoutside', 'FontSize', 10);
 %}

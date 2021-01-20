@@ -44,7 +44,7 @@ BindingSite *Motor::GetDockSite() {
   }
   BindingSite *site{active_head->site_};
   int dir{active_head->trailing_ ? 1 : -1};
-  int i_dock{site->index_ + dir * site->filament_->dx_};
+  int i_dock{(int)site->index_ + dir * site->filament_->dx_};
   if (i_dock < 0 or i_dock > site->filament_->sites_.size() - 1) {
     if (Sys::test_mode_.empty()) {
       return nullptr;
@@ -93,7 +93,7 @@ void Motor::ApplyLatticeDeformation() {
   } else {
     epicenter = head_two_.site_;
   }
-  int i_epicenter{epicenter->index_};
+  int i_epicenter{(int)epicenter->index_};
   for (int delta{1}; delta <= Sys::lattice_cutoff_; delta++) {
     for (int dir{-1}; dir <= 1; dir += 2) {
       int i_scan{i_epicenter + dir * delta};
@@ -168,7 +168,7 @@ bool Motor::Diffuse(CatalyticHead *head, int dir) {
 
   BindingSite *old_site = head->site_;
   // printf("no\n");
-  int i_new{old_site->index_ + dir};
+  int i_new{(int)old_site->index_ + dir};
   // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
     return false;
@@ -263,6 +263,6 @@ bool Motor::Unbind(CatalyticHead *head) {
   return true;
 }
 
-bool Motor::Tether() {}
+bool Motor::Tether() { return false; }
 
-bool Motor::Untether() {}
+bool Motor::Untether() { return false; }

@@ -37,7 +37,6 @@ public:
 
   virtual Vec<double> GetSpringOrientation() { return {}; }
   virtual Vec<double> GetBoundObjectOrientation() { return {}; }
-
   virtual bool Unbind() { return false; };
 };
 #endif

@@ -13,7 +13,7 @@ OBJDIR = obj
 BINDIR = bin
 SRCEXT = cpp
 
-COMPILE_FLAGS = -std=c++2a
+COMPILE_FLAGS = -std=c++17
 RCOMPILE_FLAGS = -D NDEBUG -O2 -march=native
 DCOMPILE_FLAGS = -D DEBUG -O0 -g
 LINK_FLAGS =
@@ -27,7 +27,7 @@ ifeq ($(LOC), summit)
 #    LINK_FLAGS += -lm
 else
     GSLINCS = -I./libs/gsl/include
-    GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl
+    GSLLIBS = -Wl,-rpath=./libs/gsl/static -L./libs/gsl/static -lgsl -lm
     LINK_FLAGS += -static
 endif
 INCLUDES = $(GSLINCS) $(YAMLINCS)

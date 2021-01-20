@@ -51,11 +51,11 @@ void Protofilament::GenerateSites() {
   }
   // Set site neighbors (immediately forward/behind; 2 max on a 1-D lattice)
   for (auto &&site : sites_) {
-    int i_fwd{site.index_ + 1};
+    int i_fwd{(int)site.index_ + 1};
     if (i_fwd < sites_.size()) {
       site.AddNeighbor(&sites_[i_fwd]);
     }
-    int i_bck{site.index_ - 1};
+    int i_bck{(int)site.index_ - 1};
     if (i_bck > 0) {
       site.AddNeighbor(&sites_[i_bck]);
     }
@@ -129,6 +129,25 @@ void Protofilament::UpdateRodPosition() {
 
 void Protofilament::UpdateSitePositions() {
 
+  /*
+  // If proteins are disabled, only update endpoint positions
+  if (Sys::proteins_inactive_) {
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      // Distance will be negative for first half of sites
+      double p_dist{double(plus_end_->index_) - center_index_};
+      p_dist *= Params::Filaments::site_size; // convert to nm
+      // Orientation always points towards increasing site index
+      plus_end_->pos_[i_dim] = pos_[i_dim] + p_dist * Dot(orientation_, i_dim);
+      // Distance will be negative for first half of sites
+      double m_dist{double(minus_end_->index_) - center_index_};
+      m_dist *= Params::Filaments::site_size; // convert to nm
+      // Orientation always points towards increasing site index
+      minus_end_->pos_[i_dim] = pos_[i_dim] + m_dist * Dot(orientation_, i_dim);
+    }
+    return;
+  }
+  */
+
   for (auto &&site : sites_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Distance will be negative for first half of sites
@@ -155,7 +174,7 @@ BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
   using namespace Params;
   // printf("i_site = %i, delta = %i\n", site->index_, delta);
   // First, we find which site best aligns vertically w/ given site
-  int site_x{site->pos_[0]};
+  int site_x{(int)site->pos_[0]};
   // x-coords equal, so site_pos_x = (i_align - center_index) * site_size + pos
   int i_aligned{int((site_x - pos_[0]) / Filaments::site_size + center_index_)};
   // Scan relative to aligned site using given delta value

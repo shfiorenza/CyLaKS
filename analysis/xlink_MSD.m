@@ -1,23 +1,47 @@
 clear all;
 % Often-changed variables
-simName = 'xlink_diffusion_double';
-n_sites = [5000, 5000];
-max_sites = max(n_sites);
-n_mts = length(n_sites);
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
+simName = 'test2';
+
 starting_point = 001;
-max_tau = 3.6; % in seconds
-% Pseudo-constant variables
-delta_t = 0.000025;
-n_steps = 60000000;
-n_datapoints = 10000;
-time_per_datapoint = delta_t * n_steps / n_datapoints;
-active_datapoints = n_datapoints - starting_point;
-site_size = 0.008; % in um
+max_tau = 1; % in seconds
+
+% Open log file and parse it into param labels & their values
+log_file = sprintf(fileDirectory, sprintf('%s.log', simName));
+log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
+params = log{1, 1};
+values = log{1, 2};
+% Read in number of MTs
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+n_sites = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("n_sites[%i] ", i_mt - 1);
+    n_sites(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        n_sites(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
+end
+% Read in system params
+dt = sscanf(values{contains(params, "dt ")}, '%g');
+steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
+time_per_datapoint = dt * steps_per_datapoint;
+n_datapoints = str2double(values{contains(params, "n_datapoints ")});
+% Use actual recorded number of datapoints to parse thru data/etc
+if any(contains(params, "N_DATAPOINTS ") ~= 0)
+    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
+end
+site_size = 0.0082; % in um
 xlink_cutoff = 4;
 
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-xlinkFileStruct = '%s_xlinkID.file';
-mtFileStruct = '%s_mt_coord.file';
+max_sites = max(n_sites);
+n_mts = length(n_sites);
+
+xlinkFileStruct = '%s_protein_id.file';
+%mtFileStruct = '%s_mt_coord.file';
 
 xlinkFileName = sprintf(fileDirectory, sprintf(xlinkFileStruct, simName));
 xlink_data_file = fopen(xlinkFileName);
@@ -25,14 +49,16 @@ xlink_raw_data = fread(xlink_data_file, n_mts * max_sites * n_datapoints, '*int'
 fclose(xlink_data_file);
 xlink_data = reshape(xlink_raw_data, max_sites, n_mts, n_datapoints);
 
+%{
 mtFileName = sprintf(fileDirectory, sprintf(mtFileStruct, simName));
 mt_data_file = fopen(mtFileName);
 mt_raw_data = fread(mt_data_file, n_mts * n_datapoints, '*int');
 fclose(mt_data_file);
-mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
+%}
+mt_data = zeros(n_mts, n_datapoints); %reshape(mt_raw_data, n_mts, n_datapoints);
 
 min_tau = time_per_datapoint;
-tau_increment = time_per_datapoint;
+tau_increment = 10*time_per_datapoint;
 
 taus = min_tau:tau_increment:max_tau;
 n_taus = length(taus);
@@ -53,7 +79,6 @@ for i_tau = 1:n_taus
         prev_coords = squeeze(mt_data(:, i_data - tau_step));
         % Scan through ID data at current timestep
         for i_site = 1:max_sites
-
             if cur_IDs(i_site, 1) ~= -1
                 site_coord = i_site + cur_coords(1);
                 % If one MT, just search over single MT in prev. timestep
@@ -102,13 +127,9 @@ for i_tau = 1:n_taus
                     disp('Greater than 2 MTs not implemented yet.');
                     return
                 end
-
             end
-
         end
-
     end
-
 end
 
 MSD = zeros(n_taus, 1);

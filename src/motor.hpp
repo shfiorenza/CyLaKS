@@ -35,6 +35,7 @@ public:
       return &head_two_;
     } else {
       Sys::ErrorExit("Motor::GetActiveHead");
+      return nullptr;
     }
   }
   BindingSite *GetNeighbor_Bind_II() { return GetDockSite(); }

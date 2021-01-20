@@ -9,6 +9,8 @@ inline std::string sim_name_;
 inline std::string test_mode_;
 inline std::string yaml_file_;
 
+inline bool proteins_inactive_{true};
+
 inline size_t ablation_step_{0};
 
 inline FILE *log_file_;

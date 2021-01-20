@@ -41,7 +41,7 @@ public:
   }
   BindingSite *GetNeighb(BindingSite *site, int delta);
   Vec<double> GetPolarOrientation() {
-    double c{polarity_ == 0 ? -1 : 1};
+    double c{polarity_ == 0 ? -1.0 : 1.0};
     return {c * orientation_[0], c * orientation_[1]};
   }
   void AddForce(BindingSite *location, Vec<double> f_applied) {

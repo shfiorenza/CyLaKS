@@ -171,7 +171,7 @@ void Curator::ParseParameters() {
     }
   }
   Log(" Kinesin (motor) parameters:\n");
-  ParseYAML(&Motors::n_runs_desired, "motors.n_runs_desired", "runs");
+  ParseYAML(&Motors::n_runs_to_exit, "motors.n_runs_to_exit", "runs");
   ParseYAML(&Motors::gaussian_range, "motors.gaussian_range", "sites");
   ParseYAML(&Motors::gaussian_amp_solo, "motors.gaussian_amp_solo", "kbT");
   ParseYAML(&Motors::gaussian_ceiling_bulk, "motors.gaussian_ceiling_bulk",

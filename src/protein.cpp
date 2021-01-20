@@ -3,7 +3,7 @@
 
 void Protein::InitializeNeighborList() {}
 
-bool Protein::HasSatellite() {}
+bool Protein::HasSatellite() { return false; }
 
 void Protein::UntetherSatellite() {}
 
@@ -91,6 +91,7 @@ double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
   double r_x{neighb->pos_[0] - site->pos_[0]};
   double r_y{neighb->pos_[1] - site->pos_[1]};
   double r{sqrt(Square(r_x) + Square(r_y))};
+  // printf("r = %g\n", r);
   if (r < spring_.r_min_ or r > spring_.r_max_) {
     return 0.0;
   }
@@ -153,6 +154,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   if (old_loc->filament_ == static_loc->filament_) {
     Sys::ErrorExit("Protein::GetWeight_diffuse [2]");
   }
+  spring_.UpdatePosition();
   double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
   double weight_neighb{head->site_->GetWeight_Unbind()};
   return weight_spring * weight_neighb;
@@ -199,7 +201,7 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   // printf("dx: %i\n", dx);
   BindingSite *old_site = head->site_;
   // printf("no\n");
-  int i_new{old_site->index_ + dx};
+  int i_new{(int)old_site->index_ + dx};
   // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
     return false;
@@ -236,6 +238,6 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
-bool Protein::Tether() {}
+bool Protein::Tether() { return false; }
 
-bool Protein::Untether() {}
+bool Protein::Untether() { return false; }

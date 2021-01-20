@@ -69,6 +69,7 @@ inline double Dot(Vec<double> a, int i_dim) {
   case 1:
     return Dot(a, _y_hat);
   }
+  return NAN;
 }
 // Pseudo cross-product in 2-D (torque is a scalar; in/out of page)
 inline double Cross(Vec<double> a, Vec<double> b) {
@@ -87,6 +88,7 @@ inline Vec2D<double> Outer(Vec<double> a, Vec<double> b) {
       matrix[i][j] = a[i] * b[j];
     }
   }
+  return matrix;
 }
 inline Vec2D<double> GetProjectionMatrix(Vec<double> a) { return Outer(a, a); }
 inline Vec2D<double> GetOrthonormalBasis(Vec<double> a) {

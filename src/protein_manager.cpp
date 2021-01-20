@@ -163,6 +163,10 @@ void ProteinManager::InitializeTestEnvironment() {
   Sys::Log("Initializing test '%s'\n", Sys::test_mode_.c_str());
   using namespace Params;
   if (Sys::test_mode_ == "xlink_bind_ii") {
+    Xlinks::k_off_ii = 14.3;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
     double r_max{xlinks_.r_max_};
     printf("r_max = %g\n", r_max);
@@ -170,6 +174,15 @@ void ProteinManager::InitializeTestEnvironment() {
     printf("r_x_max = %g\n", r_x_max);
     size_t x_max((size_t)std::ceil(r_x_max / Filaments::site_size));
     printf("x_max = %zu\n", x_max);
+    // Initialize filament environment
+    Filaments::count = 2;
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
+    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
+    Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
+    Filaments::translation_enabled[0] = false;
+    Filaments::translation_enabled[1] = false;
+    Filaments::rotation_enabled = false;
+    filaments_->Initialize(this);
     Vec<double> p_bind(x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
     Vec<double> p_unbind(x_max + 1, xlinks_.p_event_.at("unbind_ii").GetVal());
     for (int x{0}; x <= x_max; x++) {
@@ -184,27 +197,15 @@ void ProteinManager::InitializeTestEnvironment() {
       double dr{r - Params::Xlinks::r_0};
       double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
       p_bind[x] *= exp(-(1.0 - lambda) * dE / Params::kbT);
-      p_unbind[x] *= 100 * exp(lambda * dE / Params::kbT);
+      p_unbind[x] *= exp(lambda * dE / Params::kbT);
     }
     test_ref_.emplace("bind_ii", p_bind);
     test_ref_.emplace("unbind_ii", p_unbind);
     Vec<Pair<size_t, size_t>> zeros(x_max + 1, {0, 0});
     test_stats_.emplace("bind_ii", zeros);
     test_stats_.emplace("unbind_ii", zeros);
-    // Initialize filament environment
-    Filaments::count = 2;
-    Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
-    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
-    Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
-    Filaments::translation_enabled[0] = false;
-    Filaments::translation_enabled[1] = false;
-    Filaments::rotation_enabled = false;
-    GenerateReservoirs();
-    InitializeWeights();
-    SetParameters();
-    filaments_->Initialize(this);
     // Place first xlink head on lower MT; remains static for entire sim
-    int i_site{x_max};
+    int i_site{(int)x_max};
     BindingSite *site{&filaments_->proto_[0].sites_[i_site]};
     Protein *xlink{xlinks_.GetFreeEntry()};
     bool executed{xlink->Bind(site, &xlink->head_one_)};
@@ -237,7 +238,7 @@ void ProteinManager::InitializeTestEnvironment() {
     Vec<Pair<size_t, size_t>> zeros(cutoff + 1, {0, 0});
     test_stats_.emplace("bind", zeros);
     // Bind motor head to middle site
-    int i_site{Motors::gaussian_range};
+    int i_site{(int)Motors::gaussian_range};
     BindingSite *site{&filaments_->proto_[0].sites_[i_site]};
     Motor *motor{motors_.GetFreeEntry()};
     bool executed{motor->Bind(site, &motor->head_one_)};
@@ -393,7 +394,7 @@ void ProteinManager::InitializeTestEnvironment() {
     InitializeWeights();
     SetParameters();
     filaments_->Initialize(this);
-    int n_sites{filaments_->sites_.size()};
+    int n_sites{(int)filaments_->sites_.size()};
     int n_hetero{(int)std::round(n_sites * p_hetero)};
     // printf("n_hetero = %i\n", n_hetero);
     // Randomly place heterogeneous sites on lattice
@@ -435,7 +436,7 @@ void ProteinManager::InitializeTestEvents() {
     auto poisson_bind_ii = [&](double p, int n) {
       for (int x{0}; x < test_stats_.at("bind_ii").size(); x++) {
         int c{x == 0 ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
-        int n_entries{c * xlinks_.sorted_.at("bind_ii").size_};
+        int n_entries{c * (int)xlinks_.sorted_.at("bind_ii").size_};
         test_stats_.at("bind_ii")[x].second += n_entries;
       }
       if (p == 0.0) {
@@ -460,7 +461,8 @@ void ProteinManager::InitializeTestEvents() {
           return;
         }
         double r_x{head->pos_[0] - bound_head->pos_[0]};
-        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        size_t x{
+            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
         test_stats_.at("bind_ii")[x].first++;
       } else {
         Sys::ErrorExit("Bind_II (TEST)");
@@ -485,7 +487,8 @@ void ProteinManager::InitializeTestEvents() {
       if (xlinks_.sorted_.at("unbind_ii").size_ > 0) {
         auto head{xlinks_.sorted_.at("unbind_ii").entries_[0]};
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        size_t x{
+            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
         test_stats_.at("unbind_ii")[x].second += 1;
       }
       if (p == 0.0) {
@@ -504,7 +507,8 @@ void ProteinManager::InitializeTestEvents() {
         xlinks_.FlagForUpdate();
         filaments_->FlagForUpdate();
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        size_t x{std::abs(std::round(r_x / Params::Filaments::site_size))};
+        size_t x{
+            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
         test_stats_.at("unbind_ii")[x].first++;
         // bool head->parent_->UpdateExtension();
       } else {
@@ -512,7 +516,7 @@ void ProteinManager::InitializeTestEvents() {
       }
     };
     kmc_.events_.emplace_back(
-        "unbind_ii", 100 * xlinks_.p_event_.at("unbind_ii").GetVal(),
+        "unbind_ii", xlinks_.p_event_.at("unbind_ii").GetVal(),
         &xlinks_.sorted_.at("unbind_ii").size_,
         &xlinks_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
         get_weight_unbind_ii, exe_unbind_ii);

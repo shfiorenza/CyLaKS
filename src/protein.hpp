@@ -52,6 +52,7 @@ public:
       return &head_two_;
     } else {
       Sys::ErrorExit("AssociatedProtein::GetActiveHead");
+      return nullptr;
     }
   }
 

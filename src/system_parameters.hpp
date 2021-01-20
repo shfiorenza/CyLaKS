@@ -27,7 +27,7 @@ inline bool rotation_enabled; // rotational movement within the x-y plane
 
 }; // namespace Filaments
 namespace Motors {
-inline size_t n_runs_desired;
+inline size_t n_runs_to_exit;
 inline size_t gaussian_range;
 inline double gaussian_amp_solo;
 inline double gaussian_ceiling_bulk;

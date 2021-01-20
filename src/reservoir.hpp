@@ -11,7 +11,6 @@ template <typename ENTRY_T> struct Reservoir {
 private:
   size_t species_id_;
   Vec<ENTRY_T> reservoir_;
-  Vec<ENTRY_T *> active_entries_;
 
   bool up_to_date_{false};
 
@@ -48,6 +47,8 @@ protected:
   };
 
 public:
+  Vec<ENTRY_T *> active_entries_;
+
   bool active_{false};
   bool equilibrated_{false};
   size_t step_active_{0};

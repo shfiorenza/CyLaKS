@@ -2,12 +2,12 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'separation_2_1';
+sim_name = 'testin2';
 
-movie_name = 'test';
+movie_name = 'testin';
 start_frame = 1;
 
-frames_per_plot = 1;
+frames_per_plot = 100;
 movie_duration = 10; % in seconds
 
 sid_site = 0;
@@ -179,7 +179,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
                     pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
-                   
+                % %{   
                 else
                     dx = 1;
                     mt_dir = -1;
@@ -187,7 +187,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
-                  
+                 % %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
                     if(n_mts > 1 && i_mt == 1)

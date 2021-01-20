@@ -1,7 +1,7 @@
 %
 % Often-changed variables
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
-simName = 'testiv';
+simName = 'testin2';
 n_taus = 10;
 i_tau = 0.01;
 tau_increment = i_tau;
@@ -133,6 +133,7 @@ for i_tau = 1:n_taus
                     prev_neighb_coord = prev_i_neighb + prev_coords(2);
                     prev_anchor_coord = (prev_site_coord + prev_neighb_coord) / 2;
                     dx = double(anchor_coord - prev_anchor_coord) * site_size;
+                    %dx = double(i_neighb - prev_i_neighb) * site_size;
                     i_entry = n_entries(i_tau) + 1;
                     dx_sq(i_tau, i_entry) = dx^2;
                     n_entries(i_tau) = n_entries(i_tau) + 1;

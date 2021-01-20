@@ -215,6 +215,93 @@ void ProteinManager::InitializeTestEnvironment() {
     } else {
       Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
     }
+  } else if (Sys::test_mode_ == "xlink_diffusion") {
+    // Initialize sim objects
+    Xlinks::c_bulk = 1.0;
+    Xlinks::t_active = 0.0;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
+    // Initialize filaments
+    Filaments::count = 2;
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 100;
+    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
+    Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
+    filaments_->Initialize(this);
+    // Initialize stat trackers
+    double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
+    double r_max{xlinks_.r_max_};
+    printf("r_max = %g\n", r_max);
+    double r_x_max{sqrt(Square(r_max) - Square(r_y))};
+    printf("r_x_max = %g\n", r_x_max);
+    size_t x_max((size_t)std::ceil(r_x_max / Filaments::site_size));
+    printf("x_max = %zu\n", x_max);
+    Vec<double> p_theory_to(x_max + 1,
+                            xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal());
+    Vec<double> p_theory_fr(x_max + 1,
+                            xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal());
+    Vec<double> wt_bind(x_max + 1, 0.0);
+    Vec<double> wt_unbind(x_max + 1, 0.0);
+    for (int x{0}; x <= x_max; x++) {
+      double r_x{x * Filaments::site_size};
+      double r{sqrt(Square(r_x) + Square(r_y))};
+      if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
+        wt_bind[x] = 0.0;
+        wt_unbind[x] = 0.0;
+        continue;
+      }
+      double dr{r - Params::Xlinks::r_0};
+      double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
+      wt_bind[x] = exp(-(1.0 - _lambda_spring) * dE / Params::kbT);
+      wt_unbind[x] = exp(_lambda_spring * dE / Params::kbT);
+    }
+    for (int x{0}; x <= x_max; x++) {
+      // Ensure index isn't negative to avoid seg-faults
+      int x_to{x > 0 ? x - 1 : 0};
+      // Diffusing towards rest is considered an unbinding-type event in
+      // regards to Boltzmann factors, since both events let the spring relax
+      // (dividing Boltzmann factors yields E(x) - E(x_to) in the exponential)
+      double wt_spring_to{wt_unbind[x] / wt_unbind[x_to]};
+      // Ensure index isn't out of range to avoid seg-faults
+      int x_fr{x < x_max ? x + 1 : 0};
+      // Diffusing away from rest is considered a binding-type event in
+      // regards to Boltzmann factors, since both events stretch the spring
+      // (dividing Boltzmann factors yields E(x_fr) - E(x) in the exponential)
+      double wt_spring_fr{wt_bind[x_fr] / wt_bind[x]};
+      p_theory_to[x] *= wt_spring_to;
+      p_theory_fr[x] *= wt_spring_fr;
+    }
+    test_ref_.emplace("to_rest", p_theory_to);
+    test_ref_.emplace("fr_rest", p_theory_fr);
+    Vec<Pair<size_t, size_t>> zeros(x_max + 1, {0, 0});
+    test_stats_.emplace("to_rest", zeros);
+    test_stats_.emplace("fr_rest", zeros);
+    // /*
+    for (auto &&entry : test_stats_) {
+      printf("For '%s':\n", entry.first.c_str());
+      for (int x{0}; x < entry.second.size(); x++) {
+        printf("  [%i] = {%zu, %zu}\n", x, entry.second[x].first,
+               entry.second[x].second);
+      }
+    }
+    // */
+    Protein *xlink{xlinks_.GetFreeEntry()};
+    int i_site{(int)std::round(Filaments::n_sites[0] / 2)};
+    BindingSite *site_one{&filaments_->proto_[0].sites_[i_site]};
+    BindingSite *site_two{&filaments_->proto_[1].sites_[i_site]};
+    bool exe_one{xlink->Bind(site_one, &xlink->head_one_)};
+    bool exe_two{xlink->Bind(site_two, &xlink->head_two_)};
+    if (exe_one and exe_two) {
+      bool still_attached{xlink->UpdateExtension()};
+      if (still_attached) {
+        xlinks_.AddToActive(xlink);
+        filaments_->FlagForUpdate();
+      } else {
+        Sys::ErrorExit("ProteinManager::InitializeTestEnvironment() [2]");
+      }
+    } else {
+      Sys::ErrorExit("ProteinManager::InitializeTestEnvironment() [1]");
+    }
   } else if (Sys::test_mode_ == "motor_lattice_bind") {
     size_t cutoff{Motors::gaussian_range};
     // Set parameters
@@ -523,6 +610,99 @@ void ProteinManager::InitializeTestEvents() {
         &xlinks_.sorted_.at("unbind_ii").size_,
         &xlinks_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
         get_weight_unbind_ii, exe_unbind_ii);
+  } else if (Sys::test_mode_ == "xlink_diffusion") {
+    auto is_doubly_bound = [](Object *protein) -> Vec<Object *> {
+      if (protein->GetNumHeadsActive() == 2) {
+        return {protein->GetHeadOne(), protein->GetHeadTwo()};
+      }
+      return {};
+    };
+    xlinks_.AddPop("diffuse_ii_to_rest", is_doubly_bound);
+    xlinks_.AddPop("diffuse_ii_fr_rest", is_doubly_bound);
+    auto exe_diff_to = [&](Object *base) {
+      BindingHead *head{dynamic_cast<BindingHead *>(base)};
+      double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
+      size_t x{
+          (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
+      bool executed{head->Diffuse(1)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        test_stats_.at("to_rest")[x].first++;
+      }
+    };
+    auto exe_diff_fr = [&](Object *base) {
+      BindingHead *head{dynamic_cast<BindingHead *>(base)};
+      double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
+      size_t x{
+          (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
+      bool executed{head->Diffuse(-1)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+        xlinks_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        test_stats_.at("fr_rest")[x].first++;
+      }
+    };
+    auto weight_diff_ii = [](auto *head, int dir) {
+      return head->GetWeight_Diffuse(dir);
+    };
+    auto poisson_to = [&](double p, int n) {
+      Protein *xlink{xlinks_.active_entries_[0]};
+      double r_x{xlink->head_one_.pos_[0] - xlink->head_two_.pos_[0]};
+      size_t x{
+          (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
+      if (x != 0) {
+        test_stats_.at("to_rest")[x].second += 2;
+      }
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto poisson_fr = [&](double p, int n) {
+      Protein *xlink{xlinks_.active_entries_[0]};
+      double r_x{xlink->head_one_.pos_[0] - xlink->head_two_.pos_[0]};
+      size_t x{
+          (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
+      if (x != test_stats_.at("fr_rest").size() - 1) {
+        BindingSite *site_one{xlink->head_one_.site_};
+        BindingSite *site_two{xlink->head_two_.site_};
+        if (site_one != site_one->filament_->plus_end_ and
+            site_one != site_one->filament_->minus_end_) {
+          test_stats_.at("fr_rest")[x].second += 1;
+        }
+        if (site_two != site_two->filament_->plus_end_ and
+            site_two != site_two->filament_->minus_end_) {
+          test_stats_.at("fr_rest")[x].second += 1;
+        }
+      }
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    kmc_.events_.emplace_back(
+        "diffuse_ii_to_rest",
+        xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+        &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_, poisson_to,
+        [&](Object *base) {
+          return weight_diff_ii(dynamic_cast<BindingHead *>(base), 1);
+        },
+        exe_diff_to);
+    kmc_.events_.emplace_back(
+        "diffuse_ii_fr_rest",
+        xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
+        &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson_fr,
+        [&](Object *base) {
+          return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
+        },
+        exe_diff_fr);
   } else if (Sys::test_mode_ == "filament_separation") {
     // Poisson distribution; sampled to predict events w/ variable probabilities
     auto poisson = [&](double p, int n) {
@@ -1236,8 +1416,9 @@ void ProteinManager::InitializeEvents() {
     if (executed) {
       bool still_attached{head->parent_->UpdateExtension()};
       if (!still_attached) {
-        pop->FlagForUpdate();
+        // printf("what\n");
       }
+      pop->FlagForUpdate();
       fil->FlagForUpdate();
     }
   };

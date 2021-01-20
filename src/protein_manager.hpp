@@ -42,8 +42,8 @@ public:
         auto stats = entry.second[index];
         double p{double(stats.first) / stats.second};
         double ref{test_ref_.at(entry.first)[index]};
-        printf("  p[%i] = %.3g (%.3g expected) [%zu events]\n", index, p, ref,
-               stats.first);
+        printf("  p[%i] = %.3g (%.3g expected) [%zu / %zu events]\n", index, p,
+               ref, stats.first, stats.second);
       }
     }
   }

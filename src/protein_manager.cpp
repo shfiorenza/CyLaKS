@@ -302,17 +302,20 @@ void ProteinManager::InitializeTestEnvironment() {
     }
     Filaments::immobile_until[0] = 0.0;
     Filaments::immobile_until[1] = 0.0;
-    Filaments::translation_enabled[0] = true;
+    Filaments::translation_enabled[0] = false;
     Filaments::translation_enabled[1] = true;
     Filaments::rotation_enabled = false; // true;
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
     filaments_->Initialize(this);
-    Str response;
-    printf("Enter number of crosslinkers: ");
-    std::getline(std::cin, response);
-    int n_xlinks{(int)std::stoi(response)};
+    int n_xlinks{Sys::n_xlinks_};
+    if (n_xlinks == -1) {
+      Str response;
+      printf("Enter number of crosslinkers: ");
+      std::getline(std::cin, response);
+      n_xlinks = (int)std::stoi(response);
+    }
     Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
     int n_places{(int)filaments_->sites_.size() / 2};
     if (n_xlinks > n_places) {

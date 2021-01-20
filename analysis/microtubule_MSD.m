@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
 sim_name_base = 'test2';

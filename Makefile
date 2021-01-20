@@ -4,8 +4,8 @@ ifeq ($(LOC), summit)
     CC=gcc # icc
     CXX=g++ # icpc
 else
-    CC=gcc
-    CXX=g++
+    CC=gcc-9
+    CXX=g++-9
 endif
 
 SRCDIR = src

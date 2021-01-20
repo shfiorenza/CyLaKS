@@ -5,7 +5,7 @@
 
 void Curator::CheckArgs(int argc, char *argv[]) {
 
-  if (argc < 3 or argc > 4) {
+  if (argc < 3 or argc > 5) {
     printf("\nError! Incorrect number of command-line arguments\n");
     printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
     printf("test_mode (optional)\n");
@@ -17,11 +17,18 @@ void Curator::CheckArgs(int argc, char *argv[]) {
   }
   Sys::yaml_file_ = argv[1];
   Sys::sim_name_ = argv[2];
-  if (argc == 4) {
+  if (argc == 4 or argc == 5) {
     Sys::test_mode_ = argv[3];
     bool valid_mode{false};
     for (auto const &mode : test_modes_) {
       if (Sys::test_mode_ == mode) {
+        if (argc == 5) {
+          if (Sys::test_mode_ == "filament_separation") {
+            Sys::n_xlinks_ = std::stoi(argv[4]);
+          } else {
+            break;
+          }
+        }
         valid_mode = true;
       }
     }

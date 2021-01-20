@@ -9,6 +9,8 @@ inline std::string sim_name_;
 inline std::string test_mode_;
 inline std::string yaml_file_;
 
+inline int n_xlinks_{-1};
+
 inline bool proteins_inactive_{true};
 
 inline size_t ablation_step_{0};

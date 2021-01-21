@@ -22,7 +22,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
 
   using namespace Params;
   if (step_active_ * dt < t_equil + t_run) {
-    printf("BOINK\n");
+    // printf("BOINK\n");
     Sys::proteins_inactive_ = false;
     active_ = true;
   }
@@ -86,16 +86,19 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
 
-  if (up_to_date_) {
-    return;
-  }
-  up_to_date_ = true;
+  // if (up_to_date_) {
+  //   printf("UP TO DATE!!\n");
+  //   return;
+  // }
+  // up_to_date_ = true;
+  // printf("%i ACTIVE\n", n_active_entries_);
   for (auto &&pop : sorted_) {
     pop.second.ZeroOut();
   }
   for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
     ENTRY_T *entry{active_entries_[i_entry]};
     Sys::Log(1, " entry no %i (ID %i)\n", i_entry, entry->GetID());
+    // printf(" %i HEADS\n", entry->GetNumHeadsActive());
     // entry->UpdateExtension();
     for (auto &&pop : sorted_) {
       Sys::Log(1, "  sorting into %s\n", pop.second.name_.c_str());

@@ -85,6 +85,9 @@ void EventManager::ExecuteEvents() {
 
   SampleEventStatistics();
   GenerateExecutionSequence();
+  // if (n_events_to_exe_ >= 1) {
+  //   printf("%i EVENTS TO EXE\n", n_events_to_exe_);
+  // }
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     Sys::Log(1, "Executing event %s on protein #%i\n",
              events_to_exe_[i_event]->name_.c_str(),

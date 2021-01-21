@@ -56,7 +56,7 @@ void Protofilament::GenerateSites() {
       site.AddNeighbor(&sites_[i_fwd]);
     }
     int i_bck{(int)site.index_ - 1};
-    if (i_bck > 0) {
+    if (i_bck >= 0) {
       site.AddNeighbor(&sites_[i_bck]);
     }
   }

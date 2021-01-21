@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 1500
+t_run: 10
 t_equil: 0
 t_snapshot: 0.01
 dynamic_equil_window: -1 
@@ -12,7 +12,7 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [100, 100]
+  n_sites: [13, 13]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
@@ -25,7 +25,7 @@ motors:
   gaussian_range: 1000 # 1200 # 1000
   gaussian_amp_solo: 0.95 # 1.3 # 0.95
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
-  neighb_neighb_energy: 1.6 # 1.75 # 1.6
+  neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.0 # 60 # 0.05

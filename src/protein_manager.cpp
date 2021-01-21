@@ -1013,6 +1013,9 @@ void ProteinManager::InitializeTestEvents() {
   } else if (Sys::test_mode_ == "filament_separation") {
     // Poisson distribution; sampled to predict events w/ variable probabilities
     auto poisson = [&](double p, int n) {
+      // printf("TO: %zu | FR: %zu\n",
+      //        xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+      //        xlinks_.sorted_.at("diffuse_ii_fr_rest").size_);
       if (p > 0.0) {
         return SysRNG::SamplePoisson(p);
       } else {
@@ -1033,11 +1036,12 @@ void ProteinManager::InitializeTestEvents() {
       if (executed) {
         bool still_attached{head->parent_->UpdateExtension()};
         if (!still_attached) {
+          printf("WUT\n");
         }
         // FIXME had to move this from if statement above -- why ?
-        xlinks_.FlagForUpdate();
-        filaments_->FlagForUpdate();
       }
+      filaments_->FlagForUpdate();
+      xlinks_.FlagForUpdate();
     };
     auto exe_diffuse_bck = [&](Object *base) {
       auto head{dynamic_cast<BindingHead *>(base)};
@@ -1047,15 +1051,17 @@ void ProteinManager::InitializeTestEvents() {
         if (!still_attached) {
         }
         // FIXME had to move this from if statement above -- why ?
-        xlinks_.FlagForUpdate();
-        filaments_->FlagForUpdate();
       }
+      filaments_->FlagForUpdate();
+      xlinks_.FlagForUpdate();
     };
     auto get_weight_diff_ii_to = [](Object *base) {
+      // printf("HI\n");
       auto head{dynamic_cast<BindingHead *>(base)};
       return head->GetWeight_Diffuse(1);
     };
     auto get_weight_diff_ii_fr = [](Object *base) {
+      // printf("HII\n");
       auto head{dynamic_cast<BindingHead *>(base)};
       return head->GetWeight_Diffuse(-1);
     };

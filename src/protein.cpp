@@ -144,9 +144,11 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     return 0.0;
   }
   if (new_loc->occupant_ != nullptr) {
+    // printf("YO WHAT THA - dx = %i\n", dx);
     return 0.0;
   }
   BindingSite *old_loc{head->site_};
+  // printf("doink\n");
   if (old_loc->GetNumNeighborsOccupied() == _n_neighbs_max) {
     return 0.0;
   }
@@ -157,6 +159,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   spring_.UpdatePosition();
   double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
   double weight_neighb{head->site_->GetWeight_Unbind()};
+  // printf("WT[%i] = %g\n", dx, weight_spring * weight_neighb);
   return weight_spring * weight_neighb;
 }
 
@@ -195,6 +198,7 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
       }
       // Impossible to diffuse toward rest
     } else {
+      // printf("HAH on site %i\n", head->site_->index_);
       return false;
     }
   }
@@ -209,6 +213,7 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   // printf("chaching\n");
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {
+    // printf("HAH on site %i\n", head->site_->index_);
     return false;
   }
   old_site->occupant_ = nullptr;

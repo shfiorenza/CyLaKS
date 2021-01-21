@@ -73,6 +73,7 @@ public:
   }
   void Sort(ENTRY_T *entry) {
     Vec<ENTRY_T *> members{get_members_(entry)};
+    // printf("%i MEMBERS\n", members.size());
     for (auto const &member : members) {
       if (one_d_) {
         AddEntry(member);

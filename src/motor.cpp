@@ -147,13 +147,15 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   if (!head->trailing_) {
     weight_site = head->GetOtherHead()->site_->GetWeight_Unbind();
   }
+  // Divide out the weight from one neighbor, since it's the motor's other foot
+  // weight_site /= Sys::weight_neighb_unbind_[1];
   // Disregard effects from internal force if it's disabled
   if (Params::Motors::internal_force == 0.0) {
     return weight_site;
   }
   double weight_sq{Square(weight_site)};
   // We only want the lattice contribution to be squared; divide out neighb term
-  int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  int n_neighbs{head->site_->GetNumNeighborsOccupied() - 1};
   //   double weight{weight_sq / Sys::weight_neighb_unbind_[n_neighbs]};
   //   printf("weight = %g\n", weight);
   return weight_sq / Sys::weight_neighb_unbind_[n_neighbs];

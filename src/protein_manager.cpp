@@ -339,8 +339,6 @@ void ProteinManager::InitializeTestEnvironment() {
   } else if (Sys::test_mode_ == "motor_lattice_step") {
     Motors::c_bulk = 1.0;
     Motors::t_active = 0.0;
-    Motors::neighb_neighb_energy = 0.0;
-    Xlinks::neighb_neighb_energy = 0.0;
     // Initialize sim objects
     GenerateReservoirs();
     InitializeWeights();
@@ -367,14 +365,19 @@ void ProteinManager::InitializeTestEnvironment() {
         Sys::weight_lattice_unbind_[delta] = test_weight_unbind;
       }
     }
+    for (auto &&site : filaments_->sites_) {
+      site->SetWeight_Bind(test_weight_bind);
+      site->SetWeight_Unbind(test_weight_unbind);
+    }
     // Initialize statistic trackers
     Vec<Pair<size_t, size_t>> zeros(1, {0, 0});
     Vec<double> p_theory_bind_ii(1, motors_.p_event_.at("bind_ii").GetVal() *
                                         test_weight_bind);
     test_stats_.emplace("bind_ii", zeros);
     test_ref_.emplace("bind_ii", p_theory_bind_ii);
-    Vec<double> p_theory_unbind_ii(
-        1, motors_.p_event_.at("unbind_ii").GetVal() * test_weight_unbind);
+    Vec<double> p_theory_unbind_ii(1,
+                                   motors_.p_event_.at("unbind_ii").GetVal() *
+                                       Square(test_weight_unbind));
     test_stats_.emplace("unbind_ii", zeros);
     test_ref_.emplace("unbind_ii", p_theory_unbind_ii);
     Vec<double> p_theory_unbind_i(1, motors_.p_event_.at("unbind_i").GetVal() *
@@ -930,6 +933,7 @@ void ProteinManager::InitializeTestEvents() {
     auto poisson_unbind_ii = [&](double p, int n) {
       test_stats_.at("unbind_ii")[0].second +=
           motors_.sorted_.at("unbind_ii").size_;
+      // printf("sz = %zu\n", motors_.sorted_.at("unbind_ii").size_);
       if (p > 0.0) {
         return SysRNG::SamplePoisson(p);
       } else {

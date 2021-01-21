@@ -66,10 +66,23 @@ public:
         pop.second.Sort(site);
       }
       int n_neighbs{site->GetNumNeighborsOccupied()};
-      site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
-      site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
+      if (Sys::test_mode_.empty()) {
+        site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
+        site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
+        continue;
+      }
+      if (Sys::test_mode_ != "motor_lattice_step") {
+        site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
+        site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
+      }
     }
-    UpdateLattice();
+    if (Sys::test_mode_.empty()) {
+      UpdateLattice();
+      return;
+    }
+    if (Sys::test_mode_ != "motor_lattice_step") {
+      UpdateLattice();
+    }
   }
   void RunBD() {
     if (AllFilamentsImmobile()) {

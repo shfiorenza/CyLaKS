@@ -157,6 +157,7 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::polarity, "filaments.polarity", "");
   ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
   ParseYAML(&Filaments::y_initial, "filaments.y_initial", "nm");
+  ParseYAML(&Filaments::f_applied, "filaments.f_applied", "pN");
   ParseYAML(&Filaments::immobile_until, "filaments.immobile_until", "s");
   ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
             "");

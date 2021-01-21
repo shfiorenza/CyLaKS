@@ -309,6 +309,7 @@ void ProteinManager::InitializeTestEnvironment() {
     Motors::k_on = 1.0;
     Motors::c_bulk = 10.0;
     Motors::neighb_neighb_energy = 0.0;
+    Xlinks::neighb_neighb_energy = 0.0;
     Filaments::count = 1;
     Filaments::n_sites[0] = 2 * cutoff + 1;
     // Initialize sim objects
@@ -336,12 +337,21 @@ void ProteinManager::InitializeTestEnvironment() {
       Sys::ErrorExit("ProteinManager::InitializeTestEnvironment()");
     }
   } else if (Sys::test_mode_ == "motor_lattice_step") {
-    Filaments::count = 1;
-    Filaments::n_sites[0] = 1000;
+    Motors::c_bulk = 1.0;
+    Motors::t_active = 0.0;
+    Motors::neighb_neighb_energy = 0.0;
+    Xlinks::neighb_neighb_energy = 0.0;
     // Initialize sim objects
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
+    // Initialize filaments
+    Filaments::count = 1;
+    Filaments::n_sites[0] = 1000;
+    Filaments::translation_enabled[0] = false;
+    Filaments::translation_enabled[1] = false;
+    Filaments::rotation_enabled = false;
+    Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
     filaments_->Initialize(this);
     printf("Enter test delta (-1 to check against self-coop): ");
     Str response;
@@ -703,6 +713,299 @@ void ProteinManager::InitializeTestEvents() {
           return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
         },
         exe_diff_fr);
+  } else if (Sys::test_mode_ == "motor_lattice_bind") {
+    auto poisson = [&](double p, int n) {
+      // Each delta distance has 2 sites available to it each timestep
+      // Do not count delta = 0, where 'main' motor is permanently bound to
+      for (int delta{1}; delta <= Motors::gaussian_range; delta++) {
+        test_stats_.at("bind")[delta].second += 2;
+      }
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto exe_bind_i = [&](Object *base) {
+      BindingSite *site{dynamic_cast<BindingSite *>(base)};
+      int i_site{(int)site->index_};
+      // 'main' kinesin motor will always be at index_ = lattice_cutoff_
+      int delta{abs(i_site - (int)Motors::gaussian_range)};
+      test_stats_.at("bind")[delta].first++;
+      filaments_->FlagForUpdate();
+    };
+    auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
+    auto is_unocc = [](Object *site) -> Vec<Object *> {
+      if (!site->IsOccupied()) {
+        return {site};
+      }
+      return {};
+    };
+    filaments_->AddPop("motors", is_unocc);
+    kmc_.events_.emplace_back(
+        "bind_i", motors_.p_event_.at("bind_i").GetVal(),
+        &filaments_->unoccupied_.at("motors").size_,
+        &filaments_->unoccupied_.at("motors").entries_, poisson,
+        [&](Object *base) {
+          return weight_bind_i(dynamic_cast<BindingSite *>(base));
+        },
+        exe_bind_i);
+  } else if (Sys::test_mode_ == "motor_lattice_step") {
+    auto binomial = [&](double p, int n) {
+      if (n > 0) {
+        return SysRNG::SampleBinomial(p, n);
+      } else {
+        return 0;
+      }
+    };
+    // Bind_ATP_I
+    auto exe_bind_ATP = [](auto *head, auto *pop) {
+      // printf("boop\n");
+      bool executed{head->parent_->Bind_ATP(head)};
+      if (executed) {
+        pop->FlagForUpdate();
+      }
+    };
+    auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 1) {
+        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::NONE) {
+          return {motor->GetActiveHead()};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("bound_i_NULL", [&](Object *base) {
+      return is_NULL_i_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "bind_ATP_i", motors_.p_event_.at("bind_ATP_i").GetVal(),
+        &motors_.sorted_.at("bound_i_NULL").size_,
+        &motors_.sorted_.at("bound_i_NULL").entries_, binomial,
+        [&](Object *base) {
+          exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+        });
+    // Bind_ATP_II
+    auto poisson_ATP = [&](double p, int n) {
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
+      auto *rear_head{front_head->GetOtherHead()};
+      if (front_head->trailing_) {
+        return;
+      }
+      bool unbound{rear_head->Unbind()};
+      bool executed{front_head->parent_->Bind_ATP(front_head)};
+      if (executed) {
+        pop->FlagForUpdate();
+        fil->FlagForUpdate();
+      }
+    };
+    auto weight_bind_ATP_ii = [](auto *head) {
+      return head->parent_->GetWeight_BindATP_II(head);
+    };
+    auto is_NULL_ii_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 2) {
+        bool found_head{false};
+        CatalyticHead *chosen_head{nullptr};
+        if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
+          chosen_head = &motor->head_one_;
+        }
+        if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
+          if (chosen_head != nullptr) {
+            Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
+          }
+          chosen_head = &motor->head_two_;
+        }
+        if (chosen_head != nullptr) {
+          return {chosen_head};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("bound_ii_NULL", [&](Object *base) {
+      return is_NULL_ii_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
+        &motors_.sorted_.at("bound_ii_NULL").size_,
+        &motors_.sorted_.at("bound_ii_NULL").entries_, poisson_ATP,
+        [&](Object *base) {
+          return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
+        },
+        [&](Object *base) {
+          exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                          filaments_);
+        });
+    // Hydrolyze
+    auto exe_hydrolyze = [](auto *head, auto *pop) {
+      bool executed{head->parent_->Hydrolyze(head)};
+      if (executed) {
+        pop->FlagForUpdate();
+      }
+    };
+    auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 1) {
+        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ATP) {
+          return {motor->GetActiveHead()};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("bound_i_ATP", [&](Object *base) {
+      return is_ATP_i_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "hydrolyze", motors_.p_event_.at("hydrolyze").GetVal(),
+        &motors_.sorted_.at("bound_i_ATP").size_,
+        &motors_.sorted_.at("bound_i_ATP").entries_, binomial,
+        [&](Object *base) {
+          exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
+        });
+    // Bind_II
+    auto exe_bind_ii = [&](Object *base) {
+      auto bound_head{dynamic_cast<CatalyticHead *>(base)};
+      auto head{bound_head->GetOtherHead()};
+      auto site{head->parent_->GetNeighbor_Bind_II()};
+      // If dock site is plus end, unbind motor and place it on minus end
+      if (site == site->filament_->plus_end_) {
+        bool exe1{bound_head->Unbind()};
+        auto new_site{site->filament_->minus_end_};
+        bool exe2{bound_head->parent_->Bind(new_site, bound_head)};
+        bool exe3{bound_head->parent_->Bind_ATP(bound_head)};
+        bool exe4{bound_head->parent_->Hydrolyze(bound_head)};
+        site = bound_head->parent_->GetNeighbor_Bind_II();
+      }
+      auto executed{head->parent_->Bind(site, head)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+        motors_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        test_stats_.at("bind_ii")[0].first++;
+      }
+    };
+    auto weight_bind_ii = [](auto *head) {
+      return head->parent_->GetWeight_Bind_II();
+    };
+    auto poisson_bind_ii = [&](double p, int n) {
+      test_stats_.at("bind_ii")[0].second +=
+          motors_.sorted_.at("bind_ii").size_;
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto is_docked = [](auto *motor) -> Vec<Object *> {
+      auto *docked_head{motor->GetDockedHead()};
+      if (docked_head != nullptr) {
+        return {docked_head->GetOtherHead()};
+      }
+      return {};
+    };
+    motors_.AddPop("bind_ii", [&](Object *base) {
+      return is_docked(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "bind_ii", motors_.p_event_.at("bind_ii").GetVal(),
+        &motors_.sorted_.at("bind_ii").size_,
+        &motors_.sorted_.at("bind_ii").entries_, poisson_bind_ii,
+        [&](Object *base) {
+          return weight_bind_ii(dynamic_cast<CatalyticHead *>(base));
+        },
+        exe_bind_ii);
+    // Unbind_II
+    auto exe_unbind_ii = [&](Object *base) {
+      auto head{dynamic_cast<CatalyticHead *>(base)};
+      bool executed{head->Unbind()};
+      if (executed) {
+        motors_.FlagForUpdate();
+        filaments_->FlagForUpdate();
+        test_stats_.at("unbind_ii")[0].first++;
+      }
+    };
+    auto poisson_unbind_ii = [&](double p, int n) {
+      test_stats_.at("unbind_ii")[0].second +=
+          motors_.sorted_.at("unbind_ii").size_;
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto weight_unbind_ii = [](auto *head) {
+      return head->GetWeight_Unbind_II();
+    };
+    auto is_ADPP_ii_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 2) {
+        bool found_head{false};
+        CatalyticHead *chosen_head{nullptr};
+        if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
+          chosen_head = &motor->head_one_;
+        }
+        if (motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
+          if (chosen_head != nullptr) {
+            Sys::ErrorExit("Protein_MGR::is_ADPP_ii_bound()");
+          }
+          chosen_head = &motor->head_two_;
+        }
+        if (chosen_head != nullptr) {
+          return {chosen_head};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("unbind_ii", [&](Object *base) {
+      return is_ADPP_ii_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "unbind_ii", motors_.p_event_.at("unbind_ii").GetVal(),
+        &motors_.sorted_.at("unbind_ii").size_,
+        &motors_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
+        [&](Object *base) {
+          return weight_unbind_ii(dynamic_cast<CatalyticHead *>(base));
+        },
+        exe_unbind_ii);
+    // Unbind_I
+    auto exe_unbind_i = [&](Object *base) {
+      // Count stats for unbind_i but do not actually execute it
+      test_stats_.at("unbind_i")[0].first++;
+      filaments_->FlagForUpdate();
+    };
+    auto poisson_unbind_i = [&](double p, int n) {
+      test_stats_.at("unbind_i")[0].second +=
+          motors_.sorted_.at("bound_i_ADPP").size_;
+      if (p > 0.0) {
+        return SysRNG::SamplePoisson(p);
+      } else {
+        return 0;
+      }
+    };
+    auto weight_unbind_i = [](auto *head) {
+      return head->parent_->GetWeight_Unbind_I();
+    };
+    auto is_ADPP_i_bound = [](auto *motor) -> Vec<Object *> {
+      if (motor->n_heads_active_ == 1) {
+        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ADPP) {
+          return {motor->GetActiveHead()};
+        }
+      }
+      return {};
+    };
+    motors_.AddPop("bound_i_ADPP", [&](Object *base) {
+      return is_ADPP_i_bound(dynamic_cast<Motor *>(base));
+    });
+    kmc_.events_.emplace_back(
+        "unbind_i", motors_.p_event_.at("unbind_i").GetVal(),
+        &motors_.sorted_.at("bound_i_ADPP").size_,
+        &motors_.sorted_.at("bound_i_ADPP").entries_, poisson_unbind_i,
+        [&](Object *base) {
+          return weight_unbind_i(dynamic_cast<CatalyticHead *>(base));
+        },
+        exe_unbind_i);
   } else if (Sys::test_mode_ == "filament_separation") {
     // Poisson distribution; sampled to predict events w/ variable probabilities
     auto poisson = [&](double p, int n) {

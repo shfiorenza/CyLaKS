@@ -10,6 +10,7 @@
 class Curator {
 private:
   Vec<Str> test_modes_{"xlink_bind_ii",       "xlink_diffusion",
+                       "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",
                        "hetero_tubulin",      "kinesin_mutant"};
   struct DataFile {

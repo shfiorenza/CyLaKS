@@ -87,7 +87,7 @@ bool FilamentManager::AllFilamentsImmobile() {
 void FilamentManager::UpdateForces() {
   for (auto &&pf : proto_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      pf.force_[i_dim] = 0.0;
+      pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
   }

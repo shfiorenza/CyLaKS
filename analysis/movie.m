@@ -2,12 +2,12 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'testin2';
+sim_name = 'testin4';
 
 movie_name = 'testin';
 start_frame = 1;
 
-frames_per_plot = 100;
+frames_per_plot = 10;
 movie_duration = 10; % in seconds
 
 sid_site = 0;

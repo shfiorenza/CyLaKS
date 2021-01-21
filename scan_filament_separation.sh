@@ -18,6 +18,7 @@ do
 		PARAM_FILE="temp_params_${SIM_NAME}.yaml"
 		echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
 		cp ${BASE_PARAMS} ${PARAM_FILE}
+        yq w -i ${PARAM_FILE} seed ${SEED}
 		# Run sim for these parameter values
 		./sim ${PARAM_FILE} ${SIM_NAME} filament_separation ${N_XLINKS}
 		wait

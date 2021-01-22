@@ -44,6 +44,27 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
   if (n_heads_active_ == 1) {
     return 1;
   } else if (n_heads_active_ == 2) {
+    double x_static{head->GetOtherHead()->site_->pos_[0]};
+    double x_fwd{head->site_->pos_[0] + Params::Filaments::site_size};
+    double x_bck{head->site_->pos_[0] - Params::Filaments::site_size};
+    double r_x_fwd{x_fwd - x_static};
+    double r_x_bck{x_bck - x_static};
+    double r_x{head->site_->pos_[0] - x_static};
+    double r_y{head->site_->pos_[1] - head->GetOtherHead()->site_->pos_[1]};
+    double r{sqrt(Square(r_x) + Square(r_y))};
+    double r_fwd{sqrt(Square(r_x_fwd) + Square(r_y))};
+    double r_bck{sqrt(Square(r_x_bck) + Square(r_y))};
+    double dr{r - spring_.r_rest_};
+    double dr_fwd{r_fwd - spring_.r_rest_};
+    double dr_bck{r_bck - spring_.r_rest_};
+    if (Square(dr_fwd) < Square(dr)) {
+      return 1;
+    }
+    if (Square(dr_bck) < Square(dr)) {
+      return -1;
+    }
+    return 0;
+    /*
     // printf("%g > %g?\n", head->site_->pos_[0], GetAnchorCoordinate(0));
     if (head->site_->pos_[0] > GetAnchorCoordinate(0)) {
       return -1;
@@ -52,6 +73,7 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
     } else {
       return 0;
     }
+    */
   } else {
     Sys::ErrorExit("Protein::GetDirToRest()\n");
   }
@@ -129,7 +151,8 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   if (dx == 0) {
     // Diffuse from rest in a random direction
     if (dir == -1) {
-      if (SysRNG::GetRanProb() < 0.5) {
+      ran_ = SysRNG::GetRanProb();
+      if (ran_ < 0.5) {
         dx = 1;
       } else {
         dx = -1;
@@ -191,7 +214,7 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   if (dx == 0) {
     // Diffuse from rest in a random direction
     if (dir == -1) {
-      if (SysRNG::GetRanProb() < 0.5) {
+      if (ran_ < 0.5) {
         dx = 1;
       } else {
         dx = -1;

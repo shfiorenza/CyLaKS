@@ -97,12 +97,56 @@ void Motor::ApplyLatticeDeformation() {
   for (int delta{1}; delta <= Sys::lattice_cutoff_; delta++) {
     for (int dir{-1}; dir <= 1; dir += 2) {
       int i_scan{i_epicenter + dir * delta};
-      if (i_scan < 0 or i_scan > epicenter->filament_->sites_.size() - 1) {
-        continue;
+      int mt_length{epicenter->filament_->sites_.size() - 1};
+      if (i_scan < 0 or i_scan > mt_length) {
+        if (Sys::test_mode_.empty()) {
+          continue;
+        }
+        if (Sys::test_mode_ != "filament_ablation") {
+          continue;
+        }
+        if (epicenter->filament_->index_ == 0 and i_scan > mt_length) {
+          int i_adj{i_scan - mt_length};
+          // printf("i_adj = %i\n", i_adj);
+          auto other_mt{epicenter->filament_->neighbor_};
+          if (i_adj > other_mt->sites_.size() - 1) {
+            continue;
+          }
+          BindingSite *site{&other_mt->sites_[i_adj]};
+          if (site == nullptr) {
+            printf("NO\n");
+            exit(1);
+          }
+          site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
+          // printf("nop\n");
+          site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
+          // printf("yop\n");
+          continue;
+        }
+        if (epicenter->filament_->index_ == 1 and i_scan < 0) {
+          auto other_mt{epicenter->filament_->neighbor_};
+          int i_adj{other_mt->sites_.size() + i_scan};
+          // printf("i_adj = %i\n", i_adj);
+          if (i_adj < 0) {
+            continue;
+          }
+          BindingSite *site{&other_mt->sites_[i_adj]};
+          if (site == nullptr) {
+            printf("NO\n");
+            exit(1);
+          }
+          site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
+          // printf("yop\n");
+          site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
+          // printf("nop\n");
+          continue;
+        }
       }
-      BindingSite *site{&epicenter->filament_->sites_[i_scan]};
-      site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
-      site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
+      if (i_scan >= 0 and i_scan < epicenter->filament_->sites_.size()) {
+        BindingSite *site{&epicenter->filament_->sites_[i_scan]};
+        site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
+        site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
+      }
     }
   }
 }
@@ -155,7 +199,8 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   }
   double weight_sq{Square(weight_site)};
   // We only want the lattice contribution to be squared; divide out neighb term
-  int n_neighbs{head->site_->GetNumNeighborsOccupied() - 1};
+  // int n_neighbs{head->site_->GetNumNeighborsOccupied() - 1};
+  int n_neighbs{1};
   //   double weight{weight_sq / Sys::weight_neighb_unbind_[n_neighbs]};
   //   printf("weight = %g\n", weight);
   return weight_sq / Sys::weight_neighb_unbind_[n_neighbs];

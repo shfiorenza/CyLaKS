@@ -7,6 +7,7 @@
 
 class Protein : public Object {
 protected:
+  double ran_{0.0};
   int n_neighbors_bind_ii_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
 

@@ -187,7 +187,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
-                 % %}
+                % %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
                     if(n_mts > 1 && i_mt == 1)

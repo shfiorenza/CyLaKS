@@ -10,9 +10,12 @@ void EventManager::Initialize() {}
 void EventManager::SampleEventStatistics() {
 
   n_events_to_exe_ = 0;
+  // printf("yes?\n");
   for (auto &&event : events_) {
+    // printf("event is %s\n", event.name_.c_str());
     n_events_to_exe_ += event.SampleStatistics();
   }
+  // printf("noh\n");
   if (n_events_to_exe_ <= 1) {
     return;
   }
@@ -83,7 +86,9 @@ void EventManager::GenerateExecutionSequence() {
 
 void EventManager::ExecuteEvents() {
 
+  // printf("heh\n");
   SampleEventStatistics();
+  // printf("hOOh\n");
   GenerateExecutionSequence();
   // if (n_events_to_exe_ >= 1) {
   //   printf("%i EVENTS TO EXE\n", n_events_to_exe_);

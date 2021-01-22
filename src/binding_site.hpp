@@ -43,23 +43,31 @@ public:
   void SetWeight_Unbind(double val) { weight_unbind_ = val; }
   void AddWeight_Bind(double val) {
     int n_neighbs{GetNumNeighborsOccupied()};
+    // printf("**heyyyy\n");
     if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
       return;
     }
+    // printf("**HEY - val = %g\n", val);
     weight_bind_ *= val;
+    // printf("**AH\n");
     if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
       weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      // printf("**u wot\n");
       return;
     }
   }
   void AddWeight_Unbind(double val) {
     int n_neighbs{GetNumNeighborsOccupied()};
+    // printf("heyyyy\n");
     if (weight_unbind_ == Sys::weight_lattice_unbind_max_[n_neighbs]) {
       return;
     }
+    // printf("HEY - val = %g\n", val);
     weight_unbind_ *= val;
+    // printf("AH\n");
     if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
       weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      // printf("u wot\n");
       return;
     }
   }
@@ -72,10 +80,12 @@ public:
     }
     int n_neighbs{0};
     for (auto const &site : neighbors_) {
+      // printf("hi\n");
       if (site->occupant_ != nullptr) {
         n_neighbs++;
       }
     }
+    // printf("noh - %i\n", n_neighbs);
     return n_neighbs;
   }
 

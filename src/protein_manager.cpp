@@ -224,7 +224,7 @@ void ProteinManager::InitializeTestEnvironment() {
     SetParameters();
     // Initialize filaments
     Filaments::count = 2;
-    Filaments::n_sites[0] = Filaments::n_sites[1] = 100;
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 1000;
     Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
     Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
     filaments_->Initialize(this);
@@ -1104,6 +1104,7 @@ void ProteinManager::InitializeTestEvents() {
         return;
       }
       auto entry{pop->GetFreeEntry()};
+      printf("bound motor %i\n", entry->GetID());
       // always bind catalytic head first
       bool executed{entry->Bind(site, &entry->head_one_)};
       if (executed) {

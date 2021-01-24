@@ -1,25 +1,30 @@
 clear;
 close all;
-simName = 'test';
-n_sites = 1000;
-n_datapoints = 10000;
-n_mts = 2;
+simName = 'test_mutant';
+n_sites = 100;
+n_datapoints = 1000;
+%n_mts = 1;
+
+speciesID = 2;
 
 iptsetpref('ImshowBorder','tight');
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
 occu_fileStruct = '%s_occupancy.file';
-mt_fileStruct = '%s_mt_coord.file';
+mt_fileStruct = '%s_filament_pos.file';
 
 % microtubule coordinates - specifically, left edge of MT
 fileName = sprintf(fileDirectory, sprintf(mt_fileStruct, simName));
 data_file = fopen(fileName);
-mt_coords = fread(data_file, [n_datapoints, n_sites], '*int');
+mt_coords = zeros(n_datapoints, n_sites); %%fread(data_file, [n_datapoints, n_sites], '*int');
 fclose(data_file);
 % occupancy data on each MT
 fileName = sprintf(fileDirectory, sprintf(occu_fileStruct, simName));
 data_file = fopen(fileName);
 occupancy = fread(data_file, [n_datapoints, n_sites], '*int');
 fclose(data_file);
+
+occupancy(occupancy ~= speciesID) = 0;
+occupancy(occupancy == speciesID) = 1;
 
 %matrix = zeros([n_datapoints n_sites]); 
 %matrix = occupancy(:,1,:);
@@ -44,11 +49,11 @@ noiseStd = 25;
 doPlot = 0;
 
 % truncation parameters - center region
-siteMin = 250;%500;%625;
+siteMin = 1;%500;%625;
 siteMax = n_sites;%2000;%1875;
 timeMin = 1;
-timeSkip = 5;
-timeMax = 10000;
+timeSkip = 1;
+timeMax = 1000;
 dataMatrix = matrix(timeMin:timeSkip:timeMax,siteMin:siteMax);
 
 image2D = imageGaussianKymograph(dataMatrix,siteLength,pixelLength,...
@@ -57,11 +62,13 @@ image2D = imageGaussianKymograph(dataMatrix,siteLength,pixelLength,...
 intThresh = 1500;
 image2D(image2D>intThresh) = intThresh;
 
+%{
 figure, imagesc(image2D);
 colormap gray; 
 whitebg(2,'k')
 axis([-6 126 -50 2050]);
 daspect([150 1000 1]);
+%}
 
 %find pixels for 10 microns
 lineLength = 10000/pixelLength;

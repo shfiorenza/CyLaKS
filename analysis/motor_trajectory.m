@@ -1,71 +1,45 @@
 clear all
 n_mts = 1;
-length_of_microtubule = 500;
-n_datapoints = 100000;
+n_sites = 1000;
+n_datapoints = 1000;
+t_per_datapoint = 0.1;
 
-starting_point = 00001;
-n_steps = 10000;
-ID = 1;
+ID = 407; % 462; %622;
 
-final_trajectory = zeros([n_steps 1]);
-
-fileDirectory = '/home/shane/Projects/overlap_analysis/mgh_model/%s';
-fileName = 'test_motorID.file';
-
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
+fileName = 'testiTO4_protein_id.file';
 data_file = fopen(sprintf(fileDirectory, fileName));
-mt_array = fread(data_file, [n_mts*length_of_microtubule, n_datapoints], '*int');
+mt_array = fread(data_file, [n_mts*n_sites, n_datapoints], '*int');
 fclose(data_file);
 
-% Find where motor
-n_start = 1;
-done = false;
-for n = starting_point:1:n_datapoints
-   for site = 1:1:n_mts*length_of_microtubule
-       if done == false
-         if mt_array(site, n) == ID
-            n_start = n;
-            done = true;
-         end
-       end
-   end
-end
-n_end = n_start + n_steps - 1;
-if(n_end > n_datapoints)
-    n_end = n_datapoints;
-end 
-
-% Collect desire amount of datapoints
-step_index = 1;
-for n = n_start:1:n_end 
-    for site = 1:1:n_mts*length_of_microtubule
-            if mt_array(site, n) == ID
-                % Convert raw site # to normalized index
-                site_adj = mod(site, length_of_microtubule);
-                final_trajectory(step_index, 1) = site_adj;
-                step_index = step_index + 1; 
-                break;
-            % If not found, put coord that won't show up on graph
-            elseif site == n_mts*length_of_microtubule
-                final_trajectory(step_index, 1) = -5;
-                step_index = step_index + 1;
+trajectory = zeros([n_datapoints 1]) - 10;
+first_sighting = true;
+for i_data = 1 : n_datapoints
+    for i_site = 1 : n_sites
+        if mt_array(i_site, i_data) == ID
+            trajectory(i_data, 1) = i_site;
+            if first_sighting
+                n_start = i_data;
+                first_sighting = false;
             end
+            n_end = i_data;
+            break;
+        end
     end
 end
 
 %%plot fig%%
 fig1 = figure(1);
-set(fig1,'Position', [50, 50, 3*480, 3*270])
-plot1 = plot(linspace(n_start, n_end, n_steps), final_trajectory, ':ob');
+set(fig1,'Position', [50, 50, 2*480, 2*270])
 
-%%style stuff%%
-plot1.MarkerSize = 2;
-plot1.LineWidth = 1;
-axis = gca;
-axis.YLim = [0 length_of_microtubule];
-axis.XLim = [n_start n_end];
-axis.TickDir = 'out';
-axis.Box = 'off';
-axis.GridLineStyle = '-';
-xlabel({'Datapoint number', sprintf('[Motor ID: %d]', ID)});
-ylabel('Site on microtubule');
+% reverse t so as to mirror a real kymograph
+x = trajectory(n_start : n_end);
+t =  linspace(n_end, n_start, n_end - n_start + 1);
+plot(x, t, ':ob', 'LineWidth', 1.5, 'MarkerSize', 5);
 
+xlim([0 n_sites]);
+ylim([n_start-1 n_end+1]);
+xlabel('Site on microtubule');
+ylabel({'Datapoint number', sprintf('[Motor ID: %d]', ID)});
+%yticks(linspace(n_start, n_end, 5));
+yticklabels({'1000', '900', '800', '700', '600','500','400','300','200','100'});

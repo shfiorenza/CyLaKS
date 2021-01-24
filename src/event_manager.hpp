@@ -18,8 +18,9 @@ public:
   EventManager();
   ~EventManager() {
     for (auto &&event : events_) {
-      printf("p_%s = %g\n", event.name_.c_str(),
-             double(event.n_executed_tot_) / event.n_opportunities_tot_);
+      printf("p_%s = %g [%zu exe]\n", event.name_.c_str(),
+             double(event.n_executed_tot_) / event.n_opportunities_tot_,
+             event.n_executed_tot_);
     }
   }
   void Initialize();

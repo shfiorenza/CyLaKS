@@ -1,9 +1,9 @@
 %
 % Often-changed variables
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
-simName = 'testin2';
+simName = 'testino7';
 n_taus = 10;
-i_tau = 0.01;
+i_tau = 1.0;
 tau_increment = i_tau;
 
 % Open log file and parse it into param labels & their values

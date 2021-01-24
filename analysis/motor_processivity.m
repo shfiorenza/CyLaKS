@@ -1,5 +1,5 @@
 clear variables;
-sim_name = "kif4a_processivity";
+sim_name = "testu100";
 file_dir = '/home/shane/projects/CyLaKS/';
 
 % Open log file and parse it into param labels & their values

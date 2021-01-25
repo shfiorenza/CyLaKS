@@ -1,13 +1,13 @@
 clear all
 n_mts = 1;
-n_sites = 1000;
-n_datapoints = 1000;
+n_sites = 2000;
+n_datapoints = 10000;
 t_per_datapoint = 0.1;
 
-ID = 407; % 462; %622;
+ID = 1435; % 462; %622;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
-fileName = 'testiTO4_protein_id.file';
+fileName = 'hybrid_motor_0.05_0_protein_id.file';
 data_file = fopen(sprintf(fileDirectory, fileName));
 mt_array = fread(data_file, [n_mts*n_sites, n_datapoints], '*int');
 fclose(data_file);

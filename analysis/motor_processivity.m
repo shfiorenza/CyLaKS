@@ -1,5 +1,5 @@
 clear variables;
-sim_name = "test";
+sim_name = "hybrid_motor_0.05_0";
 file_dir = '/home/shane/projects/CyLaKS/';
 
 % Open log file and parse it into param labels & their values

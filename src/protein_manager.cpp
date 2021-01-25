@@ -148,8 +148,10 @@ void ProteinManager::SetParameters() {
   // Diffusion
   double x_sq{Square(Filaments::site_size / 1000)}; // in um^2
   double tau_i{x_sq / (2 * Xlinks::d_i)};
+  Sys::Log("tau = %g\n", tau_i);
   double tau_ii{x_sq / (2 * Xlinks::d_ii)};
   double p_diffuse_i{dt / tau_i};
+  Sys::Log("p = %g\n", p_diffuse_i);
   double p_diffuse_ii{dt / tau_ii};
   // diff_fwd and diff_bck are two separate events, which effectively
   // doubles the probability to diffuse. Thus we divide p_diff by 2.
@@ -1152,7 +1154,6 @@ void ProteinManager::InitializeTestEvents() {
         });
     // Bind_II
     auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
-      // auto bound_head{dynamic_cast<BindingHead *>(base_head)};
       auto head{bound_head->GetOtherHead()};
       auto site{head->parent_->GetNeighbor_Bind_II()};
       auto executed{head->parent_->Bind(site, head)};
@@ -1165,8 +1166,6 @@ void ProteinManager::InitializeTestEvents() {
     auto weight_bind_ii = [](auto *head) {
       return head->parent_->GetWeight_Bind_II();
     };
-    // need two events: one to bind catalytic head; one to bind passive
-
     auto is_docked = [](auto *motor) -> Vec<Object *> {
       auto *docked_head{motor->GetDockedHead()};
       if (docked_head != nullptr) {
@@ -1199,14 +1198,9 @@ void ProteinManager::InitializeTestEvents() {
     auto weight_unbind_ii = [](auto *head) {
       return head->GetWeight_Unbind_II();
     };
-    auto is_doubly_bound = [](Object *protein) -> Vec<Object *> {
-      if (protein->GetNumHeadsActive() == 2) {
-        return {protein->GetHeadOne(), protein->GetHeadTwo()};
-      }
-      return {};
-    };
     auto is_ADPP_ii_bound = [](auto *motor) -> Vec<Object *> {
       if (motor->n_heads_active_ == 2) {
+        // Always unbind active head first if both are ADPP bound
         if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP and
             motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
           return {&motor->head_one_};

@@ -29,11 +29,11 @@ motors:
   t_active: 0
   k_on: 0.000358
   c_bulk: 0.5 # 0.05
-  c_eff_bind: 4000000
+  c_eff_bind: 400000 # 0
   k_on_ATP: 2500
   c_ATP: 2
   k_hydrolyze: 95
-  k_off_i: 8 
+  k_off_i: 0.8 # 8 
   k_off_ii: 260 # 2375 # 260
   applied_force: 0.0
   internal_force: 26.0 # 0.0 # 26.0

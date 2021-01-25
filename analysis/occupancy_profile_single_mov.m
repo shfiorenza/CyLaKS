@@ -1,7 +1,7 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'testiii';
+sim_name = 'hybrid_motor_100_0';
 steps_per_plot = 10;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';

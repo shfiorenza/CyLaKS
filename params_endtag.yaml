@@ -2,9 +2,9 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 10 # 00
+t_run: 1000
 t_equil: 0
-t_snapshot: 0.01
+t_snapshot: 0.1
 dynamic_equil_window: -1 
 verbosity: 0
 filaments:
@@ -41,7 +41,7 @@ motors:
   sigma_off_ii: 0.125
   sigma_ATP: 1.15
   endpausing_active: true
-  tethers_active: true
+  tethers_active: false
   k_tether: 0.1
   c_eff_tether: 500
   k_untether: 0.05

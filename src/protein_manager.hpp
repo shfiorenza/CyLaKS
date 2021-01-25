@@ -71,9 +71,7 @@ public:
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();
-    // printf("we did it\n");
     kmc_.ExecuteEvents();
-    // printf("did we?\n");
   }
 };
 

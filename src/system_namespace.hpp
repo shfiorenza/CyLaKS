@@ -11,6 +11,9 @@ inline std::string yaml_file_;
 
 inline int n_xlinks_{-1};
 
+inline double p_mutant_{0.0};
+inline double binding_affinity_{0.0};
+
 inline bool proteins_inactive_{true};
 
 inline size_t ablation_step_{0};

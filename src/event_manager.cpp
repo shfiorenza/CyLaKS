@@ -86,9 +86,7 @@ void EventManager::GenerateExecutionSequence() {
 
 void EventManager::ExecuteEvents() {
 
-  // printf("heh\n");
   SampleEventStatistics();
-  // printf("hOOh\n");
   GenerateExecutionSequence();
   // if (n_events_to_exe_ >= 1) {
   //   printf("%i EVENTS TO EXE\n", n_events_to_exe_);

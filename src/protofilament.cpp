@@ -129,9 +129,9 @@ void Protofilament::UpdateRodPosition() {
 
 void Protofilament::UpdateSitePositions() {
 
-  /*
+  // /*
   // If proteins are disabled, only update endpoint positions
-  if (Sys::proteins_inactive_) {
+  if (Params::Filaments::count == 1) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Distance will be negative for first half of sites
       double p_dist{double(plus_end_->index_) - center_index_};
@@ -146,7 +146,6 @@ void Protofilament::UpdateSitePositions() {
     }
     return;
   }
-  */
 
   for (auto &&site : sites_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {

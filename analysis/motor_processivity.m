@@ -1,5 +1,5 @@
 clear variables;
-sim_name = "testu100";
+sim_name = "test";
 file_dir = '/home/shane/projects/CyLaKS/';
 
 % Open log file and parse it into param labels & their values

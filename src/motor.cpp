@@ -6,19 +6,6 @@ void Motor::ChangeConformation() {
   if (n_heads_active_ != 1) {
     Sys::ErrorExit("Motor::ChangeConformation()");
   }
-  /*
-  if (n_heads_active_ == 2) {
-    if (head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
-      Unbind(&head_one_);
-    } else if (head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
-      Unbind(&head_two_);
-    }
-  }
-  if (n_heads_active_ == 2) {
-    printf("what\n");
-    exit(1);
-  }
-  */
   BindingSite *site{GetActiveHead()->site_};
   if (site == nullptr) {
     Sys::ErrorExit("Motor::ChangeConformation() [2]");
@@ -97,7 +84,7 @@ void Motor::ApplyLatticeDeformation() {
   for (int delta{1}; delta <= Sys::lattice_cutoff_; delta++) {
     for (int dir{-1}; dir <= 1; dir += 2) {
       int i_scan{i_epicenter + dir * delta};
-      int mt_length{epicenter->filament_->sites_.size() - 1};
+      int mt_length{(int)epicenter->filament_->sites_.size() - 1};
       if (i_scan < 0 or i_scan > mt_length) {
         if (Sys::test_mode_.empty()) {
           continue;
@@ -125,7 +112,7 @@ void Motor::ApplyLatticeDeformation() {
         }
         if (epicenter->filament_->index_ == 1 and i_scan < 0) {
           auto other_mt{epicenter->filament_->neighbor_};
-          int i_adj{other_mt->sites_.size() + i_scan};
+          int i_adj{(int)other_mt->sites_.size() + i_scan};
           // printf("i_adj = %i\n", i_adj);
           if (i_adj < 0) {
             continue;
@@ -172,7 +159,8 @@ double Motor::GetWeight_Bind_II() {
 
 double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
 
-  if (Params::Motors::internal_force == 0.0) {
+  if (Params::Motors::internal_force == 0.0 or
+      Params::Motors::gaussian_range == 0) {
     return 0.0;
   }
   double weight_site{head->site_->GetWeight_Bind()};
@@ -194,7 +182,8 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   // Divide out the weight from one neighbor, since it's the motor's other foot
   // weight_site /= Sys::weight_neighb_unbind_[1];
   // Disregard effects from internal force if it's disabled
-  if (Params::Motors::internal_force == 0.0) {
+  if (Params::Motors::internal_force == 0.0 or
+      Params::Motors::gaussian_range == 0) {
     return weight_site;
   }
   double weight_sq{Square(weight_site)};

@@ -107,10 +107,17 @@ void ProteinManager::SetParameters() {
 
   // Bind_ATP -- motors only
   double p_bind_ATP{Motors::k_on_ATP * Motors::c_ATP * dt};
-  motors_.AddProb("bind_ATP_i", p_bind_ATP);
+  double wt_ATP_i{1.0};
+  if (Motors::applied_force > 0.0) {
+    wt_ATP_i = exp(-Motors::applied_force * Motors::sigma_ATP / kbT);
+  }
+  motors_.AddProb("bind_ATP_i", p_bind_ATP * wt_ATP_i);
   double wt_ATP_ii{exp(-Motors::internal_force * Motors::sigma_ATP / kbT)};
   if (Motors::internal_force == 0.0) {
     wt_ATP_ii = 0.0;
+  }
+  if (Motors::applied_force > 0.0) {
+    wt_ATP_ii *= exp(Motors::applied_force * Motors::sigma_ATP / kbT);
   }
   motors_.AddProb("bind_ATP_ii", p_bind_ATP * wt_ATP_ii);
   // Hydrolyze_ATP -- motors only
@@ -123,12 +130,19 @@ void ProteinManager::SetParameters() {
   // Unbind_II
   xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
   double wt_unbind_ii{exp(Motors::internal_force * Motors::sigma_off_ii / kbT)};
+  if (Motors::applied_force > 0.0) {
+    wt_unbind_ii *= exp(-Motors::applied_force * Motors::sigma_off_ii / kbT);
+  }
   motors_.AddProb("unbind_ii", Motors::k_off_ii * dt * wt_unbind_ii);
   // Unbind_II_Teth -- xlinks only
 
   // Unbind I
   xlinks_.AddProb("unbind_i", Xlinks::k_off_i * dt, "neighbs", 1);
-  motors_.AddProb("unbind_i", Motors::k_off_i * dt);
+  double wt_unbind_i{1.0};
+  if (Motors::applied_force > 0.0) {
+    wt_unbind_i = exp(Motors::applied_force * Motors::sigma_off_i / kbT);
+  }
+  motors_.AddProb("unbind_i", Motors::k_off_i * dt * wt_unbind_i);
   // Unbind_I_Teth
 
   // Diffusion
@@ -472,19 +486,25 @@ void ProteinManager::InitializeTestEnvironment() {
     SetParameters();
     filaments_->Initialize(this);
   } else if (Sys::test_mode_ == "hetero_tubulin") {
-    printf("Enter fraction of heterogenous tubulin: ");
-    Str response_one;
-    std::getline(std::cin, response_one);
-    double p_hetero{(double)std::stod(response_one)};
+    double p_hetero{Sys::p_mutant_};
+    if (p_hetero == 0.0) {
+      printf("Enter fraction of heterogenous tubulin: ");
+      Str response_one;
+      std::getline(std::cin, response_one);
+      p_hetero = (double)std::stod(response_one);
+    }
     if (p_hetero < 0.0 or p_hetero > 1.0) {
       printf("Invalid fraction, ya dingus!\n");
       exit(1);
     }
-    printf("Enter decrease in binding affinity ");
-    printf("(e.g., 2 will cut p_bind in half): ");
-    Str response_two;
-    std::getline(std::cin, response_two);
-    double bind_aff{(double)std::stod(response_two)};
+    double bind_aff{Sys::binding_affinity_};
+    if (bind_aff == 0.0) {
+      printf("Enter decrease in binding affinity ");
+      printf("(e.g., 2 will cut p_bind in half): ");
+      Str response_two;
+      std::getline(std::cin, response_two);
+      bind_aff = (double)std::stod(response_two);
+    }
     if (bind_aff < 0.0) {
       printf("Error. Fractional change must be positive!\n");
       exit(1);
@@ -1104,7 +1124,7 @@ void ProteinManager::InitializeTestEvents() {
         return;
       }
       auto entry{pop->GetFreeEntry()};
-      printf("bound motor %i\n", entry->GetID());
+      Sys::Log("bound motor %zu\n", entry->GetID());
       // always bind catalytic head first
       bool executed{entry->Bind(site, &entry->head_one_)};
       if (executed) {

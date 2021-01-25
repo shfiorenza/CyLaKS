@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.1 # 0.001
 dt: 0.00002
-t_run: 100
+t_run: 1000
 t_equil: 0
 t_snapshot: 0.01
 dynamic_equil_window: -1 
@@ -12,36 +12,36 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [2000, 13]
+  n_sites: [10000, 13]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
   immobile_until: [1500, 1500]
   f_applied: [0.0, 0.0]
-  translation_enabled: [true, true]
-  rotation_enabled: true
+  translation_enabled: [false, false]
+  rotation_enabled: false
 motors:
   n_runs_to_exit: 250
-  gaussian_range: 1000 # 1200 # 1000
+  gaussian_range: 0 # 1000 # 1200 # 1000
   gaussian_amp_solo: 0.95 # 1.3 # 0.95
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
   k_on: 0.000358
-  c_bulk: 0.5 # 30 # 60 # 60 # 0.05
+  c_bulk: 0.05
   c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 95
-  k_off_i: 8 
+  k_hydrolyze: 110 # 95
+  k_off_i: 10 # 8 
   k_off_ii: 260 # 2375 # 260
   applied_force: 0.0
   internal_force: 26.0 # 0.0 # 26.0
-  sigma_off_i: 1.0
-  sigma_off_ii: 0.125
-  sigma_ATP: 1.15
+  sigma_off_i: 2.0 # 1.0
+  sigma_off_ii: 0.35 # 0.125
+  sigma_ATP: 4.6 # 1.15
   endpausing_active: true
-  tethers_active: true
+  tethers_active: false
   k_tether: 0.1
   c_eff_tether: 500
   k_untether: 0.05
@@ -52,11 +52,11 @@ xlinks:
   neighb_neighb_energy: 0.0 # 2.25
   t_active: 0
   k_on: 0.000238
-  c_bulk: 0.0 # 1.0 # 0.0 # 50
+  c_bulk: 0.0
   c_eff_bind: 5000
   k_off_i: 0.143
   k_off_ii: 0.0143
-  d_i: 0.5 # 0.131
+  d_i: 0.131
   d_ii: 0.0655
   r_0: 32
   k_spring: 0.453

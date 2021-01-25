@@ -16,7 +16,7 @@ SRCEXT = cpp
 COMPILE_FLAGS = -std=c++17
 RCOMPILE_FLAGS = -D NDEBUG -O2 -march=native
 DCOMPILE_FLAGS = -D DEBUG -O0 -g
-LINK_FLAGS =
+LINK_FLAGS = -lstdc++fs
 YAMLINCS = -I./libs/yaml-cpp/include
 YAMLLIBS = -Wl,-rpath=./libs/yaml-cpp/static -L./libs/yaml-cpp/static -lyaml-cpp
 # If we're running on Summit, add appropriate flags

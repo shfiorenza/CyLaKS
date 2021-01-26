@@ -1,7 +1,8 @@
-
+%{
 clear variables;
-sim_name = 'run_motor_forceVel/motor_forceVelC';
+sim_name = 'run_motor_forceVel/k401_forceVel';
 applied_forces = [-6, -5, -4, -3, -2, -1, 0];
+seeds = [0, 1, 2, 3];
 
 exp_forces = [0, -1.0 : -0.5 : -6.0];
 exp_runlengths = [940, 770, 480, 500, 270, 330, 250, 150, 240, 120, 70, 50];
@@ -20,7 +21,7 @@ avg_velocities = zeros(n_runs, 1);
 err_velocities = zeros(n_runs, 1);
 for i_run = 1 : n_runs 
     name = sprintf("%s/%s_%i", file_dir, sim_name, abs(applied_forces(i_run)));
-    mot_stats = get_motor_stats(name);
+    mot_stats = get_motor_stats(name, seeds);
     avg_runlengths(i_run) = mot_stats(1);
     err_runlengths(i_run) = mot_stats(2);
     avg_lifetimes(i_run) = mot_stats(3);
@@ -55,10 +56,10 @@ ax.FontSize = 12;
 % Label axes, legend, etc. 
 xlabel('Applied force (pN)', 'FontSize', 14);
 ylabel('Run length (nm)', 'FontSize', 14);
-%xlim([-6.5 0.5]);
+xlim([-6.5 0.5]);
+ylim([0 1400]);
 legend({'Experimental data', 'Experimental fit', 'Simulation data'}, ... 
     'location', 'northwest', 'FontSize', 12);
-
 
 fig2 = figure();
 set(fig2, 'Position', [75, 75, 960, 600]);
@@ -84,9 +85,10 @@ exp_vel_fit = fplot(@(f) d_step*k_1(f)*k_2*k_3(f) / (k_1(f)*k_2 + k_3(f)*(k_1(f)
 exp_vel_fit.Color = exp_vel.Color;
 uistack(sim_vel, 'top');
 ax = gca;
-ax.FontSize = 12; 
-xlabel('Applied force (pN)', 'FontSize', 14);
-ylabel('Velocity (nm/s)', 'FontSize', 14);
-%xlim([-6.5 0.5]);
-legend({'Experimental data', 'Experimental fit', 'Simulation data'}, ... 
-    'location', 'northwest', 'FontSize', 12);
+ax.FontSize = 16; 
+xlabel('Applied force (pN)', 'FontSize', 18);
+ylabel('Velocity (nm/s)', 'FontSize', 18);
+xlim([-6.5 0.5]);
+ylim([0 900]);
+legend({'Experimental data', 'Fit to 3-state model', 'Simulation'}, ... 
+    'location', 'northwest', 'FontSize', 14);

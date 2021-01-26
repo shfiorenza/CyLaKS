@@ -1,15 +1,22 @@
-function mot_stats = get_motor_stats(base_name, seeds)
+function mot_stats = get_motor_stats(base_name, seeds, plot_flag)
 
-multirun = true; 
+%{
+base_name = "/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility";
+seeds = [0, 1, 2, 3, 4, 5];
+do_plot = true;
+%}
+
+multirun = true;
+n_seeds = length(seeds);
+sim_name = sprintf('%s_%i', base_name, seeds(1));
+do_plot = false;
 if nargin == 1
-   multirun = false;
-end
-if multirun
-    n_seeds = length(seeds);
-    sim_name = sprintf('%s_%i', base_name, seeds(1));
-else
+    multirun = false;
     n_seeds = 1;
     sim_name = base_name;
+end
+if nargin == 3
+   do_plot = plot_flag; 
 end
 
 % Open log file and parse it into param labels & their values
@@ -171,7 +178,46 @@ mot_stats(4) = err_time;
 mot_stats(5) = mean_vel;
 mot_stats(6) = err_vel;
 
+%}
 fprintf('For sim %s (%i runs):\n', sim_name, n_runs);
 disp(mot_stats);
+
+if do_plot
+    % prep figure
+    fig1 = figure();
+    set(fig1, 'Position', [50, 50, 960, 600]);
+    % plot run length histogram
+    n_bins = int32(sqrt(n_runs));
+    histfit(runlengths, n_bins, 'exponential');
+    % Display mean runlength
+    dim1 = [0.55 0.65 0.2 0.2];
+    str1 = sprintf('Mean processivity: %i +/- %i nm', int32(mean_run), int32(err_run));
+    annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on');
+    % Display mean lifetime
+    dim2 = [0.55 0.6 0.2 0.2];
+    str2 = sprintf('Mean life time: %#.1f +/- %#.2f s', mean_time, err_time);
+    annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on');
+    % Display mean velocity
+    dim3 = [0.55 0.55 0.2 0.2];
+    str3 = sprintf('Mean velocity: %i +/- %i nm/s', int32(mean_vel), int32(err_vel));
+    annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on');
+    % Cosmetic stuff
+    xlabel('Processivity (nm)');
+    ylabel('Counts');
+    
+    
+    fig2 = figure();
+    set(fig2, 'Position', [75, 75, 960, 600]);
+    histfit(lifetimes, n_bins, 'exponential');
+    xlabel('Lifetime (s)');
+    ylabel('Counts');
+    
+    fig3 = figure();
+    set(fig3, 'Position', [100, 100, 960, 600]);
+    histfit(velocities, n_bins, 'normal');
+    xlabel('Velocity (nm/s)');
+    ylabel('Counts');
+    
+end
 
 end

@@ -1,6 +1,9 @@
 clear variables;
-sim_name = "hybrid_motor_0.05_0";
+seeds = [0, 1, 2, 3, 4, 5];
+sim_name = "run_motor_mobility/kif4a_mobility_0";
 file_dir = '/home/shane/projects/CyLaKS/';
+
+"/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility"
 
 % Open log file and parse it into param labels & their values
 log_file = sprintf('%s/%s', file_dir, sprintf('%s.log', sim_name));
@@ -48,52 +51,40 @@ n_active = zeros([n_mts 1]);
 % motor ID is unique; make following arrays serial w/ ID as index
 runlengths = zeros([(10 * n_mts * n_sites) 1]);
 lifetimes = zeros([(10 * n_mts * n_sites) 1]);
-velocities = zeros([(10 *n_mts * n_sites) 1]);
+velocities = zeros([(10 * n_mts * n_sites) 1]);
 n_runs = 0;
 starting_site = zeros([10 * n_mts * n_sites 1]) - 1;
 starting_datapoint = zeros([10 * n_mts * n_sites 1]) - 1;
 
 for i_data = 1:n_datapoints - 1
-
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         future_IDs = motor_data(:, i_mt, i_data + 1);
         %{
         % Do not count motors that are jammed or at the plus end
         jammed_motors = [];
-
         for i_site = 1:n_sites
             motor_ID = motor_IDs(i_site);
-
             if motor_ID == -1
                 continue;
             end
-
             if i_site == 1
                 jammed_motors = [jammed_motors motor_ID];
             else
                 fwd_ID = motor_IDs(i_site - 1);
-
                 if fwd_ID == -1
                     continue;
                 end
-
                 if fwd_ID ~= motor_ID
                     jammed_motors = [jammed_motors motor_ID];
                 end
-
             end
-
         end
-
         %}
-
         % Determine end-tag region; ignore motors that terminate from here
         endtag_boundary = 1;
-
         for i_site = 1:n_sites
             motor_ID = motor_IDs(i_site);
-
             if motor_ID ~= -1
                 endtag_boundary = i_site + 1;
             else
@@ -101,7 +92,6 @@ for i_data = 1:n_datapoints - 1
             end
 
         end
-
         %}
         % Scan through IDs of bound motors (-1 means no motor on that site)
         for i_site = 1:1:n_sites
@@ -116,7 +106,6 @@ for i_data = 1:n_datapoints - 1
                     n_active(i_mt) = n_active(i_mt) + 1;
                     active_motors(i_mt, n_active(i_mt)) = motor_ID;
                 end
-
                 % Otherwise if a motor is found, only count first head
             elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
                 % Record the motor's starting site if this is the first time
@@ -127,19 +116,14 @@ for i_data = 1:n_datapoints - 1
                     n_active(i_mt) = n_active(i_mt) + 1;
                     active_motors(i_mt, n_active(i_mt)) = motor_ID;
                 end
-
             end
-
         end
-
         % Check one datapoint into the future to see if any motors unbound
         n_deleted = 0;
-
         for i_motor = 1:1:n_active(i_mt)
             i_adj = i_motor - n_deleted;
             motor_ID = active_motors(i_mt, i_adj);
             future_site = find(future_IDs == motor_ID, 1);
-
             if isempty(future_site)
                 % Calculate distance traveled
                 end_site = find(motor_IDs == motor_ID);
@@ -159,7 +143,6 @@ for i_data = 1:n_datapoints - 1
                     lifetimes(n_runs) = run_time;
                     velocities(n_runs) = velocity;
                 end
-
                 starting_site(motor_ID) = -1;
                 starting_datapoint(motor_ID) = -1;
                 % Switch now-deleted entry with last entry in active_motors
@@ -168,12 +151,10 @@ for i_data = 1:n_datapoints - 1
                 n_active(i_mt) = n_active(i_mt) - 1;
                 n_deleted = n_deleted + 1;
             end
-
         end
-
     end
-
 end
+
 
 % trim arrays to get rid of un-used containers
 runlengths = runlengths(1:n_runs);

@@ -489,7 +489,7 @@ void ProteinManager::InitializeTestEnvironment() {
     filaments_->Initialize(this);
   } else if (Sys::test_mode_ == "hetero_tubulin") {
     double p_hetero{Sys::p_mutant_};
-    if (p_hetero == 0.0) {
+    if (p_hetero == -1.0) {
       printf("Enter fraction of heterogenous tubulin: ");
       Str response_one;
       std::getline(std::cin, response_one);
@@ -500,7 +500,7 @@ void ProteinManager::InitializeTestEnvironment() {
       exit(1);
     }
     double bind_aff{Sys::binding_affinity_};
-    if (bind_aff == 0.0) {
+    if (bind_aff == -1.0) {
       printf("Enter decrease in binding affinity ");
       printf("(e.g., 2 will cut p_bind in half): ");
       Str response_two;

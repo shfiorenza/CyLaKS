@@ -466,7 +466,7 @@ void ProteinManager::InitializeTestEnvironment() {
   } else if (Sys::test_mode_ == "filament_ablation") {
     Filaments::count = 2;
     Sys::Log("  COUNT = 2\n");
-    Filaments::n_sites[0] = Filaments::n_sites[1] = 125;
+    Filaments::n_sites[0] = Filaments::n_sites[1] = 250;
     Filaments::polarity[0] = Filaments::polarity[1] = 0;
     Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
     Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);

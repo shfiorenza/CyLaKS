@@ -3,19 +3,20 @@ clear variables;
 
 file_dir = '/home/shane/projects/CyLaKS';
 sim_name = 'run_hybrid_motor/hybrid_motor_0.05_0';
+sim_name = 'ablation';
 dwell_time = 0.1;  % dwell time of theoretical camera
 
-i_start = 4150;
-i_end = 4650;
+i_start = 1; %4150;
+i_end = -1; %4650;
 
-scale_x = 10; % microns
-scale_t = 5; % seconds
+scale_x = 0.5; % microns
+scale_t = 50; % seconds
 
 % parameters for making simulated image (i.e., each frame)
-scale_factor = 15;  % Controls how bright a single motor is (1 typically)
+scale_factor = 15 ;  % Controls how bright a single motor is (1 typically)
 siteLength = 8;
-pixelLength = 150;
-pixelPad = 1;
+pixelLength = 15;
+pixelPad = 5;
 gaussSigma = 1.0;
 doPlot = 0;
 gaussAmp = 4000;
@@ -52,6 +53,7 @@ if any(contains(params, "N_DATAPOINTS ") ~= 0)
     n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
 n_sites = max(mt_lengths);
+n_dims = 2;
 
 posFile = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);
 occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
@@ -61,9 +63,9 @@ proteinFile = sprintf('%s/%s_protein_ids.file', file_dir, sim_name);
 filament_pos = zeros(n_mts, n_datapoints);
 if isfile(posFile)
     mt_data_file = fopen(posFile);
-    mt_raw_data = fread(mt_data_file, n_mts * n_datapoints, '*int');
+    mt_data = fread(mt_data_file, 2*n_dims * n_mts * n_datapoints, '*double');
     fclose(mt_data_file);
-    filament_pos = reshape(mt_raw_data, n_mts, n_datapoints);
+    filament_pos = reshape(mt_data, n_dims, 2, n_mts, n_datapoints);
 end
 % occupancy data on each MT
 occupancy = zeros(n_sites, n_mts, n_datapoints);
@@ -103,19 +105,55 @@ end
 dwell_steps = dwell_time / time_per_datapoint;
 
 pixels_x = ceil(n_sites*siteLength/pixelLength)+2*pixelPad;
+if n_mts == 2
+    pixels_x = ceil(2*n_sites*siteLength/pixelLength)+2*pixelPad;
+    max_diff_x = 0;
+    for i_data = i_start : dwell_steps : i_end - dwell_steps
+        minus_one = filament_pos(:, 2, 1, i_data);
+        plus_two = filament_pos(:, 1, 2, i_data);
+        diff_x = plus_two(1) - minus_one(1);
+        if diff_x > max_diff_x
+           max_diff_x = diff_x; 
+        end
+    end
+    n_sites_diff_max = ceil(max_diff_x / siteLength);
+    pixel_diff_max = ceil(max_diff_x / pixelLength);
+    pixels_x = pixels_x + (pixel_diff_max - 1);
+end
 pixels_y = ceil((i_end - i_start) / dwell_steps);
-final_img = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img = zeros(pixels_y, pixels_x, 3);
+ % RGB image; 
 
 % Run through movie frames and create each one
 for i_data = i_start : dwell_steps :i_end - dwell_steps
+    if n_mts == 2
+        minus_one = filament_pos(:, 2, 1, i_data);
+        plus_two = filament_pos(:, 1, 2, i_data);
+        diff_x = plus_two(1) - minus_one(1);
+        pixel_diff = ceil(diff_x / pixelLength);
+        n_sites_diff = ceil(diff_x / siteLength);
+        buffer = zeros(1, n_sites_diff);
+        leftover = zeros(1, n_sites_diff_max - n_sites_diff);
+        
+        motors1 = sum(motor_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
+        motors2 = sum(motor_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        dataMatrix = [motors1 buffer motors2 leftover];
+        
+        sites1 = sum(site_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
+        sites2 = sum(site_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        lineMatrix = [sites1 buffer sites2 leftover];
+    else
+        dataMatrix = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), 3)';
+        lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), 3)';
+    end
+    
     % green channel - motors
-    dataMatrix = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), 3)';
     imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
     imageMotors = imageMotors/intensityMax; %convert to grayscale
     % red channel - microtubule
     %lineMatrix = ones(size(dataMatrix));
-    lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), 3)';
+   
     imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
     imageLine = imageLine/intensityMax; %convert to grayscale
@@ -125,7 +163,7 @@ for i_data = i_start : dwell_steps :i_end - dwell_steps
     % merge into RGB image
     imageRGB = cat(3, imageLine, imageMotors, imageBlue);
     index = (i_data - i_start) / dwell_steps + 1;
-    final_img(index, :, :) = imageRGB(1, :, :);
+    final_img(index, :, :) = mean(imageRGB(:, :, :), 1);
 end
 %} 
 fig1 = figure;
@@ -137,7 +175,9 @@ set(gca, 'Box', 'off');
 % Add a scale bar
 len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
-l = line([10 len_x+10],[10 10],'Color','w','LineWidth',4);
+l = line([8 len_x+8],[150 150],'Color','w','LineWidth',4);
+%l = line([2 len_x+2],[150 150],'Color','w','LineWidth',4);
 set(l,'clipping','off')
-l2 = line([13 13],[15 len_y+15],'Color','w','LineWidth',4);
+l2 = line([6 6],[200 len_y+200],'Color','w','LineWidth',4);
+%l2 = line([2 2],[250 len_y+250],'Color','w','LineWidth',4);
 set(l2,'clipping','off')

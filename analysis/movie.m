@@ -2,7 +2,7 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'testii';
+sim_name = 'test';
 
 movie_name = 'testin2';
 start_frame = 1;

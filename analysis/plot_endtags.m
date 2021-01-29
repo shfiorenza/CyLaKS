@@ -1,4 +1,4 @@
-
+%{
 clear variables;
 base_names = ["endtag"];
 folder = "run_endtag_vs_coop";
@@ -49,8 +49,8 @@ folder = "run_endtag_both";
 %}
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
-ranges = [10, 50, 100, 500];
-seeds = [0, 1, 2]; %, 3]; %, 4, 5, 6, 7, 8, 9];
+ranges = [10, 50, 100, 1000];
+seeds = [0, 1, 2, 3]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
 
@@ -60,7 +60,8 @@ exp_endtag_lengths = [1.19, 1.27, 1.43, 1.61, 1.63, 1.74, 2.21]; % in um
 exp_err_endtag_lengths = [0.11, 0.10, 0.12, 0.12, 0.18, 0.16, 0.18, ]; % in um
 
 site_size = 0.008; % in um
-n_runs = length(base_names);
+%n_runs = length(base_names);
+n_runs = length(ranges);
 n_mts = length(mt_lengths);
 n_seeds = length(seeds);
 
@@ -73,8 +74,8 @@ for i_run = 1 : n_runs
             %sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run),conc, seeds(i_seed));
             %sim_name = sprintf("%s/%s_%i_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
             %for range = i_range : length(ranges)
-            sim_name = sprintf("%s/%s_%i_%i_%i", dir, base_names(i_run), mt_lengths(i_mt),  ...
-                500, seeds(i_seed)); 
+            sim_name = sprintf("%s/%s_%i_%i_%i", dir, base_names(1), mt_lengths(i_mt),  ...
+                ranges(i_run), seeds(i_seed))
            % end
             endtag_lengths(i_mt, i_seed) = get_endtag_length(sim_name);
         end
@@ -109,13 +110,24 @@ exp_data = errorbar(exp_mt_lengths, exp_endtag_lengths, ...
 exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 % Plot sim data
 %}
+
 for i_run = 1 : n_runs
     sim_data = errorbar(mt_lengths * site_size, avg_endtag_length(i_run, :), ...
         err_endtag_length(i_run, :), 'o','MarkerSize', 12, 'LineWidth', 2, ...
-        'MarkerEdgeColor', color(4, :));
-    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
-    sim_data.Color = sim_data.MarkerFaceColor;
+        'MarkerEdgeColor', color(i_run, :));
+   sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+   sim_data.Color = sim_data.MarkerFaceColor;
 end
+%}
+%{
+for i_mt = 1 : n_mts
+    sim_data = errorbar(ranges * site_size, avg_endtag_length(:, i_mt), ...
+        err_endtag_length(:, i_mt), 'o','MarkerSize', 12, 'LineWidth', 2, ...
+        'MarkerEdgeColor', color(i_mt, :));
+   sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+   sim_data.Color = sim_data.MarkerFaceColor;
+end
+%}
 %{
 % Use 3rd party errorbarxy.m to plot horizontal error bars for exp data 
 errorbarxy(exp_mt_lengths, exp_endtag_lengths, exp_err_mt_lengths, ...
@@ -202,7 +214,7 @@ legend('boxoff');
 %}
 
 % Short- & long-range coop w/o stepping FX stylistic stuff
-legendLabel = ["10", "50", "100", "500"];
+legendLabel = ["Range = 0.08 \mum", "Range = 0.4 \mum", "Range = 0.8 \mum", "Range = 8 \mum"];
 legend(legendLabel,'location', 'northwest', 'FontSize', 18);
 legend('boxoff');
 %{

@@ -46,6 +46,15 @@ template <typename T1, typename T2> using Pair = std::pair<T1, T2>;
 /* Common macros */
 inline double Square(double x) { return x * x; }
 inline double Cube(double x) { return x * x * x; }
+template <typename DATA_T> inline DATA_T Pow(DATA_T x, size_t n) {
+  DATA_T result{1.0};
+  while (n > 0) {
+    result *= x;
+    n--;
+  }
+  return result;
+}
+
 template <typename... ARGS> inline double Avg(ARGS... vals) {
   double sum{0.0};
   for (auto const &val : {vals...}) {

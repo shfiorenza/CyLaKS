@@ -3,19 +3,21 @@ clear variables;
 
 file_dir = '/home/shane/projects/CyLaKS';
 sim_name = 'run_hybrid_motor/hybrid_motor_0.05_0';
-sim_name = 'ablation';
+%sim_name = 'ablation';
+%sim_name = 'run_hetero_tubulin/hetero_tubulin_1_0';
+%sim_name = 'run_endtag_vs_coop/endtag_1750_1000_0';
 dwell_time = 0.1;  % dwell time of theoretical camera
 
-i_start = 1; %4150;
-i_end = -1; %4650;
+i_start = 4150; %1150; %4150;
+i_end = 4650; %1650; %4650;
 
-scale_x = 0.5; % microns
-scale_t = 50; % seconds
+scale_x = 10; % microns
+scale_t = 5; % seconds
 
 % parameters for making simulated image (i.e., each frame)
-scale_factor = 15 ;  % Controls how bright a single motor is (1 typically)
+scale_factor = 50; % 15 % Controls how bright a single motor is (1 typically)
 siteLength = 8;
-pixelLength = 15;
+pixelLength = 150; % 60; %150; % 15;
 pixelPad = 5;
 gaussSigma = 1.0;
 doPlot = 0;
@@ -175,9 +177,9 @@ set(gca, 'Box', 'off');
 % Add a scale bar
 len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
-l = line([8 len_x+8],[150 150],'Color','w','LineWidth',4);
-%l = line([2 len_x+2],[150 150],'Color','w','LineWidth',4);
+l = line([15 len_x+15],[5 5],'Color','w','LineWidth',4);
+%l = line([9 len_x+9],[200 200],'Color','w','LineWidth',4);
 set(l,'clipping','off')
-l2 = line([6 6],[200 len_y+200],'Color','w','LineWidth',4);
-%l2 = line([2 2],[250 len_y+250],'Color','w','LineWidth',4);
+l2 = line([10 10],[10 len_y+10],'Color','w','LineWidth',4);
+%l2 = line([10 10],[350 len_y+350],'Color','w','LineWidth',4);
 set(l2,'clipping','off')

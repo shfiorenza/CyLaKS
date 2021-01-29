@@ -416,14 +416,16 @@ void ProteinManager::InitializeTestEnvironment() {
       printf("\nError! Filaments must be the same length.\n");
       exit(1);
     }
+    Motors::c_bulk = 0.0;
+    Xlinks::c_bulk = 1.0;
+    GenerateReservoirs();
+    InitializeWeights();
+    SetParameters();
     Filaments::immobile_until[0] = 0.0;
     Filaments::immobile_until[1] = 0.0;
     Filaments::translation_enabled[0] = false;
     Filaments::translation_enabled[1] = true;
     Filaments::rotation_enabled = false; // true;
-    GenerateReservoirs();
-    InitializeWeights();
-    SetParameters();
     filaments_->Initialize(this);
     int n_xlinks{Sys::n_xlinks_};
     if (n_xlinks == -1) {

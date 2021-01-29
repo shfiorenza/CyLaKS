@@ -14,6 +14,7 @@ void FilamentManager::SetParameters() {
   if (Params::Filaments::rotation_enabled) {
     mobile_ = true;
   }
+  threshold_ = std::pow(2, 1.0 / 6.0) * sigma_;
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;
   weight_neighbs_bind_.resize(_n_neighbs_max + 1);
@@ -90,6 +91,18 @@ void FilamentManager::UpdateForces() {
       pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
+  }
+  if (proto_.size() == 2) {
+    // this some jank 1-D wca potential type jawn
+    double r{proto_[1].pos_[1] - proto_[0].pos_[1]};
+    if (r < threshold_) {
+      double f_mag{
+          48 * epsilon_ *
+          (Pow(sigma_, 12) / Pow(r, 13) - 0.5 * Pow(sigma_, 6) / Pow(r, 7))};
+      // printf("F_MAG IS %g\n", f_mag);
+      proto_[1].force_[1] += f_mag;
+      proto_[0].force_[1] -= f_mag;
+    }
   }
   proteins_->UpdateExtensions();
 }

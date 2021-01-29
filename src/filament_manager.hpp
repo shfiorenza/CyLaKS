@@ -15,7 +15,7 @@ private:
   Vec<double> weight_neighbs_bind_;
   Vec<double> weight_neighbs_unbind_;
 
-  double sigma_{25.0};    // nm
+  double sigma_{4.0};     // nm
   double epsilon_{1.0};   // kbT
   double threshold_{0.0}; // nm
 

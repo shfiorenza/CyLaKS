@@ -95,6 +95,7 @@ void FilamentManager::UpdateForces() {
   if (proto_.size() == 2) {
     // this some jank 1-D wca potential type jawn
     double r{proto_[1].pos_[1] - proto_[0].pos_[1]};
+    // printf("threshold is %g\n", threshold_);
     if (r < threshold_) {
       double f_mag{
           48 * epsilon_ *

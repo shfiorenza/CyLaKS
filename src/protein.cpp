@@ -96,15 +96,27 @@ void Protein::UpdateNeighbors_Bind_II() {
   double r_y{site->filament_->pos_[1] - neighb_fil->pos_[1]};
   double r_x_max{sqrt(Square(spring_.r_max_) - Square(r_y))};
   int delta_max{(int)std::ceil(r_x_max / Params::Filaments::site_size)};
+  // BindingSite *scratch[neighbors_bind_ii_.size()];
   for (int delta{-delta_max}; delta <= delta_max; delta++) {
     BindingSite *neighb{neighb_fil->GetNeighb(site, delta)};
     if (neighb == nullptr) {
       continue;
     }
     if (neighb->occupant_ == nullptr) {
+      // scratch[n_neighbors_bind_ii_++] = neighb;
       neighbors_bind_ii_[n_neighbors_bind_ii_++] = neighb;
     }
   }
+  // printf("%i neighbs\n", n_neighbors_bind_ii_);
+  // BindingSite *truncated[n_neighbors_bind_ii_];
+  // for (int i_entry{0}; i_entry < n_neighbors_bind_ii_; i_entry++) {
+  //   truncated[i_entry] = scratch[i_entry];
+  // }
+  // // Shuffle then transfer data
+  // SysRNG::Shuffle(truncated, n_neighbors_bind_ii_, sizeof(BindingSite *));
+  // for (int i_entry{0}; i_entry < n_neighbors_bind_ii_; i_entry++) {
+  //   neighbors_bind_ii_[i_entry] = truncated[i_entry];
+  // }
 }
 
 double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
@@ -115,10 +127,14 @@ double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
   double r{sqrt(Square(r_x) + Square(r_y))};
   // printf("r = %g\n", r);
   if (r < spring_.r_min_ or r > spring_.r_max_) {
+    // printf("r_x = %g\n", r_x);
+    // printf("doink\n");
     return 0.0;
   }
   double weight_spring{spring_.GetWeight_Bind(r)};
+  // printf("wt = %g\n", weight_spring);
   double weight_site{neighb->GetWeight_Bind()};
+  // printf("WTT = %g\n", weight_site);
   return weight_spring * weight_site;
 }
 
@@ -135,6 +151,7 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
     Sys::Log(2, "p_cum = %g\n", p_cum);
     if (ran < p_cum) {
       Sys::Log(2, "*** chose neighb %i ***\n\n", neighb->index_);
+      Sys::i_picked_[i_neighb]++;
       return neighb;
     }
   }
@@ -188,6 +205,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
 
 double Protein::GetWeight_Bind_II() {
 
+  // UpdateExtension();
   double tot_weight{0.0};
   UpdateNeighbors_Bind_II();
   for (int i_neighb{0}; i_neighb < n_neighbors_bind_ii_; i_neighb++) {

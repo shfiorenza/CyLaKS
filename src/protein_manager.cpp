@@ -179,7 +179,7 @@ void ProteinManager::InitializeTestEnvironment() {
   Sys::Log("Initializing test '%s'\n", Sys::test_mode_.c_str());
   using namespace Params;
   if (Sys::test_mode_ == "xlink_bind_ii") {
-    Xlinks::k_off_ii = 14.3;
+    Xlinks::k_off_ii = 143;
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
@@ -203,17 +203,19 @@ void ProteinManager::InitializeTestEnvironment() {
     Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
     Vec<double> p_unbind(2 * x_max + 1,
                          xlinks_.p_event_.at("unbind_ii").GetVal());
+    double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
     for (int x{-x_max}; x <= x_max; x++) {
       int x_index{x_max + x};
-      // printf("x = %i\n", x);
-      // printf("x_index = %i\n", x_index);
+      printf("x = %i\n", x);
+      printf("x_index = %i\n", x_index);
       // x = abs(x);
-      double r_x{abs(x) * Filaments::site_size};
+      double r_x{x * Filaments::site_size + offset};
+      printf("r_x = %g\n", r_x);
       double r{sqrt(Square(r_x) + Square(r_y))};
       if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
         p_bind[x_index] *= 0.0;
         p_unbind[x_index] *= 0.0;
-        // printf("yoink");
+        printf("yoink");
         continue;
       }
       double dr{r - Params::Xlinks::r_0};
@@ -573,12 +575,13 @@ void ProteinManager::InitializeTestEvents() {
     xlinks_.AddPop("bind_ii", is_singly_bound);
     // int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
     // printf("**x_max = %i**\n", x_max);
+    double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
     // Helper functions for Bind_II event structure
     auto poisson_bind_ii = [&](double p, int n) {
       for (int x{0}; x < test_stats_.at("bind_ii").size(); x++) {
-        int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
-        int c{x == x_max ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
-        int n_entries{c * (int)xlinks_.sorted_.at("bind_ii").size_};
+        // int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
+        // int c{x == x_max ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
+        int n_entries{(int)xlinks_.sorted_.at("bind_ii").size_};
         test_stats_.at("bind_ii")[x].second += n_entries;
       }
       if (p == 0.0) {
@@ -603,9 +606,10 @@ void ProteinManager::InitializeTestEvents() {
           return;
         }
         double r_x{head->pos_[0] - bound_head->pos_[0]};
-        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
-        // int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
-        test_stats_.at("bind_ii")[x + 4].first++;
+        double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
+        int x{(int)std::round((r_x - offset) / Params::Filaments::site_size)};
+        int x_max{int(test_stats_.at("unbind_ii").size() - 1) / 2};
+        test_stats_.at("bind_ii")[x + x_max].first++;
       } else {
         Sys::ErrorExit("Bind_II (TEST)");
       }
@@ -629,7 +633,8 @@ void ProteinManager::InitializeTestEvents() {
       if (xlinks_.sorted_.at("unbind_ii").size_ > 0) {
         auto head{xlinks_.sorted_.at("unbind_ii").entries_[0]};
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
+        double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
+        int x{(int)std::round((r_x - offset) / Params::Filaments::site_size)};
         int x_max{int(test_stats_.at("unbind_ii").size() - 1) / 2};
         test_stats_.at("unbind_ii")[x + x_max].second += 1;
       }
@@ -649,10 +654,8 @@ void ProteinManager::InitializeTestEvents() {
         xlinks_.FlagForUpdate();
         filaments_->FlagForUpdate();
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        // size_t x{
-        //     (size_t)std::abs(std::round(r_x /
-        //     Params::Filaments::site_size))};
-        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
+        double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
+        int x{(int)std::round((r_x - offset) / Params::Filaments::site_size)};
         int x_max{int(test_stats_.at("unbind_ii").size() - 1) / 2};
         test_stats_.at("unbind_ii")[x + x_max].first++;
         // bool head->parent_->UpdateExtension();

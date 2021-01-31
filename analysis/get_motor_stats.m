@@ -1,6 +1,6 @@
 function mot_stats = get_motor_stats(base_name, seeds, plot_flag)
-
 %{
+clear variables; 
 base_name = "/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility";
 seeds = [0, 1, 2, 3, 4, 5];
 do_plot = true;
@@ -30,7 +30,7 @@ if any(contains(params, "COUNT ") ~= 0)
     n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
 end
 n_sites = sscanf(values{contains(params, "n_sites[0]")}, '%i');
-site_size = 0.0082; % in um
+site_size = 0.008; % in um
 
 runlengths = zeros([(n_seeds*n_mts*n_sites) 1]);
 lifetimes = zeros([(n_seeds*n_mts*n_sites) 1]);
@@ -192,31 +192,33 @@ if do_plot
     % Display mean runlength
     dim1 = [0.55 0.65 0.2 0.2];
     str1 = sprintf('Mean processivity: %i +/- %i nm', int32(mean_run), int32(err_run));
-    annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on');
+    annotation('textbox', dim1, 'String', str1, 'FontSize', 14, 'FitBoxToText', 'on');
     % Display mean lifetime
-    dim2 = [0.55 0.6 0.2 0.2];
-    str2 = sprintf('Mean life time: %#.1f +/- %#.2f s', mean_time, err_time);
-    annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on');
+    dim2 = [0.55 0.58 0.2 0.2];
+    str2 = sprintf('Mean life time: %#.2f +/- %#.2f s', mean_time, err_time);
+    annotation('textbox', dim2, 'String', str2, 'FontSize', 14, 'FitBoxToText', 'on');
     % Display mean velocity
-    dim3 = [0.55 0.55 0.2 0.2];
+    dim3 = [0.55 0.51 0.2 0.2];
     str3 = sprintf('Mean velocity: %i +/- %i nm/s', int32(mean_vel), int32(err_vel));
-    annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on');
+    annotation('textbox', dim3, 'String', str3, 'FontSize', 14, 'FitBoxToText', 'on');
     % Cosmetic stuff
-    xlabel('Processivity (nm)');
-    ylabel('Counts');
-    
+    xlabel('Processivity (nm)', 'FontSize', 20);
+    ylabel('Counts', 'FontSize', 20);
+    set(gca, 'FontSize', 20);
     
     fig2 = figure();
     set(fig2, 'Position', [75, 75, 960, 600]);
     histfit(lifetimes, n_bins, 'exponential');
-    xlabel('Lifetime (s)');
-    ylabel('Counts');
+    xlabel('Lifetime (s)', 'FontSize', 20);
+    ylabel('Counts', 'FontSize', 20);
+    set(gca, 'FontSize', 20);
     
     fig3 = figure();
     set(fig3, 'Position', [100, 100, 960, 600]);
     histfit(velocities, n_bins, 'normal');
-    xlabel('Velocity (nm/s)');
-    ylabel('Counts');
+    xlabel('Velocity (nm/s)', 'FontSize', 20);
+    ylabel('Counts', 'FontSize', 20);
+    set(gca, 'FontSize', 20);
     
 end
 

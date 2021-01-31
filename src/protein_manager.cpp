@@ -188,10 +188,11 @@ void ProteinManager::InitializeTestEnvironment() {
     printf("r_max = %g\n", r_max);
     double r_x_max{sqrt(Square(r_max) - Square(r_y))};
     printf("r_x_max = %g\n", r_x_max);
-    size_t x_max((size_t)std::ceil(r_x_max / Filaments::site_size));
-    printf("x_max = %zu\n", x_max);
+    int x_max((int)std::ceil(r_x_max / Filaments::site_size));
+    printf("x_max = %i\n", x_max);
     // Initialize filament environment
     Filaments::count = 2;
+    Sys::Log("  COUNT = 2\n");
     Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
     Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
     Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
@@ -199,25 +200,36 @@ void ProteinManager::InitializeTestEnvironment() {
     Filaments::translation_enabled[1] = false;
     Filaments::rotation_enabled = false;
     filaments_->Initialize(this);
-    Vec<double> p_bind(x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
-    Vec<double> p_unbind(x_max + 1, xlinks_.p_event_.at("unbind_ii").GetVal());
-    for (int x{0}; x <= x_max; x++) {
-      double lambda{0.5};
-      double r_x{x * Filaments::site_size};
+    Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
+    Vec<double> p_unbind(2 * x_max + 1,
+                         xlinks_.p_event_.at("unbind_ii").GetVal());
+    for (int x{-x_max}; x <= x_max; x++) {
+      int x_index{x_max + x};
+      // printf("x = %i\n", x);
+      // printf("x_index = %i\n", x_index);
+      // x = abs(x);
+      double r_x{abs(x) * Filaments::site_size};
       double r{sqrt(Square(r_x) + Square(r_y))};
       if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
-        p_bind[x] *= 0.0;
-        p_unbind[x] *= 0.0;
+        p_bind[x_index] *= 0.0;
+        p_unbind[x_index] *= 0.0;
+        // printf("yoink");
         continue;
       }
       double dr{r - Params::Xlinks::r_0};
       double dE{0.5 * Params::Xlinks::k_spring * Square(dr)};
-      p_bind[x] *= exp(-(1.0 - lambda) * dE / Params::kbT);
-      p_unbind[x] *= exp(lambda * dE / Params::kbT);
+      p_bind[x_index] *= exp(-(1.0 - _lambda_spring) * dE / Params::kbT);
+      p_unbind[x_index] *= exp(_lambda_spring * dE / Params::kbT);
     }
     test_ref_.emplace("bind_ii", p_bind);
     test_ref_.emplace("unbind_ii", p_unbind);
-    Vec<Pair<size_t, size_t>> zeros(x_max + 1, {0, 0});
+    /*
+    for (int i{0}; i < test_ref_.at("bind_ii").size(); i++) {
+      printf("b(ub)[%i] = %#.3g (%#.3g)\n", i, test_ref_.at("bind_ii")[i],
+             test_ref_.at("unbind_ii")[i]);
+    }
+    */
+    Vec<Pair<size_t, size_t>> zeros(2 * x_max + 1, {0, 0});
     test_stats_.emplace("bind_ii", zeros);
     test_stats_.emplace("unbind_ii", zeros);
     // Place first xlink head on lower MT; remains static for entire sim
@@ -559,10 +571,13 @@ void ProteinManager::InitializeTestEvents() {
       return {};
     };
     xlinks_.AddPop("bind_ii", is_singly_bound);
+    // int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
+    // printf("**x_max = %i**\n", x_max);
     // Helper functions for Bind_II event structure
     auto poisson_bind_ii = [&](double p, int n) {
       for (int x{0}; x < test_stats_.at("bind_ii").size(); x++) {
-        int c{x == 0 ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
+        int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
+        int c{x == x_max ? 1 : 2}; // 1 site at x = 0. Otherwise, 2 due to
         int n_entries{c * (int)xlinks_.sorted_.at("bind_ii").size_};
         test_stats_.at("bind_ii")[x].second += n_entries;
       }
@@ -588,9 +603,9 @@ void ProteinManager::InitializeTestEvents() {
           return;
         }
         double r_x{head->pos_[0] - bound_head->pos_[0]};
-        size_t x{
-            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
-        test_stats_.at("bind_ii")[x].first++;
+        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
+        // int x_max{int(test_stats_.at("bind_ii").size() - 1) / 2};
+        test_stats_.at("bind_ii")[x + 4].first++;
       } else {
         Sys::ErrorExit("Bind_II (TEST)");
       }
@@ -614,9 +629,9 @@ void ProteinManager::InitializeTestEvents() {
       if (xlinks_.sorted_.at("unbind_ii").size_ > 0) {
         auto head{xlinks_.sorted_.at("unbind_ii").entries_[0]};
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        size_t x{
-            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
-        test_stats_.at("unbind_ii")[x].second += 1;
+        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
+        int x_max{int(test_stats_.at("unbind_ii").size() - 1) / 2};
+        test_stats_.at("unbind_ii")[x + x_max].second += 1;
       }
       if (p == 0.0) {
         return 0;
@@ -634,9 +649,12 @@ void ProteinManager::InitializeTestEvents() {
         xlinks_.FlagForUpdate();
         filaments_->FlagForUpdate();
         double r_x{head->pos_[0] - head->GetOtherHead()->pos_[0]};
-        size_t x{
-            (size_t)std::abs(std::round(r_x / Params::Filaments::site_size))};
-        test_stats_.at("unbind_ii")[x].first++;
+        // size_t x{
+        //     (size_t)std::abs(std::round(r_x /
+        //     Params::Filaments::site_size))};
+        int x{(int)(std::round(r_x / Params::Filaments::site_size))};
+        int x_max{int(test_stats_.at("unbind_ii").size() - 1) / 2};
+        test_stats_.at("unbind_ii")[x + x_max].first++;
         // bool head->parent_->UpdateExtension();
       } else {
         Sys::ErrorExit("Unbind_II (TEST)");

@@ -2,7 +2,7 @@ clear variables;
 
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 
-sim_name = 'testino';
+sim_name = 'test';
 
 movie_name = 'testin2';
 start_frame = 1;
@@ -173,13 +173,13 @@ for i_data = start_frame : frames_per_plot : end_frame
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
             if(id ~= -1)
-               % if i_mt == 1 % comment here
+                if i_mt == 1 % comment here
                     dx = -1;
                     mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
                     pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
-                 %{   
+                % %{   
                 else
                     dx = 1;
                     mt_dir = -1;
@@ -187,7 +187,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                     pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
                 end
-                 %}
+                % %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
                     if(n_mts > 1 && i_mt == 1)

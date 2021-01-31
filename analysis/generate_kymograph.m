@@ -2,22 +2,26 @@
 clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'run_hybrid_motor/hybrid_motor_0.05_0';
-%sim_name = 'ablation';
+sim_name = 'run_heterodimer_kymograph/hybrid_motor_10_0';
+%sim_name = 'run_tubulin/tubulin_1_0';
+%sim_name = 'run_endtag_ablation/ablation';
 %sim_name = 'run_hetero_tubulin/hetero_tubulin_1_0';
 %sim_name = 'run_endtag_vs_coop/endtag_1750_1000_0';
 dwell_time = 0.1;  % dwell time of theoretical camera
 
-i_start = 4150; %1150; %4150;
-i_end = 4650; %1650; %4650;
+i_start = 1; %1150; %4150;
+i_end = -1; %1650; %4650;
+frac_visible = [1, 1]; %[2,3] % [numerator, denominator]; [1,1] for all visibile
+gfp_intensity = 25; %1.5 % Controls how bright a single motor is (1 typically)
 
-scale_x = 10; % microns
-scale_t = 5; % seconds
+
+scale_x = 2.5; %2.5; %1; % microns
+scale_t = 10; %30; %10; % seconds
+
 
 % parameters for making simulated image (i.e., each frame)
-scale_factor = 50; % 15 % Controls how bright a single motor is (1 typically)
-siteLength = 8;
-pixelLength = 150; % 60; %150; % 15;
+siteLength = 8.2;
+pixelLength = 150;
 pixelPad = 5;
 gaussSigma = 1.0;
 doPlot = 0;
@@ -59,7 +63,7 @@ n_dims = 2;
 
 posFile = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);
 occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
-proteinFile = sprintf('%s/%s_protein_ids.file', file_dir, sim_name);
+proteinFile = sprintf('%s/%s_protein_id.file', file_dir, sim_name);
 
 % filament position data; gives coordinates of each endpoint
 filament_pos = zeros(n_mts, n_datapoints);
@@ -90,15 +94,40 @@ site_ID = 0;
 xlink_ID = 1;
 motor_ID = 2;
 
+%{
 motor_matrix = occupancy;
-site_matrix = occupancy;
-
 motor_matrix(motor_matrix ~= motor_ID) = 0;
 motor_matrix(motor_matrix == motor_ID) = scale_factor;
+%}
+
+motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %protein_ids;
+for i_data = 1 : n_datapoints
+   for i_mt = 1 : n_mts
+       for i_site = 1 : mt_lengths(i_mt)
+           id = protein_ids(i_site, i_mt, i_data);
+           if id ~= -1
+               if mod(frac_visible(1)*id, frac_visible(2)) == 0
+                  motor_matrix(i_site, i_mt, i_data) = gfp_intensity;
+               end
+           end
+       end
+   end
+end
+%{
+motor_matrix = protein_ids;
+motor_matrix(mod(motor_matrix, 10) ~= 0) = scale_factor;
+motor_matrix(mod(motor_matrix, 10) == 0) = -1;
+motor_matrix(motor_matrix == -1) = 0;
+%}
+
+
+site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %occupancy;
+%{
 site_matrix(site_matrix == xlink_ID) = -1;
 site_matrix(site_matrix == motor_ID) = -1;
 %site_matrix(site_matrix == site_ID) = 1;
 site_matrix(site_matrix == -1) = 0;
+%}
 
 if i_end == -1
     i_end = n_datapoints;
@@ -121,6 +150,9 @@ if n_mts == 2
     n_sites_diff_max = ceil(max_diff_x / siteLength);
     pixel_diff_max = ceil(max_diff_x / pixelLength);
     pixels_x = pixels_x + (pixel_diff_max - 1);
+end
+if n_mts == 2
+   pixels_x = pixels_x + 1; 
 end
 pixels_y = ceil((i_end - i_start) / dwell_steps);
 final_img = zeros(pixels_y, pixels_x, 3);
@@ -152,6 +184,7 @@ for i_data = i_start : dwell_steps :i_end - dwell_steps
     % green channel - motors
     imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
+    imageMotors = imageMotors + ones(size(imageMotors))*bkgLevel + randn(size(imageMotors))*noiseStd;
     imageMotors = imageMotors/intensityMax; %convert to grayscale
     % red channel - microtubule
     %lineMatrix = ones(size(dataMatrix));
@@ -169,17 +202,25 @@ for i_data = i_start : dwell_steps :i_end - dwell_steps
 end
 %} 
 fig1 = figure;
-set(fig1, 'Position', [100 100 500 700]);
+set(fig1, 'Position', [100 100 200 700]);
 axes('Units','Normalize','Position',[0 0 1 1]);
-imagesc(final_img);
+img1 = imagesc(final_img);
 set(gca,'Xtick',[]); set(gca,'Ytick',[]);
 set(gca, 'Box', 'off');
 % Add a scale bar
 len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
-l = line([15 len_x+15],[5 5],'Color','w','LineWidth',4);
-%l = line([9 len_x+9],[200 200],'Color','w','LineWidth',4);
+%pos = get(gcf, 'Position') %// gives x left, y bottom, width, height
+%{
+l = line([103.5 103.5-len_x],[2625 2625],'Color','w','LineWidth',4); %endtags
+l2 = line([103 103],[2600 2600-len_y],'Color','w','LineWidth',4); %endtags
+%}
+%{
+l = line([57 57-len_x],[980 980],'Color','w','LineWidth',4); %tubulin
+l2 = line([56.75 56.75],[970 970-len_y],'Color','w','LineWidth',4); %tubulin
+%}
+l = line([57 57-len_x],[980 980],'Color','w','LineWidth',4); %tubulin
+l2 = line([56.25 56.25],[970 970-len_y],'Color','w','LineWidth',4); %tubulin
+
 set(l,'clipping','off')
-l2 = line([10 10],[10 len_y+10],'Color','w','LineWidth',4);
-%l2 = line([10 10],[350 len_y+350],'Color','w','LineWidth',4);
 set(l2,'clipping','off')

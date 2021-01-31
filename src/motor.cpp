@@ -89,7 +89,8 @@ void Motor::ApplyLatticeDeformation() {
         if (Sys::test_mode_.empty()) {
           continue;
         }
-        if (Sys::test_mode_ != "filament_ablation") {
+        if (Sys::test_mode_ != "filament_ablation" or
+            Sys::i_step_ >= Sys::ablation_step_) {
           continue;
         }
         if (epicenter->filament_->index_ == 0 and i_scan > mt_length) {

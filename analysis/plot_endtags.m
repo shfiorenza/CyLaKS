@@ -1,7 +1,7 @@
 %{
 clear variables;
 base_names = ["endtag"];
-folder = "run_endtag_vs_coop";
+folder = "run_endtag_coop";
 % Data for initial plot that compares to previous paper
 %{
 base_names = ["endtag_1.5nM"];
@@ -49,7 +49,7 @@ folder = "run_endtag_both";
 %}
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
-ranges = [10, 50, 100, 1000];
+ranges = [10, 30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
 seeds = [0, 1, 2, 3]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
@@ -59,7 +59,7 @@ exp_err_mt_lengths =  [0.79, 0.79, 0.79, 0.79, 0.79, 0.79, 0.79]; % in um;
 exp_endtag_lengths = [1.19, 1.27, 1.43, 1.61, 1.63, 1.74, 2.21]; % in um
 exp_err_endtag_lengths = [0.11, 0.10, 0.12, 0.12, 0.18, 0.16, 0.18, ]; % in um
 
-site_size = 0.008; % in um
+site_size = 0.0082; % in um
 %n_runs = length(base_names);
 n_runs = length(ranges);
 n_mts = length(mt_lengths);
@@ -92,6 +92,8 @@ end
 %}
 
 color = [0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
+    0.494, 0.184, 0.556; 0.466, 0.674, 0.188; 0.301, 0.745, 0.933; ...
+    0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
     0.494, 0.184, 0.556; 0.466, 0.674, 0.188; 0.301, 0.745, 0.933];
 marker = {'o', 'o', 'o', 'o', 'o'};
 % Color & markers for baseline varied conc
@@ -100,8 +102,8 @@ color = [160 160 160; 128 128 128; 96 96 80; 64 64 64; 0 0 0 ] / 255;
 marker = ['o', 's', '^', 'v', 'd'];
 %}
 
-%fig1 = figure();
-%set(fig1, 'Position', [50, 50, 1080, 720])
+fig1 = figure();
+set(fig1, 'Position', [50, 50, 1080, 720])
 hold all;
 %{
 % Plot exp data with just vertical error bars
@@ -110,7 +112,7 @@ exp_data = errorbar(exp_mt_lengths, exp_endtag_lengths, ...
 exp_data.MarkerFaceColor = exp_data.MarkerEdgeColor;
 % Plot sim data
 %}
-
+%{
 for i_run = 1 : n_runs
     sim_data = errorbar(mt_lengths * site_size, avg_endtag_length(i_run, :), ...
         err_endtag_length(i_run, :), 'o','MarkerSize', 12, 'LineWidth', 2, ...
@@ -119,10 +121,10 @@ for i_run = 1 : n_runs
    sim_data.Color = sim_data.MarkerFaceColor;
 end
 %}
-%{
+
 for i_mt = 1 : n_mts
-    sim_data = errorbar(ranges * site_size, avg_endtag_length(:, i_mt), ...
-        err_endtag_length(:, i_mt), 'o','MarkerSize', 12, 'LineWidth', 2, ...
+    % sim_data = errorbar(ranges * site_size, avg_endtag_length(:, i_mt),
+    sim_data = semilogx(avg_endtag_length(:, i_mt), 'o','MarkerSize', 12, 'LineWidth', 2, ...
         'MarkerEdgeColor', color(i_mt, :));
    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
    sim_data.Color = sim_data.MarkerFaceColor;
@@ -165,16 +167,25 @@ end
 %}
 
 
-xlabel("Microtubule length (\mum)", 'FontSize', 18);
-ylabel("Endtag length (\mum)", 'Fontsize', 18);
-set(gca, 'FontSize', 18);
+%xlabel("Microtubule length (\mum)", 'FontSize', 18);
+xlabel("Range of potential (\mum)", 'FontSize', 24);
+ylabel("Endtag length (\mum)", 'Fontsize', 24);
+set(gca, 'FontSize', 24);
 %legendLabel = ["Experiment", "Simulation"];
 %legend(legendLabel,'location', 'northwest', 'FontSize', 18);
 %legend('boxoff');
-ylim([0 3.5]); % 2]); %-0.25 11]);
-yticks([0 1 2 3]); %5 10]);
-xlim([0 15]); % 12]);
-xticks([0 5 10 15]);
+ylim([0 2.25]); % 2]); %-0.25 11]);
+yticks([0 0.5 1 1.5 2]); %5 10]);
+xlim([0 length(ranges) + 1]);
+xticks(1:1:length(ranges));
+xtickangle(45);
+ticks = cellstr(num2str(ranges(1:5)'*0.008, '%#.1g'));
+ticks = [ticks; cellstr(num2str(ranges(6:9)'*0.008, '%#.2g'))];
+ticks = [ticks; cellstr(num2str(ranges(10:12)'*0.008, '%#.2g'))];
+
+xticklabels(ticks);
+%xlim([0 15]); % 12]);
+%xticks([0 5 10 15]);
 
 % Varied conc stylistic stuff
 %{
@@ -214,8 +225,9 @@ legend('boxoff');
 %}
 
 % Short- & long-range coop w/o stepping FX stylistic stuff
-legendLabel = ["Range = 0.08 \mum", "Range = 0.4 \mum", "Range = 0.8 \mum", "Range = 8 \mum"];
-legend(legendLabel,'location', 'northwest', 'FontSize', 18);
+%legendLabel = cellstr(num2str(ranges'*0.0082, 'Range = %#.2g \mu m'));
+legendLabel = cellstr(num2str(mt_lengths'*0.008, 'L = %i \\mum'));
+legend(legendLabel,'location', 'northwest', 'FontSize', 24);
 legend('boxoff');
 %{
 legendLabel = ["Experiment", "Simulation", ...

@@ -92,7 +92,7 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
-  if (proto_.size() == 2) {
+  if (proto_.size() == 2 and proteins_->xlinks_.active_) {
     // this some jank 1-D wca potential type jawn
     double r{proto_[1].pos_[1] - proto_[0].pos_[1]};
     // printf("threshold is %g\n", threshold_);

@@ -151,7 +151,7 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
     Sys::Log(2, "p_cum = %g\n", p_cum);
     if (ran < p_cum) {
       Sys::Log(2, "*** chose neighb %i ***\n\n", neighb->index_);
-      Sys::i_picked_[i_neighb]++;
+      // Sys::i_picked_[i_neighb]++;
       return neighb;
     }
   }

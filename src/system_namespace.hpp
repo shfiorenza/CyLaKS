@@ -5,7 +5,7 @@
 
 namespace Sys {
 
-inline int i_picked_[9];
+// inline int i_picked_[9];
 
 inline std::string sim_name_;
 inline std::string test_mode_;

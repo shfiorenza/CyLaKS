@@ -1,9 +1,9 @@
-%
+%{
 % Often-changed variables
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
-simName = 'testino7';
+simName = 'run_xlink_diffusion/xlink_diffusion';
 n_taus = 10;
-i_tau = 1.0;
+i_tau = 2.5;
 tau_increment = i_tau;
 
 % Open log file and parse it into param labels & their values
@@ -173,20 +173,28 @@ D = fit(2) / 2
 %}
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 960, 600])
+set(fig1, 'Position', [50, 50, 480, 720])
 % Plot data
-errorbar(taus, MSD, MSD_err, 'o', 'MarkerSize', 10, 'LineWidth', 2);
+%errorbar(taus, MSD, MSD_err, 'o', 'MarkerSize', 10, 'LineWidth', 2);
+sim_data = plot(taus, MSD, 'o', 'MarkerSize', 14, 'MarkerEdgeColor', [0 0.447 0.741]);
+sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+sim_data.Color = sim_data.MarkerFaceColor;
 hold on
 % Plot fit
-plot(taus, taus_padded * fit, '--', 'LineWidth', 2)
-ylabel('Mean squared displacement (\mum^2)', 'FontSize', 14);
-xlabel('Tau (s)', 'FontSize', 14);
-title('Doubly-bound crosslinkers', 'FontSize', 16);
-legend('Sim data', 'Linear fit', 'location', 'northwest', 'FontSize', 14);
-xlim([0.0 (max_tau + tau_increment)]);
-ax = gca;
-ax.FontSize = 14;
+plot(taus, taus_padded * fit, 'LineWidth', 2)
+ylabel('Mean squared displacement (\mum^2)', 'FontSize', 2);
+xlabel('Tau (s)', 'FontSize', 20);
+set(gca, 'FontSize', 24);
+%title('Doubly-bound crosslinkers', 'FontSize', 16);
+legend('Simulation', 'Linear fit', 'location', 'northwest', 'FontSize', 18);
+xlim([-1 (max_tau + tau_increment)]);
+ylim([-0.1 1.2]);
+yticks([0 0.5 1.0])
+% Force avg_occu plot on top of avg_occu_theory plot
+h = get(gca,'Children');
+set(gca,'Children',[h(2) h(1)])
+
 % Plot D_observed obtained via linear regression
-dim = [0.142 0.7 .5 .1];
-str = sprintf("D_{obs} = %#.3g", D) + " \mum^2s^{-1}";
-annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on', 'FontSize', 14);
+dim = [0.255 0.71 .5 .1];
+str = sprintf("D = %#.3g", D) + " \mum^2s^{-1}";
+annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on', 'FontSize', 18);

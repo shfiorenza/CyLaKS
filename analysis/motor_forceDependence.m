@@ -1,8 +1,8 @@
-%{
+
 clear variables;
 sim_name = 'run_motor_forceVel/k401_forceVel';
-applied_forces = [-6, -5, -4, -3, -2, -1, 0];
-seeds = [0, 1, 2, 3];
+applied_forces = [-5.25, -4.25, -3.25]; %[-6, -5, -4, -3, -2, -1, 0];
+seeds = [0]; % , 1, 2, 3];
 
 exp_forces = [0, -1.0 : -0.5 : -6.0];
 exp_runlengths = [940, 770, 480, 500, 270, 330, 250, 150, 240, 120, 70, 50];
@@ -20,7 +20,7 @@ err_lifetimes = zeros(n_runs, 1);
 avg_velocities = zeros(n_runs, 1);
 err_velocities = zeros(n_runs, 1);
 for i_run = 1 : n_runs 
-    name = sprintf("%s/%s_%i", file_dir, sim_name, abs(applied_forces(i_run)));
+    name = sprintf("%s/%s_%g", file_dir, sim_name, abs(applied_forces(i_run)));
     mot_stats = get_motor_stats(name, seeds);
     avg_runlengths(i_run) = mot_stats(1);
     err_runlengths(i_run) = mot_stats(2);

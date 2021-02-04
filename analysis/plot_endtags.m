@@ -92,8 +92,6 @@ end
 %}
 
 color = [0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
-    0.494, 0.184, 0.556; 0.466, 0.674, 0.188; 0.301, 0.745, 0.933; ...
-    0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
     0.494, 0.184, 0.556; 0.466, 0.674, 0.188; 0.301, 0.745, 0.933];
 marker = {'o', 'o', 'o', 'o', 'o'};
 % Color & markers for baseline varied conc
@@ -103,7 +101,7 @@ marker = ['o', 's', '^', 'v', 'd'];
 %}
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 1080, 720])
+set(fig1, 'Position', [50, 50, 960, 720])
 hold all;
 %{
 % Plot exp data with just vertical error bars
@@ -122,12 +120,21 @@ for i_run = 1 : n_runs
 end
 %}
 
+%{
+x = logspace(-3, 1, 12);
+y = linspace(1,12, 12);
+semilogx(x, y);
+return
+%}
+
 for i_mt = 1 : n_mts
-    % sim_data = errorbar(ranges * site_size, avg_endtag_length(:, i_mt),
-    sim_data = semilogx(avg_endtag_length(:, i_mt), 'o','MarkerSize', 12, 'LineWidth', 2, ...
-        'MarkerEdgeColor', color(i_mt, :));
-   sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
-   sim_data.Color = sim_data.MarkerFaceColor;
+    %sim_data = errorbar(ranges * site_size, avg_endtag_length(:, i_mt), ...
+    %    err_endtag_length(:, i_mt), 'o','MarkerSize', 14, 'LineWidth', 2, ...
+    %    'MarkerEdgeColor', color(i_mt, :));
+    sim_data = plot(ranges * site_size, avg_endtag_length(:, i_mt), ...
+        'o','MarkerSize', 14, 'MarkerEdgeColor', color(i_mt, :));
+    sim_data.MarkerFaceColor = sim_data.MarkerEdgeColor;
+    sim_data.Color = sim_data.MarkerFaceColor;
 end
 %}
 %{
@@ -168,24 +175,21 @@ end
 
 
 %xlabel("Microtubule length (\mum)", 'FontSize', 18);
-xlabel("Range of potential (\mum)", 'FontSize', 24);
-ylabel("Endtag length (\mum)", 'Fontsize', 24);
+xlabel("Range of potential (\mum)");
+ylabel("Endtag length (\mum)");
 set(gca, 'FontSize', 24);
-%legendLabel = ["Experiment", "Simulation"];
-%legend(legendLabel,'location', 'northwest', 'FontSize', 18);
-%legend('boxoff');
-ylim([0 2.25]); % 2]); %-0.25 11]);
+ylim([0 1.9]); % 2]); %-0.25 11]);
 yticks([0 0.5 1 1.5 2]); %5 10]);
-xlim([0 length(ranges) + 1]);
-xticks(1:1:length(ranges));
-xtickangle(45);
-ticks = cellstr(num2str(ranges(1:5)'*0.008, '%#.1g'));
-ticks = [ticks; cellstr(num2str(ranges(6:9)'*0.008, '%#.2g'))];
-ticks = [ticks; cellstr(num2str(ranges(10:12)'*0.008, '%#.2g'))];
-
-xticklabels(ticks);
 %xlim([0 15]); % 12]);
 %xticks([0 5 10 15]);
+xlim([0.05 15]);
+xticks([0.1 1 10]);
+xticklabels([0.1 1 10]);
+set(gca, 'XScale', 'log');
+
+legendLabel = cellstr(num2str(mt_lengths'*0.008, 'L = %i \\mum'));
+legend(legendLabel,'location', 'northwest', 'FontSize', 24);
+legend('boxoff');
 
 % Varied conc stylistic stuff
 %{
@@ -225,10 +229,6 @@ legend('boxoff');
 %}
 
 % Short- & long-range coop w/o stepping FX stylistic stuff
-%legendLabel = cellstr(num2str(ranges'*0.0082, 'Range = %#.2g \mu m'));
-legendLabel = cellstr(num2str(mt_lengths'*0.008, 'L = %i \\mum'));
-legend(legendLabel,'location', 'northwest', 'FontSize', 24);
-legend('boxoff');
 %{
 legendLabel = ["Experiment", "Simulation", ...
     "Simulation - no long-range stepping cooperativity", ...

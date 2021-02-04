@@ -12,16 +12,16 @@ do
     do
         SEED=$(( ${BASE_SEED} + ${I_SEED} ))
         SIM_NAME="${BASE_NAME}_${APPLIED_FORCE}_${I_SEED}"
-        PARAM_FILE="params_temp_${SIM_NAME}.yaml"
+        PARAM_FILE="temp_params_${SIM_NAME}.yaml"
         echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
         cp ${BASE_PARAMS} ${PARAM_FILE}
-        yq w -i ${PARAM_FILE} filaments.f_applied[0] ${APPLIED_FORCE}
-        yq w -i ${PARAM_FILE} filaments.f_applied[1] ${APPLIED_FORCE}
-        yq w -i ${PARAM_FILE} filaments.f_applied[2] ${APPLIED_FORCE}
-        yq w -i ${PARAM_FILE} seed ${SEED}
+        yq eval -i ".filaments.f_applied[0] = ${APPLIED_FORCE}" ${PARAM_FILE}
+        yq eval -i ".filaments.f_applied[1] = ${APPLIED_FORCE}" ${PARAM_FILE}
+        yq eval -i ".filaments.f_applied[2] = ${APPLIED_FORCE}" ${PARAM_FILE}
+        yq eval -i ".seed = ${SEED}" ${PARAM_FILE}
         # Run simulation; '&' allows for all to run concurrently 
         ./sim ${PARAM_FILE} ${SIM_NAME} & 
     done
 done
 wait 
-rm params_temp_${BASE_NAME}_*
+ rm temp_params_${BASE_NAME}_*

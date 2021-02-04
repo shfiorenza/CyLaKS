@@ -12,13 +12,27 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [1000, 500]
-  polarity: [0, 1]
-  x_initial: [0, 0]
-  y_initial: [0, 32]
-  immobile_until: [1500, 1500]
-  f_applied: [0.0, 0.0]
-  translation_enabled: [false, false]
+  n_sites:
+    - 1000
+    - 500
+  polarity:
+    - 0
+    - 1
+  x_initial:
+    - 0
+    - 0
+  y_initial:
+    - 0
+    - 32
+  immobile_until:
+    - 1500
+    - 1500
+  f_applied:
+    - 0.0
+    - 0.0
+  translation_enabled:
+    - false
+    - false
   rotation_enabled: false
 motors:
   n_runs_to_exit: 250

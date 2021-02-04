@@ -13,7 +13,7 @@ do
     PARAM_FILE="temp_params_${SIM_NAME}.yaml"
     echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
     cp ${BASE_PARAMS} ${PARAM_FILE}
-    yq w -i ${PARAM_FILE} seed ${SEED}
+    yq eval -i ".seed = ${SEED}" ${PARAM_FILE}
     # Run simulation; '&' allows for all to run concurrently 
     ./sim ${PARAM_FILE} ${SIM_NAME} & 
 done

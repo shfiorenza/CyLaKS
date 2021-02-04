@@ -2,14 +2,15 @@ clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
 sim_name_base = ["mt_forceVel"];
 %sim_name_base = ["mt_forceVel0.5", "mt_forceVel_5.0", "mt_forceVel_50.0"];
-seeds = [0, 1]; %[0, 1, 2, 3, 4]; 
-applied_force = [5.0, 50.0]; % in pN
+seeds = [0]; %, 1]; %[0, 1, 2, 3, 4]; 
+applied_force = [0.05, 0.5, 5.0, 50.0]; % in pN
+labels = ["0.05", "0.5", "5.0", "50.0"];
 
 n_dims = 2;
 % Open log file and parse it into param labels & their values
 log_file = sprintf(file_dir, sprintf('%s.log', sim_name_base));
 if(~isempty(seeds) && ~isempty(applied_force))
-    log_file = sprintf(file_dir, sprintf('%s_%#.1f_%i.log', sim_name_base, applied_force(1), seeds(1)));
+    log_file = sprintf(file_dir, sprintf('%s_%s_%i.log', sim_name_base, labels(1), seeds(1)));
 end
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
@@ -26,9 +27,9 @@ for i_mt = 1 : n_mts
     string = sprintf('length[%i] ', i_mt - 1);
     ell(i_mt) = sscanf(values{contains(params, string)}, '%g');
     string = sprintf('gamma_par[%i] ', i_mt - 1);
-    gamma_par(i_mt) = 0; %sscanf(values{contains(params, string)}, '%g');
+    gamma_par(i_mt) = sscanf(values{contains(params, string)}, '%g');
     string = sprintf('gamma_perp[%i] ', i_mt - 1);
-    gamma_perp(i_mt) = 0;  %sscanf(values{contains(params, string)}, '%g');
+    gamma_perp(i_mt) = sscanf(values{contains(params, string)}, '%g');
 end
 % Read in system params
 dt = sscanf(values{contains(params, 'dt ')}, '%g');
@@ -48,7 +49,7 @@ expected_vel = zeros(n_sims, n_mts); % in um/s
 for i_sim = 1:n_sims
     for i_mt = 1:n_mts
         % Calculate velocity then convert to um/s
-        expected_vel(i_sim, i_mt) = 0; %(applied_force(i_sim) / gammas(i_mt)) / 1000;
+        expected_vel(i_sim, i_mt) = (applied_force(i_sim) / gamma_par(i_mt));
     end
 end
 
@@ -57,7 +58,7 @@ for i_sim = 1 : n_sims
     for i_seed = 1 : n_seeds
         sim_name = sim_name_base;
         if(~isempty(seeds))
-            sim_name = sprintf('%s_%#.1f_%i', sim_name_base, applied_force(i_sim), seeds(i_seed));
+            sim_name = sprintf('%s_%s_%i', sim_name_base,labels(i_sim), seeds(i_seed));
         end
         filename =sprintf(file_dir, sprintf('%s_filament_pos.file', sim_name))
         file = fopen(filename);
@@ -107,10 +108,8 @@ t = linspace(0, n_datapoints * time_per_datapoint, n_plot_points);
 for i_sim = 1:n_sims
     subplot(1, n_sims + 1, i_sim)
     hold on
-    disp(i_sim)
     for i_mt = 1:n_mts
-        disp(i_mt)
-        errorbar(t, squeeze(avg_velocities(i_mt, i_sim, :)), squeeze(err_velocities(i_sim, i_mt, :)), ...
+        errorbar(t, squeeze(avg_velocities(i_sim, i_mt, :)), squeeze(err_velocities(i_sim, i_mt, :)), ...
             'o', 'LineWidth', 2, 'MarkerSize', 10);
     end
 

@@ -57,6 +57,12 @@ void FilamentManager::GenerateFilaments() {
   for (auto const &pf : proto_) {
     Log("     D_perp[%i] = %g nm^2/s\n", pf.index_, kbT / pf.gamma_[1]);
   }
+  for (auto const &pf : proto_) {
+    Log("      gamma_par[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[0]);
+  }
+  for (auto const &pf : proto_) {
+    Log("       gamma_perp[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[1]);
+  }
   Log("\n");
   /*
   for (int i_fil{0}; i_fil < proto; i_fil++) {

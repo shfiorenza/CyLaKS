@@ -6,7 +6,7 @@ echo "Base parameter file is ${BASE_PARAMS}"
 
 BASE_SEED=198261346419
 
-for I_SEED in 0 1 2 3 4 5
+for I_SEED in 0 1 2 #  3 4 5
 do
     SEED=$(( ${BASE_SEED} + ${I_SEED} ))
     SIM_NAME="${BASE_NAME}_${I_SEED}"

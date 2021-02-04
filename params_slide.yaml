@@ -13,8 +13,8 @@ filaments:
   site_size: 8.2
   n_bd_per_kmc: 1
   n_sites:
-    - 17
-    - 626
+    - 125
+    - 625
     - 2500
   polarity:
     - 0

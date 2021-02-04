@@ -1,8 +1,8 @@
 
 clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
-sim_name_base = 'test2';
-seeds = []; %[0, 1, 2, 3, 4]; 
+sim_name_base = 'mt_diffusion';
+seeds = [0, 1, 2]; %[0, 1, 2, 3, 4]; 
 n_taus = 10;
 i_tau = 0.1; % 10.0;
 
@@ -10,7 +10,7 @@ n_dims = 2;
 % Open log file and parse it into param labels & their values
 log_file = sprintf(file_dir, sprintf('%s.log', sim_name_base));
 if(~isempty(seeds))
-    log_file = sprintf(file_dir, sprintf('%s_%i.log', sim_name_base, seeds(0)));
+    log_file = sprintf(file_dir, sprintf('%s_%i.log', sim_name_base, seeds(1)));
 end
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};

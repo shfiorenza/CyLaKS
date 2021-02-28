@@ -2,8 +2,8 @@
 clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'run_heterodimer_kymograph/hybrid_motor_10_0';
-%sim_name = 'run_tubulin/tubulin_1_0';
+sim_name = 'run_heterodimer_kymograph/hybrid_motor_0.01_0';
+%sim_name = 'run_tubulin_kymograph/tubulin_1_0';
 %sim_name = 'run_endtag_ablation/ablation';
 %sim_name = 'run_hetero_tubulin/hetero_tubulin_1_0';
 %sim_name = 'run_endtag_vs_coop/endtag_1750_1000_0';
@@ -203,6 +203,7 @@ end
 %} 
 fig1 = figure;
 set(fig1, 'Position', [100 100 200 700]);
+%set(fig1, 'Position', [100 100 540 700]);
 axes('Units','Normalize','Position',[0 0 1 1]);
 img1 = imagesc(final_img);
 set(gca,'Xtick',[]); set(gca,'Ytick',[]);

@@ -37,13 +37,13 @@ public:
   ProteinManager() {}
   ~ProteinManager() {
     for (auto const &entry : test_stats_) {
-      printf("For event %s:\n", entry.first.c_str());
+      Sys::Log("For event %s:\n", entry.first.c_str());
       for (int index{0}; index < entry.second.size(); index++) {
         auto stats = entry.second[index];
         double p{double(stats.first) / stats.second};
         double ref{test_ref_.at(entry.first)[index]};
-        printf("  p[%i] = %.3g (%.3g expected) [%zu / %zu events]\n", index, p,
-               ref, stats.first, stats.second);
+        Sys::Log("  p[%i] = %.3g (%.3g expected) [%zu / %zu events]\n", index,
+                 p, ref, stats.first, stats.second);
       }
     }
   }

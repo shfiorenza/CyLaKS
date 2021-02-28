@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 base_names = ["endtag"];
 folder = "run_endtag_coop";
@@ -49,7 +49,7 @@ folder = "run_endtag_both";
 %}
 
 mt_lengths = [250, 500, 750, 1000, 1250, 1750]; % in n_sites
-ranges = [10, 30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
+ranges = [10, 20, 30, 50, 75, 100, 150, 200, 300, 400, 500, 750, 1000];
 seeds = [0, 1, 2, 3]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
@@ -101,7 +101,7 @@ marker = ['o', 's', '^', 'v', 'd'];
 %}
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 960, 720])
+set(fig1, 'Position', [50, 50, 720, 540])
 hold all;
 %{
 % Plot exp data with just vertical error bars
@@ -177,7 +177,7 @@ end
 %xlabel("Microtubule length (\mum)", 'FontSize', 18);
 xlabel("Range of potential (\mum)");
 ylabel("Endtag length (\mum)");
-set(gca, 'FontSize', 24);
+set(gca, 'FontSize', 22);
 ylim([0 1.9]); % 2]); %-0.25 11]);
 yticks([0 0.5 1 1.5 2]); %5 10]);
 %xlim([0 15]); % 12]);
@@ -188,7 +188,7 @@ xticklabels([0.1 1 10]);
 set(gca, 'XScale', 'log');
 
 legendLabel = cellstr(num2str(mt_lengths'*0.008, 'L = %i \\mum'));
-legend(legendLabel,'location', 'northwest', 'FontSize', 24);
+legend(legendLabel,'location', 'northwest', 'FontSize', 20);
 legend('boxoff');
 
 % Varied conc stylistic stuff

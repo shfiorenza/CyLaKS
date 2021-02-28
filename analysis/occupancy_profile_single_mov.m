@@ -1,7 +1,7 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'hybrid_motor_100_0';
+sim_name = 'run_xlink_diffusion/xlink_diffusion_single_0';
 steps_per_plot = 10;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';
@@ -116,7 +116,7 @@ for i = 1:1:int32(n_datapoints)
         hold all
 
         plot(linspace(0, max_sites * site_size, max_sites), motor_occupancy);
-        %plot(linspace(0, n_sites*0.008, n_sites), xlink_occupancy);
+        plot(linspace(0, max_sites * site_size, max_sites), xlink_occupancy);
         %plot(linspace(0, n_sites*0.008, n_sites), net_occupancy);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_accel);

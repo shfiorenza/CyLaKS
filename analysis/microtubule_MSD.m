@@ -1,10 +1,10 @@
-
+%{
 clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
-sim_name_base = 'mt_diffusion';
-seeds = [0, 1, 2]; %[0, 1, 2, 3, 4]; 
+sim_name_base = 'run_mt_diffusion/mt_diffusion';
+seeds = [0, 1, 2, 3, 4, 5];
 n_taus = 10;
-i_tau = 0.1; % 10.0;
+i_tau = 10; % 10.0;
 
 n_dims = 2;
 % Open log file and parse it into param labels & their values
@@ -143,24 +143,48 @@ end
 
 % Plot
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 1500, 500]);
+set(fig1, 'Position', [50, 50, 720, 540]);
+
+data_color = [0, 0.4470, 0.7410; 0.9290, 0.6940, 0.1250; 0.4660, 0.6740, 0.1880];
+line_color = [0.8500, 0.3250, 0.0980; 0.4940, 0.1840, 0.5560; 0.3010, 0.7450, 0.9330];
+color = [0, 0.4470, 0.7410; 0.8500, 0.3250, 0.0980;  0.9290, 0.6940, 0.1250];
+
+c = 1e-6; % convert from nm^2 to um^2
 
 for i_mt = 1:n_mts
-    subplot(1, n_mts + 1, i_mt)
+   % subplot(1, n_mts, i_mt)
     hold on
-    %plot(linspace(0, n_datapoints * time_per_datapoint, n_datapoints), com_x(i_mt, :));
-    %plot(linspace(0, n_datapoints * time_per_datapoint, n_datapoints), com_y(i_mt, :));
-    errorbar(taus, MSD_par(i_mt, :), MSD_par_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
-    plot([0 max_tau], [0 2 * D_par(i_mt) * max_tau], '--', 'LineWidth', 2); %, ...
-    % 'Color', [0.5 0.5 0.5]);
-    errorbar(taus, MSD_perp(i_mt, :), MSD_perp_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
-    plot([0 max_tau], [0 2 * D_perp(i_mt) * max_tau], '--', 'LineWidth', 2);
-    ax = gca;
-    ax.FontSize = 10;
-    xlabel("Tau (s)", 'FontSize', 12);
-    ylabel("Mean squared displacement (\mum^2)", 'FontSize', 12);
-    title({sprintf("L_{MT} = %g", ell(i_mt)/1000) + " \mum", " "}, 'FontSize', 12);
+    par_data = plot(taus, c*MSD_par(i_mt, :), 'o', 'MarkerSize', 12, 'MarkerEdgeColor', color(i_mt, :));
+    par_data.MarkerFaceColor = par_data.MarkerEdgeColor;
+    par_data.Color = par_data.MarkerFaceColor;
+    %errorbar(taus, MSD_par(i_mt, :), MSD_par_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
+    perp_data = plot(taus, c*MSD_perp(i_mt, :), 'sq', 'MarkerSize', 12, 'MarkerEdgeColor', color(i_mt, :));
+    perp_data.MarkerFaceColor = perp_data.MarkerEdgeColor;
+    perp_data.Color = perp_data.MarkerFaceColor;
+   plot([0 max_tau + i_tau/8], [0 c*2 * D_par(i_mt) * (max_tau + i_tau/8)], '-', 'LineWidth', 2, 'Color', [0.6 0.6 0.6]); %line_color(i_mt, :)); 
+     plot([0 max_tau + i_tau/8], [0 c*2 * D_perp(i_mt) * (max_tau + i_tau/8)], '-', 'LineWidth', 2, 'Color', [0.6 0.6 0.6]); %line_color(i_mt, :));
+    
+    %errorbar(taus, MSD_perp(i_mt, :), MSD_perp_err(i_mt, :), 'o', 'LineWidth', 2, 'MarkerSize', 10);
+    set(gca, 'FontSize', 22);
+    xlabel("Tau (s)", 'FontSize', 22);
+    ylabel("MSD (\mum^2)", 'FontSize', 22);
+    xlim([-i_tau/4 max_tau + i_tau/4]);
+    ylim([-0.15 5]);
+    xticks([0 25 50 75]);
+    yticks([0 2 4]);
 end
+h = get(gca,'Children');
+n_entries = length(h);
+h_array = [];
+for i = n_entries : - 1 : 1
+      h_array = [h_array h(i)];
+end
+set(gca,'Children',h_array)
+legend(h([n_entries, n_entries-4, n_entries-8, n_entries-2, n_entries-1, n_entries-5, n_entries-9]), ... 
+    ["L = 1 um (par)", "L = 5 um (par)", "L = 20 um (par)", "Theory", "L = 1um (perp)", "L = 5 um (perp)", "L = 20 um (perp)"], ...
+    'location', 'northwest', 'FontSize', 18, 'NumColumns', 2);
+legend('boxoff') 
+%{
 % Some trickery to give all plots a common legend
 subplot(1, n_mts + 1, n_mts + 1)
 hold on
@@ -171,6 +195,5 @@ plot([0, 0], '--', 'LineWidth', 2);
 xlim([1 2]);
 ylim([1 2]);
 axis off
-legend(["Par (sim)", "Par (theory)", "Perp (sim)", "Perp (theory)"], ...
-    'location', 'northwestoutside', 'FontSize', 10);
+
 %}

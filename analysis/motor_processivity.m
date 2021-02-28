@@ -1,6 +1,7 @@
 clear variables;
-seeds = [0, 1, 2, 3, 4, 5];
+seeds = [0, 1, 2]; %, 3, 4, 5];
 sim_name = "run_motor_mobility/kif4a_mobility_0";
+sim_name = "run_heterodimer_kymograph/hybrid_motor_0.01_0";
 file_dir = '/home/shane/projects/CyLaKS/';
 
 "/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility"

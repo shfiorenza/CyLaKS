@@ -1,5 +1,4 @@
 *.file
-*.dat
 *.log
 *.err
 *.out
@@ -8,3 +7,4 @@
 *.json
 *.avi
 .vscode/
+build/

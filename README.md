@@ -1,5 +1,5 @@
 # CyLaKS
-The **Cy**toskeleton **La**ttice **K**intetic **S**imulator
+The **Cy**toskeleton **La**ttice **K**inetic **S**imulator
 ## Installation
 To begin, simply clone this repo:
 ```
@@ -8,8 +8,8 @@ cd CyLaKS
 ```
 ### Dependencies 
 CyLaKS requires the following libraries to run:
-	* [gsl] (http://www.gnu.org/software/gsl/)
-	* [yaml-cpp] (https://github.com/jbeder/yaml-cpp)
+ * [gsl](http://www.gnu.org/software/gsl/)
+ * [yaml-cpp](https://github.com/jbeder/yaml-cpp)
 
 On most Ubuntu distributions, you can install these dependences as follows:
 ```	
@@ -33,17 +33,25 @@ There are additional flags to build CyLaKS in debug mode or clean the build dire
 ```
 ./install.sh -h
 ```
-Once compiled, see CyLaKS run options by calling the executable:
+Once compiled, you can observe CyLaKS run options by calling the executable:
 ```
 ./sim 
 ```
 ## Running CyLaKS
-Input file types 
- .yaml -> contains parameters; can be created/editing using any text-editor
-Output file types
- .log  -> contains a record of simulation outputs; access using any text-editor
- .file -> contains raw data from sims; use included MATLAB code to analyze
+To run CyLaKS, use the `sim` executable as follows:
+```
+./sim [parameter-file] [sim-name] [optional-flags]
+```
+The parameter file must be a YAML file. See the included .yaml files for an example of proper formatting. 
+
+The sim name sets the prefix of all output files and can be whatever you'd like. 
+
+CyLaKS has two types of output files:
+ * .log -> plain-text record of all simulation outputs
+ * .file -> raw data output of simulations; use included MATLAB code to analyze 
 ### Demos
 Different demos can be found in the demos/ folder. 
-### Custom simulations
+### Test modes
 placeholder
+
+## Analysis

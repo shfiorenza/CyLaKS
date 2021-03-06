@@ -1,6 +1,6 @@
 clear variables;
 
-fileDirectory = '/home/shane/projects/CyLaKS/%s';
+fileDirectory = '../%s';
 
 sim_name = 'test';
 
@@ -24,21 +24,6 @@ log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
-% Read in number of MTs
-n_mts = sscanf(values{contains(params, "count ")}, '%g');
-if any(contains(params, "COUNT ") ~= 0)
-    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
-end
-mt_lengths = zeros(1, n_mts);
-for i_mt = 1 : n_mts
-    string = sprintf("n_sites[%i] ", i_mt - 1);
-    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
-        string = sprintf("N_SITES[%i] ", i_mt - 1);
-        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    end
-end
-
 % Read in system params
 dt = sscanf(values{contains(params, "dt ")}, '%g');
 steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
@@ -48,11 +33,26 @@ n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 if any(contains(params, "N_DATAPOINTS ") ~= 0)
     n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
-n_dims = 2;
-site_size = 0.0082; % in um
+site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in um
+% Read in number of MTs
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+% Read in MT lengths (in n_sites)
+mt_lengths = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("n_sites[%i] ", i_mt - 1);
+    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
+end
 max_sites = max(mt_lengths);
-xlink_cutoff = 5;
-teth_cutoff = 19;
+n_dims = 2; % hard-coded for now; CyLaKS always outputs data in 2-D
+xlink_cutoff = 5; % FIXME: dynamically get this from log
+teth_cutoff = 10; % FIXME: dynamically get this from log
 
 r_prot = (site_size*1000);
 
@@ -173,7 +173,7 @@ for i_data = start_frame : frames_per_plot : end_frame
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
             if(id ~= -1)
-                if i_mt == 1 % comment here
+                if i_mt == 1 % comment here for ablation
                     dx = -1;
                     mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];

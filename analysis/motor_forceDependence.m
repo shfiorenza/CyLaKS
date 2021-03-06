@@ -1,4 +1,3 @@
-%{
 clear variables;
 sim_name = 'run_motor_forceVel/k401_forceVel';
 applied_forces = [-6:0.5:0];

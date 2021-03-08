@@ -14,9 +14,7 @@ function endtag_length = get_endtag_length(sim_name)
     n_sites = values{contains(params, "n_sites[0]")};
     n_sites = sscanf(n_sites, '%i');
     % Read in system params
-    dt = sscanf(values{contains(params, "dt ")}, '%g');
-    steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
-    time_per_datapoint = dt * steps_per_datapoint;
+    time_per_datapoint = sscanf(values{contains(params, "t_snapshot ")}, '%g');
     n_datapoints = str2double(values{contains(params, "n_datapoints ")});
     % Use actual recorded number of datapoints to parse thru data/etc
     if any(contains(params, "N_DATAPOINTS ") ~= 0)

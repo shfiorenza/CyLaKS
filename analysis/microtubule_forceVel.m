@@ -1,25 +1,16 @@
-%{
 clear variables;
-file_dir = '/home/shane/projects/CyLaKS/%s';
+
 sim_name_base = ["run_mt_forceVel/mt_forceVel"];
 %sim_name_base = ["mt_forceVel0.5", "mt_forceVel_5.0", "mt_forceVel_50.0"];
 seeds = [0, 1, 2, 3, 4, 5]; 
 applied_force = [1 10:10:100];
-%applied_force = [1, 5.0, 10, 50, 100]; % in pN
-labels = ["1"];
-for i = 10 : 10 : 40
-   labels = [labels num2str(i)]; 
-end
-labels = [labels "50.0"];
-for i = 60 : 10 : 100
-   labels = [labels num2str(i)]; 
-end
 
 n_dims = 2;
 % Open log file and parse it into param labels & their values
+file_dir = '../%s';
 log_file = sprintf(file_dir, sprintf('%s.log', sim_name_base));
 if(~isempty(seeds) && ~isempty(applied_force))
-    log_file = sprintf(file_dir, sprintf('%s_%s_%i.log', sim_name_base, labels(1), seeds(1)));
+    log_file = sprintf(file_dir, sprintf('%s_%i_%i.log', sim_name_base, applied_force(1), seeds(1)));
 end
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
@@ -42,8 +33,7 @@ for i_mt = 1 : n_mts
 end
 % Read in system params
 dt = sscanf(values{contains(params, 'dt ')}, '%g');
-steps_per_datapoint = str2double(values{contains(params, 'n_steps_per_snapshot ')});
-time_per_datapoint = dt * steps_per_datapoint;
+time_per_datapoint = sscanf(values{contains(params, 't_snapshot ')}, '%g');
 n_datapoints = str2double(values{contains(params, 'n_datapoints ')});
 % Use actual recorded number of datapoints to parse thru data/etc
 if any(contains(params, 'N_DATAPOINTS ') ~= 0)
@@ -70,7 +60,7 @@ for i_sim = 1 : n_sims
     for i_seed = 1 : n_seeds
         sim_name = sim_name_base;
         if(~isempty(seeds))
-            sim_name = sprintf('%s_%s_%i', sim_name_base,labels(i_sim), seeds(i_seed));
+            sim_name = sprintf('%s_%i_%i', sim_name_base, applied_force(i_sim), seeds(i_seed));
         end
         filename = sprintf(file_dir, sprintf('%s_filament_pos.file', sim_name))
         file = fopen(filename);

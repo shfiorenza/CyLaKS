@@ -1,4 +1,3 @@
-
 clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
@@ -7,17 +6,16 @@ sim_name = 'run_heterodimer_kymograph/hybrid_motor_0.01_0';
 %sim_name = 'run_endtag_ablation/ablation';
 %sim_name = 'run_hetero_tubulin/hetero_tubulin_1_0';
 %sim_name = 'run_endtag_vs_coop/endtag_1750_1000_0';
-dwell_time = 0.1;  % dwell time of theoretical camera
 
+dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1; %1150; %4150;
 i_end = -1; %1650; %4650;
 frac_visible = [1, 1]; %[2,3] % [numerator, denominator]; [1,1] for all visibile
 gfp_intensity = 25; %1.5 % Controls how bright a single motor is (1 typically)
 
-
+% Scale bar lengths 
 scale_x = 2.5; %2.5; %1; % microns
 scale_t = 10; %30; %10; % seconds
-
 
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
@@ -31,24 +29,11 @@ noiseStd = 100;
 intensityMax = gaussAmp/2 + bkgLevel;
 
 % Open log file and parse it into param labels & their values
-log_file = sprintf('%s/%s.log', file_dir, sim_name);
+fileDirectory = '../%s';
+log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
-% Read in number of MTs
-n_mts = sscanf(values{contains(params, "count ")}, '%g');
-if any(contains(params, "COUNT ") ~= 0)
-    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
-end
-mt_lengths = zeros(1, n_mts);
-for i_mt = 1 : n_mts
-    string = sprintf("n_sites[%i] ", i_mt - 1);
-    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
-        string = sprintf("N_SITES[%i] ", i_mt - 1);
-        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    end
-end
 % Read in system params
 dt = sscanf(values{contains(params, "dt ")}, '%g');
 steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
@@ -58,7 +43,24 @@ n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 if any(contains(params, "N_DATAPOINTS ") ~= 0)
     n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
-n_sites = max(mt_lengths);
+site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in um
+% Read in number of MTs
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+% Read in MT lengths (in n_sites)
+mt_lengths = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("n_sites[%i] ", i_mt - 1);
+    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
+end
+max_sites = max(mt_lengths);
+
 n_dims = 2;
 
 posFile = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);
@@ -74,31 +76,25 @@ if isfile(posFile)
     filament_pos = reshape(mt_data, n_dims, 2, n_mts, n_datapoints);
 end
 % occupancy data on each MT
-occupancy = zeros(n_sites, n_mts, n_datapoints);
+occupancy = zeros(max_sites, n_mts, n_datapoints);
 if isfile(occuFile)
     occupancy_file = fopen(occuFile);
-    occu_raw_data = fread(occupancy_file, n_datapoints * n_mts * n_sites, '*int');
-    occupancy = reshape(occu_raw_data, n_sites, n_mts, n_datapoints);
+    occu_raw_data = fread(occupancy_file, n_datapoints * n_mts * max_sites, '*int');
+    occupancy = reshape(occu_raw_data, max_sites, n_mts, n_datapoints);
     fclose(occupancy_file);
 end
 % protein ID data
-protein_ids = zeros(n_sites, n_mts, n_datapoints) - 1;
+protein_ids = zeros(max_sites, n_mts, n_datapoints) - 1;
 if isfile(proteinFile)
     protein_data_file = fopen(proteinFile);
-    protein_raw_data = fread(protein_data_file, [n_mts * n_sites * n_datapoints], '*int');
+    protein_raw_data = fread(protein_data_file, [n_mts * max_sites * n_datapoints], '*int');
     fclose(protein_data_file);
-    protein_ids = reshape(protein_raw_data, n_sites, n_mts, n_datapoints);
+    protein_ids = reshape(protein_raw_data, max_sites, n_mts, n_datapoints);
 end
 
 site_ID = 0;
 xlink_ID = 1;
 motor_ID = 2;
-
-%{
-motor_matrix = occupancy;
-motor_matrix(motor_matrix ~= motor_ID) = 0;
-motor_matrix(motor_matrix == motor_ID) = scale_factor;
-%}
 
 motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %protein_ids;
 for i_data = 1 : n_datapoints
@@ -113,21 +109,7 @@ for i_data = 1 : n_datapoints
        end
    end
 end
-%{
-motor_matrix = protein_ids;
-motor_matrix(mod(motor_matrix, 10) ~= 0) = scale_factor;
-motor_matrix(mod(motor_matrix, 10) == 0) = -1;
-motor_matrix(motor_matrix == -1) = 0;
-%}
-
-
 site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %occupancy;
-%{
-site_matrix(site_matrix == xlink_ID) = -1;
-site_matrix(site_matrix == motor_ID) = -1;
-%site_matrix(site_matrix == site_ID) = 1;
-site_matrix(site_matrix == -1) = 0;
-%}
 
 if i_end == -1
     i_end = n_datapoints;
@@ -135,9 +117,9 @@ end
 
 dwell_steps = dwell_time / time_per_datapoint;
 
-pixels_x = ceil(n_sites*siteLength/pixelLength)+2*pixelPad;
+pixels_x = ceil(max_sites*siteLength/pixelLength)+2*pixelPad;
 if n_mts == 2
-    pixels_x = ceil(2*n_sites*siteLength/pixelLength)+2*pixelPad;
+    pixels_x = ceil(2*max_sites*siteLength/pixelLength)+2*pixelPad;
     max_diff_x = 0;
     for i_data = i_start : dwell_steps : i_end - dwell_steps
         minus_one = filament_pos(:, 2, 1, i_data);
@@ -151,6 +133,8 @@ if n_mts == 2
     pixel_diff_max = ceil(max_diff_x / pixelLength);
     pixels_x = pixels_x + (pixel_diff_max - 1);
 end
+% Sometimes you gotta add or subtract 1 here -- must be some kind of
+% rounding error 
 if n_mts == 2
    pixels_x = pixels_x + 1; 
 end
@@ -211,7 +195,6 @@ set(gca, 'Box', 'off');
 % Add a scale bar
 len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
-%pos = get(gcf, 'Position') %// gives x left, y bottom, width, height
 %{
 l = line([103.5 103.5-len_x],[2625 2625],'Color','w','LineWidth',4); %endtags
 l2 = line([103 103],[2600 2600-len_y],'Color','w','LineWidth',4); %endtags

@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 fileDirectory = '/home/shane/projects/CyLaKS/run_xlink_bind_ii/%s';
 sim_name_base = 'xlink_bind_ii';

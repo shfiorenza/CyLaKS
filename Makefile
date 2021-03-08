@@ -1,5 +1,6 @@
-# <variant> library not yet supported on intel compiler. Use gcc/8.2.0 for now.
-# Ideally, <variant> should be depricated by polymorphism in the future. 
+# *** NOTE: Largely depricated by install.sh ***
+# Still used for make clean-output and to compile on Summit
+
 ifeq ($(LOC), summit)
     CC=gcc # icc
     CXX=g++ # icpc

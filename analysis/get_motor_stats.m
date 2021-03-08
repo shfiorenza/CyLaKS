@@ -1,4 +1,5 @@
 function mot_stats = get_motor_stats(base_name, seeds, plot_flag)
+% Code block below is for when this is used as a standalone script
 %{
 clear variables; 
 base_name = "/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility";

@@ -1,17 +1,15 @@
-%{
+
 clear variables;
 baseNames = ["hetero_tubulin"];
 folder = "run_tubulin_mobility";
-
-dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
-
-color_exp = [0, 0.4470, 0.7410]; %[1 0 0]; %[0.55 0.55 0.55];
-
 p_hetero = [0.0, 0.1, 0.2, 0.4, 0.6, 0.8, 0.9, 1.0];
 seeds = [0, 1, 2, 3, 4, 5];
 
-n_fractions = length(p_hetero);
 
+color_exp = [0, 0.4470, 0.7410]; %[1 0 0]; %[0.55 0.55 0.55];
+
+dir = sprintf("../%s", folder);
+n_fractions = length(p_hetero);
 runlengths = zeros(n_fractions, 1);
 err_runlengths = zeros(n_fractions, 1);
 lifetimes = zeros(n_fractions, 1);

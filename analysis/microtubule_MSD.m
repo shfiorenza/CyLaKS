@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 file_dir = '/home/shane/projects/CyLaKS/%s';
 sim_name_base = 'run_mt_diffusion/mt_diffusion';
@@ -33,8 +33,7 @@ for i_mt = 1 : n_mts
 end
 % Read in system params
 dt = sscanf(values{contains(params, 'dt ')}, '%g');
-steps_per_datapoint = str2double(values{contains(params, 'n_steps_per_snapshot ')});
-time_per_datapoint = dt * steps_per_datapoint;
+time_per_datapoint = sscanf(values{contains(params, "t_snapshot ")}, '%g');
 n_datapoints = str2double(values{contains(params, 'n_datapoints ')});
 % Use actual recorded number of datapoints to parse thru data/etc
 if any(contains(params, 'N_DATAPOINTS ') ~= 0)

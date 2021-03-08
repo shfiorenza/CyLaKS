@@ -1,15 +1,14 @@
 clear variables;
 
-fileDirectory = '../%s';
-
 sim_name = 'test';
-
 movie_name = 'testin2';
-start_frame = 1;
 
+% Movie details
+start_frame = 1;
 frames_per_plot = 100;
 movie_duration = 30; % in seconds
 
+% Species IDs
 sid_site = 0;
 sid_xlink = 1;
 sid_motor = 2;
@@ -20,14 +19,14 @@ purple = [128 0 128] / 255;
 color = [purple; blue];
 
 % Open log file and parse it into param labels & their values
+fileDirectory = '../%s';
 log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
 % Read in system params
 dt = sscanf(values{contains(params, "dt ")}, '%g');
-steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
-time_per_datapoint = dt * steps_per_datapoint;
+time_per_datapoint = sscanf(values{contains(params, "t_snapshot ")}, '%g');
 n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 % Use actual recorded number of datapoints to parse thru data/etc
 if any(contains(params, "N_DATAPOINTS ") ~= 0)

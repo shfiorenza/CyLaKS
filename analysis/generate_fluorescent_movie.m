@@ -1,7 +1,13 @@
 clear;
 close all;
+
+% FIXME: this script needs MT positions to be updated
+% Old: coordinates are scalar; x-pos of left-most edge of MTs
+% New: coordinates are vectors; x,y-pos of MT center of mass 
+
 sim_name = 'run_mobility_both/mobility_both_80_0';
 movie_name = "movie_final_80pM_end";
+
 i_start = 45000; % datapoint to start at
 i_end = 50000;
 datapoints_per_plot = 10; % How often to plot the fluorscent image
@@ -20,31 +26,38 @@ bkgLevel = 200;
 noiseStd = 100;
 intensityMax = gaussAmp/2;% + bkgLevel;
 
-file_dir = '/home/shane/Projects/overlap_analysis/mgh_model';
 % Open log file and parse it into param labels & their values
-log_file = sprintf('%s/%s.log', file_dir, sim_name);
-log = textscan(fileread(log_file),'%s %s', 'Delimiter', '=');
-params = log{1,1};
-values = log{1,2};
-% Read in number of MTs
-n_mts = str2double(values{contains(params, 'count')});
-n_sites = values{contains(params, 'length')};
-n_sites = sscanf(n_sites, '%i');
+fileDirectory = '../%s';
+log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
+log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
+params = log{1, 1};
+values = log{1, 2};
 % Read in system params
-delta_t = sscanf(values{contains(params, 'delta_t')}, '%g');
-total_steps = str2double(values{contains(params, 'n_steps')});
-data_threshold = sscanf(values{contains(params, 'data_threshold')}, '%g');
-if any(contains(params, 'DATA_THRESHOLD') ~= 0)
-   data_threshold = str2double(values{contains(params, 'DATA_THRESHOLD')});
-end
-n_steps = total_steps - data_threshold;
-% Use max possible number of datapoints to calculate time_per_datapoint (as is done in Sim)
-n_datapoints = str2double(values{contains(params, 'n_datapoints')});
-time_per_datapoint = delta_t * n_steps / n_datapoints;
+dt = sscanf(values{contains(params, "dt ")}, '%g');
+steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
+time_per_datapoint = dt * steps_per_datapoint;
+n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 % Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, 'N_DATAPOINTS') ~= 0)
-   n_datapoints = str2double(values{contains(params, 'N_DATAPOINTS')});
+if any(contains(params, "N_DATAPOINTS ") ~= 0)
+    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
 end
+site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in um
+% Read in number of MTs
+n_mts = sscanf(values{contains(params, "count ")}, '%g');
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+% Read in MT lengths (in n_sites)
+mt_lengths = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("n_sites[%i] ", i_mt - 1);
+    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
+        string = sprintf("N_SITES[%i] ", i_mt - 1);
+        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    end
+end
+max_sites = max(mt_lengths);
 
 v = VideoWriter(movie_name);
 v.FrameRate = ((i_end - i_start) / datapoints_per_plot) / movie_duration;
@@ -64,22 +77,22 @@ if isfile(mtFile)
     mt_data = reshape(mt_raw_data, n_mts, n_datapoints);
 end
 % occupancy data on each MT
-occupany = zeros(n_sites, n_mts, n_datapoints);
+occupany = zeros(max_sites, n_mts, n_datapoints);
 occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
 if isfile(occuFile)
     occupancy_file = fopen(occuFile);
-    occu_raw_data = fread(occupancy_file, [n_datapoints * n_mts * n_sites], '*int');
-    occupancy = reshape(occu_raw_data, n_sites, n_mts, n_datapoints);
+    occu_raw_data = fread(occupancy_file, [n_datapoints * n_mts * max_sites], '*int');
+    occupancy = reshape(occu_raw_data, max_sites, n_mts, n_datapoints);
     fclose(occupancy_file);
 end
 % motor ID data
-motor_IDs = zeros(n_sites, n_mts, n_datapoints) - 1;
+motor_IDs = zeros(max_sites, n_mts, n_datapoints) - 1;
 motorFile = sprintf('%s/%s_motorID.file', file_dir, sim_name);
 if isfile(motorFile)
     motor_data_file = fopen(motorFile);
-    motor_raw_data = fread(motor_data_file, [n_mts * n_sites * n_datapoints], '*int');
+    motor_raw_data = fread(motor_data_file, [n_mts * max_sites * n_datapoints], '*int');
     fclose(motor_data_file);
-    motor_IDs = reshape(motor_raw_data, n_sites, n_mts, n_datapoints);
+    motor_IDs = reshape(motor_raw_data, max_sites, n_mts, n_datapoints);
 end
 
 tubulin_ID = 0;

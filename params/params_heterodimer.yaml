@@ -1,44 +1,24 @@
 seed: 198261346419
 kbT: 4.114
-eta: 0.1 # 0.001
+eta: 0.001
 dt: 0.00002
 t_run: 1000
 t_equil: 0
-t_snapshot: 0.01 # 0.1
-dynamic_equil_window: -1
+t_snapshot: 0.01
+dynamic_equil_window: -1 
 verbosity: 0
 filaments:
-  count: 3
+  count: 1
   radius: 12.5
   site_size: 8.2
-  n_bd_per_kmc: 1
-  n_sites:
-    - 125
-    - 625
-    - 2500
-  polarity:
-    - 0
-    - 1
-    - 0
-  x_initial:
-    - 0
-    - 0
-    - 0
-  y_initial:
-    - 0
-    - 32
-    - 64
-  immobile_until:
-    - 0
-    - 0
-    - 0
-  f_applied:
-    - 0.0
-    - 0.0
-    - 0.0
-  translation_enabled:
-    - true
-    - true
+  n_bd_per_kmc: 10
+  n_sites: [10000, 13]
+  polarity: [0, 1]
+  x_initial: [0, 0]
+  y_initial: [0, 32]
+  immobile_until: [1500, 1500]
+  f_applied: [0.0, 0.0]
+  translation_enabled: [false, false]
   rotation_enabled: false
 motors:
   n_runs_to_exit: 250
@@ -46,14 +26,14 @@ motors:
   gaussian_amp_solo: 0.95 # 1.3 # 0.95
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
-  t_active: 9500
+  t_active: 0
   k_on: 0.000358
-  c_bulk: 0.0 # 1.5
-  c_eff_bind: 4000000
+  c_bulk: 0.05
+  c_eff_bind: 400000 # 0
   k_on_ATP: 2500
   c_ATP: 2
   k_hydrolyze: 95
-  k_off_i: 8
+  k_off_i: 0.8 # 8 
   k_off_ii: 260 # 2375 # 260
   applied_force: 0.0
   internal_force: 26.0 # 0.0 # 26.0
@@ -69,10 +49,10 @@ motors:
   k_spring: 0.1325
   k_slack: 0.0265
 xlinks:
-  neighb_neighb_energy: 2.25
-  t_active: 9500
+  neighb_neighb_energy: 0.0 # 2.25
+  t_active: 0
   k_on: 0.000238
-  c_bulk: 0.0 # 5
+  c_bulk: 0.0
   c_eff_bind: 5000
   k_off_i: 0.143
   k_off_ii: 0.0143

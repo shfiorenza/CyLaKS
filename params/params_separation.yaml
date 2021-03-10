@@ -42,7 +42,7 @@ motors:
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
   k_on: 0.000358
-  c_bulk: 0.0 # 0.5 # 30 # 60 # 60 # 0.05
+  c_bulk: 0.0 # 0.5
   c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2
@@ -66,11 +66,11 @@ xlinks:
   neighb_neighb_energy: 0.0 # 2.25
   t_active: 0
   k_on: 0.000238
-  c_bulk: 0.5 # 1.0 # 0.0 # 50
+  c_bulk: 0.5 # 1.0 
   c_eff_bind: 500000
   k_off_i: 0.143
   k_off_ii: 0.0143
-  d_i: 0.5 # 0.131
+  d_i: 0.131
   d_ii: 0.0655
   r_0: 32
   k_spring: 0.453

@@ -148,10 +148,10 @@ void ProteinManager::SetParameters() {
   // Diffusion
   double x_sq{Square(Filaments::site_size / 1000)}; // in um^2
   double tau_i{x_sq / (2 * Xlinks::d_i)};
-  Sys::Log("tau = %g\n", tau_i);
+  // Sys::Log("tau = %g\n", tau_i);
   double tau_ii{x_sq / (2 * Xlinks::d_ii)};
   double p_diffuse_i{dt / tau_i};
-  Sys::Log("p = %g\n", p_diffuse_i);
+  // Sys::Log("p = %g\n", p_diffuse_i);
   double p_diffuse_ii{dt / tau_ii};
   // diff_fwd and diff_bck are two separate events, which effectively
   // doubles the probability to diffuse. Thus we divide p_diff by 2.
@@ -1826,9 +1826,11 @@ void ProteinManager::InitializeEvents() {
   }
   // Bind_II_Teth
   // Unbind_II_Teth
+  /*
   for (auto const &event : kmc_.events_) {
     printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
   }
+  */
 }
 
 void ProteinManager::FlagFilamentsForUpdate() { filaments_->FlagForUpdate(); }

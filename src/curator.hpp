@@ -13,6 +13,8 @@ private:
                        "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",
                        "hetero_tubulin",      "kinesin_mutant"};
+  // Vec<Str> demo_modes_{"filament_separation", "heterogenous_tubulin",
+  //                      "kinesin_heterodimer"};
   struct DataFile {
     Str name_{"example"};
     Str filename_{"simName_example.file"};

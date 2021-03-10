@@ -23,6 +23,7 @@ clean_cmake_files() {
     rm -rf build/src
     rm -rf build/Doxyfile
     rm -rf build/tests
+    rm cylaks
 }
 
 show_help() {

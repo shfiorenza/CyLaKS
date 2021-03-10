@@ -444,7 +444,8 @@ void ProteinManager::InitializeTestEnvironment() {
     int n_xlinks{Sys::n_xlinks_};
     if (n_xlinks == -1) {
       Str response;
-      printf("Enter number of crosslinkers: ");
+      printf("Microtubules are %zu sites in length.\n", Filaments::n_sites[0]);
+      printf("Enter number of crosslinkers to insert: ");
       std::getline(std::cin, response);
       n_xlinks = (int)std::stoi(response);
     }

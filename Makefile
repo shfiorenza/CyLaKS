@@ -1,5 +1,5 @@
-# *** NOTE: Largely depricated by install.sh ***
-# Still used for make clean-output and to compile on Summit
+# *** NOTE: Largely depricated by install.sh and clean_output.sh ***
+# Still used to compile on Summit
 
 ifeq ($(LOC), summit)
     CC=gcc # icc

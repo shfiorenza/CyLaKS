@@ -16,6 +16,11 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
   
+  if (APPLE)
+    set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
+    set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
+  endif()
+
   # specify compiler build type
   if(DEBUG)
     set(CMAKE_BUILD_TYPE "Debug")
@@ -64,6 +69,7 @@ endif()
 # find required libraries
 find_package(GSL REQUIRED)
 find_package(yaml-cpp REQUIRED)
+message("-- Found yaml-cpp: ${YAML_CPP_INCLUDE_DIR}")
 
 # add source directory
 add_subdirectory(src)

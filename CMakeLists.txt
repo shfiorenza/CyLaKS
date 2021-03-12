@@ -16,10 +16,10 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   set(CMAKE_CXX_STANDARD 17)
   set(CMAKE_CXX_STANDARD_REQUIRED True)
   
-  if (APPLE)
-    set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
-    set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
-  endif()
+  # if (APPLE)
+  #   set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
+  #   set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
+  # endif()
 
   # specify compiler build type
   if(DEBUG)
@@ -58,12 +58,12 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
   include(CTest)
 
   # Docs only available if this is the main app
-  find_package(Doxygen)
-  if(Doxygen_FOUND)
-    add_subdirectory(docs)
-  else()
-    message(STATUS "Doxygen not found, not building docs")
-  endif()
+  # find_package(Doxygen)
+  # if(Doxygen_FOUND)
+  #   add_subdirectory(docs)
+  # else()
+  #   message(STATUS "Doxygen not found, not building docs")
+  # endif()
 endif()
 
 # find required libraries

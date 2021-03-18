@@ -8,8 +8,6 @@ class BindingSite;
 
 class Motor : public Protein {
 protected:
-  Str ligands_{"yuhh yuh"};
-
 public:
   CatalyticHead head_one_, head_two_;
   LinearSpring tether_;

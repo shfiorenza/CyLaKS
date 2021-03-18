@@ -1,4 +1,4 @@
-#include "protofilament.hpp"
+#include "cylaks/protofilament.hpp"
 
 void Protofilament::SetParameters() {
 
@@ -21,22 +21,8 @@ void Protofilament::SetParameters() {
   gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
   // gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8));
   // pN*s*nm
-  /*
-  Sys::Log("   length[%i] = %g nm\n", index_, length_);
-  Vec<Str> label{"par", "perp", "rot"};
-  Vec<double> diffusion_const(n_dims, 0.0);
-  */
   for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
     sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
-    /*
-    diffusion_const[i_dim] = kbT / gamma_[i_dim]; // nm^2/s or rad^2/s
-    Sys::Log("     D_%s[%i] = %g %s^2/s\n", label[i_dim].c_str(), index_,
-             diffusion_const[i_dim], i_dim < 2 ? "nm" : "rad");
-    Sys::Log(1, "    gamma_%s = %g pN*s%s\n", label[i_dim].c_str(),
-             gamma_[i_dim], i_dim < 2 ? "/nm" : "*nm");
-    Sys::Log(1, "     sigma_%s = %g %s\n", label[i_dim].c_str(), sigma_[i_dim],
-             i_dim < 2 ? "nm" : "rad");
-    */
   }
 }
 
@@ -129,7 +115,7 @@ void Protofilament::UpdateRodPosition() {
 
 void Protofilament::UpdateSitePositions() {
 
-  // /*
+  // FIXME: generalize for arbitrary number of filaments
   // If proteins are disabled, only update endpoint positions
   if (Params::Filaments::count == 1) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -146,7 +132,6 @@ void Protofilament::UpdateSitePositions() {
     }
     return;
   }
-
   for (auto &&site : sites_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Distance will be negative for first half of sites

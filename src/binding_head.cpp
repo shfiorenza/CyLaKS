@@ -1,7 +1,7 @@
-#include "binding_head.hpp"
-#include "binding_site.hpp"
-#include "protein.hpp"
-#include "protofilament.hpp"
+#include "cylaks/binding_head.hpp"
+#include "cylaks/binding_site.hpp"
+#include "cylaks/protein.hpp"
+#include "cylaks/protofilament.hpp"
 
 int BindingHead::GetDirectionTowardRest() {
   return parent_->GetDirectionTowardRest(this);
@@ -14,7 +14,6 @@ int BindingHead::GetNumNeighborsOccupied() {
 int BindingHead::GetNumHeadsActive() { return parent_->n_heads_active_; }
 
 Vec<double> BindingHead::GetBoundObjectOrientation() {
-  // return site_->filament_->orientation_;
   return site_->filament_->GetPolarOrientation();
 }
 

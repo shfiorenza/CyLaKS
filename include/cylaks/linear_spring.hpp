@@ -81,7 +81,6 @@ public:
     double r_mag{sqrt(r_sq)};
     // printf("r = %g\n", r_mag);
     if (r_mag < r_min_ or r_mag > r_max_) {
-      // printf("BONK\n");
       // ForceUnbind();
       // return false;
     }

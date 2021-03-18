@@ -1,5 +1,5 @@
-#include "binding_site.hpp"
-#include "protofilament.hpp"
+#include "cylaks/binding_site.hpp"
+#include "cylaks/protofilament.hpp"
 
 BindingSite *BindingSite::GetNeighbor(int dir) {
 
@@ -7,13 +7,10 @@ BindingSite *BindingSite::GetNeighbor(int dir) {
     Sys::ErrorExit("BindingSite::GetNeighb()");
   }
   for (auto const &neighb : neighbors_) {
-    // printf("neighb %i\n", neighb->index_);
     if (index_ + dir == neighb->index_) {
-      // printf("cha-ching!\n");
       return neighb;
     }
   }
-  // printf("UMMM??\n");
   return nullptr;
 }
 

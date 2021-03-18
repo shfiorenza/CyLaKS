@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'demo_endtag'; % Raw sim name; do not include directory
+sim_name = 'demo_separation'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details

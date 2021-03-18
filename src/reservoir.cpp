@@ -1,6 +1,6 @@
-#include "reservoir.hpp"
-#include "motor.hpp"
-#include "protein.hpp"
+#include "cylaks/reservoir.hpp"
+#include "cylaks/motor.hpp"
+#include "cylaks/protein.hpp"
 
 template class Reservoir<Motor>;
 template class Reservoir<Protein>;
@@ -22,7 +22,6 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
 
   using namespace Params;
   if (step_active_ * dt < t_equil + t_run) {
-    // printf("BOINK\n");
     Sys::proteins_inactive_ = false;
     active_ = true;
   }

@@ -1,9 +1,9 @@
-#include "protein_manager.hpp"
-#include "binding_site.hpp"
-#include "curator.hpp"
-#include "filament_manager.hpp"
-#include "system_namespace.hpp"
-#include "system_rng.hpp"
+#include "cylaks/protein_manager.hpp"
+#include "cylaks/binding_site.hpp"
+#include "cylaks/curator.hpp"
+#include "cylaks/filament_manager.hpp"
+#include "cylaks/system_namespace.hpp"
+#include "cylaks/system_rng.hpp"
 #include <iostream>
 #include <limits>
 #include <string>
@@ -1082,7 +1082,6 @@ void ProteinManager::InitializeTestEvents() {
       if (executed) {
         bool still_attached{head->parent_->UpdateExtension()};
         if (!still_attached) {
-          printf("WUT\n");
         }
         // FIXME had to move this from if statement above -- why ?
       }
@@ -1847,6 +1846,5 @@ void ProteinManager::UpdateFilaments() {
   if (Sys::i_step_ == Sys::ablation_step_) {
     filaments_->proto_[1].pos_[0] += 200.0;
     filaments_->proto_[1].ForceUpdate();
-    // printf("HELLO\n");
   }
 }

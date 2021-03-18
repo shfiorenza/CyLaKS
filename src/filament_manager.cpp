@@ -1,5 +1,5 @@
-#include "filament_manager.hpp"
-#include "protein_manager.hpp"
+#include "cylaks/filament_manager.hpp"
+#include "cylaks/protein_manager.hpp"
 
 void FilamentManager::SetParameters() {
 
@@ -98,8 +98,9 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
+  // this some jank 1-D wca potential type jawn
+  /*
   if (proto_.size() == 2 and proteins_->xlinks_.active_) {
-    // this some jank 1-D wca potential type jawn
     double r{proto_[1].pos_[1] - proto_[0].pos_[1]};
     // printf("threshold is %g\n", threshold_);
     if (r < threshold_) {
@@ -111,6 +112,7 @@ void FilamentManager::UpdateForces() {
       proto_[0].force_[1] -= f_mag;
     }
   }
+  */
   proteins_->UpdateExtensions();
 }
 

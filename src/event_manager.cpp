@@ -1,7 +1,7 @@
-#include "event_manager.hpp"
-#include "curator.hpp"
-#include "system_namespace.hpp"
-#include "system_rng.hpp"
+#include "cylaks/event_manager.hpp"
+#include "cylaks/curator.hpp"
+#include "cylaks/system_namespace.hpp"
+#include "cylaks/system_rng.hpp"
 
 EventManager::EventManager() {}
 

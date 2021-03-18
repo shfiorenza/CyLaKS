@@ -1,5 +1,5 @@
-#include "motor.hpp"
-#include "protofilament.hpp"
+#include "cylaks/motor.hpp"
+#include "cylaks/protofilament.hpp"
 
 void Motor::ChangeConformation() {
 
@@ -10,17 +10,14 @@ void Motor::ChangeConformation() {
   if (site == nullptr) {
     Sys::ErrorExit("Motor::ChangeConformation() [2]");
   }
-  //   printf("site %i\n", site->index_);
   if (site == site->filament_->plus_end_ and
       Params::Motors::endpausing_active) {
     if (Sys::test_mode_.empty() or site->filament_->index_ == 0) {
       return;
     }
   }
-  //   printf("ChangeConformation for motor %i!\n", GetID());
   head_one_.trailing_ = !head_one_.trailing_;
   head_two_.trailing_ = !head_two_.trailing_;
-  //   printf("wut\n");
 }
 
 BindingSite *Motor::GetDockSite() {
@@ -71,7 +68,6 @@ void Motor::ApplyLatticeDeformation() {
   if (n_heads_active_ == 0) {
     return;
   }
-  //   printf("hi\n");
   BindingSite *epicenter{nullptr};
   if (n_heads_active_ == 1) {
     epicenter = GetActiveHead()->site_;
@@ -106,9 +102,7 @@ void Motor::ApplyLatticeDeformation() {
             exit(1);
           }
           site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
-          // printf("nop\n");
           site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
-          // printf("yop\n");
           continue;
         }
         if (epicenter->filament_->index_ == 1 and i_scan < 0) {
@@ -124,9 +118,7 @@ void Motor::ApplyLatticeDeformation() {
             exit(1);
           }
           site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
-          // printf("yop\n");
           site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
-          // printf("nop\n");
           continue;
         }
       }
@@ -204,13 +196,10 @@ double Motor::GetWeight_Unbind_I() {
 bool Motor::Diffuse(CatalyticHead *head, int dir) {
 
   BindingSite *old_site = head->site_;
-  // printf("no\n");
   int i_new{(int)old_site->index_ + dir};
-  // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
     return false;
   }
-  // printf("chaching\n");
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {
     return false;
@@ -218,7 +207,6 @@ bool Motor::Diffuse(CatalyticHead *head, int dir) {
   old_site->occupant_ = nullptr;
   new_site->occupant_ = head;
   head->site_ = new_site;
-  // printf("frfr\n\n");
   return true;
 }
 
@@ -292,8 +280,6 @@ bool Motor::Unbind(CatalyticHead *head) {
   }
   if (Sys::test_mode_ == "kinesin_mutant") {
     if (n_heads_active_ == 1 and head == &head_one_) {
-      //   printf("bang\n");
-      //   printf("head_")
       ChangeConformation();
     }
   }

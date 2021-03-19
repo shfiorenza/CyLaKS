@@ -7,15 +7,12 @@ git clone https://github.com/Betterton-Lab/CyLaKS
 cd CyLaKS
 ```
 ### Using pre-built Docker image
-A pre-built image of CyLaKS is available as a [Docker](https://www.docker.com/) image. 
-
-To download this image, run
+A pre-built image of CyLaKS is available as a [Docker](https://www.docker.com/) image. To download this image, run
 ```
 docker pull shfiorenza/cylaks
 ```
-Depending your local Docker permissions, you may need to add `sudo` to the command above. 
-
-If this is the first time using Docker on your machine, you may have to initialize the Docker Daemon. On Linux distributions, run
+Depending your local Docker permissions, you may need to add `sudo` to the command above. If this is the your first time using Docker, 
+you may have to initialize the Docker Daemon. On Linux distributions, you can simply run
 ```
 dockerd
 ```
@@ -27,13 +24,18 @@ Once you have the CyLaKS image, you can launch a Docker container named `cylaks`
 ```
 Again, you may need to add 'sudo' depending on your local Docker permissions. 
 
-Once the container is running, you can select from available CyLaKS demos by using the `-d` flag:
+Once the container is running, you can select from available CyLaKS demos to run by using the `-d` flag:
 ```
 ./lauch_docker.sh -d
 ```
-You can also launch custom CyLaKS simulations via Docker:
+You can also launch custom CyLaKS simulations via Docker while the container is running:
 ```
 docker exec -it cylaks cylaks.exe [parameter-file] [sim-name] [optional-flags]
+```
+
+To close the cylaks container, use the `stop` command:
+```
+docker stop cylaks
 ```
 ### Building from source 
 CyLaKS requires the following libraries:

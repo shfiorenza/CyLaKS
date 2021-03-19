@@ -26,7 +26,7 @@ Again, you may need to add 'sudo' depending on your local Docker permissions.
 
 Once the container is running, you can select from available CyLaKS demos to run by using the `-d` flag:
 ```
-./lauch_docker.sh -d
+./launch_docker.sh -d
 ```
 You can also launch custom CyLaKS simulations via Docker while the container is running:
 ```

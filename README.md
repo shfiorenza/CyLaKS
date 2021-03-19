@@ -27,11 +27,14 @@ Once you have the CyLaKS image, you can launch a Docker container named `cylaks`
 ```
 Again, you may need to add 'sudo' depending on your local Docker permissions. 
 
-Once the container is running, you can launch CyLaKS simulations via Docker:
+Once the container is running, you can select from available CyLaKS demos by using the `-d` flag:
+```
+./lauch_docker.sh -d
+```
+You can also launch custom CyLaKS simulations via Docker:
 ```
 docker exec -it cylaks cylaks.exe [parameter-file] [sim-name] [optional-flags]
 ```
-You can also select from available demos by using the 
 ### Building from source 
 CyLaKS requires the following libraries:
  * [gsl](http://www.gnu.org/software/gsl/)

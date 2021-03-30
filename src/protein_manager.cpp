@@ -1647,6 +1647,12 @@ void ProteinManager::InitializeEvents() {
         [&](Object *base) {
           exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
                        filaments_);
+          if (!Sys::equilibrating_) {
+            Sys::n_runs_recorded_++;
+            if (Sys::n_runs_recorded_ >= Params::Motors::n_runs_to_exit) {
+              Sys::early_exit_triggered_ = true;
+            }
+          }
         });
   }
   // Unbind_I_Teth

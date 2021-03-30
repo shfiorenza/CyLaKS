@@ -26,6 +26,9 @@ inline size_t verbosity_{0};
 inline bool running_{true};
 inline bool equilibrating_{true};
 
+inline bool early_exit_triggered_{false};
+inline size_t n_runs_recorded_{0};
+
 inline size_t n_unique_objects_{0};
 inline size_t n_unique_species_{0};
 
@@ -75,7 +78,8 @@ inline void ErrorExit(const char *fn_name) {
   exit(1);
 }
 inline void EarlyExit() {
-  Log("Run terminated after sufficient data collection\n");
+  Log("Run terminated after sufficient data collection (%i kinesin runs)\n",
+      n_runs_recorded_);
   Log("   N_STEPS = %zu\n", i_step_ - n_steps_equil_);
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   running_ = false;

@@ -342,7 +342,7 @@ void Curator::CheckPrintProgress() {
   using namespace Params;
   // Percent milestone; controls report frequency
   int p_report{10};
-  // Advance simulation forward one site (or 1 dt in real time)
+  // Advance simulation forward one step (or 1 dt in real time)
   i_step_++;
   // If still equilibrating, report progress and check protein equil. status
   if (equilibrating_) {
@@ -455,5 +455,8 @@ void Curator::OutputData() {
       continue;
     }
     data_files_.at("tether_anchor_pos").Write(tether_anchor_pos, n_sites_max_);
+  }
+  if (Sys::early_exit_triggered_) {
+    Sys::EarlyExit();
   }
 }

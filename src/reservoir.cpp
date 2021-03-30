@@ -70,7 +70,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
     window_var += diff * diff / (window_size - 1);
   }
   double window_sigma{sqrt(window_var)};
-  Log("Species %zu is still equilibrating ... (n_bound_avg = %.3g +/- %.1g)\n",
+  Log("Species %zu is still equilibrating ... (n_bound_avg = %.3g +/- %.2g)\n",
       species_id_, window_avg, window_sigma);
   double delta{std::fabs(n_bound_avg_ - window_avg)};
   double delta_sigma{sqrt(n_bound_var_ + window_var)};

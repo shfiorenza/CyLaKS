@@ -1,7 +1,7 @@
-#include "catalytic_head.hpp"
-#include "binding_site.hpp"
-#include "motor.hpp"
-#include "protofilament.hpp"
+#include "cylaks/catalytic_head.hpp"
+#include "cylaks/binding_site.hpp"
+#include "cylaks/motor.hpp"
+#include "cylaks/protofilament.hpp"
 
 int CatalyticHead::GetNumNeighborsOccupied() {
   return site_->GetNumNeighborsOccupied();

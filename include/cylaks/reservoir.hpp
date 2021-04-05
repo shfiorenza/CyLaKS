@@ -7,6 +7,9 @@
 
 class Object;
 
+// Reservoir: Holds and organizes all proteins that will ever exist in sim.
+//            Creates N objects, where N is the sum of binding sites in sim.
+//            Note: objects are not modeled when fully unbound
 template <typename ENTRY_T> struct Reservoir {
 private:
   size_t species_id_;

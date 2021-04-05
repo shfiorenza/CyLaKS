@@ -9,16 +9,16 @@ read MODE
 case "$MODE" in 
 
     1)
-        ./cylaks params/params_endtag.yaml demo_endtag 
+        ./cylaks.exe params/params_endtag.yaml demo_endtag 
         ;;
     2)
-        ./cylaks params/params_endtag.yaml demo_tubulin hetero_tubulin
+        ./cylaks.exe params/params_endtag.yaml demo_tubulin hetero_tubulin
         ;;
     3)
-        ./cylaks params/params_heterodimer.yaml demo_heterodimer kinesin_mutant
+        ./cylaks.exe params/params_heterodimer.yaml demo_heterodimer kinesin_mutant
         ;;
     4)
-        ./cylaks params/params_separation.yaml demo_separation filament_separation
+        ./cylaks.exe params/params_separation.yaml demo_separation filament_separation
         ;;
 
 esac 

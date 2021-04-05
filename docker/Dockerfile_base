@@ -1,0 +1,18 @@
+FROM ubuntu:focal
+ENV DEBIAN_FRONTEND=noninteractive 
+WORKDIR /build
+RUN apt-get -qq update && apt-get install -qqy --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        vim \
+        cmake \
+        wget \
+        git \
+        curl \
+        htop \
+        pkg-config \
+        doxygen \
+        libgsl-dev \
+	    libyaml-cpp-dev &&\
+    rm -rf ~/.cache
+ENTRYPOINT []

@@ -1,8 +1,7 @@
-#include "event.hpp"
+#include "cylaks/event.hpp"
 
 void Event::SampleStatistics_Poisson() {
 
-  // printf("WHY\n");
   if (*n_avail_ > poisson_.weights_.size()) {
     poisson_.weights_.resize(*n_avail_);
   }

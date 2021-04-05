@@ -3,6 +3,7 @@
 #include <gsl/gsl_randist.h>
 #include <gsl/gsl_rng.h>
 
+// SysRNG: A wrapper for GSL so that we dont have to keep passing the RNG object
 struct SysRNG {
 private:
   inline static const gsl_rng_type *generator_type_{gsl_rng_mt19937};

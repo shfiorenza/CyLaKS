@@ -1,6 +1,6 @@
-#include "reservoir.hpp"
-#include "motor.hpp"
-#include "protein.hpp"
+#include "cylaks/reservoir.hpp"
+#include "cylaks/motor.hpp"
+#include "cylaks/protein.hpp"
 
 template class Reservoir<Motor>;
 template class Reservoir<Protein>;
@@ -22,8 +22,6 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
 
   using namespace Params;
   if (step_active_ * dt < t_equil + t_run) {
-    // printf("BOINK\n");
-    Sys::proteins_inactive_ = false;
     active_ = true;
   }
   if (dynamic_equil_window < 0.0) {
@@ -71,7 +69,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
     window_var += diff * diff / (window_size - 1);
   }
   double window_sigma{sqrt(window_var)};
-  Log("Species %zu is still equilibrating ... (n_bound_avg = %.3g +/- %.1g)\n",
+  Log("Species %zu is still equilibrating ... (n_bound_avg = %.3g +/- %.2g)\n",
       species_id_, window_avg, window_sigma);
   double delta{std::fabs(n_bound_avg_ - window_avg)};
   double delta_sigma{sqrt(n_bound_var_ + window_var)};
@@ -86,12 +84,10 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
 
-  // if (up_to_date_) {
-  //   printf("UP TO DATE!!\n");
-  //   return;
-  // }
-  // up_to_date_ = true;
-  // printf("%i ACTIVE\n", n_active_entries_);
+  if (up_to_date_) {
+    return;
+  }
+  up_to_date_ = true;
   for (auto &&pop : sorted_) {
     pop.second.ZeroOut();
   }

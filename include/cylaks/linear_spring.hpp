@@ -7,6 +7,8 @@
 
 class BindingSite;
 
+// LinearSpring: Hookean; works to hold two points at some rest distance
+// Note: currently contains some junk related to angular springs; to fix
 class LinearSpring : public Object {
 private:
   double k_slack_{0.0};  // For when r < r_0; pN/nm
@@ -81,7 +83,6 @@ public:
     double r_mag{sqrt(r_sq)};
     // printf("r = %g\n", r_mag);
     if (r_mag < r_min_ or r_mag > r_max_) {
-      // printf("BONK\n");
       // ForceUnbind();
       // return false;
     }

@@ -5,6 +5,8 @@
 class BindingSite;
 class Motor;
 
+// CatalyticHead: A binding head that also undergoes a ATP hydrolysis cycle
+//                Cycles thru ADP, NONE, ATP, and ADPP ligands in that order
 class CatalyticHead : public BindingHead {
 private:
 public:

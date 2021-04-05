@@ -1,0 +1,88 @@
+#ifndef _CYLAKS_SYSTEM_NAMESPACE_HPP_
+#define _CYLAKS_SYSTEM_NAMESPACE_HPP_
+#include <cstring>
+#include <filesystem>
+
+// Sys namespace: Used to easily share variables across CyLaKS classes
+namespace Sys {
+
+inline std::string sim_name_;  // Name of simulation
+inline std::string test_mode_; // Name of test mode, if any
+inline std::string yaml_file_; // Name of parameter file
+
+inline FILE *log_file_;      // Pointer to log fle
+inline size_t verbosity_{0}; // How much info is output to log; higher is more
+
+inline bool running_{true};       // If main kmc-bd loop is running
+inline bool equilibrating_{true}; // If proteins are still equilibrating
+
+inline size_t n_unique_objects_{0}; // No. of total objects across all species
+inline size_t n_unique_species_{0}; // No. of different protein species
+
+inline size_t n_steps_pre_equil_{0}; // kMC-BD steps before proteins are checked
+inline size_t n_steps_equil_{0};     // kMC-BD steps to complete protein equil.
+inline size_t n_steps_run_{0};       // kMC-BD steps to run post-equil.
+
+inline size_t i_step_{0};      // Current kMC-BD step
+inline size_t i_datapoint_{0}; // Current datapoint index
+
+// Auxiliary variables related to test_modes
+inline int n_xlinks_{-1};              // For 'filament_separation'
+inline double p_mutant_{-1.0};         // For 'hetero_tubulin'
+inline double binding_affinity_{-1.0}; // For 'hetero_tubulin'
+inline size_t ablation_step_{0};       // For 'filament_ablation'
+
+inline size_t n_runs_recorded_{0}; // No. of motor runs post-equilibration
+inline bool early_exit_triggered_{false}; // Exit after next data output?
+
+// Simple look-up tables for Boltzmann factors used throughout simulation
+inline std::vector<double> weight_neighb_bind_;   // index: [n_neighbs]
+inline std::vector<double> weight_neighb_unbind_; // index: n_neighbs]
+inline size_t lattice_cutoff_; // Range of long-range Gaussian in n_sites
+inline std::vector<double> weight_lattice_bind_;       // index: [delta]
+inline std::vector<double> weight_lattice_unbind_;     // index: [delta]
+inline std::vector<double> weight_lattice_bind_max_;   // index: [n_neighbs]
+inline std::vector<double> weight_lattice_unbind_max_; // index: [n_neighbs]
+
+// Log function: prints to both terminal and sim_name.log file
+template <typename... Args>
+inline void Log(const char *msg, const Args... args) {
+  // Tag each log pintout in terminal w/ simulation name
+  printf("[%s] ", sim_name_.c_str());
+  // This is technically a horrendous vulnerability, but we don't care about
+  // 'hackers' in our sim; also Log() is never explicitly linked to input
+  int chars_printed{printf(msg, args..., "MISSING STRING")};
+  int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
+  if (chars_printed < 0 or chars_written < 0) {
+    printf("Fatal error in Curator::Log()\n *** EXITING ***\n");
+    fprintf(log_file_, "Fatal error in Curator::Log()\n *** EXITING ***\n");
+    exit(1);
+  }
+}
+// Log function but w/ verbosity: only log msg if set verbosity is high enough
+template <typename... Args>
+inline void Log(size_t tier, const char *msg, const Args... args) {
+  if (verbosity_ < tier) {
+    return;
+  }
+  Log(msg, args...);
+}
+// If an error occurs, report function name and stats needed for analysis
+inline void ErrorExit(const char *fn_name) {
+  Log("Fatal error in simulation.\n");
+  Log("   Function name: %s\n", fn_name);
+  Log("   I_STEP = %zu\n", i_step_);
+  Log("   N_STEPS = %zu\n", i_step_ - n_steps_equil_);
+  Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
+  exit(1);
+}
+// After sufficient number of kinesin runs, report stats needed for analysis
+inline void EarlyExit() {
+  Log("Run terminated after sufficient data collection (%i kinesin runs)\n",
+      n_runs_recorded_);
+  Log("   N_STEPS = %zu\n", i_step_ - n_steps_equil_);
+  Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
+  running_ = false;
+}
+}; // namespace Sys
+#endif

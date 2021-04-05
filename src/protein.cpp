@@ -1,5 +1,5 @@
-#include "protein.hpp"
-#include "protofilament.hpp"
+#include "cylaks/protein.hpp"
+#include "cylaks/protofilament.hpp"
 
 void Protein::InitializeNeighborList() {}
 
@@ -103,20 +103,9 @@ void Protein::UpdateNeighbors_Bind_II() {
       continue;
     }
     if (neighb->occupant_ == nullptr) {
-      // scratch[n_neighbors_bind_ii_++] = neighb;
       neighbors_bind_ii_[n_neighbors_bind_ii_++] = neighb;
     }
   }
-  // printf("%i neighbs\n", n_neighbors_bind_ii_);
-  // BindingSite *truncated[n_neighbors_bind_ii_];
-  // for (int i_entry{0}; i_entry < n_neighbors_bind_ii_; i_entry++) {
-  //   truncated[i_entry] = scratch[i_entry];
-  // }
-  // // Shuffle then transfer data
-  // SysRNG::Shuffle(truncated, n_neighbors_bind_ii_, sizeof(BindingSite *));
-  // for (int i_entry{0}; i_entry < n_neighbors_bind_ii_; i_entry++) {
-  //   neighbors_bind_ii_[i_entry] = truncated[i_entry];
-  // }
 }
 
 double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
@@ -128,7 +117,6 @@ double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
   // printf("r = %g\n", r);
   if (r < spring_.r_min_ or r > spring_.r_max_) {
     // printf("r_x = %g\n", r_x);
-    // printf("doink\n");
     return 0.0;
   }
   double weight_spring{spring_.GetWeight_Bind(r)};
@@ -151,7 +139,6 @@ BindingSite *Protein::GetNeighbor_Bind_II() {
     Sys::Log(2, "p_cum = %g\n", p_cum);
     if (ran < p_cum) {
       Sys::Log(2, "*** chose neighb %i ***\n\n", neighb->index_);
-      // Sys::i_picked_[i_neighb]++;
       return neighb;
     }
   }
@@ -184,11 +171,9 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     return 0.0;
   }
   if (new_loc->occupant_ != nullptr) {
-    // printf("YO WHAT THA - dx = %i\n", dx);
     return 0.0;
   }
   BindingSite *old_loc{head->site_};
-  // printf("doink\n");
   if (old_loc->GetNumNeighborsOccupied() == _n_neighbs_max) {
     return 0.0;
   }
@@ -239,28 +224,25 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
       }
       // Impossible to diffuse toward rest
     } else {
-      // printf("HAH on site %i\n", head->site_->index_);
+      // printf("site %i\n", head->site_->index_);
       return false;
     }
   }
   // printf("dx: %i\n", dx);
   BindingSite *old_site = head->site_;
-  // printf("no\n");
   int i_new{(int)old_site->index_ + dx};
   // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
     return false;
   }
-  // printf("chaching\n");
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {
-    // printf("HAH on site %i\n", head->site_->index_);
+    // printf("site %i\n", head->site_->index_);
     return false;
   }
   old_site->occupant_ = nullptr;
   new_site->occupant_ = head;
   head->site_ = new_site;
-  // printf("frfr\n\n");
   return true;
 }
 

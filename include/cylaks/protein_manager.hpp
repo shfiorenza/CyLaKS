@@ -10,6 +10,8 @@
 
 class FilamentManager;
 
+// ProteinManager: Initializes proteins and the kMC events that target them
+//                 Keeps track of different protein populations as sim evolves
 class ProteinManager {
 private:
   Map<Str, Vec<Pair<size_t, size_t>>> test_stats_;
@@ -36,6 +38,7 @@ private:
 public:
   ProteinManager() {}
   ~ProteinManager() {
+    // If a test mode was active, report associated statistics
     for (auto const &entry : test_stats_) {
       Sys::Log("For event %s:\n", entry.first.c_str());
       for (int index{0}; index < entry.second.size(); index++) {

@@ -4,6 +4,8 @@
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
+// AngularSpring: Works to keep two planes parallel while at some rest angle
+//                (Still being fully implemented/debugged)
 class AngularSpring : public Object {
 private:
   double k_rot_{0.0};

@@ -1,7 +1,7 @@
-#include "event_manager.hpp"
-#include "curator.hpp"
-#include "system_namespace.hpp"
-#include "system_rng.hpp"
+#include "cylaks/event_manager.hpp"
+#include "cylaks/curator.hpp"
+#include "cylaks/system_namespace.hpp"
+#include "cylaks/system_rng.hpp"
 
 EventManager::EventManager() {}
 
@@ -10,12 +10,10 @@ void EventManager::Initialize() {}
 void EventManager::SampleEventStatistics() {
 
   n_events_to_exe_ = 0;
-  // printf("yes?\n");
   for (auto &&event : events_) {
     // printf("event is %s\n", event.name_.c_str());
     n_events_to_exe_ += event.SampleStatistics();
   }
-  // printf("noh\n");
   if (n_events_to_exe_ <= 1) {
     return;
   }
@@ -36,7 +34,7 @@ void EventManager::SampleEventStatistics() {
       Event *event_j{active_events[j_entry].first};
       // wally_->Log(2, "   event_j = %s\n", event_j->name_.c_str());
       Object *tar_j{active_events[j_entry].second};
-      // If event_i and event_j target the same motor or motor head, remove one
+      // If event_i and event_j target the same protein, remove one
       if (tar_i->GetID() == tar_j->GetID()) {
         double p_one{event_i->p_occur_};
         double p_two{event_j->p_occur_};

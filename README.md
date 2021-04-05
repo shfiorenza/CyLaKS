@@ -6,45 +6,73 @@ To begin, clone the repo:
 git clone https://github.com/Betterton-Lab/CyLaKS
 cd CyLaKS
 ```
-### Dependencies 
-CyLaKS requires the following libraries to run:
+### Using pre-built Docker image
+A pre-built image of CyLaKS is available as a [Docker](https://www.docker.com/) image. To download this image, run
+```
+docker pull shfiorenza/cylaks
+```
+Depending your local Docker permissions, you may need to add `sudo` to the command above. If this is the your first time using Docker, 
+you may have to initialize the Docker Daemon. On Linux distributions, you can simply run
+```
+dockerd
+```
+On Windows and MacOS, you can use [Docker Desktop](https://www.docker.com/products/docker-desktop). 
+
+Once you have the CyLaKS image, you can launch a Docker container named `cylaks` in the background via the provided script:
+```
+./launch_docker.sh
+```
+Again, you may need to add 'sudo' depending on your local Docker permissions. 
+
+Once the container is running, you can select from available CyLaKS demos to run by using the `-d` flag:
+```
+./launch_docker.sh -d
+```
+You can also launch custom CyLaKS simulations via Docker while the container is running:
+```
+docker exec -it cylaks cylaks.exe [parameter-file] [sim-name] [optional-flags]
+```
+
+To close the cylaks container, use the `stop` command:
+```
+docker stop cylaks
+```
+### Building from source 
+CyLaKS requires the following libraries:
  * [gsl](http://www.gnu.org/software/gsl/)
  * [yaml-cpp](https://github.com/jbeder/yaml-cpp)
 
-On most Ubuntu distributions, you can install these dependences as follows:
+On most Linux distributions, you can install these dependences as follows:
 ```	
 sudo apt-get install libgsl-dev
 sudo apt-get install libyaml-cpp-dev
 ```
-In order to run most of the included bash scripts found in `scripts/`, [yq](https://github.com/mikefarah/yq) is also required. There are a variety of ways to install this utility, so consult the documentation to find the most convenient means for your local environment. 
-### Building from source 
-To use the provided installation script, you must have CMake (version 3.14+) installed. On most Ubuntu distributions, CMake can be installed via:
+In order to use most of the included bash scripts found in `scripts/`, [yq](https://github.com/mikefarah/yq) is also required. There are a variety of ways to install this utility, so consult the documentation to find the most convenient means for your local environment. 
+
+To use the provided installation script, you must have CMake (version 3.13+) installed. On most Linux distributions, CMake can be installed via:
 ```
 sudo apt-get install cmake
 ```
-
 Once CMake is installed, call the installation script to compile CyLaKS. An executable will be added to the main folder. 
 ```
 ./install.sh 
 ```
-
 There are additional flags to build CyLaKS in debug mode or clean the build directory. To view these options, add the '-h' flag:
 ```
 ./install.sh -h
 ```
 Once compiled, you can observe CyLaKS run options by calling the executable:
 ```
-./cylaks
+./cylaks.exe
 ```
 ## Running simulations
-To run CyLaKS, use the `cylaks` executable as follows:
+To run CyLaKS, use the `cylaks.exe` executable as follows:
 ```
-./cylaks [parameter-file] [sim-name] [optional-flags]
+./cylaks.exe [parameter-file] [sim-name] [optional-flags]
 ```
 The parameter file must be a YAML file. See the files included in `params/` for an example of proper formatting. 
 
 The sim name sets the prefix of all output files and can be whatever you'd like. 
-
 ### Demos
 To select from currently available demos, use the `run_demos.sh` script. 
 ### Test modes

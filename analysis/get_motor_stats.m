@@ -7,17 +7,18 @@ seeds = [0, 1, 2, 3, 4, 5];
 do_plot = true;
 %}
 
-multirun = true;
-n_seeds = length(seeds);
-sim_name = sprintf('%s_%i', base_name, seeds(1));
 do_plot = false;
 if nargin == 1
     multirun = false;
     n_seeds = 1;
     sim_name = base_name;
-end
-if nargin == 3
-   do_plot = plot_flag; 
+else
+    multirun = true;
+    n_seeds = length(seeds);
+    sim_name = sprintf('%s_%i', base_name, seeds(1));
+    if nargin == 3
+       do_plot = plot_flag; 
+    end
 end
 
 % Open log file and parse it into param labels & their values

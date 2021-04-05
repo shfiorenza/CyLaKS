@@ -98,8 +98,7 @@ void Motor::ApplyLatticeDeformation() {
           }
           BindingSite *site{&other_mt->sites_[i_adj]};
           if (site == nullptr) {
-            printf("NO\n");
-            exit(1);
+            Sys::ErrorExit("Motor::ApplyLatticeDeformation [0]");
           }
           site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
           site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
@@ -114,8 +113,7 @@ void Motor::ApplyLatticeDeformation() {
           }
           BindingSite *site{&other_mt->sites_[i_adj]};
           if (site == nullptr) {
-            printf("NO\n");
-            exit(1);
+            Sys::ErrorExit("Motor::ApplyLatticeDeformation [1]");
           }
           site->AddWeight_Bind(Sys::weight_lattice_bind_[delta]);
           site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
@@ -271,7 +269,10 @@ bool Motor::Unbind(CatalyticHead *head) {
   // If we are about to completely unbind, record this motor run
   if (n_heads_active_ == 1) {
     if (!Sys::equilibrating_) {
-      // n_runs_rec++ GOES HERE
+      Sys::n_runs_recorded_++;
+      if (Sys::n_runs_recorded_ >= Params::Motors::n_runs_to_exit) {
+        Sys::early_exit_triggered_ = true;
+      }
     }
   }
   n_heads_active_--;

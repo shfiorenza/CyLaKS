@@ -5,6 +5,8 @@
 #include "linear_spring.hpp"
 #include "system_namespace.hpp"
 
+// Protein: Essentially just a passive crosslinker at this stage
+//          Has two binding heads connected by a linear hookean spring
 class Protein : public Object {
 protected:
   double ran_{0.0};

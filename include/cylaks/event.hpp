@@ -5,6 +5,7 @@
 
 class Object;
 
+// Event: Models a kMC event; calculates & executes expected num. each timestep
 struct Event {
 private:
   enum Distribution { Binomial, Poisson };
@@ -22,7 +23,7 @@ private:
 public:
   size_t n_executed_tot_{0};      // # of times event has been executed
   size_t n_opportunities_tot_{0}; // # of opportunities event had to execute
-  Str name_{"bruh"};              // Name of this event, e.g., "Bind_II_Teth"
+  Str name_{"void"};              // Name of this event, e.g., "Bind_II_Teth"
   double p_occur_{0.0};      // Probability that event will occur each timestep
   size_t n_expected_{0};     // Expected # of events to occur any given timestep
   size_t *n_avail_{nullptr}; // Ptr to # of targets event can act on; dynamic

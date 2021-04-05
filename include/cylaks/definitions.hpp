@@ -8,8 +8,6 @@
 #include <unordered_map>
 #include <vector>
 
-#define GetVarName(Variable) (#Variable)
-
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};

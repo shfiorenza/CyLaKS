@@ -6,6 +6,8 @@
 
 class BindingSite;
 
+// Motor: Steps via coordinated mechanochemcial cyles of two catalytic heads
+//        Can exert forces and drag cargo via its 'tether' (or stalk)
 class Motor : public Protein {
 protected:
 public:

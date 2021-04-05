@@ -2,8 +2,8 @@
 #define _CYLAKS_RIGID_ROD_HPP_
 #include "object.hpp"
 
+// RigidRod: Basic rod that cannot bend; infinitely thin.
 class RigidRod : public Object {
-
 protected:
 public:
   double length_{0.0}; // In nm

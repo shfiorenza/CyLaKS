@@ -6,6 +6,7 @@
 class BindingHead;
 class Protofilament;
 
+// BindingSite: Binds various proteins; make up the binding lattice of filaments
 class BindingSite : public Sphere {
 protected:
   double binding_affinity_{1.0};

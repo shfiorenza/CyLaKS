@@ -22,7 +22,6 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
 
   using namespace Params;
   if (step_active_ * dt < t_equil + t_run) {
-    Sys::proteins_inactive_ = false;
     active_ = true;
   }
   if (dynamic_equil_window < 0.0) {
@@ -85,12 +84,10 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
 
 template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
 
-  // if (up_to_date_) {
-  //   printf("UP TO DATE!!\n");
-  //   return;
-  // }
-  // up_to_date_ = true;
-  // printf("%i ACTIVE\n", n_active_entries_);
+  if (up_to_date_) {
+    return;
+  }
+  up_to_date_ = true;
   for (auto &&pop : sorted_) {
     pop.second.ZeroOut();
   }

@@ -6,6 +6,7 @@
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
+// Protofilament: Infinitely-thin rigid rod with a 1-D lattice of binding sites
 class Protofilament : public RigidRod {
 private:
   size_t polarity_{0};

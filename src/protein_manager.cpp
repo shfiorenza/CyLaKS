@@ -206,16 +206,16 @@ void ProteinManager::InitializeTestEnvironment() {
     double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
     for (int x{-x_max}; x <= x_max; x++) {
       int x_index{x_max + x};
-      printf("x = %i\n", x);
-      printf("x_index = %i\n", x_index);
+      // printf("x = %i\n", x);
+      // printf("x_index = %i\n", x_index);
       // x = abs(x);
       double r_x{x * Filaments::site_size + offset};
-      printf("r_x = %g\n", r_x);
+      // printf("r_x = %g\n", r_x);
       double r{sqrt(Square(r_x) + Square(r_y))};
       if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
         p_bind[x_index] *= 0.0;
         p_unbind[x_index] *= 0.0;
-        printf("yoink");
+        // printf("yoink");
         continue;
       }
       double dr{r - Params::Xlinks::r_0};
@@ -513,7 +513,7 @@ void ProteinManager::InitializeTestEnvironment() {
       p_hetero = (double)std::stod(response_one);
     }
     if (p_hetero < 0.0 or p_hetero > 1.0) {
-      printf("Invalid fraction, ya dingus!\n");
+      printf("Error. Invalid fraction!\n");
       exit(1);
     }
     double bind_aff{Sys::binding_affinity_};
@@ -524,12 +524,8 @@ void ProteinManager::InitializeTestEnvironment() {
       std::getline(std::cin, response_two);
       bind_aff = (double)std::stod(response_two);
     }
-    if (bind_aff < 0.0) {
+    if (bind_aff <= 0.0) {
       printf("Error. Fractional change must be positive!\n");
-      exit(1);
-    }
-    if (bind_aff == 0.0) {
-      printf("You tryna start a damn singularity?!\n");
       exit(1);
     }
     GenerateReservoirs();
@@ -538,21 +534,16 @@ void ProteinManager::InitializeTestEnvironment() {
     filaments_->Initialize(this);
     int n_sites{(int)filaments_->sites_.size()};
     int n_hetero{(int)std::round(n_sites * p_hetero)};
-    // printf("n_hetero = %i\n", n_hetero);
     // Randomly place heterogeneous sites on lattice
     int site_indices[n_sites];
     for (int index{0}; index < n_sites; index++) {
       site_indices[index] = index;
-      // printf("i = %i\n", index);
     }
     SysRNG::Shuffle(site_indices, n_sites, sizeof(int));
     for (int i_hetero{0}; i_hetero < n_hetero; i_hetero++) {
       int i_site{site_indices[i_hetero]};
-      // printf("i_site = %i\n", i_site);
       filaments_->sites_[i_site]->SetBindingAffinity(bind_aff);
-      // printf("SITE %zu IS A HETERO\n", filaments_->sites_[i_site]->index_);
     }
-    // exit(1);
   } else if (Sys::test_mode_ == "kinesin_mutant") {
     GenerateReservoirs();
     InitializeWeights();
@@ -1647,12 +1638,6 @@ void ProteinManager::InitializeEvents() {
         [&](Object *base) {
           exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
                        filaments_);
-          if (!Sys::equilibrating_) {
-            Sys::n_runs_recorded_++;
-            if (Sys::n_runs_recorded_ >= Params::Motors::n_runs_to_exit) {
-              Sys::early_exit_triggered_ = true;
-            }
-          }
         });
   }
   // Unbind_I_Teth

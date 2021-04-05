@@ -3,51 +3,48 @@
 #include <cstring>
 #include <filesystem>
 
+// Sys namespace: Used to easily share variables across CyLaKS classes
 namespace Sys {
 
-// inline int i_picked_[9];
+inline std::string sim_name_;  // Name of simulation
+inline std::string test_mode_; // Name of test mode, if any
+inline std::string yaml_file_; // Name of parameter file
 
-inline std::string sim_name_;
-inline std::string test_mode_;
-inline std::string yaml_file_;
+inline FILE *log_file_;      // Pointer to log fle
+inline size_t verbosity_{0}; // How much info is output to log; higher is more
 
-inline int n_xlinks_{-1};
+inline bool running_{true};       // If main kmc-bd loop is running
+inline bool equilibrating_{true}; // If proteins are still equilibrating
 
-inline double p_mutant_{-1.0};
-inline double binding_affinity_{-1.0};
+inline size_t n_unique_objects_{0}; // No. of total objects across all species
+inline size_t n_unique_species_{0}; // No. of different protein species
 
-inline bool proteins_inactive_{true};
+inline size_t n_steps_pre_equil_{0}; // kMC-BD steps before proteins are checked
+inline size_t n_steps_equil_{0};     // kMC-BD steps to complete protein equil.
+inline size_t n_steps_run_{0};       // kMC-BD steps to run post-equil.
 
-inline size_t ablation_step_{0};
+inline size_t i_step_{0};      // Current kMC-BD step
+inline size_t i_datapoint_{0}; // Current datapoint index
 
-inline FILE *log_file_;
-inline size_t verbosity_{0};
+// Auxiliary variables related to test_modes
+inline int n_xlinks_{-1};              // For 'filament_separation'
+inline double p_mutant_{-1.0};         // For 'hetero_tubulin'
+inline double binding_affinity_{-1.0}; // For 'hetero_tubulin'
+inline size_t ablation_step_{0};       // For 'filament_ablation'
 
-inline bool running_{true};
-inline bool equilibrating_{true};
+inline size_t n_runs_recorded_{0}; // No. of motor runs post-equilibration
+inline bool early_exit_triggered_{false}; // Exit after next data output?
 
-inline bool early_exit_triggered_{false};
-inline size_t n_runs_recorded_{0};
+// Simple look-up tables for Boltzmann factors used throughout simulation
+inline std::vector<double> weight_neighb_bind_;   // index: [n_neighbs]
+inline std::vector<double> weight_neighb_unbind_; // index: n_neighbs]
+inline size_t lattice_cutoff_; // Range of long-range Gaussian in n_sites
+inline std::vector<double> weight_lattice_bind_;       // index: [delta]
+inline std::vector<double> weight_lattice_unbind_;     // index: [delta]
+inline std::vector<double> weight_lattice_bind_max_;   // index: [n_neighbs]
+inline std::vector<double> weight_lattice_unbind_max_; // index: [n_neighbs]
 
-inline size_t n_unique_objects_{0};
-inline size_t n_unique_species_{0};
-
-inline size_t n_steps_pre_equil_{0};
-inline size_t n_steps_equil_{0};
-inline size_t n_steps_run_{0};
-
-inline size_t i_step_{0};
-inline size_t i_datapoint_{0};
-
-inline std::vector<double> weight_neighb_bind_;   // [n_neighbs]
-inline std::vector<double> weight_neighb_unbind_; // [n_neighbs]
-
-inline size_t lattice_cutoff_;
-inline std::vector<double> weight_lattice_bind_;       // [delta]
-inline std::vector<double> weight_lattice_unbind_;     // [delta]
-inline std::vector<double> weight_lattice_bind_max_;   // [n_neighbs]
-inline std::vector<double> weight_lattice_unbind_max_; // [n_neighbs]
-
+// Log function: prints to both terminal and sim_name.log file
 template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
   // Tag each log pintout in terminal w/ simulation name
@@ -62,6 +59,7 @@ inline void Log(const char *msg, const Args... args) {
     exit(1);
   }
 }
+// Log function but w/ verbosity: only log msg if set verbosity is high enough
 template <typename... Args>
 inline void Log(size_t tier, const char *msg, const Args... args) {
   if (verbosity_ < tier) {
@@ -69,6 +67,7 @@ inline void Log(size_t tier, const char *msg, const Args... args) {
   }
   Log(msg, args...);
 }
+// If an error occurs, report function name and stats needed for analysis
 inline void ErrorExit(const char *fn_name) {
   Log("Fatal error in simulation.\n");
   Log("   Function name: %s\n", fn_name);
@@ -77,6 +76,7 @@ inline void ErrorExit(const char *fn_name) {
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   exit(1);
 }
+// After sufficient number of kinesin runs, report stats needed for analysis
 inline void EarlyExit() {
   Log("Run terminated after sufficient data collection (%i kinesin runs)\n",
       n_runs_recorded_);

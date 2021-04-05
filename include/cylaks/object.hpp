@@ -2,6 +2,7 @@
 #define _CYLAKS_OBJECT_HPP_
 #include "definitions.hpp"
 
+// Object: Basic building block of CyLaKS; foundation of all proteins/etc
 class Object {
 private:
   size_t unique_id_{0};

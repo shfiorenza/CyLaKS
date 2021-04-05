@@ -7,6 +7,8 @@
 
 class BindingSite;
 
+// LinearSpring: Hookean; works to hold two points at some rest distance
+// Note: currently contains some junk related to angular springs; to fix
 class LinearSpring : public Object {
 private:
   double k_slack_{0.0};  // For when r < r_0; pN/nm

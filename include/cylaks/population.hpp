@@ -3,11 +3,14 @@
 #include "definitions.hpp"
 #include "system_namespace.hpp"
 
+// Population: Used to divide active proteins into different bins
+//             Stores pointers to proteins that fit given critera
+//             E.g., motors with 1 neighbor that can unbind
 template <typename ENTRY_T> struct Population {
 private:
   bool one_d_{true};
   // 1-d stuff
-  Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_;
+  Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_; // Selection criteria
   // multi-dim stuff
   Vec<int> min_indices_;
   Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;

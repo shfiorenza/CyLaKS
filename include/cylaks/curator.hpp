@@ -7,8 +7,10 @@
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
 
+// Curator: Initializes and runs the simulation; controls data output
 class Curator {
 private:
+  // Available test modes; initialize custom scenarios and kMC events
   Vec<Str> test_modes_{"xlink_bind_ii",       "xlink_diffusion",
                        "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",

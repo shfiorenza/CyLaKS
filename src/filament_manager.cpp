@@ -98,7 +98,7 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
-  // this some jank 1-D wca potential type jawn
+  // Temporary hacky 1-D wca potential implementation
   /*
   if (proto_.size() == 2 and proteins_->xlinks_.active_) {
     double r{proto_[1].pos_[1] - proto_[0].pos_[1]};

@@ -5,6 +5,7 @@
 class BindingSite;
 class Protein;
 
+// BindingHead: Can bind to and diffuse along binding sites
 class BindingHead : public Sphere {
 protected:
 public:

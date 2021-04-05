@@ -8,6 +8,7 @@
 
 class ProteinManager;
 
+// FilamentManager: Manages the brownian dynamics and binding sites of filaments
 class FilamentManager {
 private:
   bool up_to_date_{false};
@@ -15,6 +16,7 @@ private:
   Vec<double> weight_neighbs_bind_;
   Vec<double> weight_neighbs_unbind_;
 
+  // Some temporary hacky stuff for WCA potential
   double sigma_{4.0};     // nm
   double epsilon_{1.0};   // kbT
   double threshold_{0.0}; // nm

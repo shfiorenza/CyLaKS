@@ -28,6 +28,11 @@ Once the container is running, you can select from available CyLaKS demos to run
 ```
 ./launch_docker.sh -d
 ```
+If the Dockerhub image does not work for whatever reason, try building the environment and simulation images on your machine:
+```
+./launch_docker.sh -e
+./launch_docker.sh -b
+```
 You can also launch custom CyLaKS simulations via Docker while the container is running:
 ```
 docker exec -it cylaks cylaks.exe [parameter-file] [sim-name] [optional-flags]

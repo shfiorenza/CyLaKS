@@ -37,6 +37,11 @@ To close the cylaks container, use the `stop` command:
 ```
 docker stop cylaks
 ```
+If the Dockerhub image does not work for whatever reason, try building the environment and simulation images on your machine:
+```
+./launch_docker.sh -e
+./launch_docker.sh -b
+```
 ### Building from source 
 CyLaKS requires the following libraries:
  * [gsl](http://www.gnu.org/software/gsl/)

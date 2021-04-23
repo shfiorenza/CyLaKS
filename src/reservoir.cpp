@@ -24,7 +24,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SetParameters() {
   if (step_active_ * dt < t_equil + t_run) {
     active_ = true;
   }
-  if (dynamic_equil_window < 0.0) {
+  if (dynamic_equil_window < 0.0 or !active_) {
     equilibrated_ = true;
   } else {
     size_t window_size{(size_t)std::round(dynamic_equil_window / dt)};

@@ -253,13 +253,17 @@ void Curator::InitializeSimulation() {
   Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
   Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
   Log("\n");
+
   // Initialize sim objects
   SysRNG::Initialize(seed);
-  // If we're running a test, let proteins initialize filament environment
+  // With no test mode active, initialize proteins and filaments normally
   if (Sys::test_mode_.empty()) {
     filaments_.Initialize(&proteins_);
+    proteins_.Initialize(&filaments_);
+  } else {
+    proteins_.InitializeTest(&filaments_);
   }
-  proteins_.Initialize(&filaments_);
+  // Get maximum filament length in n_sites
   for (auto const &pf : filaments_.proto_) {
     if (pf.sites_.size() > n_sites_max_) {
       n_sites_max_ = pf.sites_.size();

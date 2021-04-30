@@ -166,24 +166,24 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
     Sys::ErrorExit("Motor::GetWeight_Unbind_II()");
   }
   double weight_site{head->site_->GetWeight_Unbind()};
-  // Ensure we use weight from trailing head to avoid self-coop
+  // Ensure we use weight from trailing head to avoid self-coop from lattice
   if (!head->trailing_) {
+    // printf("hello from site %zu\n", head->site_->index_);
     weight_site = head->GetOtherHead()->site_->GetWeight_Unbind();
   }
   // Divide out the weight from one neighbor, since it's the motor's other foot
-  // weight_site /= Sys::weight_neighb_unbind_[1];
+  weight_site /= Sys::weight_neighb_unbind_[1];
   // Disregard effects from internal force if it's disabled
   if (Params::Motors::internal_force == 0.0 or
       Params::Motors::gaussian_range == 0) {
     return weight_site;
   }
   double weight_sq{Square(weight_site)};
-  // We only want the lattice contribution to be squared; divide out neighb term
-  // int n_neighbs{head->site_->GetNumNeighborsOccupied() - 1};
-  int n_neighbs{1};
-  //   double weight{weight_sq / Sys::weight_neighb_unbind_[n_neighbs]};
-  //   printf("weight = %g\n", weight);
-  return weight_sq / Sys::weight_neighb_unbind_[n_neighbs];
+  // Divide out sq'd contribution if motor has a real neighb (i.e., not itself)
+  if (head->GetNumNeighborsOccupied() == 2) {
+    weight_sq /= Sys::weight_neighb_unbind_[1];
+  }
+  return weight_sq;
 }
 
 double Motor::GetWeight_Unbind_I() {

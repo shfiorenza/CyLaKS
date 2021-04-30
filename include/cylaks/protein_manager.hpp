@@ -28,39 +28,36 @@ private:
   void GenerateReservoirs();
   void InitializeWeights();
   void SetParameters();
-  void InitializeTestEnvironment();
-  void InitializeTestEvents();
   void InitializeEvents();
 
   void FlagFilamentsForUpdate();
   void UpdateFilaments();
 
+  void ReportTestStatistics();
+
+  void SetTestMode();
+  void InitializeTest_Filament_Ablation();
+  void InitializeTest_Filament_Separation();
+  void InitializeTest_Filament_HeteroTubulin();
+  void InitializeTest_Motor_Heterodimer();
+  void InitializeTest_Motor_LatticeStep();
+  void InitializeTest_Motor_LatticeBind();
+  void InitializeTest_Xlink_Diffusion();
+  void InitializeTest_Xlink_Bind_II();
+
 public:
   ProteinManager() {}
-  ~ProteinManager() {
-    // If a test mode was active, report associated statistics
-    for (auto const &entry : test_stats_) {
-      Sys::Log("For event %s:\n", entry.first.c_str());
-      for (int index{0}; index < entry.second.size(); index++) {
-        auto stats = entry.second[index];
-        double p{double(stats.first) / stats.second};
-        double ref{test_ref_.at(entry.first)[index]};
-        Sys::Log("  p[%i] = %.3g (%.3g expected) [%zu / %zu events]\n", index,
-                 p, ref, stats.first, stats.second);
-      }
-    }
-  }
+  ~ProteinManager() { ReportTestStatistics(); }
   void Initialize(FilamentManager *filaments) {
     filaments_ = filaments;
-    if (!Sys::test_mode_.empty()) {
-      InitializeTestEnvironment();
-      InitializeTestEvents();
-      return;
-    }
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
     InitializeEvents();
+  }
+  void InitializeTest(FilamentManager *filaments) {
+    filaments_ = filaments;
+    SetTestMode();
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {

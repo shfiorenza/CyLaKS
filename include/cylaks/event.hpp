@@ -7,7 +7,7 @@ class Object;
 
 // Event: Models a kMC event; calculates & executes expected num. each timestep
 struct Event {
-private:
+protected:
   enum Distribution { Binomial, Poisson };
   Distribution mode_{Binomial};    // Which distribution we sample from
   Vec<Object *> *target_pool_;     // Ptr to list of available targets; dynamic
@@ -29,7 +29,7 @@ public:
   size_t *n_avail_{nullptr}; // Ptr to # of targets event can act on; dynamic
   Vec<Object *> targets_;    // Objects this event will act on this timestep
 
-private:
+protected:
   void SetTargets() {
     if (n_expected_ > targets_.size()) {
       targets_.resize(n_expected_);

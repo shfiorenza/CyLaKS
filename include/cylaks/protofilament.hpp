@@ -8,7 +8,7 @@
 
 // Protofilament: Infinitely-thin rigid rod with a 1-D lattice of binding sites
 class Protofilament : public RigidRod {
-private:
+protected:
   size_t polarity_{0};
   double dt_eff_{0.0};
   double center_index_{0.0};
@@ -24,7 +24,7 @@ public:
   BindingSite *minus_end_{nullptr};
   Protofilament *neighbor_{nullptr};
 
-private:
+protected:
   void SetParameters();
   void GenerateSites();
 

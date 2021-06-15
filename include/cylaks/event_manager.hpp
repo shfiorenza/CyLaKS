@@ -5,14 +5,14 @@
 
 // EventManager: Handles all Events(); ensures no populations go negative
 class EventManager {
-private:
+protected:
   int n_events_to_exe_;
   Vec<Event *> events_to_exe_;
 
 public:
   Vec<Event> events_;
 
-private:
+protected:
   void SampleEventStatistics();
   void GenerateExecutionSequence();
 

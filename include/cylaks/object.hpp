@@ -4,7 +4,7 @@
 
 // Object: Basic building block of CyLaKS; foundation of all proteins/etc
 class Object {
-private:
+protected:
   size_t unique_id_{0};
   size_t species_id_{0};
 

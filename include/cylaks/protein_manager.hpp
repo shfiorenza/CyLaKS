@@ -13,10 +13,7 @@ class FilamentManager;
 // ProteinManager: Initializes proteins and the kMC events that target them
 //                 Keeps track of different protein populations as sim evolves
 class ProteinManager {
-private:
-  Map<Str, Vec<Pair<size_t, size_t>>> test_stats_;
-  Map<Str, Vec<double>> test_ref_;
-
+protected:
   FilamentManager *filaments_{nullptr};
 
 public:
@@ -24,40 +21,24 @@ public:
   Reservoir<Protein> xlinks_;
   EventManager kmc_;
 
-private:
+protected:
+  void FlagFilamentsForUpdate();
+  virtual void UpdateFilaments();
+
   void GenerateReservoirs();
   void InitializeWeights();
   void SetParameters();
   void InitializeEvents();
 
-  void FlagFilamentsForUpdate();
-  void UpdateFilaments();
-
-  void ReportTestStatistics();
-
-  void SetTestMode();
-  void InitializeTest_Filament_Ablation();
-  void InitializeTest_Filament_Separation();
-  void InitializeTest_Filament_HeteroTubulin();
-  void InitializeTest_Motor_Heterodimer();
-  void InitializeTest_Motor_LatticeStep();
-  void InitializeTest_Motor_LatticeBind();
-  void InitializeTest_Xlink_Diffusion();
-  void InitializeTest_Xlink_Bind_II();
-
 public:
   ProteinManager() {}
-  ~ProteinManager() { ReportTestStatistics(); }
-  void Initialize(FilamentManager *filaments) {
+  virtual ~ProteinManager() {}
+  virtual void Initialize(FilamentManager *filaments) {
     filaments_ = filaments;
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
     InitializeEvents();
-  }
-  void InitializeTest(FilamentManager *filaments) {
-    filaments_ = filaments;
-    SetTestMode();
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {
@@ -74,5 +55,4 @@ public:
     kmc_.ExecuteEvents();
   }
 };
-
 #endif

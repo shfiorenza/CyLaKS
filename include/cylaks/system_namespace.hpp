@@ -1,7 +1,8 @@
 #ifndef _CYLAKS_SYSTEM_NAMESPACE_HPP_
 #define _CYLAKS_SYSTEM_NAMESPACE_HPP_
-#include <cstring>
+#include "definitions.hpp"
 #include <filesystem>
+#include <string>
 
 // Sys namespace: Used to easily share variables across CyLaKS classes
 namespace Sys {
@@ -16,8 +17,8 @@ inline size_t verbosity_{0}; // How much info is output to log; higher is more
 inline bool running_{true};       // If main kmc-bd loop is running
 inline bool equilibrating_{true}; // If proteins are still equilibrating
 
-inline size_t n_unique_objects_{0}; // No. of total objects across all species
-inline size_t n_unique_species_{0}; // No. of different protein species
+inline size_t n_objects_{0}; // No. of total objects across all species
+inline size_t n_species_{0}; // No. of different protein species
 
 inline size_t n_steps_pre_equil_{0}; // kMC-BD steps before proteins are checked
 inline size_t n_steps_equil_{0};     // kMC-BD steps to complete protein equil.
@@ -37,7 +38,7 @@ inline bool early_exit_triggered_{false}; // Exit after next data output?
 
 // Simple look-up tables for Boltzmann factors used throughout simulation
 inline std::vector<double> weight_neighb_bind_;   // index: [n_neighbs]
-inline std::vector<double> weight_neighb_unbind_; // index: n_neighbs]
+inline std::vector<double> weight_neighb_unbind_; // index: [n_neighbs]
 inline size_t lattice_cutoff_; // Range of long-range Gaussian in n_sites
 inline std::vector<double> weight_lattice_bind_;       // index: [delta]
 inline std::vector<double> weight_lattice_unbind_;     // index: [delta]
@@ -84,5 +85,53 @@ inline void EarlyExit() {
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   running_ = false;
 }
+
+struct DataFile {
+  Str name_{"example"};
+  Str filename_{"simName_example.file"};
+  FILE *fileptr_;
+  DataFile() {}
+  DataFile(Str name) : name_{name} {
+    filename_ = Sys::sim_name_ + "_" + name_ + ".file";
+    fileptr_ = fopen(filename_.c_str(), "w");
+    if (fileptr_ == nullptr) {
+      printf("Error; cannot open '%s'\n", filename_.c_str());
+      exit(1);
+    }
+  }
+  template <typename DATA_T> void Write(DATA_T *array, size_t count) {
+    size_t n_chars_written{fwrite(array, sizeof(DATA_T), count, fileptr_)};
+    if (n_chars_written < count) {
+      printf("Error writing to '%s'\n", filename_.c_str());
+      exit(1);
+    }
+  }
+};
+struct ProbEntry {
+  Str event_name_;
+  double val_;
+  Vec3D<double> vals_;
+  ProbEntry() {}
+  ProbEntry(Str name, double val) : event_name_{name}, val_{val} {}
+  ProbEntry(Str name, Vec3D<double> vals) : event_name_{name}, vals_{vals} {}
+  double GetVal() { return val_; }
+  double GetVal(size_t i) { return vals_[0][0][i]; }
+  double GetVal(size_t i, size_t j) { return vals_[0][i][j]; }
+  double GetVal(size_t i, size_t j, size_t k) { return vals_[i][j][k]; }
+};
+struct BoltzmannFactor {
+  Str effect_name_;
+  int i_start_{0};
+  size_t size_{0};
+  Vec<double> bind_;
+  Vec<double> unbind_;
+  BoltzmannFactor() {}
+  BoltzmannFactor(Str name, size_t sz) : BoltzmannFactor(name, sz, 0) {}
+  BoltzmannFactor(Str name, size_t size, int i_start)
+      : effect_name_{name}, size_{size}, i_start_{i_start} {
+    bind_.resize(size);
+    unbind_.resize(size);
+  }
+};
 }; // namespace Sys
 #endif

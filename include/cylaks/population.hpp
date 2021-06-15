@@ -7,7 +7,7 @@
 //             Stores pointers to proteins that fit given critera
 //             E.g., motors with 1 neighbor that can unbind
 template <typename ENTRY_T> struct Population {
-private:
+protected:
   bool one_d_{true};
   // 1-d stuff
   Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_; // Selection criteria

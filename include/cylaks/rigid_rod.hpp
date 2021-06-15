@@ -14,7 +14,7 @@ public:
   Vec<double> force_;       // In pN; zero'd out every timestep
   Vec<double> orientation_; // Unit vector
 
-private:
+protected:
   void SetParameters() {
     gamma_.resize(3);
     sigma_.resize(3);

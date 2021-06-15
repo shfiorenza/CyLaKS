@@ -3,7 +3,9 @@
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <unordered_map>
 #include <vector>

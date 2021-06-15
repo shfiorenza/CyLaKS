@@ -96,7 +96,6 @@ void Protein::UpdateNeighbors_Bind_II() {
   double r_y{site->filament_->pos_[1] - neighb_fil->pos_[1]};
   double r_x_max{sqrt(Square(spring_.r_max_) - Square(r_y))};
   int delta_max{(int)std::ceil(r_x_max / Params::Filaments::site_size)};
-  // BindingSite *scratch[neighbors_bind_ii_.size()];
   for (int delta{-delta_max}; delta <= delta_max; delta++) {
     BindingSite *neighb{neighb_fil->GetNeighb(site, delta)};
     if (neighb == nullptr) {
@@ -114,15 +113,11 @@ double Protein::GetSoloWeight_Bind_II(BindingSite *neighb) {
   double r_x{neighb->pos_[0] - site->pos_[0]};
   double r_y{neighb->pos_[1] - site->pos_[1]};
   double r{sqrt(Square(r_x) + Square(r_y))};
-  // printf("r = %g\n", r);
   if (r < spring_.r_min_ or r > spring_.r_max_) {
-    // printf("r_x = %g\n", r_x);
     return 0.0;
   }
   double weight_spring{spring_.GetWeight_Bind(r)};
-  // printf("wt = %g\n", weight_spring);
   double weight_site{neighb->GetWeight_Bind()};
-  // printf("WTT = %g\n", weight_site);
   return weight_spring * weight_site;
 }
 
@@ -212,7 +207,6 @@ double Protein::GetWeight_Unbind_II(BindingHead *head) {
 bool Protein::Diffuse(BindingHead *head, int dir) {
 
   int dx{dir * head->GetDirectionTowardRest()};
-  // FIXME ran num MUST be synchronized with one in GetWeight() above
   // For xlinks exactly at rest,
   if (dx == 0) {
     // Diffuse from rest in a random direction
@@ -224,20 +218,16 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
       }
       // Impossible to diffuse toward rest
     } else {
-      // printf("site %i\n", head->site_->index_);
       return false;
     }
   }
-  // printf("dx: %i\n", dx);
   BindingSite *old_site = head->site_;
   int i_new{(int)old_site->index_ + dx};
-  // printf("i_old: %i | i_new: %i\n", old_site->index_, i_new);
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
     return false;
   }
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {
-    // printf("site %i\n", head->site_->index_);
     return false;
   }
   old_site->occupant_ = nullptr;

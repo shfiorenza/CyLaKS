@@ -2,7 +2,9 @@
 #define _CYLAKS_CURATOR_HPP_
 #include "definitions.hpp"
 #include "filament_manager.hpp"
+#include "filament_tester.hpp"
 #include "protein_manager.hpp"
+#include "protein_tester.hpp"
 #include "system_namespace.hpp"
 #include "system_parameters.hpp"
 #include "system_rng.hpp"
@@ -15,30 +17,9 @@ private:
                        "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",
                        "hetero_tubulin",      "kinesin_mutant"};
-  // Vec<Str> demo_modes_{"filament_separation", "heterogenous_tubulin",
-  //                      "kinesin_heterodimer"};
-  struct DataFile {
-    Str name_{"example"};
-    Str filename_{"simName_example.file"};
-    FILE *fileptr_;
-    DataFile() {}
-    DataFile(Str name) : name_{name} {
-      filename_ = Sys::sim_name_ + "_" + name_ + ".file";
-      fileptr_ = fopen(filename_.c_str(), "w");
-      if (fileptr_ == nullptr) {
-        printf("Error; cannot open '%s'\n", filename_.c_str());
-        exit(1);
-      }
-    }
-    template <typename DATA_T> void Write(DATA_T *array, size_t count) {
-      size_t n_chars_written{fwrite(array, sizeof(DATA_T), count, fileptr_)};
-      if (n_chars_written < count) {
-        printf("Error writing to '%s'\n", filename_.c_str());
-        exit(1);
-      }
-    }
-  };
-  UMap<Str, DataFile> data_files_;
+
+  UMap<Str, Sys::DataFile> data_files_;
+
   size_t n_steps_per_snapshot_{0};
   size_t n_sites_max_{0};
 
@@ -48,6 +29,9 @@ public:
   ProteinManager proteins_;
   FilamentManager filaments_;
 
+  ProteinTester test_proteins_;
+  FilamentTester test_filaments_;
+
 private:
   void CheckArgs(int argc, char *agrv[]);
   void GenerateLog();
@@ -55,6 +39,7 @@ private:
   void InitializeSimulation();
   void GenerateDataFiles();
 
+  void UpdateObjects();
   void CheckPrintProgress();
   void OutputData();
 
@@ -67,8 +52,7 @@ public:
     GenerateDataFiles();
   }
   void EvolveSimulation() {
-    proteins_.RunKMC();
-    filaments_.RunBD();
+    UpdateObjects();
     CheckPrintProgress();
     OutputData();
   }

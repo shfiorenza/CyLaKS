@@ -68,19 +68,26 @@ void Motor::ApplyLatticeDeformation() {
   if (n_heads_active_ == 0) {
     return;
   }
+  // Epicenter is the location of the motor; deformation propagates from here
   BindingSite *epicenter{nullptr};
+  // If singly bound, there is no ambiguity to epicenter location
   if (n_heads_active_ == 1) {
     epicenter = GetActiveHead()->site_;
+    // Otherwise, by convention, always use the trailing head when doubly bound
   } else if (head_one_.trailing_) {
     epicenter = head_one_.site_;
   } else {
     epicenter = head_two_.site_;
   }
+  // Get index of epicenter in microtubule lattice
   int i_epicenter{(int)epicenter->index_};
+  // Starting from +/- 1 site from the epicenter, apply lattice deformations
   for (int delta{1}; delta <= Sys::lattice_cutoff_; delta++) {
     for (int dir{-1}; dir <= 1; dir += 2) {
+      // Index of site we're currently applying the deformation to
       int i_scan{i_epicenter + dir * delta};
       int mt_length{(int)epicenter->filament_->sites_.size() - 1};
+      // Do not
       if (i_scan < 0 or i_scan > mt_length) {
         if (Sys::test_mode_.empty()) {
           continue;

@@ -234,6 +234,31 @@ void Curator::InitializeSimulation() {
 
   using namespace Params;
   using namespace Sys;
+  // Initialize sim objects
+  SysRNG::Initialize(seed);
+  // With no test mode active, initialize proteins and filaments normally
+  if (Sys::test_mode_.empty()) {
+    printf("\n\n no test ocurring\n");
+    filaments_.Initialize(&proteins_);
+    proteins_.Initialize(&filaments_);
+    // Get maximum filament length in n_sites
+    for (auto const &pf : filaments_.protofilaments_) {
+      if (pf.sites_.size() > n_sites_max_) {
+        n_sites_max_ = pf.sites_.size();
+      }
+    }
+  }
+  // Otherwise, initialize test versions of proteins and filaments
+  else {
+    printf("\n\n TEST HAPS\n\n");
+    test_proteins_.Initialize(&test_filaments_);
+    // Get maximum filament length in n_sites
+    for (auto const &pf : test_filaments_.protofilaments_) {
+      if (pf.sites_.size() > n_sites_max_) {
+        n_sites_max_ = pf.sites_.size();
+      }
+    }
+  }
   // Calculate local parameters
   start_time_ = SysClock::now();
   n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
@@ -246,29 +271,11 @@ void Curator::InitializeSimulation() {
   }
   n_steps_run_ = (size_t)std::round(t_run / dt);
   // Log parameters
-  Log("\n");
   Log("  System variables calculated post-initialization:\n");
   Log("   n_steps_run = %zu\n", n_steps_run_);
   Log("   n_steps_equil = %zu\n", n_steps_equil_);
   Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
   Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
-  Log("\n");
-
-  // Initialize sim objects
-  SysRNG::Initialize(seed);
-  // With no test mode active, initialize proteins and filaments normally
-  if (Sys::test_mode_.empty()) {
-    filaments_.Initialize(&proteins_);
-    proteins_.Initialize(&filaments_);
-  } else {
-    proteins_.InitializeTest(&filaments_);
-  }
-  // Get maximum filament length in n_sites
-  for (auto const &pf : filaments_.proto_) {
-    if (pf.sites_.size() > n_sites_max_) {
-      n_sites_max_ = pf.sites_.size();
-    }
-  }
   if (Sys::test_mode_.empty()) {
     Log("\n");
   }
@@ -277,15 +284,25 @@ void Curator::InitializeSimulation() {
 void Curator::GenerateDataFiles() {
 
   auto AddDataFile = [&](Str name) {
-    data_files_.emplace(name, DataFile(name));
+    data_files_.emplace(name, Sys::DataFile(name));
   };
+  bool motors_active{proteins_.motors_.active_};
+  bool motors_tethering{proteins_.motors_.tethering_active_};
+  bool xlinks_active{proteins_.xlinks_.active_};
+  bool xlinks_crosslinking{proteins_.xlinks_.crosslinking_active_};
+  if (!Sys::test_mode_.empty()) {
+    motors_active = test_proteins_.motors_.active_;
+    motors_tethering = test_proteins_.motors_.tethering_active_;
+    xlinks_active = test_proteins_.xlinks_.active_;
+    xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
+  }
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
   // if (Params::Filaments::t_ablate > 0.0) {
   //   AddDataFile("filament_pos_postSplit");
   // }
-  if (proteins_.motors_.active_ or proteins_.xlinks_.active_) {
+  if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
     AddDataFile("occupancy");
@@ -298,17 +315,17 @@ void Curator::GenerateDataFiles() {
     // if (Params::Filaments::t_ablate > 0.0) {
     //   AddDataFile("protein_id_postSplit");
     // }
-    if (proteins_.xlinks_.crosslinking_active_) {
+    if (xlinks_crosslinking) {
       AddDataFile("partner_index");
     }
   }
-  if (proteins_.motors_.active_) {
+  if (motors_active) {
     // bool; simply says if motor head is trailing or not
     AddDataFile("motor_head_trailing");
     // if (Params::Filaments::t_ablate > 0.0) {
     //   AddDataFile("motor_head_trailing_postSplit");
     // }
-    if (proteins_.motors_.tethering_active_) {
+    if (motors_tethering) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
       AddDataFile("tether_anchor_pos");
@@ -322,7 +339,7 @@ void Curator::GenerateDataFiles() {
       */
     }
   }
-  if (proteins_.xlinks_.active_ and proteins_.xlinks_.crosslinking_active_) {
+  if (xlinks_active and xlinks_crosslinking) {
     /*
     // Open xlink extension file, which stores the number of stage-2
     // xlinks at a certain extension for all possible extensions
@@ -339,8 +356,26 @@ void Curator::GenerateDataFiles() {
   }
 }
 
+void Curator::UpdateObjects() {
+
+  if (Sys::test_mode_.empty()) {
+    proteins_.RunKMC();
+    filaments_.RunBD();
+  } else {
+    test_proteins_.RunKMC();
+    test_filaments_.RunBD();
+  }
+}
+
 void Curator::CheckPrintProgress() {
 
+  // Choose correct object to read data from
+  bool motors_equil{proteins_.motors_.equilibrated_};
+  bool xlinks_equil{proteins_.xlinks_.equilibrated_};
+  if (!Sys::test_mode_.empty()) {
+    motors_equil = test_proteins_.motors_.equilibrated_;
+    xlinks_equil = test_proteins_.xlinks_.equilibrated_;
+  }
   // FIXME report t_sim & t_elapsed_irl each milestone; not step #
   using namespace Sys;
   using namespace Params;
@@ -358,8 +393,7 @@ void Curator::CheckPrintProgress() {
       Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
           double(i_step_) / n_steps_pre_equil_ * 100, i_step_, i_step_ * dt);
     }
-    if (proteins_.motors_.equilibrated_ and proteins_.xlinks_.equilibrated_ and
-        i_step_ >= n_steps_pre_equil_) {
+    if (motors_equil and xlinks_equil and i_step_ >= n_steps_pre_equil_) {
       n_steps_equil_ = i_step_;
       equilibrating_ = false;
       if (dynamic_equil_window > 0.0) {
@@ -394,19 +428,36 @@ void Curator::OutputData() {
   if (Sys::equilibrating_ or Sys::i_step_ % n_steps_per_snapshot_ != 0) {
     return;
   }
+  // Choose correct object to read data from
+  size_t n_pfs{filaments_.protofilaments_.size()};
+  bool motors_active{proteins_.motors_.active_};
+  bool motors_tethering{proteins_.motors_.tethering_active_};
+  bool xlinks_active{proteins_.xlinks_.active_};
+  bool xlinks_crosslinking{proteins_.xlinks_.crosslinking_active_};
+  if (!Sys::test_mode_.empty()) {
+    n_pfs = test_filaments_.protofilaments_.size();
+    motors_active = test_proteins_.motors_.active_;
+    motors_tethering = test_proteins_.motors_.tethering_active_;
+    xlinks_active = test_proteins_.xlinks_.active_;
+    xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
+  }
   Sys::i_datapoint_++;
-  for (auto &&pf : filaments_.proto_) {
+  for (int i_pf{0}; i_pf < n_pfs; i_pf++) {
+    Protofilament *pf{nullptr};
+    if (Sys::test_mode_.empty()) {
+      pf = &filaments_.protofilaments_[i_pf];
+    } else {
+      pf = &test_filaments_.protofilaments_[i_pf];
+    }
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      coord1[i_dim] = (double)pf.plus_end_->pos_[i_dim];
-      coord2[i_dim] = (double)pf.minus_end_->pos_[i_dim];
+      coord1[i_dim] = (double)pf->plus_end_->pos_[i_dim];
+      coord2[i_dim] = (double)pf->minus_end_->pos_[i_dim];
     }
-    // printf("wrote plus_end = (%g, %g)\n", coord1[0], coord1[1]);
-    // printf("wrote minus_end = (%g, %g)\n", coord2[0], coord2[1]);
     data_files_.at("filament_pos").Write(coord1, _n_dims_max);
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
-    if (!proteins_.motors_.active_ and !proteins_.xlinks_.active_) {
+    if (!motors_active and !xlinks_active) {
       continue;
     }
     int occupancy[n_sites_max_];
@@ -421,7 +472,7 @@ void Curator::OutputData() {
       motor_trailing[i_site] = false;
       tether_anchor_pos[i_site] = -1.0;
     }
-    for (auto const &site : pf.sites_) {
+    for (auto const &site : pf->sites_) {
       if (site.occupant_ == nullptr) {
         continue;
       }
@@ -448,14 +499,14 @@ void Curator::OutputData() {
     }
     data_files_.at("occupancy").Write(occupancy, n_sites_max_);
     data_files_.at("protein_id").Write(protein_id, n_sites_max_);
-    if (proteins_.xlinks_.crosslinking_active_) {
+    if (xlinks_crosslinking) {
       data_files_.at("partner_index").Write(partner_index, n_sites_max_);
     }
-    if (!proteins_.motors_.active_) {
+    if (!motors_active) {
       continue;
     }
     data_files_.at("motor_head_trailing").Write(motor_trailing, n_sites_max_);
-    if (!proteins_.motors_.tethering_active_) {
+    if (!motors_tethering) {
       continue;
     }
     data_files_.at("tether_anchor_pos").Write(tether_anchor_pos, n_sites_max_);

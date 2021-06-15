@@ -24,7 +24,7 @@ public:
   bool tethered_{false};
   Protein *partner_{nullptr};
 
-private:
+protected:
   void InitializeNeighborList();
 
 public:

@@ -3,24 +3,22 @@
 void Protofilament::SetParameters() {
 
   using namespace Params;
-  using namespace Filaments;
-  pos_[0] = x_initial[index_];
-  pos_[1] = y_initial[index_];
+  // using namespace Filaments;
+  pos_[0] = Filaments::x_initial[index_];
+  pos_[1] = Filaments::y_initial[index_];
   orientation_[0] = 1.0;
-  orientation_[1] = 0.0;                 // Begin aligned with x-axis
-  length_ = site_size * n_sites[index_]; // nm
-  polarity_ = polarity[index_];
+  orientation_[1] = 0.0; // Begin aligned with x-axis
+  length_ = Filaments::site_size * Filaments::n_sites[index_]; // nm
+  polarity_ = Filaments::polarity[index_];
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
-  // printf("dx = %i\n", dx_);
-  immobile_until_ = immobile_until[index_] / dt;
-  dt_eff_ = dt / n_bd_per_kmc;
-  double ar{length_ / (2 * radius)};                // unitless aspect ratio
+  immobile_until_ = Filaments::immobile_until[index_] / dt; // n_steps
+  dt_eff_ = dt / Filaments::n_bd_per_kmc;                   // s
+  double ar{length_ / (2 * Filaments::radius)};     // unitless aspect ratio
   double eta_adj{eta * 1e-06};                      // pN*s/nm^2
   double pi{M_PI};                                  // literally just pi
   gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
   gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
-  // gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8));
-  // pN*s*nm
+  gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8)); // pN*s*nm
   for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
     sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
   }
@@ -32,8 +30,8 @@ void Protofilament::GenerateSites() {
   sites_.resize(n_sites);
   // Initialize sites
   for (int i_entry{0}; i_entry < n_sites; i_entry++) {
-    sites_[i_entry].Initialize(_id_site, Sys::n_unique_objects_++, _r_site,
-                               i_entry, this);
+    sites_[i_entry].Initialize(_id_site, Sys::n_objects_++, _r_site, i_entry,
+                               this);
   }
   // Set site neighbors (immediately forward/behind; 2 max on a 1-D lattice)
   for (auto &&site : sites_) {
@@ -55,8 +53,7 @@ void Protofilament::GenerateSites() {
 
 void Protofilament::UpdateRodPosition() {
 
-  // FIXME update efficienty; e.g., noise_rot shouldnt be calculated in all sims
-  // Independent terms for rod trans/rotational diffusion
+  // ! FIXME re-introduce rotational movement
   double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   // double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
@@ -66,7 +63,6 @@ void Protofilament::UpdateRodPosition() {
   Vec2D<double> rod_basis{GetOrthonormalBasis(orientation_)};
   /* c.f. Tao et al., J. Chem. Phys. (2005); doi.org/10.1063/1.1940031 */
   Vec2D<double> xi_inv(_n_dims_max, Vec<double>(_n_dims_max, 0.0));
-  // double xi_inv[_n_dims_max][_n_dims_max];
   for (int i{0}; i < _n_dims_max; i++) {
     for (int j{i}; j < _n_dims_max; j++) {
       double uiuj{orientation_[i] * orientation_[j]};
@@ -84,13 +80,12 @@ void Protofilament::UpdateRodPosition() {
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
-      // printf("f[%i] = %g\n", i_dim, force_[i_dim]);
       pos_[i_dim] += Dot(xi_inv[i_dim], force_) * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
       // Check for NaN positions
       if (pos_[i_dim] != pos_[i_dim]) {
-        printf("force = %g\n", force_[i_dim]);
+        Sys::Log("force = %g\n", force_[i_dim]);
         Sys::ErrorExit("Protofilament::UpdateRodPositions()");
       }
     }
@@ -115,7 +110,7 @@ void Protofilament::UpdateRodPosition() {
 
 void Protofilament::UpdateSitePositions() {
 
-  // FIXME: generalize for arbitrary number of filaments
+  // ! FIXME: generalize for arbitrary number of filaments
   // If proteins are disabled, only update endpoint positions
   if (Params::Filaments::count == 1) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -156,14 +151,14 @@ void Protofilament::UpdateSitePositions() {
 BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
 
   using namespace Params;
-  // printf("i_site = %i, delta = %i\n", site->index_, delta);
+  Sys::Log(2, "i_site = %i, delta = %i\n", site->index_, delta);
   // First, we find which site best aligns vertically w/ given site
   int site_x{(int)site->pos_[0]};
   // x-coords equal, so site_pos_x = (i_align - center_index) * site_size + pos
   int i_aligned{int((site_x - pos_[0]) / Filaments::site_size + center_index_)};
   // Scan relative to aligned site using given delta value
   int i_neighb{i_aligned + delta};
-  // printf("i_neighb is %i\n", i_neighb);
+  Sys::Log(2, "i_neighb is %i\n", i_neighb);
   if (i_neighb < 0 or i_neighb > sites_.size() - 1) {
     return nullptr;
   }

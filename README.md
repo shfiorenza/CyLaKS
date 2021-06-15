@@ -1,5 +1,6 @@
 # CyLaKS
 The **Cy**toskeleton **La**ttice-based **K**inetic **S**imulator
+Please use pre-built Dockerhub image. The current GitHub build has bugs. 
 ## Installation
 To begin, clone the repo:
 ```

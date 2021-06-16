@@ -1,6 +1,5 @@
 #ifndef _CYLAKS_SYSTEM_NAMESPACE_HPP_
 #define _CYLAKS_SYSTEM_NAMESPACE_HPP_
-#include "definitions.hpp"
 #include <filesystem>
 #include <string>
 
@@ -85,13 +84,13 @@ inline void EarlyExit() {
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   running_ = false;
 }
-
+/* Useful data structures */
 struct DataFile {
-  Str name_{"example"};
-  Str filename_{"simName_example.file"};
+  std::string name_{"example"};
+  std::string filename_{"simName_example.file"};
   FILE *fileptr_;
   DataFile() {}
-  DataFile(Str name) : name_{name} {
+  DataFile(std::string name) : name_{name} {
     filename_ = Sys::sim_name_ + "_" + name_ + ".file";
     fileptr_ = fopen(filename_.c_str(), "w");
     if (fileptr_ == nullptr) {
@@ -108,26 +107,27 @@ struct DataFile {
   }
 };
 struct ProbEntry {
-  Str event_name_;
+  std::string event_name_;
   double val_;
-  Vec3D<double> vals_;
+  std::vector<std::vector<std::vector<double>>> vals_;
   ProbEntry() {}
   ProbEntry(Str name, double val) : event_name_{name}, val_{val} {}
-  ProbEntry(Str name, Vec3D<double> vals) : event_name_{name}, vals_{vals} {}
+  ProbEntry(Str name, std::vector<std::vector<std::vector<double>>> vals)
+      : event_name_{name}, vals_{vals} {}
   double GetVal() { return val_; }
   double GetVal(size_t i) { return vals_[0][0][i]; }
   double GetVal(size_t i, size_t j) { return vals_[0][i][j]; }
   double GetVal(size_t i, size_t j, size_t k) { return vals_[i][j][k]; }
 };
 struct BoltzmannFactor {
-  Str effect_name_;
+  std::string effect_name_;
   int i_start_{0};
   size_t size_{0};
   Vec<double> bind_;
   Vec<double> unbind_;
   BoltzmannFactor() {}
-  BoltzmannFactor(Str name, size_t sz) : BoltzmannFactor(name, sz, 0) {}
-  BoltzmannFactor(Str name, size_t size, int i_start)
+  BoltzmannFactor(std::string name, size_t sz) : BoltzmannFactor(name, sz, 0) {}
+  BoltzmannFactor(std::string name, size_t size, int i_start)
       : effect_name_{name}, size_{size}, i_start_{i_start} {
     bind_.resize(size);
     unbind_.resize(size);

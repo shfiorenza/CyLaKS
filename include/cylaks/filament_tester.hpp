@@ -1,5 +1,5 @@
-#ifndef _CYLAKS_FILAMENT_TESTER_
-#define _CYLAKS_FILAMENT_TESTER_
+#ifndef _CYLAKS_FILAMENT_TESTER_HPP_
+#define _CYLAKS_FILAMENT_TESTER_HPP_
 #include "filament_manager.hpp"
 
 class ProteinTester;
@@ -13,11 +13,7 @@ protected:
 public:
   FilamentTester() {}
   ~FilamentTester() {}
-  void Initialize(ProteinTester *proteins) {
-    proteins_ = proteins;
-    FilamentManager::SetParameters();
-    FilamentManager::GenerateFilaments();
-  }
+  void Initialize(ProteinTester *proteins);
   void UpdateUnoccupied() {
     if (up_to_date_) {
       return;
@@ -42,5 +38,4 @@ public:
     }
   }
 };
-
 #endif

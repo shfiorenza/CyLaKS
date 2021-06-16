@@ -238,7 +238,6 @@ void Curator::InitializeSimulation() {
   SysRNG::Initialize(seed);
   // With no test mode active, initialize proteins and filaments normally
   if (Sys::test_mode_.empty()) {
-    printf("\n\n no test ocurring\n");
     filaments_.Initialize(&proteins_);
     proteins_.Initialize(&filaments_);
     // Get maximum filament length in n_sites
@@ -250,7 +249,6 @@ void Curator::InitializeSimulation() {
   }
   // Otherwise, initialize test versions of proteins and filaments
   else {
-    printf("\n\n TEST HAPS\n\n");
     test_proteins_.Initialize(&test_filaments_);
     // Get maximum filament length in n_sites
     for (auto const &pf : test_filaments_.protofilaments_) {
@@ -275,10 +273,7 @@ void Curator::InitializeSimulation() {
   Log("   n_steps_run = %zu\n", n_steps_run_);
   Log("   n_steps_equil = %zu\n", n_steps_equil_);
   Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
-  Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
-  if (Sys::test_mode_.empty()) {
-    Log("\n");
-  }
+  Log("   n_datapoints = %zu\n\n", n_steps_run_ / n_steps_per_snapshot_);
 }
 
 void Curator::GenerateDataFiles() {

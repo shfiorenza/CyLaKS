@@ -36,8 +36,8 @@ protected:
 
   bool AllFilamentsImmobile();
 
-  void UpdateForces();
-  void UpdateLattice();
+  virtual void UpdateForces();
+  virtual void UpdateLattice();
 
 public:
   FilamentManager() {}

@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_OBJECT_HPP_
 #define _CYLAKS_OBJECT_HPP_
-#include "definitions.hpp"
+#include "system_definitions.hpp"
 
 // Object: Basic building block of CyLaKS; foundation of all proteins/etc
 class Object {

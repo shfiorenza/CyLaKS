@@ -1,9 +1,12 @@
 #include "cylaks/protein_tester.hpp"
-#include "cylaks/binding_site.hpp"
-#include "cylaks/curator.hpp"
 #include "cylaks/filament_tester.hpp"
-#include "cylaks/system_namespace.hpp"
-#include "cylaks/system_rng.hpp"
+
+void ProteinTester::Initialize(FilamentTester *filaments) {
+
+  filaments_ = filaments;
+  ProteinManager::filaments_ = dynamic_cast<FilamentManager *>(filaments_);
+  SetTestMode();
+}
 
 void ProteinTester::UpdateFilaments() {
 
@@ -56,7 +59,6 @@ void ProteinTester::SetTestMode() {
   }
 }
 
-// ! FIXME seg-faults
 void ProteinTester::InitializeTest_Filament_Ablation() {
 
   using namespace Params;
@@ -85,7 +87,6 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
   InitializeEvents();
 }
 
-// ! FIXME seg-faults
 void ProteinTester::InitializeTest_Filament_Separation() {
 
   using namespace Params;
@@ -109,16 +110,15 @@ void ProteinTester::InitializeTest_Filament_Separation() {
   if (n_xlinks == -1) {
     Str response;
     printf("Microtubules are %zu sites in length.\n", Filaments::n_sites[0]);
-    for (int i_pf{0}; i_pf < filaments_->protofilaments_.size(); i_pf++) {
-      printf("%zu\n", filaments_->protofilaments_[i_pf].sites_.size());
-    }
+    // for (int i_pf{0}; i_pf < filaments_->protofilaments_.size(); i_pf++) {
+    //   printf("%zu\n", filaments_->protofilaments_[i_pf].sites_.size());
+    // }
     printf("Enter number of crosslinkers to insert: ");
     std::getline(std::cin, response);
     n_xlinks = (int)std::stoi(response);
   }
   Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
   int n_places{(int)filaments_->sites_.size() / 2};
-  printf("n_places = %i\n", n_places);
   if (n_xlinks > n_places) {
     printf("\nError! Too many crosslinkers for filament length used.\n");
     exit(1);
@@ -208,7 +208,6 @@ void ProteinTester::InitializeTest_Filament_Separation() {
                             poisson, get_weight_diff_ii_fr, exe_diffuse_bck);
 }
 
-// !FIXME seg-faults
 void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
 
   double p_hetero{Sys::p_mutant_};

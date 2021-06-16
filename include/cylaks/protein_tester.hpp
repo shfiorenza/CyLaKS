@@ -27,11 +27,8 @@ protected:
   void InitializeTest_Xlink_Bind_II();
 
 public:
-  ProteinTester() {}
+  ProteinTester() : ProteinManager() {}
   ~ProteinTester() { ReportTestStatistics(); }
-  void Initialize(FilamentTester *filaments) {
-    filaments_ = filaments;
-    SetTestMode();
-  }
+  void Initialize(FilamentTester *filaments);
 };
 #endif

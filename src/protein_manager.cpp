@@ -1,5 +1,4 @@
 #include "cylaks/protein_manager.hpp"
-// #include "cylaks/curator.hpp"
 #include "cylaks/filament_manager.hpp"
 
 void ProteinManager::FlagFilamentsForUpdate() { filaments_->FlagForUpdate(); }
@@ -81,11 +80,14 @@ void ProteinManager::InitializeWeights() {
   double dx_cutoff{(Sys::lattice_cutoff_ + 1) * Params::Filaments::site_size};
   double lattice_E_0_solo{-1 * Params::Motors::gaussian_amp_solo};
   double lattice_alpha{-1 * lattice_E_0_solo / (dx_cutoff * dx_cutoff)};
-  if (Sys::lattice_cutoff_ > 0) {
-    Sys::Log("  lattice_cutoff_ is %i\n", Sys::lattice_cutoff_);
-    Sys::Log("  lattice_alpha_ is %g\n", lattice_alpha);
-  } else {
-    Sys::Log("  Lattice cooperativity is disabled.\n");
+  if (motors_.active_) {
+    if (Sys::lattice_cutoff_ > 0) {
+      Sys::Log("  Motor variables calculated post-initialization:\n");
+      Sys::Log("   lattice_cutoff_ is %i\n", Sys::lattice_cutoff_);
+      Sys::Log("   lattice_alpha_ is %g\n", lattice_alpha);
+    } else {
+      Sys::Log("  Lattice cooperativity is disabled.\n");
+    }
   }
   // Array of binding/unbinding weights due to lattice deformation from a SINGLE
   // motor; multiplied together to get total weight for any arrangement
@@ -601,9 +603,16 @@ void ProteinManager::InitializeEvents() {
   // ! Need to add
   // Unbind_II_Teth
   // ! Need to add
-  /*
+  // ! FIXME export this to a function that is also called in test modes
+  // Check that all event probabilities are valid
   for (auto const &event : kmc_.events_) {
-    printf("%s: %g\n", event.name_.c_str(), event.p_occur_);
+    if (event.p_occur_ < 0.0 or event.p_occur_ > 1.0) {
+      Sys::Log("Invalid probabilitiy: p_%s = %g\n", event.name_.c_str(),
+               event.p_occur_);
+      Sys::ErrorExit("ProteinManager::InitializeEvents()");
+    } else if (event.p_occur_ > 0.1) {
+      Sys::Log("WARNING: p_%s = %g. High probability may reduce accuracy\n",
+               event.name_.c_str(), event.p_occur_);
+    }
   }
-  */
 }

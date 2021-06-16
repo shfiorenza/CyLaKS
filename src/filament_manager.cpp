@@ -19,7 +19,6 @@ void FilamentManager::SetParameters() {
 
 void FilamentManager::GenerateFilaments() {
 
-  // using namespace Params;
   protofilaments_.resize(Params::Filaments::count);
   for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
     protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
@@ -54,7 +53,6 @@ void FilamentManager::GenerateFilaments() {
   for (auto const &pf : protofilaments_) {
     Log("       gamma_perp[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[1]);
   }
-  Log("\n");
 }
 
 bool FilamentManager::AllFilamentsImmobile() {
@@ -71,6 +69,7 @@ bool FilamentManager::AllFilamentsImmobile() {
 }
 
 void FilamentManager::UpdateForces() {
+
   for (auto &&pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
@@ -93,9 +92,7 @@ void FilamentManager::UpdateForces() {
     }
   }
   */
-  // proteins_->UpdateExtensions();
+  proteins_->UpdateExtensions();
 }
 
-void FilamentManager::UpdateLattice() {
-  // proteins_->UpdateLatticeDeformation();
-}
+void FilamentManager::UpdateLattice() { proteins_->UpdateLatticeDeformation(); }

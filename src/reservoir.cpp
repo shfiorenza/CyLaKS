@@ -94,7 +94,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
   for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
     ENTRY_T *entry{active_entries_[i_entry]};
     Sys::Log(1, " entry no %i (ID %i)\n", i_entry, entry->GetID());
-    // printf(" %i HEADS\n", entry->GetNumHeadsActive());
+    // ! FIXME: should this be commented out or not?
     // entry->UpdateExtension();
     for (auto &&pop : sorted_) {
       Sys::Log(1, "  sorting into %s\n", pop.second.name_.c_str());

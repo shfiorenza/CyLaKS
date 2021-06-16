@@ -54,5 +54,6 @@ public:
     xlinks_.PrepForKMC();
     kmc_.ExecuteEvents();
   }
+  void RunBD() {}
 };
 #endif

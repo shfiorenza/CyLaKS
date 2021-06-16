@@ -1,6 +1,6 @@
 #ifndef _CYLAKS_POPULATION_HPP_
 #define _CYLAKS_POPULATION_HPP_
-#include "definitions.hpp"
+#include "system_definitions.hpp"
 #include "system_namespace.hpp"
 
 // Population: Used to divide active proteins into different bins

@@ -1,7 +1,7 @@
 # CyLaKS
 The **Cy**toskeleton **La**ttice-based **K**inetic **S**imulator
 ## Installation
-To begin, clone the repo:
+If you plan on compiling or instally CyLaKS locally, clone the repo:
 ```
 git clone https://github.com/Betterton-Lab/CyLaKS
 cd CyLaKS

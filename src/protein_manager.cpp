@@ -25,7 +25,7 @@ void ProteinManager::GenerateReservoirs() {
   if (Params::Xlinks::c_bulk == 0.0) {
     xlink_step_active = std::numeric_limits<size_t>::max();
   }
-  // Initialize the crosslinker
+  // Initialize the crosslinker reservoir
   xlinks_.Initialize(_id_xlink, reservoir_size, xlink_step_active);
 }
 

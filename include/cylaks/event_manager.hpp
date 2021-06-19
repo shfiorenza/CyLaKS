@@ -17,7 +17,7 @@ protected:
   void GenerateExecutionSequence();
 
 public:
-  EventManager();
+  EventManager() {}
   ~EventManager() {
     for (auto &&event : events_) {
       Sys::Log("p_%s = %g [%zu exe]\n", event.name_.c_str(),
@@ -25,7 +25,6 @@ public:
                event.n_executed_tot_);
     }
   }
-  void Initialize();
   void ExecuteEvents();
 };
 

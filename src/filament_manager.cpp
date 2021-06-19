@@ -76,22 +76,16 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
-  // Temporary hacky 1-D wca potential implementation
-  // !FIXME: add flag to yaml file to enable/disable this
-  /*
-  if (proto_.size() == 2 and proteins_->xlinks_.active_) {
-    double r{proto_[1].pos_[1] - proto_[0].pos_[1]};
-    // printf("threshold is %g\n", threshold_);
+  if (Params::Filaments::wca_potential_enabled) {
+    double r{protofilaments_[1].pos_[1] - protofilaments_[0].pos_[1]};
     if (r < threshold_) {
       double f_mag{
           48 * epsilon_ *
           (Pow(sigma_, 12) / Pow(r, 13) - 0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-      // printf("F_MAG IS %g\n", f_mag);
-      proto_[1].force_[1] += f_mag;
-      proto_[0].force_[1] -= f_mag;
+      protofilaments_[1].force_[1] += f_mag;
+      protofilaments_[0].force_[1] -= f_mag;
     }
   }
-  */
   proteins_->UpdateExtensions();
 }
 

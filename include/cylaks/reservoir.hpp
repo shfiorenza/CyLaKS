@@ -65,6 +65,7 @@ public:
   void AddProb(Str name, double val, Str wt_name, size_t mode) {
     assert(mode == 0 or mode == 1);
     size_t size{weights_.at(wt_name).size_};
+    // FIXME verify this padding is correct
     Vec3D<double> vals(1, Vec2D<double>(1, Vec<double>(size, val)));
     // Vec<double> vals(weights_.at(wt_name).size_, val);
     for (int i{weights_.at(wt_name).i_start_}; i < size; i++) {

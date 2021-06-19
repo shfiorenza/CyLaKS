@@ -175,11 +175,11 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   double weight_site{head->site_->GetWeight_Unbind()};
   // Ensure we use weight from trailing head to avoid self-coop from lattice
   if (!head->trailing_) {
-    // printf("hello from site %zu\n", head->site_->index_);
     weight_site = head->GetOtherHead()->site_->GetWeight_Unbind();
   }
+  // FIXME we DO NOT need to divide out. Why is that??
   // Divide out the weight from one neighbor, since it's the motor's other foot
-  weight_site /= Sys::weight_neighb_unbind_[1];
+  // weight_site /= Sys::weight_neighb_unbind_[1];
   // Disregard effects from internal force if it's disabled
   if (Params::Motors::internal_force == 0.0 or
       Params::Motors::gaussian_range == 0) {
@@ -190,6 +190,7 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   if (head->GetNumNeighborsOccupied() == 2) {
     weight_sq /= Sys::weight_neighb_unbind_[1];
   }
+  // printf("wt is %g\n", weight_sq);
   return weight_sq;
 }
 

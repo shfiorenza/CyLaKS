@@ -12,6 +12,7 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
+  wca_potential_enabled: false
   n_sites:
     - 13
     - 13

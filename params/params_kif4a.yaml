@@ -20,6 +20,7 @@ filaments:
   f_applied: [0.0, 0.0]
   translation_enabled: [false, false]
   rotation_enabled: false
+  wca_potential_enabled: false
 motors:
   n_runs_to_exit: 1
   gaussian_range: 1000 # 1200 # 1000

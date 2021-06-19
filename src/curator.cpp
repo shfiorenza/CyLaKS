@@ -1,7 +1,6 @@
 #include "cylaks/curator.hpp"
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/yaml.h"
-#include <iostream>
 
 void Curator::CheckArgs(int argc, char *argv[]) {
 
@@ -71,7 +70,7 @@ void Curator::GenerateLog() {
         printf("simulation '%s'\n\n", Sys::sim_name_.c_str());
         response_unacceptable = false;
       } else {
-        printf("Invalid response. Please choose yes or no.\n");
+        printf("Invalid response. Please choose y (yes) or n (no).\n");
       }
       n_responses++;
       if (n_responses > 5) {
@@ -91,6 +90,7 @@ void Curator::GenerateLog() {
   std::tm now_tm{*std::localtime(&now_c)};
   char now_str[256];
   strftime(now_str, sizeof now_str, "%c", &now_tm);
+  // Print formatted date/time at beginning of log file
   fprintf(Sys::log_file_, "[Log file auto-generated for simulation");
   fprintf(Sys::log_file_, " '%s' on %s]\n\n", Sys::sim_name_.c_str(), now_str);
 }
@@ -119,13 +119,25 @@ void Curator::ParseParameters() {
     }
     // Otherwise, look up value label directly
     else {
-      val = input[name];
+      try {
+        val = input[name];
+      } catch (...) {
+        Sys::ErrorExit("WUT");
+      }
     }
     // Sometimes, size_t variables use "e" notation & must be treated as doubles
     try {
       *param = val.as<DATA_T>();
     } catch (const YAML::BadConversion err) {
-      *param = (DATA_T)val.as<double>();
+      // However, if this fails, the parameter is missing from the yaml file
+      try {
+        *param = (DATA_T)val.as<double>();
+      } catch (const YAML::BadConversion err) {
+        Sys::Log("\n");
+        Sys::Log("Parameter '%s' is missing from yaml file; exiting.\n",
+                 name.c_str());
+        exit(1);
+      }
     }
     // Convert parameter value into a string that we can easily log
     // (Since we don't know data types a priori, we can't use Log() aka printf)
@@ -169,6 +181,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
             "");
   ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
+  ParseYAML(&Filaments::wca_potential_enabled,
+            "filaments.wca_potential_enabled", "");
   // Check to make sure there are enough vector entries for given MT count
   if (Filaments::count > Filaments::n_sites.size() or
       Filaments::count > Filaments::polarity.size() or

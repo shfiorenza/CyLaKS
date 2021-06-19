@@ -838,7 +838,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       exe_unbind_i);
 }
 
-// ! FIXME inconsistency
 void ProteinTester::InitializeTest_Motor_LatticeBind() {
 
   using namespace Params;

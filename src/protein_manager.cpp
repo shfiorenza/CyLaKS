@@ -13,14 +13,14 @@ void ProteinManager::GenerateReservoirs() {
   for (int i_mt{0}; i_mt < Params::Filaments::count; i_mt++) {
     reservoir_size += Params::Filaments::n_sites[i_mt];
   }
-  // Convert t_active parameter to number of simulation timesteps
+  // Convert t_active parameter from seconds to number of simulation timesteps
   size_t motor_step_active{size_t(Params::Motors::t_active / Params::dt)};
   if (Params::Motors::c_bulk == 0.0) {
     motor_step_active = std::numeric_limits<size_t>::max();
   }
   // Initialize the motor reservoir
   motors_.Initialize(_id_motor, reservoir_size, motor_step_active);
-  // Convert t_active parameter to number of simulation timesteps
+  // Convert t_active parameter from seconds to number of simulation timesteps
   size_t xlink_step_active{size_t(Params::Xlinks::t_active / Params::dt)};
   if (Params::Xlinks::c_bulk == 0.0) {
     xlink_step_active = std::numeric_limits<size_t>::max();
@@ -52,12 +52,12 @@ void ProteinManager::InitializeWeights() {
   double dE{0.0};
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
     dE = -1 * Params::Motors::neighb_neighb_energy * n_neighbs;
-    // ! FIXME
+    // ! FIXME generalize w/o use of Sys namespace
     motors_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - _lambda_neighb) * dE);
     motors_.weights_[name].unbind_[n_neighbs] = exp(_lambda_neighb * dE);
     Sys::weight_neighb_bind_[n_neighbs] = exp(-(1.0 - _lambda_neighb) * dE);
     Sys::weight_neighb_unbind_[n_neighbs] = exp(_lambda_neighb * dE);
-    // ! FIXME
+    // ! FIXME generalize w/o use of Sys namespace
     dE = -1 * Params::Xlinks::neighb_neighb_energy * n_neighbs;
     xlinks_.weights_[name].bind_[n_neighbs] = exp(-(1.0 - _lambda_neighb) * dE);
     xlinks_.weights_[name].unbind_[n_neighbs] = exp(_lambda_neighb * dE);
@@ -67,6 +67,7 @@ void ProteinManager::InitializeWeights() {
   double lattice_E_max_tot{-1 * Params::Motors::gaussian_ceiling_bulk};
   double wt_lattice_bind_max{exp(-(1.0 - _lambda_lattice) * lattice_E_max_tot)};
   double wt_lattice_unbind_max{exp(_lambda_lattice * lattice_E_max_tot)};
+  // ! FIXME generalize w/o use of Sys namespace
   Sys::weight_lattice_bind_max_.resize(_n_neighbs_max + 1);
   Sys::weight_lattice_unbind_max_.resize(_n_neighbs_max + 1);
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
@@ -91,11 +92,13 @@ void ProteinManager::InitializeWeights() {
   }
   // Array of binding/unbinding weights due to lattice deformation from a SINGLE
   // motor; multiplied together to get total weight for any arrangement
+  // ! FIXME generalize w/o use of Sys namespace
   Sys::weight_lattice_bind_.resize(Sys::lattice_cutoff_ + 1);
   Sys::weight_lattice_unbind_.resize(Sys::lattice_cutoff_ + 1);
   for (int delta{0}; delta <= Sys::lattice_cutoff_; delta++) {
     double dx{delta * Params::Filaments::site_size};
     double energy{lattice_alpha * dx * dx + lattice_E_0_solo}; // in kbT
+    // printf("E = %g\n", energy);
     Sys::weight_lattice_bind_[delta] = exp(-(1.0 - _lambda_lattice) * energy);
     Sys::weight_lattice_unbind_[delta] = exp(_lambda_lattice * energy);
   }
@@ -117,7 +120,8 @@ void ProteinManager::SetParameters() {
   }
   motors_.AddProb("bind_ATP_i", p_bind_ATP * wt_ATP_i);
   double wt_ATP_ii{exp(-Motors::internal_force * Motors::sigma_ATP / kbT)};
-  if (Motors::internal_force == 0.0) {
+  if (Motors::internal_force == 0.0 or Motors::gaussian_range == 0 or
+      !Motors::gaussian_stepping_coop) {
     wt_ATP_ii = 0.0;
   }
   if (Motors::applied_force > 0.0) {
@@ -201,25 +205,33 @@ void ProteinManager::InitializeEvents() {
     if (Sys::i_step_ < pop->step_active_) {
       return;
     }
+    // Get a free entry from the reservoir
     auto entry{pop->GetFreeEntry()};
     if (entry == nullptr) {
       return;
     }
+    // Execute event and, if successful, update relevant lists
     bool executed{entry->Bind(site, &entry->head_one_)};
     if (executed) {
       pop->AddToActive(entry);
       fil->FlagForUpdate();
     }
   };
+  // Get weight for unbound-to-singly bound transition
   auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
+
+  // Return site ptr if unoccupied; empty vector if not
   auto is_unocc = [](Object *site) -> Vec<Object *> {
     if (!site->IsOccupied()) {
       return {site};
     }
     return {};
   };
-  Vec<int> i_min{0, 0, 0};
+  // Sorted array dimension sizes for neighb coop ; format is {i, j, k}
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
+  // Starting indices of array for neighb coop; format is {i, j, k}
+  Vec<int> i_min{0, 0, 0};
+  // Return the number of immediate neighbors that a site or protein has
   auto get_n_neighbs = [](Object *entry) {
     Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
     return indices_vec;
@@ -227,6 +239,7 @@ void ProteinManager::InitializeEvents() {
   if (xlinks_.active_) {
     // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
     filaments_->AddPop("xlinks", is_unocc, dim_size, i_min, get_n_neighbs);
+    // Create a binomial event for each n_neighb possibility
     for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
       kmc_.events_.emplace_back(
           "bind_i", xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
@@ -240,6 +253,7 @@ void ProteinManager::InitializeEvents() {
   if (motors_.active_) {
     // Add unoccupied site tracker for motors; no binning b/c it's Poisson-based
     filaments_->AddPop("motors", is_unocc);
+    // Create a single poisson event for all binding possibilities
     kmc_.events_.emplace_back(
         "bind_i", motors_.p_event_.at("bind_i").GetVal(),
         &filaments_->unoccupied_.at("motors").size_,
@@ -252,7 +266,7 @@ void ProteinManager::InitializeEvents() {
         });
   }
   // Bind_I_Teth
-  // ! Need to add
+
   // Bind_II
   auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
     auto head{bound_head->GetOtherHead()};
@@ -343,7 +357,6 @@ void ProteinManager::InitializeEvents() {
   if (motors_.active_) {
     auto is_ADPP_ii_bound = [](auto *motor) -> Vec<Object *> {
       if (motor->n_heads_active_ == 2) {
-        bool found_head{false};
         CatalyticHead *chosen_head{nullptr};
         if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
           chosen_head = &motor->head_one_;
@@ -425,14 +438,15 @@ void ProteinManager::InitializeEvents() {
         });
   }
   // Unbind_I_Teth
+
   // Tether_Free
+
   // Untether_Free
 
   // vv motors only vv
   // Bind_ATP
   if (motors_.active_) {
     auto exe_bind_ATP = [](auto *head, auto *pop) {
-      // printf("boop\n");
       bool executed{head->parent_->Bind_ATP(head)};
       if (executed) {
         pop->FlagForUpdate();
@@ -456,54 +470,56 @@ void ProteinManager::InitializeEvents() {
         [&](Object *base) {
           exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
-    auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
-      auto *rear_head{front_head->GetOtherHead()};
-      if (front_head->trailing_) {
-        return;
-      }
-      bool unbound{rear_head->Unbind()};
-      bool executed{front_head->parent_->Bind_ATP(front_head)};
-      if (executed) {
-        pop->FlagForUpdate();
-        fil->FlagForUpdate();
-      }
-    };
-    auto weight_bind_ATP_ii = [](auto *head) {
-      return head->parent_->GetWeight_BindATP_II(head);
-    };
-    auto is_NULL_ii_bound = [](auto *motor) -> Vec<Object *> {
-      if (motor->n_heads_active_ == 2) {
-        bool found_head{false};
-        CatalyticHead *chosen_head{nullptr};
-        if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
-          chosen_head = &motor->head_one_;
+    if (Params::Motors::gaussian_stepping_coop and
+        Params::Motors::gaussian_range > 0) {
+      auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
+        auto *rear_head{front_head->GetOtherHead()};
+        if (front_head->trailing_) {
+          return;
         }
-        if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
-          if (chosen_head != nullptr) {
-            Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
+        bool unbound{rear_head->Unbind()};
+        bool executed{front_head->parent_->Bind_ATP(front_head)};
+        if (executed) {
+          pop->FlagForUpdate();
+          fil->FlagForUpdate();
+        }
+      };
+      auto weight_bind_ATP_ii = [](auto *head) {
+        return head->parent_->GetWeight_BindATP_II(head);
+      };
+      auto is_NULL_ii_bound = [](auto *motor) -> Vec<Object *> {
+        if (motor->n_heads_active_ == 2) {
+          CatalyticHead *chosen_head{nullptr};
+          if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
+            chosen_head = &motor->head_one_;
           }
-          chosen_head = &motor->head_two_;
+          if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
+            if (chosen_head != nullptr) {
+              Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
+            }
+            chosen_head = &motor->head_two_;
+          }
+          if (chosen_head != nullptr) {
+            return {chosen_head};
+          }
         }
-        if (chosen_head != nullptr) {
-          return {chosen_head};
-        }
-      }
-      return {};
-    };
-    motors_.AddPop("bound_ii_NULL", [&](Object *base) {
-      return is_NULL_ii_bound(dynamic_cast<Motor *>(base));
-    });
-    kmc_.events_.emplace_back(
-        "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
-        &motors_.sorted_.at("bound_ii_NULL").size_,
-        &motors_.sorted_.at("bound_ii_NULL").entries_, poisson,
-        [&](Object *base) {
-          return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
-        },
-        [&](Object *base) {
-          exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                          filaments_);
-        });
+        return {};
+      };
+      motors_.AddPop("bound_ii_NULL", [&](Object *base) {
+        return is_NULL_ii_bound(dynamic_cast<Motor *>(base));
+      });
+      kmc_.events_.emplace_back(
+          "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
+          &motors_.sorted_.at("bound_ii_NULL").size_,
+          &motors_.sorted_.at("bound_ii_NULL").entries_, poisson,
+          [&](Object *base) {
+            return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
+          },
+          [&](Object *base) {
+            exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                            filaments_);
+          });
+    }
   }
   // Hydrolyze_ATP
   if (motors_.active_) {
@@ -606,6 +622,7 @@ void ProteinManager::InitializeEvents() {
   // ! FIXME export this to a function that is also called in test modes
   // Check that all event probabilities are valid
   for (auto const &event : kmc_.events_) {
+    Sys::Log("p_%s = %g\n", event.name_.c_str(), event.p_occur_);
     if (event.p_occur_ < 0.0 or event.p_occur_ > 1.0) {
       Sys::Log("Invalid probabilitiy: p_%s = %g\n", event.name_.c_str(),
                event.p_occur_);

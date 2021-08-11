@@ -14,8 +14,8 @@
 
 # === Purge all modules and load needed ones ===
 module purge
-module load gcc/8.2.0
-module load python
+module load singularity
+module load python 
 module load matlab
 module list
 

@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'testo'; % Raw sim name; do not include directory
+sim_name = 'test'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -20,7 +20,7 @@ color = [purple; blue];
 
 % Open log file and parse it into param labels & their values
 fileDirectory = '../%s';
-%fileDirectory = '/home/shane/data_cylaks_paper/run_endtag_coop/%s';
+%fileDirectory = '/home/shane/data_kif4a_paper/run_mobility_both/%s';
 log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
@@ -148,7 +148,9 @@ for i_data = start_frame : frames_per_plot : end_frame
     width = (max_x - min_x) + 50;
     height = (3/5 * width); 
     ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.YLim = [y_avg - height/2 y_avg + height/2];
+    ax.XLim = [(min_x - 25) (min_x + 1025)];
+    ax.YLim = [y_avg - 400 y_avg + 400];
+    %ax.YLim = [y_avg - height/2 y_avg + height/2];
     %ax.XLim = [(min_x - 25) (min_x + 225)];
     %ax.YLim = [-75 75];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);

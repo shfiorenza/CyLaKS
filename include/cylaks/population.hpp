@@ -8,14 +8,21 @@
 //             E.g., motors with 1 neighbor that can unbind
 template <typename ENTRY_T> struct Population {
 protected:
+  // Whether this pop. is 1-D (a serial list) or multi-dim (a sorted array)
   bool one_d_{true};
-  // 1-d stuff
-  Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_; // Selection criteria
-  // multi-dim stuff
+  // Sorting function that returns members of this pop. when given a protein
+  // Will return an empty vector if no protein components are valid members
+  Fn<Vec<ENTRY_T *>(ENTRY_T *)> get_members_;
+
+  // (M-D use) Index to start at in each dimension, often but not always 0
   Vec<int> min_indices_;
+  // (M-D use) Returns apt. bin indices <i,j,k> when given a member of the pop.
   Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;
 
+  // (1-D use) Add member to population and increase population size
   void AddEntry(ENTRY_T *entry) { entries_[size_++] = entry; }
+  // (M-D use) Add member to apt pop. bin at [i][j][k] and increase bin size
+  // Indices are input via vector in format <k>, <j, k>, or <i, j, k>
   void AddEntry(ENTRY_T *entry, Vec<int> indices) {
     int k{indices[0]};
     int j{indices.size() > 1 ? indices[1] : 0};
@@ -29,16 +36,18 @@ protected:
   }
 
 public:
-  Str name_;
-  size_t size_{0};
-  Vec<ENTRY_T *> entries_;
-  Vec3D<size_t> bin_size_;       // [n_neighbs][x_dub][x]
-  Vec4D<ENTRY_T *> bin_entries_; // [n_neighbs][x_dub][x][i]
+  Str name_;       // name of this population, e.g. "bound_i" for singly bound
+  size_t size_{0}; // current size of population; 0 when none are active
+  Vec<ENTRY_T *> entries_;       // (1-D use) list of active pop entries
+  Vec3D<size_t> bin_size_;       // (M-D use) pop size; up to 3 dims.
+  Vec4D<ENTRY_T *> bin_entries_; // (M-D use) pop entries; 1 list for each dim.
   Population() {}
+  // Constructor for simple 1-D serial population list
   Population(Str name, Fn<Vec<ENTRY_T *>(ENTRY_T *)> getmems, size_t size_ceil)
       : name_{name}, get_members_{getmems} {
     entries_.resize(size_ceil);
   }
+  // Constructor for multi-dim. (up to 3-D) sorted population array
   Population(Str name, Fn<Vec<ENTRY_T *>(ENTRY_T *)> getmems,
              Vec<size_t> size_ceil, Vec<int> i_min,
              Fn<Vec<int>(ENTRY_T *)> getindices)
@@ -61,6 +70,7 @@ public:
       }
     }
   }
+  // Reset all population sizes to zero
   void ZeroOut() {
     if (one_d_) {
       size_ = 0;
@@ -74,9 +84,9 @@ public:
       }
     }
   }
+  // Sort potential member into either 1-D list or M-D array
   void Sort(ENTRY_T *entry) {
     Vec<ENTRY_T *> members{get_members_(entry)};
-    // printf("%i MEMBERS\n", members.size());
     for (auto const &member : members) {
       if (one_d_) {
         AddEntry(member);

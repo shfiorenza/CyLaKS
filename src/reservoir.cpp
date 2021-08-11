@@ -73,7 +73,8 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::CheckEquilibration() {
       species_id_, window_avg, window_sigma);
   double delta{std::fabs(n_bound_avg_ - window_avg)};
   double delta_sigma{sqrt(n_bound_var_ + window_var)};
-  if (delta < delta_sigma or delta == n_bound_avg_) {
+  if ((delta < delta_sigma and window_avg > n_bound_avg_) or
+      delta == n_bound_avg_) {
     equilibrated_ = true;
     Log("Species %zu equilibration is complete (delta = % .2g + / - % .2g)\n",
         species_id_, delta, delta_sigma);

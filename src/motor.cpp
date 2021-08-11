@@ -12,9 +12,10 @@ void Motor::ChangeConformation() {
   }
   if (site == site->filament_->plus_end_ and
       Params::Motors::endpausing_active) {
-    if (Sys::test_mode_.empty() or site->filament_->index_ == 0) {
-      return;
-    }
+    return;
+    // if (Sys::test_mode_.empty() or site->filament_->index_ == 0) {
+    //   return;
+    // }
   }
   head_one_.trailing_ = !head_one_.trailing_;
   head_two_.trailing_ = !head_two_.trailing_;
@@ -87,8 +88,10 @@ void Motor::ApplyLatticeDeformation() {
       // Index of site we're currently applying the deformation to
       int i_scan{i_epicenter + dir * delta};
       int mt_length{(int)epicenter->filament_->sites_.size() - 1};
-      // Do not
+      // Do not access lattice sites that don't exist in memory
       if (i_scan < 0 or i_scan > mt_length) {
+        continue;
+        /*
         if (Sys::test_mode_.empty()) {
           continue;
         }
@@ -126,6 +129,7 @@ void Motor::ApplyLatticeDeformation() {
           site->AddWeight_Unbind(Sys::weight_lattice_unbind_[delta]);
           continue;
         }
+        */
       }
       if (i_scan >= 0 and i_scan < epicenter->filament_->sites_.size()) {
         BindingSite *site{&epicenter->filament_->sites_[i_scan]};
@@ -157,14 +161,21 @@ double Motor::GetWeight_Bind_II() {
 
 double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
 
-  if (Params::Motors::internal_force == 0.0 or
+  if (!Params::Motors::gaussian_stepping_coop or
       Params::Motors::gaussian_range == 0) {
     return 0.0;
   }
+  if (n_heads_active_ != 2) {
+    printf("bruh\n");
+  }
+  // Ensure we use weight from trailing head to avoid self-coop from lattice
+  if (!head->trailing_) {
+    head = head->GetOtherHead();
+  }
   double weight_site{head->site_->GetWeight_Bind()};
-  int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  // int n_neighbs{head->site_->GetNumNeighborsOccupied()};
   // Remove contribution from neighb mechanism
-  return weight_site / Sys::weight_neighb_bind_[n_neighbs];
+  return weight_site; // / Sys::weight_neighb_bind_[n_neighbs];
 }
 
 double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
@@ -172,24 +183,36 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
   if (head->ligand_ != CatalyticHead::Ligand::ADPP) {
     Sys::ErrorExit("Motor::GetWeight_Unbind_II()");
   }
-  double weight_site{head->site_->GetWeight_Unbind()};
+
+  if (n_heads_active_ != 2) {
+    printf("bruh\n");
+  }
   // Ensure we use weight from trailing head to avoid self-coop from lattice
   if (!head->trailing_) {
-    weight_site = head->GetOtherHead()->site_->GetWeight_Unbind();
+    head = head->GetOtherHead();
   }
-  // FIXME we DO NOT need to divide out. Why is that??
+  double weight_site{head->site_->GetWeight_Unbind()};
   // Divide out the weight from one neighbor, since it's the motor's other foot
+  // if (Sys::test_mode_ != "motor_lattice_step") {
   // weight_site /= Sys::weight_neighb_unbind_[1];
+  // }
   // Disregard effects from internal force if it's disabled
-  if (Params::Motors::internal_force == 0.0 or
+  if (!Params::Motors::gaussian_stepping_coop or
       Params::Motors::gaussian_range == 0) {
     return weight_site;
   }
   double weight_sq{Square(weight_site)};
-  // Divide out sq'd contribution if motor has a real neighb (i.e., not itself)
-  if (head->GetNumNeighborsOccupied() == 2) {
-    weight_sq /= Sys::weight_neighb_unbind_[1];
+  int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  if (n_neighbs == 2) {
+    Sys::ErrorExit("bruh");
   }
+  weight_sq /= Sys::weight_neighb_unbind_[n_neighbs];
+  // FIXME make function that automatically divides out neighbors to avoid
+  // this Divide out sq'd contribution if motor has a real neighb (i.e., not
+  // itself) if (head->GetNumNeighborsOccupied() == 2) {
+  //   weight_sq /= Sys::weight_neighb_unbind_[1];
+  //   // printf("%zu and %zu\n", Sys::i_step_, Sys::i_datapoint_);
+  // }
   // printf("wt is %g\n", weight_sq);
   return weight_sq;
 }

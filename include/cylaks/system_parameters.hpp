@@ -34,6 +34,7 @@ inline size_t n_runs_to_exit; // Number of post-equil. runs to trigger an exit
 inline size_t gaussian_range; // Range of Gaussian interaction; n_sites
 inline double gaussian_amp_solo; // Amplitude of interaction for one motor; kBT
 inline double gaussian_ceiling_bulk; // Ceiling of amp. for many motors; kBT
+inline bool gaussian_stepping_coop;  // Do long-rane FX apply to stepping?
 inline double neighb_neighb_energy;  // Short-range interaction magnitude; kBT
 inline double t_active;              // Time at which motors/ATP flows in; s
 inline double k_on;            // Binding rate of ADP heads to MT; 1/(nM*s)

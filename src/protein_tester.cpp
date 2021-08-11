@@ -528,6 +528,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   using namespace Params;
   Motors::c_bulk = 1.0;
   Motors::t_active = 0.0;
+  Motors::n_runs_to_exit = 1000000;
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
@@ -700,6 +701,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     auto bound_head{dynamic_cast<CatalyticHead *>(base)};
     auto head{bound_head->GetOtherHead()};
     auto site{head->parent_->GetNeighbor_Bind_II()};
+    /*
     // If dock site is plus end, unbind motor and place it on minus end
     if (site == site->filament_->plus_end_) {
       bool exe1{bound_head->Unbind()};
@@ -709,6 +711,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       bool exe4{bound_head->parent_->Hydrolyze(bound_head)};
       site = bound_head->parent_->GetNeighbor_Bind_II();
     }
+    */
     auto executed{head->parent_->Bind(site, head)};
     if (executed) {
       bool still_attached{head->parent_->UpdateExtension()};

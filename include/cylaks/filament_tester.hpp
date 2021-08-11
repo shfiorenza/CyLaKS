@@ -27,15 +27,15 @@ public:
       for (auto &&pop : unoccupied_) {
         pop.second.Sort(site);
       }
-      if (Sys::test_mode_ != "motor_lattice_step") {
-        int n_neighbs{site->GetNumNeighborsOccupied()};
-        site->SetWeight_Bind(Sys::weight_neighb_bind_[n_neighbs]);
-        site->SetWeight_Unbind(Sys::weight_neighb_unbind_[n_neighbs]);
-      }
+      // if (Sys::test_mode_ != "motor_lattice_step") {
+      int n_neighbs{site->GetNumNeighborsOccupied()};
+      site->SetWeight_Bind(Sys::weight_neighb_bind_[n_neighbs]);
+      site->SetWeight_Unbind(Sys::weight_neighb_unbind_[n_neighbs]);
+      // }
     }
-    if (Sys::test_mode_ != "motor_lattice_step") {
-      UpdateLattice();
-    }
+    // if (Sys::test_mode_ != "motor_lattice_step") {
+    UpdateLattice();
+    // }
   }
 };
 #endif

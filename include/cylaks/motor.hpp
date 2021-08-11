@@ -29,12 +29,16 @@ public:
   CatalyticHead *GetHeadOne() { return &head_one_; }
   CatalyticHead *GetHeadTwo() { return &head_two_; }
   CatalyticHead *GetActiveHead() {
+    if (n_heads_active_ != 1) {
+      Sys::ErrorExit("Motor::GetActiveHead [0]");
+      return nullptr;
+    }
     if (head_one_.site_ != nullptr) {
       return &head_one_;
     } else if (head_two_.site_ != nullptr) {
       return &head_two_;
     } else {
-      Sys::ErrorExit("Motor::GetActiveHead");
+      Sys::ErrorExit("Motor::GetActiveHead [1]");
       return nullptr;
     }
   }

@@ -205,6 +205,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Motors::gaussian_amp_solo, "motors.gaussian_amp_solo", "kbT");
   ParseYAML(&Motors::gaussian_ceiling_bulk, "motors.gaussian_ceiling_bulk",
             "kbT");
+  ParseYAML(&Motors::gaussian_stepping_coop, "motors.gaussian_stepping_coop",
+            "");
   ParseYAML(&Motors::neighb_neighb_energy, "motors.neighb_neighb_energy",
             "kbT");
   ParseYAML(&Motors::t_active, "motors.t_active", "s");

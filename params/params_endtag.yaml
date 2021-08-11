@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.001
 dt: 0.00002
-t_run: 3000
+t_run: 30 # 0
 t_equil: 0
 t_snapshot: 0.1
 dynamic_equil_window: -1 

@@ -51,7 +51,6 @@ public:
     weight_bind_ *= val;
     if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
       weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
-      return;
     }
   }
   void AddWeight_Unbind(double val) {
@@ -63,25 +62,12 @@ public:
     weight_unbind_ *= val;
     if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
       weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
-      return;
     }
   }
   double GetWeight_Bind() { return weight_bind_ / binding_affinity_; }
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
-  int GetNumNeighborsOccupied() {
-    if (_n_neighbs_max == 0) {
-      return 0;
-    }
-    int n_neighbs{0};
-    for (auto const &site : neighbors_) {
-      if (site->occupant_ != nullptr) {
-        n_neighbs++;
-      }
-    }
-    // printf("n_neighbs = %i\n", n_neighbs);
-    return n_neighbs;
-  }
+  int GetNumNeighborsOccupied();
 
   void AddForce(Vec<double> f_applied);
   void AddTorque(double tq);

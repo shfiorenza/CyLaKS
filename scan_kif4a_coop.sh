@@ -1,19 +1,17 @@
 #!/bin/bash
-SCAN_NAME="mobility_both_newNEW_NOCOOP"
+SCAN_NAME="mobility_both"
 echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params/params_kif4a.yaml"
 echo Base parameter file is ${PARAM_FILE}
 
 MOT_CONC=(0.02 0.05 0.08 0.120 0.220 0.420)
 CONC_SCALE=(20 50 80 120 220 420)
-#N_RUNS=(50 125 200 300 500 800)
-N_RUNS=(25 70 100 150 250 400)
-
+N_RUNS=(50 125 200 300 500 800)
 BASE_SEED=198261346419
-MIN_SEED=0
-MAX_SEED=0 # 5
+MIN_SEED=1
+MAX_SEED=3
 
-N_THREADS=10
+N_THREADS=12
 I_THREAD=0
 
 for I_CONC in 0 1 2 3 4 5
@@ -24,6 +22,7 @@ do
 		TEMP_PARAMS="params_temp_${FILE_NAME}.yaml"
 		cp $PARAM_FILE $TEMP_PARAMS
         yq eval -i ".seed = $(( $BASE_SEED + $SEED_NO ))" ${TEMP_PARAMS}
+		# yq eval -i ".t_equil = ${T_EQUIL[I_CONC]}" ${TEMP_PARAMS}
         yq eval -i ".motors.c_bulk = ${MOT_CONC[I_CONC]}" ${TEMP_PARAMS}			
         yq eval -i ".motors.n_runs_to_exit = ${N_RUNS[I_CONC]}" ${TEMP_PARAMS}
 		# Run sim for these parameter values

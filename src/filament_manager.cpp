@@ -32,8 +32,8 @@ void FilamentManager::GenerateFilaments() {
     protofilaments_[0].neighbor_ = &protofilaments_[1];
     protofilaments_[1].neighbor_ = &protofilaments_[0];
   }
-  // FIXME gamma_rot is invalid for MTs that are too short; need better
-  // expression --- do not include for now
+  // ! FIXME gamma_rot is invalid for MTs that are too short; need better
+  // ! expression --- do not include for now
   using namespace Sys;
   int n_dims{2}; // 3};
   Vec<double> D(n_dims, 0.0);

@@ -13,6 +13,7 @@ void Motor::ChangeConformation() {
   if (site == site->filament_->plus_end_ and
       Params::Motors::endpausing_active) {
     return;
+    // ! FIXME sort out this test nonsense
     // if (Sys::test_mode_.empty() or site->filament_->index_ == 0) {
     //   return;
     // }
@@ -31,6 +32,9 @@ BindingSite *Motor::GetDockSite() {
   int dir{active_head->trailing_ ? 1 : -1};
   int i_dock{(int)site->index_ + dir * site->filament_->dx_};
   if (i_dock < 0 or i_dock > site->filament_->sites_.size() - 1) {
+    return nullptr;
+    // ! FIXME sort out this test nonsense
+    /*
     if (Sys::test_mode_.empty()) {
       return nullptr;
     }
@@ -47,6 +51,7 @@ BindingSite *Motor::GetDockSite() {
     } else {
       return nullptr;
     }
+    */
   }
   return &site->filament_->sites_[i_dock];
 }
@@ -91,6 +96,7 @@ void Motor::ApplyLatticeDeformation() {
       // Do not access lattice sites that don't exist in memory
       if (i_scan < 0 or i_scan > mt_length) {
         continue;
+        // ! FIXME figure out this test nonsense
         /*
         if (Sys::test_mode_.empty()) {
           continue;
@@ -155,7 +161,7 @@ double Motor::GetWeight_Bind_II() {
   CatalyticHead *bound_head{GetActiveHead()};
   // By using bound_head for lattice weight, we avoid any self-coop
   double weight_site{bound_head->site_->GetWeight_Bind()};
-  // FIXME  _lambda_neighb = 1.0 now, but need to include neighb coop otherwise
+  // ! FIXME  _lambda_neighb = 1.0 now; need to include neighb coop otherwise
   return weight_site;
 }
 
@@ -173,6 +179,7 @@ double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
     head = head->GetOtherHead();
   }
   double weight_site{head->site_->GetWeight_Bind()};
+  // ! FIXME  _lambda_neighb = 1.0 now; need to include neighb coop otherwise
   // int n_neighbs{head->site_->GetNumNeighborsOccupied()};
   // Remove contribution from neighb mechanism
   return weight_site; // / Sys::weight_neighb_bind_[n_neighbs];
@@ -192,10 +199,6 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
     head = head->GetOtherHead();
   }
   double weight_site{head->site_->GetWeight_Unbind()};
-  // Divide out the weight from one neighbor, since it's the motor's other foot
-  // if (Sys::test_mode_ != "motor_lattice_step") {
-  // weight_site /= Sys::weight_neighb_unbind_[1];
-  // }
   // Disregard effects from internal force if it's disabled
   if (!Params::Motors::gaussian_stepping_coop or
       Params::Motors::gaussian_range == 0) {
@@ -207,18 +210,10 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
     Sys::ErrorExit("bruh");
   }
   weight_sq /= Sys::weight_neighb_unbind_[n_neighbs];
-  // FIXME make function that automatically divides out neighbors to avoid
-  // this Divide out sq'd contribution if motor has a real neighb (i.e., not
-  // itself) if (head->GetNumNeighborsOccupied() == 2) {
-  //   weight_sq /= Sys::weight_neighb_unbind_[1];
-  //   // printf("%zu and %zu\n", Sys::i_step_, Sys::i_datapoint_);
-  // }
-  // printf("wt is %g\n", weight_sq);
   return weight_sq;
 }
 
 double Motor::GetWeight_Unbind_I() {
-  //   printf("%g\n", GetActiveHead()->site_->GetWeight_Unbind());
   return GetActiveHead()->site_->GetWeight_Unbind();
 }
 
@@ -239,7 +234,7 @@ bool Motor::Diffuse(CatalyticHead *head, int dir) {
   return true;
 }
 
-// FIXME see if we can down-cast to bindinghead & call Protein's Bind() funct
+// ! FIXME see if we can down-cast to bindinghead & call Protein's Bind() funct
 bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
 
   if (site->occupant_ != nullptr) {
@@ -272,6 +267,7 @@ bool Motor::Bind_ATP(CatalyticHead *head) {
   }
   head->ligand_ = CatalyticHead::Ligand::ATP;
   // Do not change conformation of trailing heads (for end-pausing)
+  // ! FIXME convert this to Log() -- verbosity of 2 maybe?
   //   printf("ATP bound to head of motor %i on site %i %s\n",
   //          head->parent_->GetID(), head->site_->index_,
   //          head->trailing_ ? "(trailing)" : "");
@@ -290,7 +286,7 @@ bool Motor::Hydrolyze(CatalyticHead *head) {
   return true;
 }
 
-// FIXME same as Bind();
+// ! FIXME same as Bind();
 bool Motor::Unbind(CatalyticHead *head) {
 
   BindingSite *site{head->site_};

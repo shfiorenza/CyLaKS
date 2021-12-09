@@ -13,6 +13,7 @@ protected:
 public:
   CatalyticHead head_one_, head_two_;
   LinearSpring tether_;
+  Motor *partner_;
 
 private:
 public:

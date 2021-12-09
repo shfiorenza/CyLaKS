@@ -8,7 +8,7 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     printf("\nError! Incorrect number of command-line arguments\n");
     printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
     printf("test_mode (optional)\n");
-    printf("Currently-implemented test modes are:\n");
+    printf("Currently implemented test modes are:\n");
     for (auto const &mode : test_modes_) {
       printf("   %s\n", mode.c_str());
     }
@@ -100,7 +100,7 @@ void Curator::ParseParameters() {
   using namespace Sys;
   // Check to make sure param file actually exists
   if (!std::filesystem::exists(yaml_file_)) {
-    Log("  Error: param file does not exist; aborting \n");
+    Log("  Error: parameter file does not exist; aborting \n");
     exit(1);
   }
   // Open parameter file
@@ -122,7 +122,7 @@ void Curator::ParseParameters() {
       try {
         val = input[name];
       } catch (...) {
-        Sys::ErrorExit("WUT");
+        Sys::ErrorExit("Curator::ParseParameters() [1]");
       }
     }
     // Sometimes, size_t variables use "e" notation & must be treated as doubles
@@ -151,7 +151,7 @@ void Curator::ParseParameters() {
             val[i_val].as<Str>().c_str(), units.c_str());
       }
     } else {
-      ErrorExit("Curator::ParseParameters() -- parser");
+      ErrorExit("Curator::ParseParameters() [2]");
     }
   };
   // Parse thru parameters
@@ -310,22 +310,13 @@ void Curator::GenerateDataFiles() {
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
-  // if (Params::Filaments::t_ablate > 0.0) {
-  //   AddDataFile("filament_pos_postSplit");
-  // }
   if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
     AddDataFile("occupancy");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("occupancy_postSplit");
-    // }
     // Open protein ID file, which stores the unique ID of all bound proteins
     // (unbound not tracked) at their respective site indices during DC
     AddDataFile("protein_id");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("protein_id_postSplit");
-    // }
     if (xlinks_crosslinking) {
       AddDataFile("partner_index");
     }
@@ -333,9 +324,6 @@ void Curator::GenerateDataFiles() {
   if (motors_active) {
     // bool; simply says if motor head is trailing or not
     AddDataFile("motor_head_trailing");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("motor_head_trailing_postSplit");
-    // }
     if (motors_tethering) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
@@ -387,7 +375,7 @@ void Curator::CheckPrintProgress() {
     motors_equil = test_proteins_.motors_.equilibrated_;
     xlinks_equil = test_proteins_.xlinks_.equilibrated_;
   }
-  // FIXME report t_sim & t_elapsed_irl each milestone; not step #
+  // ! FIXME report t_sim & t_elapsed_irl each milestone; not step #
   using namespace Sys;
   using namespace Params;
   // Percent milestone; controls report frequency

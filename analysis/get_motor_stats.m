@@ -1,10 +1,10 @@
 function mot_stats = get_motor_stats(base_name, seeds, plot_flag)
 % Code block below is for when this is used as a standalone script
 
-clear variables; 
-base_name = "/home/shane/projects/CyLaKS/test2"; %run_motor_mobility/kif4a_mobility";
-seeds = [0]; %, 1, 2, 3, 4, 5];
-do_plot = true;
+%clear variables; 
+%base_name = "/home/shane/projects/CyLaKS/test2"; %run_motor_mobility/kif4a_mobility";
+%seeds = [0]; %, 1, 2, 3, 4, 5];
+%do_plot = true;
 
 
 do_plot = false;
@@ -15,14 +15,13 @@ if nargin == 1 %|| isempty(seeds)
 else
     multirun = true;
     n_seeds = length(seeds);
-    %sim_name = sprintf('%s_%i', base_name, seeds(1));
-    sim_name = base_name;
+    sim_name = sprintf('%s_%i', base_name, seeds(1));
+    %sim_name = base_name;
     if nargin == 3
        do_plot = plot_flag; 
     end
 end
-multirun = false
-do_plot = true
+%do_plot = true
 %}
 
 % Open log file and parse it into param labels & their values
@@ -137,9 +136,9 @@ for i_seed = 1 : n_seeds
                     run_time = delta_time * time_per_datapoint;
                     velocity = run_length / run_time;
                    
-                   %{
+                    %{
                     % Determine if we can observe this unbinding event
-                    scan_window = 0;
+                    scan_window = 30;
                     observable = true;
                     for i_delta = 1 : 1 : scan_window
                         i_scan_fwd = end_site(1) + i_delta; 

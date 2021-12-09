@@ -1,6 +1,5 @@
 clear variables;
-
-sim_name = 'test'; % Raw sim name; do not include directory
+sim_name = 'mobility_both_420_0'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -148,7 +147,7 @@ for i_data = start_frame : frames_per_plot : end_frame
     width = (max_x - min_x) + 50;
     height = (3/5 * width); 
     ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.XLim = [(min_x - 25) (min_x + 1025)];
+    %ax.XLim = [(min_x - 25) (min_x + 1025)];
     ax.YLim = [y_avg - 400 y_avg + 400];
     %ax.YLim = [y_avg - height/2 y_avg + height/2];
     %ax.XLim = [(min_x - 25) (min_x + 225)];

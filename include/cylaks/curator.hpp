@@ -15,8 +15,8 @@ private:
                        "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",
                        "hetero_tubulin",      "kinesin_mutant"};
-  size_t n_sites_max_{0};
-  size_t n_steps_per_snapshot_{0};
+  size_t n_sites_max_{0}; // Largest microtubule length (for padding data)
+  size_t n_steps_per_snapshot_{0}; // kMC steps per data output
   SysTimepoint start_time_;
   UMap<Str, Sys::DataFile> data_files_;
 

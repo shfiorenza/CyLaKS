@@ -28,10 +28,8 @@ public:
     index_ = index;
     filament_ = filament;
   }
-
-  void SetBindingAffinity(double val) { binding_affinity_ = val; }
-
   void AddNeighbor(BindingSite *site) { neighbors_.emplace_back(site); }
+  void SetBindingAffinity(double val) { binding_affinity_ = val; }
 
   bool IsOccupied() {
     if (occupant_ == nullptr) {
@@ -47,7 +45,7 @@ public:
     if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
       return;
     }
-    // printf("val = %g\n", val);
+    // ! FIXME generalize this for positive potentials (decreasing unbinding)
     weight_bind_ *= val;
     if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
       weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
@@ -58,9 +56,9 @@ public:
     if (weight_unbind_ == Sys::weight_lattice_unbind_max_[n_neighbs]) {
       return;
     }
-    // printf("val = %g\n", val);
     weight_unbind_ *= val;
-    if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
+    // ! FIXME generalize this for positive potentials (increase unbinding)
+    if (weight_unbind_ < Sys::weight_lattice_unbind_max_[n_neighbs]) {
       weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
     }
   }
@@ -68,10 +66,9 @@ public:
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
   int GetNumNeighborsOccupied();
+  BindingSite *GetNeighbor(int dir);
 
   void AddForce(Vec<double> f_applied);
   void AddTorque(double tq);
-
-  BindingSite *GetNeighbor(int dir);
 };
 #endif

@@ -18,6 +18,8 @@ public:
   Motor *parent_{nullptr};
   CatalyticHead *other_head_{nullptr};
 
+  CatalyticHead *partner_{nullptr};
+
 private:
 public:
   CatalyticHead() {}

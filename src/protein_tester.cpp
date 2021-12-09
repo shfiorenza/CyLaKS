@@ -171,8 +171,8 @@ void ProteinTester::InitializeTest_Filament_Separation() {
       bool still_attached{head->parent_->UpdateExtension()};
       if (!still_attached) {
       }
-      // FIXME had to move this from if statement above -- why ?
     }
+    // FIXME had to move this from if statement above -- why ?
     filaments_->FlagForUpdate();
     xlinks_.FlagForUpdate();
   };
@@ -183,8 +183,8 @@ void ProteinTester::InitializeTest_Filament_Separation() {
       bool still_attached{head->parent_->UpdateExtension()};
       if (!still_attached) {
       }
-      // FIXME had to move this from if statement above -- why ?
     }
+    // FIXME had to move this from if statement above -- why ?
     filaments_->FlagForUpdate();
     xlinks_.FlagForUpdate();
   };
@@ -522,7 +522,6 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   }
 }
 
-// ! FIXME inconsistency
 void ProteinTester::InitializeTest_Motor_LatticeStep() {
 
   using namespace Params;
@@ -535,7 +534,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   SetParameters();
   // Initialize filaments
   Filaments::count = 1;
-  Filaments::n_sites[0] = 1000;
+  Filaments::n_sites[0] = 100000;
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
@@ -545,19 +544,14 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   Str response;
   std::getline(std::cin, response);
   int test_delta{(int)std::stoi(response)};
+
   double test_weight_bind{1.0};
   double test_weight_unbind{1.0};
   if (test_delta > 0) {
     test_weight_bind = Sys::weight_lattice_bind_[test_delta];
     test_weight_unbind = Sys::weight_lattice_unbind_[test_delta];
-    for (int delta{0}; delta <= Motors::gaussian_range; delta++) {
-      Sys::weight_lattice_bind_[delta] = test_weight_bind;
-      Sys::weight_lattice_unbind_[delta] = test_weight_unbind;
-    }
-  }
-  for (auto &&site : filaments_->sites_) {
-    site->SetWeight_Bind(test_weight_bind);
-    site->SetWeight_Unbind(test_weight_unbind);
+  } else {
+    test_delta = 10;
   }
   // Initialize statistic trackers
   Vec<Pair<size_t, size_t>> zeros(1, {0, 0});
@@ -573,6 +567,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
                                        test_weight_unbind);
   test_stats_.emplace("unbind_i", zeros);
   test_ref_.emplace("unbind_i", p_theory_unbind_i);
+
   // Place motor head on minus end of microtubule
   BindingSite *site{filaments_->protofilaments_[0].minus_end_};
   Motor *motor{motors_.GetFreeEntry()};
@@ -583,19 +578,43 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   } else {
     Sys::ErrorExit("ProteinTester::InitializeTestEnvironment()");
   }
+  // Place 2nd motor test_delta distance away
+  int i_site{int(site->index_ + test_delta * site->filament_->dx_)};
+  printf("i_site is %i\n", i_site);
+  BindingSite *partner_site{&filaments_->protofilaments_[0].sites_[i_site]};
+  Motor *partner_motor{motors_.GetFreeEntry()};
+  bool pexecuted{partner_motor->Bind(partner_site, &partner_motor->head_one_)};
+  if (pexecuted) {
+    motors_.AddToActive(partner_motor);
+    filaments_->FlagForUpdate();
+  } else {
+    Sys::ErrorExit("PARTNER");
+  }
+  motor->head_one_.partner_ = &partner_motor->head_one_;
+  motor->head_two_.partner_ = &partner_motor->head_two_;
+  partner_motor->head_one_.partner_ = &motor->head_one_;
+  partner_motor->head_two_.partner_ = &motor->head_two_;
+
   auto binomial = [&](double p, int n) {
     if (n > 0) {
-      return SysRNG::SampleBinomial(p, n);
+      int n_exe{SysRNG::SampleBinomial(p, n)};
+      if (n_exe > 1) {
+        n_exe = 1;
+      }
+      return n_exe;
     } else {
       return 0;
     }
   };
   // Bind_ATP_I
   auto exe_bind_ATP = [](auto *head, auto *pop) {
-    // printf("boop\n");
+    auto partner{head->partner_};
     bool executed{head->parent_->Bind_ATP(head)};
-    if (executed) {
+    bool pexecuted{partner->parent_->Bind_ATP(partner)};
+    if (executed and pexecuted) {
       pop->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("EXE_Bind_ATP_I()");
     }
   };
   auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
@@ -619,21 +638,38 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   // Bind_ATP_II
   auto poisson_ATP = [&](double p, int n) {
     if (p > 0.0) {
-      return SysRNG::SamplePoisson(p);
+      int n_exe{SysRNG::SamplePoisson(p)};
+      if (n_exe > 1) {
+        n_exe = 1;
+      }
+      return n_exe;
     } else {
       return 0;
     }
   };
+  /*
   auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
+    return;
     auto *rear_head{front_head->GetOtherHead()};
     if (front_head->trailing_) {
       return;
     }
+    auto partner{dynamic_cast<CatalyticHead *>(
+        &front_head->parent_->partner_->head_one_)};
+    if (front_head->trailing_ != partner->trailing_) {
+      partner = partner->GetOtherHead();
+    }
+
     bool unbound{rear_head->Unbind()};
     bool executed{front_head->parent_->Bind_ATP(front_head)};
-    if (executed) {
+
+    bool punbound{partner->GetOtherHead()->Unbind()};
+    bool pexecuted{partner->parent_->Bind_ATP(partner)};
+    if (executed and pexecuted) {
       pop->FlagForUpdate();
       fil->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("EXE_Bind_ATP_II()");
     }
   };
   auto weight_bind_ATP_ii = [](auto *head) {
@@ -672,11 +708,16 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
         exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
                         filaments_);
       });
+  */
   // Hydrolyze
   auto exe_hydrolyze = [](auto *head, auto *pop) {
+    auto partner{head->partner_};
     bool executed{head->parent_->Hydrolyze(head)};
-    if (executed) {
+    bool pexecuted{partner->parent_->Hydrolyze(partner)};
+    if (executed and pexecuted) {
       pop->FlagForUpdate();
+    } else {
+      Sys::ErrorExit("EXE_Hydrolyze");
     }
   };
   auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
@@ -701,6 +742,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     auto bound_head{dynamic_cast<CatalyticHead *>(base)};
     auto head{bound_head->GetOtherHead()};
     auto site{head->parent_->GetNeighbor_Bind_II()};
+    // ! FIXME re-introduce periodic boundary conditions
     /*
     // If dock site is plus end, unbind motor and place it on minus end
     if (site == site->filament_->plus_end_) {
@@ -712,12 +754,18 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       site = bound_head->parent_->GetNeighbor_Bind_II();
     }
     */
+    auto partner{head->partner_};
+    auto partner_site{partner->parent_->GetNeighbor_Bind_II()};
     auto executed{head->parent_->Bind(site, head)};
-    if (executed) {
+    bool pexecuted{partner->parent_->Bind(partner_site, partner)};
+    if (executed and pexecuted) {
       bool still_attached{head->parent_->UpdateExtension()};
+      bool wut{partner->parent_->UpdateExtension()};
       motors_.FlagForUpdate();
       filaments_->FlagForUpdate();
       test_stats_.at("bind_ii")[0].first++;
+    } else {
+      Sys::ErrorExit("EXE_Bind_II()");
     }
   };
   auto weight_bind_ii = [](auto *head) {
@@ -726,7 +774,11 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   auto poisson_bind_ii = [&](double p, int n) {
     test_stats_.at("bind_ii")[0].second += motors_.sorted_.at("bind_ii").size_;
     if (p > 0.0) {
-      return SysRNG::SamplePoisson(p);
+      int n_exe{SysRNG::SamplePoisson(p)};
+      if (n_exe > 1) {
+        n_exe = 1;
+      }
+      return n_exe;
     } else {
       return 0;
     }
@@ -751,20 +803,28 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       exe_bind_ii);
   // Unbind_II
   auto exe_unbind_ii = [&](Object *base) {
+    // printf("FOUR!\n");
     auto head{dynamic_cast<CatalyticHead *>(base)};
+    auto partner{dynamic_cast<CatalyticHead *>(head->partner_)};
     bool executed{head->Unbind()};
-    if (executed) {
+    bool pexecuted{partner->Unbind()};
+    if (executed and pexecuted) {
       motors_.FlagForUpdate();
       filaments_->FlagForUpdate();
       test_stats_.at("unbind_ii")[0].first++;
+    } else {
+      Sys::ErrorExit("EXE_Unbind_II()");
     }
   };
   auto poisson_unbind_ii = [&](double p, int n) {
     test_stats_.at("unbind_ii")[0].second +=
         motors_.sorted_.at("unbind_ii").size_;
-    // printf("sz = %zu\n", motors_.sorted_.at("unbind_ii").size_);
     if (p > 0.0) {
-      return SysRNG::SamplePoisson(p);
+      int n_exe{SysRNG::SamplePoisson(p)};
+      if (n_exe > 1) {
+        n_exe = 1;
+      }
+      return n_exe;
     } else {
       return 0;
     }
@@ -812,7 +872,11 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     test_stats_.at("unbind_i")[0].second +=
         motors_.sorted_.at("bound_i_ADPP").size_;
     if (p > 0.0) {
-      return SysRNG::SamplePoisson(p);
+      int n_exe{SysRNG::SamplePoisson(p)};
+      if (n_exe > 1) {
+        n_exe = 1;
+      }
+      return n_exe;
     } else {
       return 0;
     }

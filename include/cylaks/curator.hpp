@@ -10,11 +10,14 @@
 // Curator: Initializes and runs the simulation; controls data output
 class Curator {
 private:
+  int n_tests_{4};
   // Available test modes; initialize custom scenarios and kMC events
   Vec<Str> test_modes_{"xlink_bind_ii",       "xlink_diffusion",
                        "motor_lattice_bind",  "motor_lattice_step",
                        "filament_separation", "filament_ablation",
                        "hetero_tubulin",      "kinesin_mutant"};
+  Vec<Str> test_param_files_{"prc1", "prc1", "kif4a", "kif4a",
+                             "prc1", "k401", "k401",  "kif4a"};
   size_t n_sites_max_{0}; // Largest microtubule length (for padding data)
   size_t n_steps_per_snapshot_{0}; // kMC steps per data output
   SysTimepoint start_time_;

@@ -12,34 +12,21 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  wca_potential_enabled: false
-  n_sites:
-    - 13
-    - 13
-  polarity:
-    - 0
-    - 1
-  x_initial:
-    - 0
-    - 0
-  y_initial:
-    - 0
-    - 32
-  immobile_until: 
-    - 1500
-    - 1500
-  f_applied: 
-    - 0.0
-    - 0.0
-  translation_enabled: 
-    - true
-    - true
+  n_sites: [13, 13]
+  polarity: [0, 1]
+  x_initial: [0, 0]
+  y_initial: [0, 32]
+  immobile_until: [1500, 1500]
+  f_applied: [0.0, 0.0]
+  translation_enabled: [true, true]
   rotation_enabled: true
+  wca_potential_enabled: true
 motors:
   n_runs_to_exit: 250
   gaussian_range: 1000 # 1200 # 1000
   gaussian_amp_solo: 0.95 # 1.3 # 0.95
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
+  gaussian_stepping_coop: true
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
   k_on: 0.000358
@@ -68,7 +55,7 @@ xlinks:
   t_active: 0
   k_on: 0.000238
   c_bulk: 0.5 # 1.0 
-  c_eff_bind: 500000
+  c_eff_bind: 5000
   k_off_i: 0.143
   k_off_ii: 0.0143
   d_i: 0.131

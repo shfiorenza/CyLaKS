@@ -12,7 +12,7 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [1250] # [10000]
+  n_sites: [1250]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
@@ -23,7 +23,7 @@ filaments:
   wca_potential_enabled: false
 motors:
   n_runs_to_exit: 800 # 100
-  gaussian_range: 1000 # 1050 # 1200 # 1000
+  gaussian_range: 1000 # 1200 # 1000
   gaussian_amp_solo: 0.95 # 1.3 # 0.95
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
   gaussian_stepping_coop: true # true

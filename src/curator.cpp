@@ -4,19 +4,72 @@
 
 void Curator::CheckArgs(int argc, char *argv[]) {
 
-  if (argc < 3 or argc > 6) {
-    printf("\nError! Incorrect number of command-line arguments\n");
-    printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
-    printf("test_mode (optional)\n");
-    printf("Currently implemented test modes are:\n");
-    for (auto const &mode : test_modes_) {
-      printf("   %s\n", mode.c_str());
+  // With no other input arguments, run interactive launcher
+  if (argc == 1) {
+    printf("Running interactive launcher. You can also quick-launch via:\n");
+    printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
+    printf("test_mode (optional)\n\n");
+    Str response;
+    printf("Run test/demo mode? (y/n)\n");
+    std::getline(std::cin, response);
+    // If not a test/demo mode, we just need parameter file and sim name
+    if (response == "n" or response == "N") {
+      printf("\nEnter path to desired parameter file:\n");
+      std::getline(std::cin, Sys::yaml_file_);
+      printf("\nEnter desired name for this simulation\n");
+      std::getline(std::cin, Sys::sim_name_);
     }
+    // Otherwise, display list of scenarios for user to choose from
+    else if (response == "y" or response == "Y") {
+      printf("Currently implemented TEST MODES:\n");
+      for (int i_test{0}; i_test < test_modes_.size(); i_test++) {
+        printf(" %i. %s\n", i_test, test_modes_[i_test].c_str());
+        if (i_test == n_tests_ - 1) {
+          printf("\nCurrently implemented DEMO MODES:\n");
+        }
+      }
+      // Demand that user picks via integer index
+      printf("\nEnter list index (from 0 to %zu) to launch desired scenario.\n",
+             test_modes_.size() - 1);
+      int test_mode{-1};
+      std::cin >> test_mode;
+      std::cin.ignore(); // Use this to ignore newline character in buffer
+      // Validate chosen list index
+      if (!std::cin) {
+        printf("Input value must be an integer. Exiting\n");
+        exit(1);
+      }
+      if (test_mode < 0 or test_mode >= test_modes_.size()) {
+        printf("Invalid list index. Exiting.\n");
+        exit(1);
+      }
+      // Set test mode
+      Sys::yaml_file_ = "params/" + test_param_files_[test_mode] + ".yaml";
+      Str base{test_mode < n_tests_ ? "test_" : "demo_"};
+      Sys::sim_name_ = base + test_modes_[test_mode];
+      Sys::test_mode_ = test_modes_[test_mode];
+      printf("Setting test mode to '%s'\n", Sys::test_mode_.c_str());
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+    // Circumvent the remainder of conventional launch process
+    return;
+  }
+  // If input format is incorrect, inform user of appropriate format
+  if (argc < 3 or argc > 6) {
+    printf("Error! Incorrect number of command-line arguments\n");
+    printf("\nUse '%s' to run interactive launcher. ", argv[0]);
+    printf("Otherwise, the correct format is:\n");
+    printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
+    printf("test_mode (optional)\n\n");
+    printf("A list of currently implemented test modes is available in the "
+           "interactive launcher.\n");
     exit(1);
   }
   Sys::yaml_file_ = argv[1];
   Sys::sim_name_ = argv[2];
-  if (argc == 4 or argc == 5 or argc == 6) {
+  if (argc > 3) {
     Sys::test_mode_ = argv[3];
     bool valid_mode{false};
     for (auto const &mode : test_modes_) {

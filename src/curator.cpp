@@ -371,6 +371,7 @@ void Curator::GenerateDataFiles() {
     // (unbound not tracked) at their respective site indices during DC
     AddDataFile("protein_id");
     if (xlinks_crosslinking) {
+      // ! FIXME rename this; confusing with general term
       AddDataFile("partner_index");
     }
   }

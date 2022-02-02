@@ -37,7 +37,9 @@ void ProteinTester::ReportTestStatistics() {
 void ProteinTester::SetTestMode() {
 
   Sys::Log("\n");
-  Sys::Log("Initializing test '%s'\n", Sys::test_mode_.c_str());
+  Sys::Log("Initializing test '%s'. Overidden parameters listed below:\n",
+           Sys::test_mode_.c_str());
+  Sys::Log("(Capitalization is for automated detection by .m scipts)\n");
   if (Sys::test_mode_ == "filament_ablation") {
     InitializeTest_Filament_Ablation();
   } else if (Sys::test_mode_ == "filament_separation") {
@@ -62,19 +64,20 @@ void ProteinTester::SetTestMode() {
 void ProteinTester::InitializeTest_Filament_Ablation() {
 
   using namespace Params;
-  Filaments::count = 2;
-  Sys::Log("  COUNT = 2\n");
-  Filaments::n_sites[0] = Filaments::n_sites[1] = 875;
-  Filaments::polarity[0] = Filaments::polarity[1] = 0;
-  Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
-  Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
+  Sys::OverrideParam("filaments. COUNT", &Filaments::count, 2);
+  Sys::OverrideParam("filaments. N_SITES[0]", &Filaments::n_sites[0], 875);
+  Sys::OverrideParam("filaments. N_SITES[1]", &Filaments::n_sites[1], 875);
+  Sys::OverrideParam("filaments. POLARITY[0]", &Filaments::polarity[0], 0);
+  Sys::OverrideParam("filaments. POLARITY[1]", &Filaments::polarity[1], 0);
+  Sys::OverrideParam("filaments. x_initial[0]", &Filaments::x_initial[0], 0.0);
+  Sys::OverrideParam("filaments. x_initial[1]", &Filaments::x_initial[1],
+                     (Filaments::n_sites[0] - 1) * Filaments::site_size);
+  Sys::OverrideParam("filaments. y_initial[0]", &Filaments::y_initial[0], 0.0);
+  Sys::OverrideParam("filaments. y_initial[1]", &Filaments::y_initial[1], 0.0);
+  Motors::endpausing_active = false;
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
-  Filaments::x_initial[0] = 0.0;
-  Filaments::x_initial[1] = (Filaments::n_sites[0] - 1) * Filaments::site_size;
-  Filaments::y_initial[0] = Filaments::y_initial[1] = 0.0;
-  Motors::endpausing_active = false;
   printf("Enter ablation time: ");
   Str response;
   std::getline(std::cin, response);
@@ -95,16 +98,18 @@ void ProteinTester::InitializeTest_Filament_Separation() {
     printf("\nError! Filaments must be the same length.\n");
     exit(1);
   }
-  Motors::c_bulk = 0.0;
-  Xlinks::c_bulk = 1.0;
-  GenerateReservoirs();
-  InitializeWeights();
-  SetParameters();
-  Filaments::immobile_until[0] = 0.0;
-  Filaments::immobile_until[1] = 0.0;
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  Sys::OverrideParam("filaments. immobile_until[0]",
+                     &Filaments::immobile_until[0], 0.0);
+  Sys::OverrideParam("filaments. immobile_until[1]",
+                     &Filaments::immobile_until[1], 0.0);
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = true;
   Filaments::rotation_enabled = false; // true;
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
   filaments_->Initialize(this);
   int n_xlinks{Sys::n_xlinks_};
   if (n_xlinks == -1) {
@@ -525,25 +530,28 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
 void ProteinTester::InitializeTest_Motor_LatticeStep() {
 
   using namespace Params;
-  Motors::c_bulk = 1.0;
-  Motors::t_active = 0.0;
-  Motors::n_runs_to_exit = 1000000;
+  Sys::OverrideParam("t_run", &t_run, 100.0);
+  Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 1.0);
+  Sys::OverrideParam("motors: t_active", &Motors::t_active, 0.0);
+  Sys::OverrideParam("motors: n_runs_to_exit", &Motors::n_runs_to_exit,
+                     1000000);
+  Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
+  Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 100000);
+  Filaments::translation_enabled[0] = false;
+  Filaments::translation_enabled[1] = false;
+  Filaments::rotation_enabled = false;
+  printf("Enter test delta (-1 to check against self-coop): ");
+  Str response;
+  std::getline(std::cin, response);
+  int test_delta{(int)std::stoi(response)};
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
   // Initialize filaments
-  Filaments::count = 1;
-  Filaments::n_sites[0] = 100000;
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
-  Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
   filaments_->Initialize(this);
-  printf("Enter test delta (-1 to check against self-coop): ");
-  Str response;
-  std::getline(std::cin, response);
-  int test_delta{(int)std::stoi(response)};
 
   double test_weight_bind{1.0};
   double test_weight_unbind{1.0};
@@ -580,7 +588,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   }
   // Place 2nd motor test_delta distance away
   int i_site{int(site->index_ + test_delta * site->filament_->dx_)};
-  printf("i_site is %i\n", i_site);
   BindingSite *partner_site{&filaments_->protofilaments_[0].sites_[i_site]};
   Motor *partner_motor{motors_.GetFreeEntry()};
   bool pexecuted{partner_motor->Bind(partner_site, &partner_motor->head_one_)};
@@ -590,10 +597,10 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   } else {
     Sys::ErrorExit("PARTNER");
   }
-  motor->head_one_.partner_ = &partner_motor->head_one_;
-  motor->head_two_.partner_ = &partner_motor->head_two_;
-  partner_motor->head_one_.partner_ = &motor->head_one_;
-  partner_motor->head_two_.partner_ = &motor->head_two_;
+  motor->head_one_.test_partner_ = &partner_motor->head_one_;
+  motor->head_two_.test_partner_ = &partner_motor->head_two_;
+  partner_motor->head_one_.test_partner_ = &motor->head_one_;
+  partner_motor->head_two_.test_partner_ = &motor->head_two_;
 
   auto binomial = [&](double p, int n) {
     if (n > 0) {
@@ -608,7 +615,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   };
   // Bind_ATP_I
   auto exe_bind_ATP = [](auto *head, auto *pop) {
-    auto partner{head->partner_};
+    auto partner{head->test_partner_};
     bool executed{head->parent_->Bind_ATP(head)};
     bool pexecuted{partner->parent_->Bind_ATP(partner)};
     if (executed and pexecuted) {
@@ -655,7 +662,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       return;
     }
     auto partner{dynamic_cast<CatalyticHead *>(
-        &front_head->parent_->partner_->head_one_)};
+        &front_head->parent_->test_partner_->head_one_)};
     if (front_head->trailing_ != partner->trailing_) {
       partner = partner->GetOtherHead();
     }
@@ -711,7 +718,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   */
   // Hydrolyze
   auto exe_hydrolyze = [](auto *head, auto *pop) {
-    auto partner{head->partner_};
+    auto partner{head->test_partner_};
     bool executed{head->parent_->Hydrolyze(head)};
     bool pexecuted{partner->parent_->Hydrolyze(partner)};
     if (executed and pexecuted) {
@@ -754,7 +761,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       site = bound_head->parent_->GetNeighbor_Bind_II();
     }
     */
-    auto partner{head->partner_};
+    auto partner{head->test_partner_};
     auto partner_site{partner->parent_->GetNeighbor_Bind_II()};
     auto executed{head->parent_->Bind(site, head)};
     bool pexecuted{partner->parent_->Bind(partner_site, partner)};
@@ -805,7 +812,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   auto exe_unbind_ii = [&](Object *base) {
     // printf("FOUR!\n");
     auto head{dynamic_cast<CatalyticHead *>(base)};
-    auto partner{dynamic_cast<CatalyticHead *>(head->partner_)};
+    auto partner{dynamic_cast<CatalyticHead *>(head->test_partner_)};
     bool executed{head->Unbind()};
     bool pexecuted{partner->Unbind()};
     if (executed and pexecuted) {
@@ -910,13 +917,16 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
   using namespace Params;
   size_t cutoff{Motors::gaussian_range};
   // Set parameters
-  Xlinks::c_bulk = 0.0;
-  Motors::k_on = 1.0;
-  Motors::c_bulk = 10.0;
-  Motors::neighb_neighb_energy = 0.0;
-  Xlinks::neighb_neighb_energy = 0.0;
-  Filaments::count = 1;
-  Filaments::n_sites[0] = 2 * cutoff + 1;
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 0.0);
+  Sys::OverrideParam("motors: k_on", &Motors::k_on, 1.0);
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 10.0);
+  Sys::OverrideParam("motors: neighb_neighb_energy",
+                     &Motors::neighb_neighb_energy, 0.0);
+  Sys::OverrideParam("xlinks: neighb_neighb_energy",
+                     &Xlinks::neighb_neighb_energy, 0.0);
+  Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
+  Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
+                     2 * cutoff + 1);
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
@@ -983,16 +993,15 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
 
   using namespace Params;
   // Initialize sim objects
-  Xlinks::c_bulk = 1.0;
-  Xlinks::t_active = 0.0;
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  Sys::OverrideParam("xlinks: t_active", &Xlinks::t_active, 1.0);
+  Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
+  Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 1000);
+  Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1], 1000);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
   // Initialize filaments
-  Filaments::count = 2;
-  Filaments::n_sites[0] = Filaments::n_sites[1] = 1000;
-  Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
-  Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
   filaments_->Initialize(this);
   // Initialize stat trackers
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
@@ -1159,10 +1168,6 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
 void ProteinTester::InitializeTest_Xlink_Bind_II() {
 
   using namespace Params;
-  Xlinks::k_off_ii = 143;
-  GenerateReservoirs();
-  InitializeWeights();
-  SetParameters();
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
   double r_max{xlinks_.r_max_};
   printf("r_max = %g\n", r_max);
@@ -1170,15 +1175,19 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
   printf("r_x_max = %g\n", r_x_max);
   int x_max((int)std::ceil(r_x_max / Filaments::site_size));
   printf("x_max = %i\n", x_max);
-  // Initialize filament environment
-  Filaments::count = 2;
-  Sys::Log("  COUNT = 2\n");
-  Filaments::n_sites[0] = Filaments::n_sites[1] = 2 * x_max + 1;
-  Sys::Log("  N_SITES[0] = %i\n", Filaments::n_sites[0]);
-  Sys::Log("  N_SITES[1] = %i\n", Filaments::n_sites[1]);
+  Sys::OverrideParam("xlinks: k_off_ii", &Xlinks::k_off_ii, 143);
+  Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
+  Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
+                     2 * x_max + 1);
+  Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1],
+                     2 * x_max + 1);
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
+  // Initialize filament environment
   filaments_->Initialize(this);
   Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
   Vec<double> p_unbind(2 * x_max + 1,

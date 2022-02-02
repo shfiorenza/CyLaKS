@@ -11,7 +11,11 @@ class Protein : public Object {
 protected:
   double ran_{0.0};
   int n_neighbors_bind_ii_{0};
+  int n_neighbors_bind_i_teth_{0};
+  int n_neighbors_bind_ii_teth_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
+  Vec<BindingSite *> neighbors_bind_i_teth_;
+  Vec<BindingSite *> neighbors_bind_ii_teth_;
 
 public:
   size_t active_index_{0};
@@ -19,9 +23,9 @@ public:
 
   BindingHead head_one_, head_two_;
   LinearSpring spring_;
-  AngularSpring pivot_one_, pivot_two_;
 
   bool tethered_{false};
+  // ! rename this to be less general
   Protein *partner_{nullptr};
 
 protected:
@@ -37,10 +41,6 @@ public:
     spring_.Initialize(sid, id, &head_one_, &head_two_, Xlinks::k_spring,
                        Xlinks::r_0, Xlinks::k_spring, Xlinks::theta_0,
                        Xlinks::k_rot);
-    // pivot_one_.Initialize(sid, id, &head_one_, &head_two_, Xlinks::theta_0,
-    //                       Xlinks::k_rot);
-    // pivot_two_.Initialize(sid, id, &head_two_, &head_one_, Xlinks::theta_0,
-    //                       Xlinks::k_rot);
     // Maximum possible x_distance of spring will occur when r_y = 0
     size_t x_max{(size_t)std::ceil(spring_.r_max_ / Filaments::site_size)};
     neighbors_bind_ii_.resize(2 * x_max + 1);

@@ -1,18 +1,21 @@
 #!/bin/bash
-SCAN_NAME="mobility_both"
+SCAN_NAME="motor_mobility"
 echo Starting ${SCAN_NAME} scan
-PARAM_FILE="params/params_kif4a.yaml"
+PARAM_FILE="params/kif4a.yaml"
 echo Base parameter file is ${PARAM_FILE}
 
 MOT_CONC=(0.02 0.05 0.08 0.120 0.220 0.420)
 CONC_SCALE=(20 50 80 120 220 420)
 N_RUNS=(50 125 200 300 500 800)
 BASE_SEED=198261346419
-MIN_SEED=1
+MIN_SEED=0
 MAX_SEED=3
 
 N_THREADS=12
 I_THREAD=0
+
+echo "Need to run a batch of 24 sims. How many CPU threads to use?" 
+read N_THREADS
 
 for I_CONC in 0 1 2 3 4 5
 do

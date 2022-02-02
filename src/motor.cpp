@@ -267,6 +267,7 @@ bool Motor::Bind_ATP(CatalyticHead *head) {
   }
   head->ligand_ = CatalyticHead::Ligand::ATP;
   // Do not change conformation of trailing heads (for end-pausing)
+  // Sys::Log()
   // ! FIXME convert this to Log() -- verbosity of 2 maybe?
   //   printf("ATP bound to head of motor %i on site %i %s\n",
   //          head->parent_->GetID(), head->site_->index_,

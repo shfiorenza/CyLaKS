@@ -45,11 +45,20 @@ public:
     if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
       return;
     }
-    // ! FIXME generalize this for positive potentials (decreasing unbinding)
     weight_bind_ *= val;
-    if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
-      weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+    // If weight is greater than unity, check if it ever gets GREATER THAN max
+    if (weight_bind_ > 1.0) {
+      if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
+        weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      }
     }
+    // Else if weight is less than unity ,check if it ever gets LESS THAN max
+    else if (weight_bind_ < 1.0) {
+      if (weight_bind_ < Sys::weight_lattice_bind_max_[n_neighbs]) {
+        weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      }
+    }
+    // (If weight is equal to unity, neither case matters)
   }
   void AddWeight_Unbind(double val) {
     int n_neighbs{GetNumNeighborsOccupied()};
@@ -57,10 +66,19 @@ public:
       return;
     }
     weight_unbind_ *= val;
-    // ! FIXME generalize this for positive potentials (increase unbinding)
-    if (weight_unbind_ < Sys::weight_lattice_unbind_max_[n_neighbs]) {
-      weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+    // If weight is greater than unity, check if it ever gets GREATER THAN max
+    if (weight_unbind_ > 1.0) {
+      if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
+        weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      }
     }
+    // Else if weight is less than unity ,check if it ever gets LESS THAN max
+    else if (weight_unbind_ < 1.0) {
+      if (weight_unbind_ < Sys::weight_lattice_unbind_max_[n_neighbs]) {
+        weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      }
+    }
+    // (If weight is equal to unity, neither case matters)
   }
   double GetWeight_Bind() { return weight_bind_ / binding_affinity_; }
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }

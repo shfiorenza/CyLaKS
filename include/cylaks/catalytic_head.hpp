@@ -18,7 +18,7 @@ public:
   Motor *parent_{nullptr};
   CatalyticHead *other_head_{nullptr};
 
-  CatalyticHead *partner_{nullptr};
+  CatalyticHead *test_partner_{nullptr}; // ! for lattice_step test mode
 
 private:
 public:
@@ -32,16 +32,13 @@ public:
 
   int GetNumNeighborsOccupied();
   int GetNumHeadsActive();
-
+  bool Trailing() { return trailing_; }
   Ligand GetLigand() { return ligand_; }
   CatalyticHead *GetOtherHead() { return other_head_; }
 
   double GetWeight_Unbind_II();
   bool Unbind();
-
   double GetWeight_Diffuse(int dir);
   bool Diffuse(int dir);
-
-  bool Trailing() { return trailing_; }
 };
 #endif

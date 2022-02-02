@@ -42,8 +42,10 @@ public:
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {
-    bool forced_unbind{xlinks_.UpdateExtensions()};
-    if (forced_unbind) {
+    bool motors_forced_unbind{motors_.UpdateExtensions()};
+    bool xlinks_forced_unbind{xlinks_.UpdateExtensions()};
+    if (motors_forced_unbind or xlinks_forced_unbind) {
+      motors_.FlagForUpdate();
       xlinks_.FlagForUpdate();
       FlagFilamentsForUpdate();
     }

@@ -49,8 +49,8 @@ template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
   // Tag each log pintout in terminal w/ simulation name
   printf("[%s] ", sim_name_.c_str());
-  // This is technically a horrendous vulnerability, but we don't care about
-  // 'hackers' in our sim; also Log() is never explicitly linked to input
+  // This is technically a horrendous vulnerability, but we don't really care
+  // about 'hackers' in our sim; also Log() is never explicitly linked to input
   int chars_printed{printf(msg, args..., "MISSING STRING")};
   int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
   if (chars_printed < 0 or chars_written < 0) {
@@ -83,6 +83,13 @@ inline void EarlyExit() {
   Log("   N_STEPS = %zu\n", i_step_ - n_steps_equil_);
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   running_ = false;
+}
+template <typename DATA_T1, typename DATA_T2>
+inline void OverrideParam(std::string name, DATA_T1 *param, DATA_T2 value) {
+  if (*param != value) {
+    Log("    %s = %s\n", name.c_str(), std::to_string(value).c_str());
+    *param = value;
+  }
 }
 /* Useful data structures */
 struct DataFile {

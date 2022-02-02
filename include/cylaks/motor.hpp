@@ -10,19 +10,23 @@ class BindingSite;
 //        Can exert forces and drag cargo via its 'tether' (or stalk)
 class Motor : public Protein {
 protected:
+  int n_neighbors_tether_{0};
+  Vec<Protein *> neighbors_tether_;
+
 public:
   CatalyticHead head_one_, head_two_;
   LinearSpring tether_;
-  Motor *partner_;
 
 private:
 public:
   Motor() {}
   void Initialize(size_t sid, size_t id) {
+    using namespace Params;
     Object::Initialize(sid, id);
     head_one_.Initialize(sid, id, _r_motor_head, this, &head_two_);
     head_two_.Initialize(sid, id, _r_motor_head, this, &head_one_);
-    // tether_.Initialize(sid, id, this);
+    tether_.Initialize(sid, id, &head_one_, &head_two_, Motors::k_slack,
+                       Motors::r_0, Motors::k_tether, 0.0, 0.0);
   }
   void ChangeConformation();
   BindingSite *GetDockSite();
@@ -45,6 +49,7 @@ public:
   }
   BindingSite *GetNeighbor_Bind_II() { return GetDockSite(); }
 
+  // ! FIXME!
   bool UpdateExtension() { return false; }
 
   void ApplyLatticeDeformation();

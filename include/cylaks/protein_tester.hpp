@@ -12,6 +12,8 @@ protected:
   FilamentTester *filaments_{nullptr};
 
 public:
+  // Reservoir<TestMotor> motors_;
+
 protected:
   void UpdateFilaments();
   void ReportTestStatistics();

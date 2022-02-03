@@ -32,11 +32,7 @@ void FilamentManager::GenerateFilaments() {
     protofilaments_[0].neighbor_ = &protofilaments_[1];
     protofilaments_[1].neighbor_ = &protofilaments_[0];
   }
-  // ! FIXME gamma_rot is invalid for MTs that are too short; need better
-  // ! expression --- do not include for now
   using namespace Sys;
-  int n_dims{2}; // 3};
-  Vec<double> D(n_dims, 0.0);
   Log("  Filament variables calculated post-initialization:\n");
   for (auto const &pf : protofilaments_) {
     Log("   length[%i] = %g nm\n", pf.index_, pf.length_);
@@ -48,10 +44,16 @@ void FilamentManager::GenerateFilaments() {
     Log("     D_perp[%i] = %g nm^2/s\n", pf.index_, Params::kbT / pf.gamma_[1]);
   }
   for (auto const &pf : protofilaments_) {
+    Log("     D_rot[%i] = %g nm^2/s\n", pf.index_, Params::kbT / pf.gamma_[2]);
+  }
+  for (auto const &pf : protofilaments_) {
     Log("      gamma_par[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[0]);
   }
   for (auto const &pf : protofilaments_) {
     Log("       gamma_perp[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[1]);
+  }
+  for (auto const &pf : protofilaments_) {
+    Log("       gamma_rot[%i] = %g nm^2/s\n", pf.index_, pf.gamma_[2]);
   }
 }
 

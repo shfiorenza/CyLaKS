@@ -1,5 +1,5 @@
 clear variables;
-sim_name = 'test_motor_lattice_step'; % Raw sim name; do not include directory
+sim_name = 'demo_filament_separation'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -75,9 +75,11 @@ set(fig1, 'Position', [50 50 1000 600]);
 filamentFileName = '%s_filament_pos.file';
 proteinFileName = '%s_protein_id.file';
 occupancyFileName = '%s_occupancy.file';
+motorHeadFileName = '%s_motor_head_trailing.file';
+
 partnerFileName = '%s_partner_index.file'; % not needed?
 tethFileName = '%s_tether_anchor_pos.file'; % not needed?
-motorHeadFileName = '%s_motor_head_trailing.file';
+
 filamentFile = sprintf(fileDirectory, sprintf(filamentFileName, sim_name));
 proteinFile = sprintf(fileDirectory, sprintf(proteinFileName, sim_name));
 occupancyFile = sprintf(fileDirectory, sprintf(occupancyFileName, sim_name));

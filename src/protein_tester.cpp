@@ -104,9 +104,9 @@ void ProteinTester::InitializeTest_Filament_Separation() {
                      &Filaments::immobile_until[0], 0.0);
   Sys::OverrideParam("filaments. immobile_until[1]",
                      &Filaments::immobile_until[1], 0.0);
-  Filaments::translation_enabled[0] = false;
+  Filaments::translation_enabled[0] = true;
   Filaments::translation_enabled[1] = true;
-  Filaments::rotation_enabled = false; // true;
+  Filaments::rotation_enabled = true;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();

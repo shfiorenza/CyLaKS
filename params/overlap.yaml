@@ -12,7 +12,7 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [13, 13]
+  n_sites: [130, 130]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]

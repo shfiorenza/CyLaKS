@@ -13,7 +13,14 @@ void Protofilament::SetParameters() {
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   immobile_until_ = Filaments::immobile_until[index_] / dt; // n_steps
   dt_eff_ = dt / Filaments::n_bd_per_kmc;                   // s
-  double ar{length_ / (2 * Filaments::radius)};     // unitless aspect ratio
+  double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
+  // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
+  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled) {
+    Sys::Log("Filament #%i aspect ratio is too small for the form of gamma_rot "
+             "we use. Please increase filament length.\n",
+             index_);
+    Sys::ErrorExit("Protofilament::SetParameters()");
+  }
   double eta_adj{eta * 1e-06};                      // pN*s/nm^2
   double pi{M_PI};                                  // literally just pi
   gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
@@ -53,10 +60,9 @@ void Protofilament::GenerateSites() {
 
 void Protofilament::UpdateRodPosition() {
 
-  // ! FIXME re-introduce rotational movement
   double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
-  // double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
+  double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
@@ -73,10 +79,8 @@ void Protofilament::UpdateRodPosition() {
     }
   }
   // Apply translationl and rotational displacements
-  /*
   Vec<double> torque_proj{Cross(torque_, orientation_)};
   double u_norm{0.0};
-  */
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
@@ -86,33 +90,33 @@ void Protofilament::UpdateRodPosition() {
       // Check for NaN positions
       if (pos_[i_dim] != pos_[i_dim]) {
         Sys::Log("force = %g\n", force_[i_dim]);
-        Sys::ErrorExit("Protofilament::UpdateRodPositions()");
+        Sys::ErrorExit("Protofilament::UpdateRodPositions() [1]");
       }
     }
-    /*
     // Only update orientation if rotation is enabled
     if (Params::Filaments::rotation_enabled) {
       orientation_[i_dim] += torque_proj[i_dim] / gamma_[2] * dt_eff_;
       orientation_[i_dim] += rod_basis[1][i_dim] * noise_rot;
+      // Check for NaN orientations
+      if (orientation_[i_dim] != orientation_[i_dim]) {
+        Sys::Log("torque_proj = %g\n", torque_proj[i_dim]);
+        Sys::ErrorExit("Protofilament::UpdateRodPositions() [2]");
+      }
       u_norm += Square(orientation_[i_dim]);
     }
-    */
   }
-  /*
   if (Params::Filaments::rotation_enabled) {
     // Re-normalize orientation vector
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       orientation_[i_dim] /= sqrt(u_norm);
     }
   }
-  */
 }
 
 void Protofilament::UpdateSitePositions() {
 
-  // ! FIXME: generalize for arbitrary number of filaments
-  // If proteins are disabled, only update endpoint positions
-  if (Params::Filaments::count == 1) {
+  // If proteins are disabled (i.e., just PFs present), update endpoints only
+  if (Params::Motors::c_bulk == 0.0 and Params::Xlinks::c_bulk == 0.0) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // Distance will be negative for first half of sites
       double p_dist{double(plus_end_->index_) - center_index_};
@@ -136,16 +140,10 @@ void Protofilament::UpdateSitePositions() {
       site.pos_[i_dim] = pos_[i_dim] + dist * Dot(orientation_, i_dim);
     }
   }
-  /*
-  printf("pos[0] = %g\n", pos_[0]);
-  printf("plus: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
-  printf("minus: (%g, %g)\n", minus_end_->pos_[0], minus_end_->pos_[1]);
-  */
-  /*
-  Sys::Log("%zu & %zu\n", plus_end_->pos_.size(), minus_end_->pos_.size());
-  Sys::Log("plus-end: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
-  Sys::Log("minus_end: (%g, %g)\n", minus_end_->pos_[0], minus_end_->pos_[1]);
-  */
+  Sys::Log(3, "%zu & %zu\n", plus_end_->pos_.size(), minus_end_->pos_.size());
+  Sys::Log(3, "plus-end: (%g, %g)\n", plus_end_->pos_[0], plus_end_->pos_[1]);
+  Sys::Log(3, "minus_end: (%g, %g)\n", minus_end_->pos_[0],
+           minus_end_->pos_[1]);
 }
 
 BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {

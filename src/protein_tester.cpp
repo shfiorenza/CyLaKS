@@ -74,10 +74,12 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
                      (Filaments::n_sites[0] - 1) * Filaments::site_size);
   Sys::OverrideParam("filaments. y_initial[0]", &Filaments::y_initial[0], 0.0);
   Sys::OverrideParam("filaments. y_initial[1]", &Filaments::y_initial[1], 0.0);
-  Motors::endpausing_active = false;
+  Sys::Log("All filament movement has been disabled by default.\n");
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
+  Sys::Log("Motor end-pausing has been activated by default.\n");
+  Motors::endpausing_active = true;
   printf("Enter ablation time: ");
   Str response;
   std::getline(std::cin, response);
@@ -104,9 +106,10 @@ void ProteinTester::InitializeTest_Filament_Separation() {
                      &Filaments::immobile_until[0], 0.0);
   Sys::OverrideParam("filaments. immobile_until[1]",
                      &Filaments::immobile_until[1], 0.0);
-  Filaments::translation_enabled[0] = true;
+  Sys::Log("Horizontal and rotational filament movement has been disabled.\n");
+  Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = true;
-  Filaments::rotation_enabled = true;
+  Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
@@ -215,6 +218,10 @@ void ProteinTester::InitializeTest_Filament_Separation() {
 
 void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
 
+  Sys::Log("All filament movement has been disabled by default.\n");
+  Params::Filaments::translation_enabled[0] = false;
+  Params::Filaments::translation_enabled[1] = false;
+  Params::Filaments::rotation_enabled = false;
   double p_hetero{Sys::p_mutant_};
   if (p_hetero == -1.0) {
     printf("Enter fraction of heterogenous tubulin: ");
@@ -259,6 +266,10 @@ void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
 
 void ProteinTester::InitializeTest_Motor_Heterodimer() {
 
+  Sys::Log("All filament movement has been disabled by default.\n");
+  Params::Filaments::translation_enabled[0] = false;
+  Params::Filaments::translation_enabled[1] = false;
+  Params::Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
@@ -429,7 +440,6 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       });
   // Bind_ATP
   auto exe_bind_ATP = [](auto *head, auto *pop) {
-    // printf("boop\n");
     bool executed{head->parent_->Bind_ATP(head)};
     if (executed) {
       pop->FlagForUpdate();
@@ -539,6 +549,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
                      1000000);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 100000);
+  Sys::Log("All filament movement has been disabled by default.\n");
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
@@ -654,7 +665,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       return 0;
     }
   };
-  /*
   auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
     return;
     auto *rear_head{front_head->GetOtherHead()};
@@ -715,7 +725,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
         exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
                         filaments_);
       });
-  */
   // Hydrolyze
   auto exe_hydrolyze = [](auto *head, auto *pop) {
     auto partner{head->test_partner_};
@@ -810,7 +819,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       exe_bind_ii);
   // Unbind_II
   auto exe_unbind_ii = [&](Object *base) {
-    // printf("FOUR!\n");
     auto head{dynamic_cast<CatalyticHead *>(base)};
     auto partner{dynamic_cast<CatalyticHead *>(head->test_partner_)};
     bool executed{head->Unbind()};
@@ -927,6 +935,10 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
                      2 * cutoff + 1);
+  Sys::Log("All filament movement has been disabled by default.\n");
+  Filaments::translation_enabled[0] = false;
+  Filaments::translation_enabled[1] = false;
+  Filaments::rotation_enabled = false;
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
@@ -998,6 +1010,10 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 1000);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1], 1000);
+  Sys::Log("All filament movement has been disabled by default.\n");
+  Filaments::translation_enabled[0] = false;
+  Filaments::translation_enabled[1] = false;
+  Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
@@ -1059,7 +1075,6 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
              entry.second[x].second);
     }
   }
-  // */
   Protein *xlink{xlinks_.GetFreeEntry()};
   int i_site{(int)std::round(Filaments::n_sites[0] / 2)};
   BindingSite *site_one{&filaments_->protofilaments_[0].sites_[i_site]};
@@ -1181,6 +1196,7 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
                      2 * x_max + 1);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1],
                      2 * x_max + 1);
+  Sys::Log("All filament movement has been disabled by default.\n");
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;

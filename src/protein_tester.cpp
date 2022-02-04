@@ -671,8 +671,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     if (front_head->trailing_) {
       return;
     }
-    auto partner{dynamic_cast<CatalyticHead *>(
-        &front_head->parent_->test_partner_->head_one_)};
+    auto partner{front_head->test_partner_};
     if (front_head->trailing_ != partner->trailing_) {
       partner = partner->GetOtherHead();
     }
@@ -925,11 +924,14 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
   using namespace Params;
   size_t cutoff{Motors::gaussian_range};
   // Set parameters
-  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 0.0);
+  Sys::OverrideParam("t_run", &t_run, 10.0);
+  Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
   Sys::OverrideParam("motors: k_on", &Motors::k_on, 1.0);
   Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 10.0);
   Sys::OverrideParam("motors: neighb_neighb_energy",
                      &Motors::neighb_neighb_energy, 0.0);
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 0.0);
   Sys::OverrideParam("xlinks: neighb_neighb_energy",
                      &Xlinks::neighb_neighb_energy, 0.0);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
@@ -1005,6 +1007,9 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
 
   using namespace Params;
   // Initialize sim objects
+  Sys::OverrideParam("t_run", &t_run, 100.0);
+  Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
   Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
   Sys::OverrideParam("xlinks: t_active", &Xlinks::t_active, 1.0);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
@@ -1022,11 +1027,11 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   // Initialize stat trackers
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
   double r_max{xlinks_.r_max_};
-  printf("r_max = %g\n", r_max);
   double r_x_max{sqrt(Square(r_max) - Square(r_y))};
-  printf("r_x_max = %g\n", r_x_max);
   size_t x_max((size_t)std::ceil(r_x_max / Filaments::site_size));
-  printf("x_max = %zu\n", x_max);
+  // printf("r_max = %g\n", r_max);
+  // printf("r_x_max = %g\n", r_x_max);
+  // printf("x_max = %zu\n", x_max);
   Vec<double> p_theory_to(x_max + 1,
                           xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal());
   Vec<double> p_theory_fr(x_max + 1,
@@ -1067,7 +1072,7 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   Vec<Pair<size_t, size_t>> zeros(x_max + 1, {0, 0});
   test_stats_.emplace("to_rest", zeros);
   test_stats_.emplace("fr_rest", zeros);
-  // /*
+  /*
   for (auto &&entry : test_stats_) {
     printf("For '%s':\n", entry.first.c_str());
     for (int x{0}; x < entry.second.size(); x++) {
@@ -1075,6 +1080,7 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
              entry.second[x].second);
     }
   }
+  */
   Protein *xlink{xlinks_.GetFreeEntry()};
   int i_site{(int)std::round(Filaments::n_sites[0] / 2)};
   BindingSite *site_one{&filaments_->protofilaments_[0].sites_[i_site]};
@@ -1183,14 +1189,20 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
 void ProteinTester::InitializeTest_Xlink_Bind_II() {
 
   using namespace Params;
+  Sys::OverrideParam("t_run", &t_run, 1000.0);
+  Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
+  Sys::OverrideParam("xlinks: k_off_ii", &Xlinks::k_off_ii, 143);
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
   double r_max{xlinks_.r_max_};
-  printf("r_max = %g\n", r_max);
   double r_x_max{sqrt(Square(r_max) - Square(r_y))};
-  printf("r_x_max = %g\n", r_x_max);
   int x_max((int)std::ceil(r_x_max / Filaments::site_size));
-  printf("x_max = %i\n", x_max);
-  Sys::OverrideParam("xlinks: k_off_ii", &Xlinks::k_off_ii, 143);
+  // printf("r_max = %g\n", r_max);
+  // printf("r_x_max = %g\n", r_x_max);
+  // printf("x_max = %i\n", x_max);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
                      2 * x_max + 1);
@@ -1200,9 +1212,6 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
   Filaments::translation_enabled[0] = false;
   Filaments::translation_enabled[1] = false;
   Filaments::rotation_enabled = false;
-  GenerateReservoirs();
-  InitializeWeights();
-  SetParameters();
   // Initialize filament environment
   filaments_->Initialize(this);
   Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());

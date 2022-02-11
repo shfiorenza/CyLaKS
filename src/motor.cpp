@@ -315,6 +315,6 @@ bool Motor::Unbind(CatalyticHead *head) {
   return true;
 }
 
-bool Motor::Tether() { return false; }
+bool Motor::Tether(Protein *target) { return false; }
 
 bool Motor::Untether() { return false; }

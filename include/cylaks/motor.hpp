@@ -28,11 +28,7 @@ public:
     tether_.Initialize(sid, id, &head_one_, &head_two_, Motors::k_slack,
                        Motors::r_0, Motors::k_tether, 0.0, 0.0);
   }
-  void ChangeConformation();
-  BindingSite *GetDockSite();
-  CatalyticHead *GetDockedHead();
-  CatalyticHead *GetHeadOne() { return &head_one_; }
-  CatalyticHead *GetHeadTwo() { return &head_two_; }
+
   CatalyticHead *GetActiveHead() {
     if (n_heads_active_ != 1) {
       Sys::ErrorExit("Motor::GetActiveHead [0]");
@@ -47,12 +43,21 @@ public:
       return nullptr;
     }
   }
+  CatalyticHead *GetHeadOne() { return &head_one_; }
+  CatalyticHead *GetHeadTwo() { return &head_two_; }
+  CatalyticHead *GetDockedHead();
+  BindingSite *GetDockSite();
+
+  void ChangeConformation();
+
   BindingSite *GetNeighbor_Bind_II() { return GetDockSite(); }
+
+  void ApplyLatticeDeformation();
 
   // ! FIXME!
   bool UpdateExtension() { return false; }
-
-  void ApplyLatticeDeformation();
+  int GetDirectionTowardsRest(CatalyticHead *head);
+  void ForceUntether();
 
   double GetWeight_Diffuse(CatalyticHead *head, int dir);
   double GetWeight_Bind_II();
@@ -65,7 +70,7 @@ public:
   bool Bind_ATP(CatalyticHead *head);
   bool Hydrolyze(CatalyticHead *head);
   bool Unbind(CatalyticHead *head);
-  bool Tether();
+  bool Tether(Protein *teth_partner);
   bool Untether();
 };
 

@@ -46,8 +46,8 @@ void ProteinManager::InitializeWeights() {
   Str name{"neighbs"};
   Sys::weight_neighb_bind_.resize(_n_neighbs_max + 1);
   Sys::weight_neighb_unbind_.resize(_n_neighbs_max + 1);
-  motors_.AddWeight(name, _n_neighbs_max + 1);
-  xlinks_.AddWeight(name, _n_neighbs_max + 1);
+  motors_.AddWeight("neighbs", _n_neighbs_max + 1);
+  xlinks_.AddWeight("neighbs", _n_neighbs_max + 1);
   double lambda_neighb{1.0};
   double dE{0.0};
   for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
@@ -108,17 +108,20 @@ void ProteinManager::SetParameters() {
 
   using namespace Params;
   // Bind I
-  xlinks_.AddProb("bind_i", Xlinks::k_on * Xlinks::c_bulk * dt, "neighbs", 0);
   motors_.AddProb("bind_i", Motors::k_on * Motors::c_bulk * dt);
+  xlinks_.AddProb("bind_i", Xlinks::k_on * Xlinks::c_bulk * dt, "neighbs", 0);
   // Bind_I_Teth
-
-  // Bind_ATP -- motors only
+  motors_.AddProb("bind_i_teth", Motors::k_on * Motors::c_eff_tether * dt);
+  xlinks_.AddProb("bind_i_teth", Xlinks::k_on * Motors::c_eff_tether * dt);
+  // Bind_ATP_I -- motors only
   double p_bind_ATP{Motors::k_on_ATP * Motors::c_ATP * dt};
   double wt_ATP_i{1.0};
   if (Motors::applied_force > 0.0) {
     wt_ATP_i = exp(-Motors::applied_force * Motors::sigma_ATP / kbT);
   }
   motors_.AddProb("bind_ATP_i", p_bind_ATP * wt_ATP_i);
+  motors_.AddProb("bind_ATP_i_teth", p_bind_ATP * wt_ATP_i);
+  // Bind_ATP_II -- motors only
   double wt_ATP_ii{exp(-Motors::internal_force * Motors::sigma_ATP / kbT)};
   if (Motors::internal_force == 0.0 or Motors::gaussian_range == 0 or
       !Motors::gaussian_stepping_coop) {
@@ -131,35 +134,34 @@ void ProteinManager::SetParameters() {
   // Hydrolyze_ATP -- motors only
   motors_.AddProb("hydrolyze", Motors::k_hydrolyze * dt);
   // Bind_II
-  xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
   motors_.AddProb("bind_ii", Motors::k_on * Motors::c_eff_bind * dt);
+  xlinks_.AddProb("bind_ii", Xlinks::k_on * Xlinks::c_eff_bind * dt);
   // Bind_II_Teth -- xlinks only
-
+  xlinks_.AddProb("bind_ii_teth", Xlinks::k_on * Xlinks::c_eff_bind * dt);
   // Unbind_II
-  xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
   double wt_unbind_ii{exp(Motors::internal_force * Motors::sigma_off_ii / kbT)};
   if (Motors::applied_force > 0.0) {
     wt_unbind_ii *= exp(-Motors::applied_force * Motors::sigma_off_ii / kbT);
   }
   motors_.AddProb("unbind_ii", Motors::k_off_ii * dt * wt_unbind_ii);
+  xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
   // Unbind_II_Teth -- xlinks only
-
+  xlinks_.AddProb("unbind_ii_teth", Xlinks::k_off_ii * dt);
   // Unbind I
-  xlinks_.AddProb("unbind_i", Xlinks::k_off_i * dt, "neighbs", 1);
   double wt_unbind_i{1.0};
   if (Motors::applied_force > 0.0) {
     wt_unbind_i = exp(Motors::applied_force * Motors::sigma_off_i / kbT);
   }
   motors_.AddProb("unbind_i", Motors::k_off_i * dt * wt_unbind_i);
+  xlinks_.AddProb("unbind_i", Xlinks::k_off_i * dt, "neighbs", 1);
   // Unbind_I_Teth
-
-  // Diffusion
+  motors_.AddProb("unbind_i_teth", Motors::k_off_i * dt * wt_unbind_i);
+  xlinks_.AddProb("unbind_i_teth", Xlinks::k_off_i * dt);
+  // Diffusion -- xlinks only
   double x_sq{Square(Filaments::site_size / 1000)}; // in um^2
   double tau_i{x_sq / (2 * Xlinks::d_i)};
-  // Sys::Log("tau = %g\n", tau_i);
   double tau_ii{x_sq / (2 * Xlinks::d_ii)};
   double p_diffuse_i{dt / tau_i};
-  // Sys::Log("p = %g\n", p_diffuse_i);
   double p_diffuse_ii{dt / tau_ii};
   // diff_fwd and diff_bck are two separate events, which effectively
   // doubles the probability to diffuse. Thus we divide p_diff by 2.
@@ -173,15 +175,27 @@ void ProteinManager::SetParameters() {
   xlinks_.AddProb("diffuse_ii_to_rest", p_diffuse_ii);
   xlinks_.AddProb("diffuse_ii_fr_rest", p_diffuse_ii);
   // Tether_Free
-
+  motors_.AddProb("tether_free", Motors::k_tether * Motors::c_bulk * dt);
+  xlinks_.AddProb("tether_free", Motors::k_tether * Xlinks::c_bulk * dt);
   // Tether_Bound -- motors only
-
+  motors_.AddProb("tether_bound", Motors::k_tether * Motors::c_eff_tether * dt);
   // Untether_Free
-
+  motors_.AddProb("untether_free", Motors::k_untether * dt);
+  xlinks_.AddProb("untether_free", Motors::k_untether * dt);
   // Untether_Bound -- motors only
+  motors_.AddProb("untether_bound", Motors::k_untether * dt);
 }
 
 void ProteinManager::InitializeEvents() {
+
+  /*
+  General strategy:
+    We create flexible, generalized execution (exe) functions as Lambda
+    Expressions. We re-use this function for all protein species by passing an
+    in-line lambda expression that effectively binds the appropriate arguments
+    to the function input.
+  See documentation (TODO) for further elaboration.
+  */
 
   //  Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
@@ -191,7 +205,7 @@ void ProteinManager::InitializeEvents() {
       return 0;
     }
   };
-  // Poisson distribution; sampled to predict events w/ variable probabilities
+  // Poisson distribution; sampled to predict events w/ time-variable probs.
   auto poisson = [&](double p, int n) {
     if (p > 0.0) {
       return SysRNG::SamplePoisson(p);
@@ -619,8 +633,9 @@ void ProteinManager::InitializeEvents() {
   // ! Need to add
   // Unbind_II_Teth
   // ! Need to add
-  // ! FIXME export this to a function that is also called in test modes
-  // Check that all event probabilities are valid
+}
+
+void ProteinManager::CheckProbabilities() {
   for (auto const &event : kmc_.events_) {
     Sys::Log("p_%s = %g\n", event.name_.c_str(), event.p_occur_);
     if (event.p_occur_ < 0.0 or event.p_occur_ > 1.0) {

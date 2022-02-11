@@ -1,9 +1,16 @@
 #include "cylaks/protein.hpp"
 #include "cylaks/protofilament.hpp"
 
-void Protein::InitializeNeighborList() {}
+bool Protein::HasSatellite() {
 
-bool Protein::HasSatellite() { return false; }
+  if (teth_partner_ == nullptr) {
+    return false;
+  }
+  if (teth_partner_->GetNumHeadsActive() == 0) {
+    return true;
+  }
+  return false;
+}
 
 void Protein::UntetherSatellite() {}
 
@@ -256,6 +263,6 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
-bool Protein::Tether() { return false; }
+bool Protein::Tether(Protein *target) { return false; }
 
 bool Protein::Untether() { return false; }

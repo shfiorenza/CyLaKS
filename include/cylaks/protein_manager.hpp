@@ -29,6 +29,7 @@ protected:
   void InitializeWeights();
   void SetParameters();
   void InitializeEvents();
+  void CheckProbabilities();
 
 public:
   ProteinManager() {}
@@ -39,6 +40,7 @@ public:
     InitializeWeights();
     SetParameters();
     InitializeEvents();
+    CheckProbabilities();
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {

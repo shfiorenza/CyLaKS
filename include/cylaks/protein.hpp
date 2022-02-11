@@ -25,11 +25,19 @@ public:
   LinearSpring spring_;
 
   bool tethered_{false};
-  // ! rename this to be less general
-  Protein *partner_{nullptr};
+  Protein *teth_partner_{nullptr};
 
 protected:
-  void InitializeNeighborList();
+  void InitializeNeighborLists();
+
+  void UpdateNeighbors_Bind_II();
+  double GetSoloWeight_Bind_II(BindingSite *neighb);
+
+  virtual void UpdateNeighbors_Bind_I_Teth() {}
+  virtual double GetSoloWeight_Bind_I_Teth(BindingSite *target) { return 0.0; }
+
+  void UpdateNeighbors_Bind_II_Teth();
+  double GetSoloWeight_Bind_II_Teth(BindingSite *neighb);
 
 public:
   Protein() {}
@@ -45,9 +53,8 @@ public:
     size_t x_max{(size_t)std::ceil(spring_.r_max_ / Filaments::site_size)};
     neighbors_bind_ii_.resize(2 * x_max + 1);
   }
+
   int GetNumHeadsActive() { return n_heads_active_; }
-  virtual BindingHead *GetHeadOne() { return &head_one_; }
-  virtual BindingHead *GetHeadTwo() { return &head_two_; }
   virtual BindingHead *GetActiveHead() {
     if (head_one_.site_ != nullptr) {
       return &head_one_;
@@ -58,6 +65,8 @@ public:
       return nullptr;
     }
   }
+  virtual BindingHead *GetHeadOne() { return &head_one_; }
+  virtual BindingHead *GetHeadTwo() { return &head_two_; }
 
   bool HasSatellite();
   void UntetherSatellite();
@@ -66,10 +75,8 @@ public:
 
   virtual bool UpdateExtension();
   virtual int GetDirectionTowardRest(BindingHead *head);
-  virtual double GetAnchorCoordinate(int i_dim);
+  double GetAnchorCoordinate(int i_dim);
 
-  virtual void UpdateNeighbors_Bind_II();
-  virtual double GetSoloWeight_Bind_II(BindingSite *neighb);
   virtual BindingSite *GetNeighbor_Bind_II();
 
   virtual double GetWeight_Diffuse(BindingHead *head, int dir);
@@ -79,7 +86,7 @@ public:
   virtual bool Diffuse(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
-  virtual bool Tether();
+  virtual bool Tether(Protein *teth_partner);
   virtual bool Untether();
 };
 

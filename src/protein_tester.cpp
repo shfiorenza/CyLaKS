@@ -6,6 +6,7 @@ void ProteinTester::Initialize(FilamentTester *filaments) {
   filaments_ = filaments;
   ProteinManager::filaments_ = dynamic_cast<FilamentManager *>(filaments_);
   SetTestMode();
+  CheckProbabilities();
 }
 
 void ProteinTester::UpdateFilaments() {

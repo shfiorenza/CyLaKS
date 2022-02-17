@@ -30,13 +30,8 @@ public:
   size_t n_active_entries_{0};
 
   bool lattice_coop_active_{false};
-
   bool tethering_active_{false};
   bool crosslinking_active_{false};
-
-  double r_min_{0.0};
-  double r_rest_{0.0};
-  double r_max_{0.0};
 
   Map<Str, Sys::ProbEntry> p_event_;
   Map<Str, Sys::BoltzmannFactor> weights_;
@@ -92,7 +87,7 @@ public:
     size_t i_entry = SysRNG::GetRanInt(reservoir_.size());
     ENTRY_T *entry = &reservoir_[i_entry];
     size_t n_attempts{0};
-    while (entry->n_heads_active_ > 0 or entry->tethered_) {
+    while (entry->GetNumHeadsActive() > 0 or entry->IsTethered()) {
       if (n_attempts > reservoir_.size()) {
         return nullptr;
       }

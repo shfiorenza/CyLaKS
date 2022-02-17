@@ -190,88 +190,183 @@ void ProteinManager::InitializeEvents() {
 
   /*
   General strategy:
-    We create flexible, generalized execution (exe) functions as Lambda
-    Expressions. We re-use this function for all protein species by passing an
+    We create flexible, generalized execution functions as Lambda Expressions.
+    We re-use these functions for all protein species by passing an
     in-line lambda expression that effectively binds the appropriate arguments
     to the function input.
+    Since the events are constructed in-place (via emplace_back), the lambda
+    functons get optimized by the compiler and we do not see the typical
+    performance drawback associated with passing functions/ptrs-to-functs/etc.
+    (also, the use of 'auto' facilitates this modular lambda useage)
   See documentation (TODO) for further elaboration.
   */
-
-  //  Binomial probabilitiy distribution; sampled to predict most events
-  auto binomial = [&](double p, int n) {
+  /* *** Probability distributions *** */
+  auto binomial = [&](double p, int n) { // For events w/ constant probs.
     if (n > 0) {
       return SysRNG::SampleBinomial(p, n);
     } else {
       return 0;
     }
   };
-  // Poisson distribution; sampled to predict events w/ time-variable probs.
-  auto poisson = [&](double p, int n) {
+  auto poisson = [&](double p, int n) { // For events w/ time-variable probs.
     if (p > 0.0) {
       return SysRNG::SamplePoisson(p);
     } else {
       return 0;
     }
   };
-  // Bind_I: Bind first head of a protein
-  auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
-    // Do not bind from solution until species is active
-    if (Sys::i_step_ < pop->step_active_) {
-      return;
-    }
-    // Get a free entry from the reservoir
-    auto entry{pop->GetFreeEntry()};
-    if (entry == nullptr) {
-      return;
-    }
-    // Execute event and, if successful, update relevant lists
-    bool executed{entry->Bind(site, &entry->head_one_)};
-    if (executed) {
-      pop->AddToActive(entry);
-      fil->FlagForUpdate();
-    }
-  };
-  // Get weight for unbound-to-singly bound transition
-  auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
-
-  // Return site ptr if unoccupied; empty vector if not
+  /* *** Sorting functions - general *** */
   auto is_unocc = [](Object *site) -> Vec<Object *> {
     if (!site->IsOccupied()) {
       return {site};
     }
     return {};
   };
-  // Sorted array dimension sizes for neighb coop ; format is {i, j, k}
+  auto is_bound_i = [](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 1 and !protein->IsTethered()) {
+      return {protein->GetActiveHead()};
+    }
+    return {};
+  };
+  auto is_bound_ii = [](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 2 and !protein->IsTethered()) {
+      return {protein->GetHeadOne(), protein->GetHeadTwo()};
+    }
+    return {};
+  };
+  /* *** Sorting functions - specific to ATP hydrolysis cycle in motors ** */
+  auto is_bound_i_NULL = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1 and !motor->IsTethered()) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_bound_i_ATP = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ATP) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_bound_i_ADPP = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1 and !motor->IsTethered()) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_docked = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    auto *docked_head{motor->GetDockedHead()};
+    if (docked_head != nullptr) {
+      return {docked_head->GetOtherHead()};
+    }
+    return {};
+  };
+  auto is_bound_ii_ADPP = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 2) {
+      Object *chosen_head{nullptr};
+      if (motor->GetHeadOne()->ligand_ == Ligand::ADPP) {
+        chosen_head = motor->GetHeadOne();
+      }
+      if (motor->GetHeadTwo()->ligand_ == Ligand::ADPP) {
+        if (chosen_head != nullptr) {
+          Sys::ErrorExit("Protein_MNGR::is_bound_ii_ADPP()");
+        }
+        chosen_head = motor->GetHeadTwo();
+      }
+      if (chosen_head != nullptr) {
+        return {chosen_head};
+      }
+    }
+    return {};
+  };
+  auto is_bound_ii_NULL = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 2) {
+      Object *chosen_head{nullptr};
+      if (motor->GetHeadOne()->ligand_ == Ligand::NONE) {
+        chosen_head = motor->GetHeadOne();
+      }
+      if (motor->GetHeadTwo()->ligand_ == Ligand::NONE) {
+        if (chosen_head != nullptr) {
+          Sys::ErrorExit("Protein_MGR::is_bound_ii_NULL()");
+        }
+        chosen_head = motor->GetHeadTwo();
+      }
+      if (chosen_head != nullptr) {
+        return {chosen_head};
+      }
+    }
+    return {};
+  };
+  /* *** Sorting functions - specific to motor-xlink tethering *** */
+  auto is_a_sattelite = [](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 0 and protein->IsTethered()) {
+      return {protein->GetHeadOne()};
+    }
+    return {};
+  };
+  auto is_bound_i_teth = [](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 1 and protein->IsTethered()) {
+      return {protein->GetActiveHead()};
+    }
+    return {};
+  };
+  auto is_bound_unteth = [](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() > 0 and !protein->IsTethered()) {
+      if (protein->GetNumHeadsActive() == 2) {
+        return {protein->GetHeadOne()};
+      } else {
+        return {protein->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_bound_i_NULL_teth = [](Object *motor) -> Vec<Object *> { return {}; };
+  auto is_bound_i_ADPP_teth = [](Object *motor) -> Vec<Object *> { return {}; };
+
+  /* *** Binning functions - used to generate multi-dim. sorted lists *** */
+  // Sorted array dimension {i,j,k}; 1-D for neighbs so we use k and pad i & j
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
-  // Starting indices of array for neighb coop; format is {i, j, k}
+  // Starting indices {i, j, k} of array for neighb coop, only use k dimension
   Vec<int> i_min{0, 0, 0};
-  // Return the number of immediate neighbors that a site or protein has
   auto get_n_neighbs = [](Object *entry) {
     Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
     return indices_vec;
   };
-  if (xlinks_.active_) {
-    // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
-    filaments_->AddPop("xlinks", is_unocc, dim_size, i_min, get_n_neighbs);
-    // Create a binomial event for each n_neighb possibility
-    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
-      kmc_.events_.emplace_back(
-          "bind_i", xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
-          &filaments_->unoccupied_.at("xlinks").bin_size_[0][0][n_neighbs],
-          &filaments_->unoccupied_.at("xlinks").bin_entries_[0][0][n_neighbs],
-          binomial, [&](Object *base) {
-            exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_, filaments_);
-          });
+  /* *** Bind_I *** */
+  auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
+  auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
+    if (Sys::i_step_ < pop->step_active_) {
+      return;
     }
-  }
+    auto entry{pop->GetFreeEntry()};
+    if (entry == nullptr) {
+      return;
+    }
+    bool executed{entry->Bind(site, entry->GetHeadOne())};
+    if (executed) {
+      pop->AddToActive(entry);
+      fil->FlagForUpdate();
+    }
+  };
   if (motors_.active_) {
     // Add unoccupied site tracker for motors; no binning b/c it's Poisson-based
-    filaments_->AddPop("motors", is_unocc);
+    filaments_->AddPop("unbinned", is_unocc);
     // Create a single poisson event for all binding possibilities
     kmc_.events_.emplace_back(
-        "bind_i", motors_.p_event_.at("bind_i").GetVal(),
-        &filaments_->unoccupied_.at("motors").size_,
-        &filaments_->unoccupied_.at("motors").entries_, poisson,
+        "bind_i (motors)", motors_.p_event_.at("bind_i").GetVal(),
+        &filaments_->unoccupied_.at("unbinned").size_,
+        &filaments_->unoccupied_.at("unbinned").entries_, poisson,
         [&](Object *base) {
           return weight_bind_i(dynamic_cast<BindingSite *>(base));
         },
@@ -279,9 +374,75 @@ void ProteinManager::InitializeEvents() {
           exe_bind_i(dynamic_cast<BindingSite *>(base), &motors_, filaments_);
         });
   }
-  // Bind_I_Teth
-
-  // Bind_II
+  if (xlinks_.active_) {
+    // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
+    filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+    // Create a binomial event for each n_neighb possibility
+    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+      kmc_.events_.emplace_back(
+          "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+          xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
+          &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
+          &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_, filaments_);
+          });
+    }
+  }
+  // ! FIXME hella temp
+  double E_max{std::log(_max_weight) * Params::kbT};
+  // E = 0.5 * k * (r - r0)^2
+  double teth_r_min{Params::Motors::r_0 -
+                    sqrt(2 * E_max / Params::Motors::k_slack)};
+  double teth_r_max{Params::Motors::r_0 +
+                    sqrt(2 * E_max / Params::Motors::k_spring)};
+  Sys::teth_x_min_ = (int)std::floor(teth_r_min / Params::Filaments::site_size);
+  Sys::teth_x_max_ = (int)std::ceil(teth_r_max / Params::Filaments::site_size);
+  printf("%g < %g < %g\n", teth_r_min, Params::Motors::r_0, teth_r_max);
+  printf("x_min: %i\n", Sys::teth_x_min_);
+  printf("x_max: %i\n", Sys::teth_x_max_);
+  /* *** Bind_I_Teth *** */
+  if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
+    motors_.AddPop("satellite", is_a_sattelite);
+    // xlinks_.AddPop("satellite", is_a_sattelite);
+    auto weight_bind_i_teth = [](auto *satellite_head) {
+      return satellite_head->parent_->GetWeight_Bind_I_Teth();
+    };
+    auto exe_bind_i_teth = [](auto *satellite_head, auto *pop, auto *fil) {
+      auto site{satellite_head->parent_->GetNeighbor_Bind_I_Teth()};
+      auto executed{satellite_head->parent_->Bind(site, satellite_head)};
+      if (executed) {
+        pop->FlagForUpdate();
+        fil->FlagForUpdate();
+      }
+    };
+    kmc_.events_.emplace_back(
+        "bind_i_teth (motors)", motors_.p_event_.at("bind_i_teth").GetVal(),
+        &motors_.sorted_.at("satellite").size_,
+        &motors_.sorted_.at("satellite").entries_, poisson,
+        [&](Object *base) {
+          return weight_bind_i_teth(dynamic_cast<CatalyticHead *>(base));
+        },
+        [&](Object *base) {
+          exe_bind_i_teth(dynamic_cast<CatalyticHead *>(base), &motors_,
+                          filaments_);
+        });
+    // kmc_.events_.emplace_back(
+    //     "bind_i_teth (xlinks)", xlinks_.p_event_.at("bind_i_teth").GetVal(),
+    //     &xlinks_.sorted_.at("satellite").size_,
+    //     &xlinks_.sorted_.at("satellite").entries_, poisson,
+    //     [&](Object *base) {
+    //       return weight_bind_i_teth(dynamic_cast<BindingHead *>(base));
+    //     },
+    //     [&](Object *base) {
+    //       exe_bind_i_teth(dynamic_cast<BindingHead *>(base), &xlinks_,
+    //                       filaments_);
+    //     });
+  }
+  /* *** Bind_II *** */
+  auto weight_bind_ii = [](auto *head) {
+    return head->parent_->GetWeight_Bind_II();
+  };
   auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
     auto head{bound_head->GetOtherHead()};
     auto site{head->parent_->GetNeighbor_Bind_II()};
@@ -292,21 +453,12 @@ void ProteinManager::InitializeEvents() {
       fil->FlagForUpdate();
     }
   };
-  auto weight_bind_ii = [](auto *head) {
-    return head->parent_->GetWeight_Bind_II();
-  };
-  auto is_singly_bound = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 1) {
-      return {protein->GetActiveHead()};
-    }
-    return {};
-  };
   if (xlinks_.crosslinking_active_) {
-    xlinks_.AddPop("bind_ii", is_singly_bound);
+    xlinks_.AddPop("singly_bound", is_bound_i);
     kmc_.events_.emplace_back(
         "bind_ii", xlinks_.p_event_.at("bind_ii").GetVal(),
-        &xlinks_.sorted_.at("bind_ii").size_,
-        &xlinks_.sorted_.at("bind_ii").entries_, poisson,
+        &xlinks_.sorted_.at("singly_bound").size_,
+        &xlinks_.sorted_.at("singly_bound").entries_, poisson,
         [&](Object *base) {
           return weight_bind_ii(dynamic_cast<BindingHead *>(base));
         },
@@ -315,20 +467,11 @@ void ProteinManager::InitializeEvents() {
         });
   }
   if (motors_.active_) {
-    auto is_docked = [](auto *motor) -> Vec<Object *> {
-      auto *docked_head{motor->GetDockedHead()};
-      if (docked_head != nullptr) {
-        return {docked_head->GetOtherHead()};
-      }
-      return {};
-    };
-    motors_.AddPop("bind_ii", [&](Object *base) {
-      return is_docked(dynamic_cast<Motor *>(base));
-    });
+    motors_.AddPop("docked", is_docked);
     kmc_.events_.emplace_back(
         "bind_ii", motors_.p_event_.at("bind_ii").GetVal(),
-        &motors_.sorted_.at("bind_ii").size_,
-        &motors_.sorted_.at("bind_ii").entries_, poisson,
+        &motors_.sorted_.at("docked").size_,
+        &motors_.sorted_.at("docked").entries_, poisson,
         [&](Object *base) {
           return weight_bind_ii(dynamic_cast<CatalyticHead *>(base));
         },
@@ -337,7 +480,10 @@ void ProteinManager::InitializeEvents() {
                       filaments_);
         });
   }
-  // Unbind_II
+  /* *** Unbind_II *** */
+  auto weight_unbind_ii = [](auto *head) {
+    return head->GetWeight_Unbind_II();
+  };
   auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
     bool executed{head->Unbind()};
     if (executed) {
@@ -345,21 +491,12 @@ void ProteinManager::InitializeEvents() {
       fil->FlagForUpdate();
     }
   };
-  auto weight_unbind_ii = [](auto *head) {
-    return head->GetWeight_Unbind_II();
-  };
-  auto is_doubly_bound = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 2) {
-      return {protein->GetHeadOne(), protein->GetHeadTwo()};
-    }
-    return {};
-  };
   if (xlinks_.crosslinking_active_) {
-    xlinks_.AddPop("unbind_ii", is_doubly_bound);
+    xlinks_.AddPop("doubly_bound", is_bound_ii);
     kmc_.events_.emplace_back(
         "unbind_ii", xlinks_.p_event_.at("unbind_ii").GetVal(),
-        &xlinks_.sorted_.at("unbind_ii").size_,
-        &xlinks_.sorted_.at("unbind_ii").entries_, poisson,
+        &xlinks_.sorted_.at("doubly_bound").size_,
+        &xlinks_.sorted_.at("doubly_bound").entries_, poisson,
         [&](Object *base) {
           return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
         },
@@ -369,31 +506,11 @@ void ProteinManager::InitializeEvents() {
         });
   }
   if (motors_.active_) {
-    auto is_ADPP_ii_bound = [](auto *motor) -> Vec<Object *> {
-      if (motor->n_heads_active_ == 2) {
-        CatalyticHead *chosen_head{nullptr};
-        if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
-          chosen_head = &motor->head_one_;
-        }
-        if (motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
-          if (chosen_head != nullptr) {
-            Sys::ErrorExit("Protein_MGR::is_ADPP_ii_bound()");
-          }
-          chosen_head = &motor->head_two_;
-        }
-        if (chosen_head != nullptr) {
-          return {chosen_head};
-        }
-      }
-      return {};
-    };
-    motors_.AddPop("unbind_ii", [&](Object *base) {
-      return is_ADPP_ii_bound(dynamic_cast<Motor *>(base));
-    });
+    motors_.AddPop("doubly_bound_ADPP", is_bound_ii_ADPP);
     kmc_.events_.emplace_back(
         "unbind_ii", motors_.p_event_.at("unbind_ii").GetVal(),
-        &motors_.sorted_.at("unbind_ii").size_,
-        &motors_.sorted_.at("unbind_ii").entries_, poisson,
+        &motors_.sorted_.at("doubly_bound_ADPP").size_,
+        &motors_.sorted_.at("doubly_bound_ADPP").entries_, poisson,
         [&](Object *base) {
           return weight_unbind_ii(dynamic_cast<CatalyticHead *>(base));
         },
@@ -402,7 +519,7 @@ void ProteinManager::InitializeEvents() {
                         filaments_);
         });
   }
-  // Unbind_I: Unbind first (singly bound) head of a protein
+  /* *** Unbind_I *** */
   auto exe_unbind_i = [](auto *head, auto *pop, auto *fil) {
     bool executed{head->Unbind()};
     if (executed) {
@@ -412,7 +529,7 @@ void ProteinManager::InitializeEvents() {
     }
   };
   if (xlinks_.active_) {
-    xlinks_.AddPop("bound_i", is_singly_bound, dim_size, i_min, get_n_neighbs);
+    xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
     for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
       kmc_.events_.emplace_back(
           "unbind_i", xlinks_.p_event_.at("unbind_i").GetVal(n_neighbs),
@@ -428,17 +545,8 @@ void ProteinManager::InitializeEvents() {
     auto weight_unbind_i = [](auto *head) {
       return head->parent_->GetWeight_Unbind_I();
     };
-    auto is_ADPP_i_bound = [](auto *motor) -> Vec<Object *> {
-      if (motor->n_heads_active_ == 1) {
-        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ADPP) {
-          return {motor->GetActiveHead()};
-        }
-      }
-      return {};
-    };
-    motors_.AddPop("bound_i_ADPP", [&](Object *base) {
-      return is_ADPP_i_bound(dynamic_cast<Motor *>(base));
-    });
+    motors_.AddPop("bound_i_ADPP", is_bound_i_ADPP);
+
     kmc_.events_.emplace_back(
         "unbind_i", motors_.p_event_.at("unbind_i").GetVal(),
         &motors_.sorted_.at("bound_i_ADPP").size_,
@@ -451,14 +559,44 @@ void ProteinManager::InitializeEvents() {
                        filaments_);
         });
   }
-  // Unbind_I_Teth
+  /* *** Unbind_I_Teth *** */
+  if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
+  }
 
-  // Tether_Free
+  /* *** Tether_Free *** */
+  if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
+    // motors_.AddPop("bound_unteth", is_bound_unteth);
+    xlinks_.AddPop("bound_unteth", is_bound_unteth);
+    // Here, the head belongs to the bound untethered protein (or motor)
+    auto exe_tether_free = [](auto *head, auto *pop, auto *altpop, auto *fil) {
+      auto satellite{altpop->GetFreeEntry()};
+      bool executed{head->parent_->Tether(satellite)};
+      if (executed) {
+        altpop->AddToActive(satellite);
+      }
+    };
+    // kmc_.events_.emplace_back(
+    //     "tether_free (motors)", motors_.p_event_.at("tether_free").GetVal(),
+    //     &motors_.sorted_.at("bound_unteth").size_,
+    //     &motors_.sorted_.at("bound_unteth").entries_, binomial,
+    //     [&](Object *base) {
+    //       exe_tether_free(dynamic_cast<CatalyticHead *>(base), &motors_,
+    //                       &xlinks_, filaments_);
+    //     });
+    kmc_.events_.emplace_back(
+        "tether_free (xlinks)", xlinks_.p_event_.at("tether_free").GetVal(),
+        &xlinks_.sorted_.at("bound_unteth").size_,
+        &xlinks_.sorted_.at("bound_unteth").entries_, binomial,
+        [&](Object *base) {
+          exe_tether_free(dynamic_cast<BindingHead *>(base), &xlinks_, &motors_,
+                          filaments_);
+        });
+  }
 
-  // Untether_Free
+  /* *** Untether_Free *** */
 
   // vv motors only vv
-  // Bind_ATP
+  /* *** Bind_ATP_I *** */
   if (motors_.active_) {
     auto exe_bind_ATP = [](auto *head, auto *pop) {
       bool executed{head->parent_->Bind_ATP(head)};
@@ -466,17 +604,7 @@ void ProteinManager::InitializeEvents() {
         pop->FlagForUpdate();
       }
     };
-    auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
-      if (motor->n_heads_active_ == 1) {
-        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::NONE) {
-          return {motor->GetActiveHead()};
-        }
-      }
-      return {};
-    };
-    motors_.AddPop("bound_i_NULL", [&](Object *base) {
-      return is_NULL_i_bound(dynamic_cast<Motor *>(base));
-    });
+    motors_.AddPop("bound_i_NULL", is_bound_i_NULL);
     kmc_.events_.emplace_back(
         "bind_ATP_i", motors_.p_event_.at("bind_ATP_i").GetVal(),
         &motors_.sorted_.at("bound_i_NULL").size_,
@@ -484,6 +612,9 @@ void ProteinManager::InitializeEvents() {
         [&](Object *base) {
           exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
+    /* *** Bind_ATP_I_Teth *** */
+
+    /* *** Bind_ATP_II *** */
     if (Params::Motors::gaussian_stepping_coop and
         Params::Motors::gaussian_range > 0) {
       auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
@@ -501,27 +632,7 @@ void ProteinManager::InitializeEvents() {
       auto weight_bind_ATP_ii = [](auto *head) {
         return head->parent_->GetWeight_BindATP_II(head);
       };
-      auto is_NULL_ii_bound = [](auto *motor) -> Vec<Object *> {
-        if (motor->n_heads_active_ == 2) {
-          CatalyticHead *chosen_head{nullptr};
-          if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
-            chosen_head = &motor->head_one_;
-          }
-          if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
-            if (chosen_head != nullptr) {
-              Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
-            }
-            chosen_head = &motor->head_two_;
-          }
-          if (chosen_head != nullptr) {
-            return {chosen_head};
-          }
-        }
-        return {};
-      };
-      motors_.AddPop("bound_ii_NULL", [&](Object *base) {
-        return is_NULL_ii_bound(dynamic_cast<Motor *>(base));
-      });
+      motors_.AddPop("bound_ii_NULL", is_bound_ii_NULL);
       kmc_.events_.emplace_back(
           "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
           &motors_.sorted_.at("bound_ii_NULL").size_,
@@ -534,8 +645,9 @@ void ProteinManager::InitializeEvents() {
                             filaments_);
           });
     }
+    /* *** Bind_ATP_II_Teth *** */
   }
-  // Hydrolyze_ATP
+  /* *** Hydrolyze_ATP *** */
   if (motors_.active_) {
     auto exe_hydrolyze = [](auto *head, auto *pop) {
       bool executed{head->parent_->Hydrolyze(head)};
@@ -543,17 +655,7 @@ void ProteinManager::InitializeEvents() {
         pop->FlagForUpdate();
       }
     };
-    auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
-      if (motor->n_heads_active_ == 1) {
-        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ATP) {
-          return {motor->GetActiveHead()};
-        }
-      }
-      return {};
-    };
-    motors_.AddPop("bound_i_ATP", [&](Object *base) {
-      return is_ATP_i_bound(dynamic_cast<Motor *>(base));
-    });
+    motors_.AddPop("bound_i_ATP", is_bound_i_ATP);
     kmc_.events_.emplace_back(
         "hydrolyze", motors_.p_event_.at("hydrolyze").GetVal(),
         &motors_.sorted_.at("bound_i_ATP").size_,
@@ -562,8 +664,8 @@ void ProteinManager::InitializeEvents() {
           exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
   }
-  // Tether_Bound
-  // Untether_Bound
+  /* *** Tether_Bound *** */
+  /* *** Untether_Bound *** */
 
   // vv xlinks only vv
   // Diffusion
@@ -604,8 +706,8 @@ void ProteinManager::InitializeEvents() {
     auto weight_diff_ii = [](auto *head, int dir) {
       return head->GetWeight_Diffuse(dir);
     };
-    xlinks_.AddPop("diffuse_ii_to_rest", is_doubly_bound);
-    xlinks_.AddPop("diffuse_ii_fr_rest", is_doubly_bound);
+    xlinks_.AddPop("diffuse_ii_to_rest", is_bound_ii);
+    xlinks_.AddPop("diffuse_ii_fr_rest", is_bound_ii);
     kmc_.events_.emplace_back(
         "diffuse_ii_to_rest",
         xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),

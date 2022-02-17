@@ -1,4 +1,5 @@
 #include "cylaks/protein.hpp"
+#include "cylaks/motor.hpp"
 #include "cylaks/protofilament.hpp"
 
 bool Protein::HasSatellite() {
@@ -89,9 +90,13 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
 
 double Protein::GetAnchorCoordinate(int i_dim) {
 
-  if (n_heads_active_ != 2) {
+  if (n_heads_active_ == 0) {
     Sys::ErrorExit("Protein::GetAnchorCoord()");
   }
+  if (n_heads_active_ == 1) {
+    return GetActiveHead()->site_->pos_[i_dim];
+  }
+  // printf("%i (%i)\n", n_heads_active_, species_id_);
   return (head_one_.site_->pos_[i_dim] + head_two_.site_->pos_[i_dim]) / 2;
 }
 
@@ -263,6 +268,14 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
-bool Protein::Tether(Protein *target) { return false; }
+bool Protein::Tether(Motor *target) {
+
+  if (target->IsTethered()) {
+    Sys::ErrorExit("Protein::Tether()");
+  }
+  teth_partner_ = target;
+  target->teth_partner_ = this;
+  return true;
+}
 
 bool Protein::Untether() { return false; }

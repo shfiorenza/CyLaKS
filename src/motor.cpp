@@ -1,6 +1,71 @@
 #include "cylaks/motor.hpp"
 #include "cylaks/protofilament.hpp"
 
+void Motor::UpdateNeighbors_Bind_I_Teth() {
+
+  if (n_heads_active_ != 0) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [1]");
+  }
+  if (!IsTethered()) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [2]");
+  }
+  if (teth_partner_->GetNumHeadsActive() == 0) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [3]");
+  }
+  n_neighbors_bind_i_teth_ = 0;
+  // ! FIXME add n_mt = 2 case
+  BindingSite *anchor{teth_partner_->GetHeadOne()->site_};
+  if (anchor == nullptr) {
+    anchor = teth_partner_->GetHeadTwo()->site_;
+  }
+  for (int dx{Sys::teth_x_min_}; dx <= Sys::teth_x_max_; dx++) {
+    for (int dir{-1}; dir <= 1; dir += 2) {
+      int i_neighb{(int)anchor->index_ + dir * dx};
+      // printf("%i + (%i)(%i) = %i\n", (int)anchor->index_, dir, dx, i_neighb);
+      if (i_neighb < 0 or i_neighb >= anchor->filament_->sites_.size()) {
+        continue;
+      }
+      BindingSite *neighb{&anchor->filament_->sites_[i_neighb]};
+      if (!neighb->IsOccupied()) {
+        // printf("%zu\n", neighbors_bind_i_teth_.size());
+        // printf("%i\n", n_neighbors_bind_i_teth_);
+        neighbors_bind_i_teth_[n_neighbors_bind_i_teth_++] = neighb;
+      }
+    }
+  }
+}
+
+double Motor::GetSoloWeight_Bind_I_Teth(BindingSite *target) {
+
+  double r_x{teth_partner_->GetAnchorCoordinate(0) - target->pos_[0]};
+  double r_y{teth_partner_->GetAnchorCoordinate(1) - target->pos_[1]};
+  double r{sqrt(Square(r_x) + Square(r_y))};
+  if (r < tether_.r_min_ or r > tether_.r_max_) {
+    return 0.0;
+  }
+  double weight_teth{tether_.GetWeight_Bind(r)};
+  double weight_site{target->GetWeight_Bind()};
+  return weight_teth * weight_site;
+}
+
+BindingSite *Motor::GetNeighbor_Bind_I_Teth() {
+
+  double weight_tot{GetWeight_Bind_I_Teth()};
+  double ran{SysRNG::GetRanProb()};
+  double p_cum{0.0};
+  Sys::Log(2, "%i NEIGHBS\n", n_neighbors_bind_i_teth_);
+  Sys::Log(2, "ran = %g\n", ran);
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    BindingSite *neighb{neighbors_bind_i_teth_[i_neighb]};
+    p_cum += GetSoloWeight_Bind_I_Teth(neighb) / weight_tot;
+    Sys::Log(2, "p_cum = %g\n", p_cum);
+    if (ran < p_cum) {
+      return neighb;
+    }
+  }
+  return nullptr;
+}
+
 void Motor::ChangeConformation() {
 
   if (n_heads_active_ != 1) {
@@ -25,7 +90,7 @@ void Motor::ChangeConformation() {
 BindingSite *Motor::GetDockSite() {
 
   CatalyticHead *active_head{GetActiveHead()};
-  if (active_head->ligand_ != CatalyticHead::Ligand::ADPP) {
+  if (active_head->ligand_ != Ligand::ADPP) {
     return nullptr;
   }
   BindingSite *site{active_head->site_};
@@ -187,7 +252,7 @@ double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
 
 double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
 
-  if (head->ligand_ != CatalyticHead::Ligand::ADPP) {
+  if (head->ligand_ != Ligand::ADPP) {
     Sys::ErrorExit("Motor::GetWeight_Unbind_II()");
   }
 
@@ -217,6 +282,19 @@ double Motor::GetWeight_Unbind_I() {
   return GetActiveHead()->site_->GetWeight_Unbind();
 }
 
+double Motor::GetWeight_Bind_I_Teth() {
+
+  double tot_weight{0.0};
+  UpdateNeighbors_Bind_I_Teth();
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    tot_weight += GetSoloWeight_Bind_I_Teth(neighbors_bind_i_teth_[i_neighb]);
+  }
+  // if (tot_weight != 0.0) {
+  //   printf("%g\n", tot_weight);
+  // }
+  return tot_weight;
+}
+
 bool Motor::Diffuse(CatalyticHead *head, int dir) {
 
   BindingSite *old_site = head->site_;
@@ -242,7 +320,7 @@ bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
   }
   site->occupant_ = head;
   head->site_ = site;
-  head->ligand_ = CatalyticHead::Ligand::NONE;
+  head->ligand_ = Ligand::NONE;
   // If we bound from bulk solution, initialize head direction
   if (n_heads_active_ == 0) {
     head->trailing_ = false;
@@ -254,7 +332,7 @@ bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
   }
   if (Sys::test_mode_ == "kinesin_mutant") {
     if (head == &head_two_) {
-      head->ligand_ = CatalyticHead::Ligand::ADPP;
+      head->ligand_ = Ligand::ADPP;
     }
   }
   return true;
@@ -262,10 +340,10 @@ bool Motor::Bind(BindingSite *site, CatalyticHead *head) {
 
 bool Motor::Bind_ATP(CatalyticHead *head) {
 
-  if (head->ligand_ != CatalyticHead::Ligand::NONE) {
+  if (head->ligand_ != Ligand::NONE) {
     Sys::ErrorExit("Motor::Bind_ATP");
   }
-  head->ligand_ = CatalyticHead::Ligand::ATP;
+  head->ligand_ = Ligand::ATP;
   // Do not change conformation of trailing heads (for end-pausing)
   // Sys::Log()
   // ! FIXME convert this to Log() -- verbosity of 2 maybe?
@@ -280,10 +358,10 @@ bool Motor::Bind_ATP(CatalyticHead *head) {
 
 bool Motor::Hydrolyze(CatalyticHead *head) {
 
-  if (head->ligand_ != CatalyticHead::Ligand::ATP) {
+  if (head->ligand_ != Ligand::ATP) {
     Sys::ErrorExit("Motor::Hydrolyze()");
   }
-  head->ligand_ = CatalyticHead::Ligand::ADPP;
+  head->ligand_ = Ligand::ADPP;
   return true;
 }
 
@@ -293,7 +371,7 @@ bool Motor::Unbind(CatalyticHead *head) {
   BindingSite *site{head->site_};
   site->occupant_ = nullptr;
   head->site_ = nullptr;
-  head->ligand_ = CatalyticHead::Ligand::ADP;
+  head->ligand_ = Ligand::ADP;
   // If we are about to completely unbind, record this motor run
   if (n_heads_active_ == 1) {
     if (!Sys::equilibrating_) {
@@ -315,6 +393,14 @@ bool Motor::Unbind(CatalyticHead *head) {
   return true;
 }
 
-bool Motor::Tether(Protein *target) { return false; }
+bool Motor::Tether(Protein *target) {
 
-bool Motor::Untether() { return false; }
+  if (target->IsTethered()) {
+    Sys::ErrorExit("Protein::Tether()");
+  }
+  teth_partner_ = target;
+  target->teth_partner_ = this;
+  return true;
+}
+
+// bool Motor::Untether() { return false; }

@@ -10,6 +10,9 @@
 #include <unordered_map>
 #include <vector>
 
+enum Ligand { NONE, ATP, ADPP, ADP };
+inline static const double _max_weight{1e3};
+
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
 inline static const size_t _n_neighbs_max{2};

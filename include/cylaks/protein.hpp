@@ -5,16 +5,16 @@
 #include "linear_spring.hpp"
 #include "system_namespace.hpp"
 
+class Motor;
+
 // Protein: Essentially just a passive crosslinker at this stage
 //          Has two binding heads connected by a linear hookean spring
 class Protein : public Object {
 protected:
   double ran_{0.0};
   int n_neighbors_bind_ii_{0};
-  int n_neighbors_bind_i_teth_{0};
   int n_neighbors_bind_ii_teth_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
-  Vec<BindingSite *> neighbors_bind_i_teth_;
   Vec<BindingSite *> neighbors_bind_ii_teth_;
 
 public:
@@ -24,19 +24,14 @@ public:
   BindingHead head_one_, head_two_;
   LinearSpring spring_;
 
-  bool tethered_{false};
   Protein *teth_partner_{nullptr};
 
 protected:
   void InitializeNeighborLists();
 
   void UpdateNeighbors_Bind_II();
-  double GetSoloWeight_Bind_II(BindingSite *neighb);
-
-  virtual void UpdateNeighbors_Bind_I_Teth() {}
-  virtual double GetSoloWeight_Bind_I_Teth(BindingSite *target) { return 0.0; }
-
   void UpdateNeighbors_Bind_II_Teth();
+  double GetSoloWeight_Bind_II(BindingSite *neighb);
   double GetSoloWeight_Bind_II_Teth(BindingSite *neighb);
 
 public:
@@ -56,6 +51,9 @@ public:
 
   int GetNumHeadsActive() { return n_heads_active_; }
   virtual BindingHead *GetActiveHead() {
+    if (n_heads_active_ != 1) {
+      Sys::ErrorExit("Protein::GetActiveHead()");
+    }
     if (head_one_.site_ != nullptr) {
       return &head_one_;
     } else if (head_two_.site_ != nullptr) {
@@ -68,6 +66,12 @@ public:
   virtual BindingHead *GetHeadOne() { return &head_one_; }
   virtual BindingHead *GetHeadTwo() { return &head_two_; }
 
+  bool IsTethered() {
+    if (teth_partner_ != nullptr) {
+      return true;
+    }
+    return false;
+  }
   bool HasSatellite();
   void UntetherSatellite();
 
@@ -75,7 +79,7 @@ public:
 
   virtual bool UpdateExtension();
   virtual int GetDirectionTowardRest(BindingHead *head);
-  double GetAnchorCoordinate(int i_dim);
+  virtual double GetAnchorCoordinate(int i_dim);
 
   virtual BindingSite *GetNeighbor_Bind_II();
 
@@ -86,7 +90,7 @@ public:
   virtual bool Diffuse(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
-  virtual bool Tether(Protein *teth_partner);
+  virtual bool Tether(Motor *teth_partner);
   virtual bool Untether();
 };
 

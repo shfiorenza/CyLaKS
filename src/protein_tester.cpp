@@ -371,16 +371,16 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   auto is_ADPP_ii_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 2) {
       // Always unbind active head first if both are ADPP bound
-      if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP and
-          motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->head_one_.ligand_ == Ligand::ADPP and
+          motor->head_two_.ligand_ == Ligand::ADPP) {
         return {&motor->head_one_};
       }
       bool found_head{false};
       CatalyticHead *chosen_head{nullptr};
-      if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->head_one_.ligand_ == Ligand::ADPP) {
         chosen_head = &motor->head_one_;
       }
-      if (motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->head_two_.ligand_ == Ligand::ADPP) {
         if (chosen_head != nullptr) {
           Sys::ErrorExit("Protein_MGR::is_ADPP_ii_bound()");
         }
@@ -420,7 +420,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   };
   auto is_ADPP_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
-      if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
         return {motor->GetActiveHead()};
       }
     }
@@ -448,7 +448,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   };
   auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
-      if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::NONE) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
         return {motor->GetActiveHead()};
       }
     }
@@ -474,7 +474,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
     };
     auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
       if (motor->n_heads_active_ == 1) {
-        if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ATP) {
+        if (motor->GetActiveHead()->ligand_ == Ligand::ATP) {
           return {motor->GetActiveHead()};
         }
       }
@@ -638,7 +638,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   };
   auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
-      if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::NONE) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
         return {motor->GetActiveHead()};
       }
     }
@@ -696,10 +696,10 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     if (motor->n_heads_active_ == 2) {
       bool found_head{false};
       CatalyticHead *chosen_head{nullptr};
-      if (motor->head_one_.ligand_ == CatalyticHead::Ligand::NONE) {
+      if (motor->head_one_.ligand_ == Ligand::NONE) {
         chosen_head = &motor->head_one_;
       }
-      if (motor->head_two_.ligand_ == CatalyticHead::Ligand::NONE) {
+      if (motor->head_two_.ligand_ == Ligand::NONE) {
         if (chosen_head != nullptr) {
           Sys::ErrorExit("Protein_MGR::is_NULL_ii_bound()");
         }
@@ -738,7 +738,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   };
   auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
-      if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ATP) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ATP) {
         return {motor->GetActiveHead()};
       }
     }
@@ -851,10 +851,10 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     if (motor->n_heads_active_ == 2) {
       bool found_head{false};
       CatalyticHead *chosen_head{nullptr};
-      if (motor->head_one_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->head_one_.ligand_ == Ligand::ADPP) {
         chosen_head = &motor->head_one_;
       }
-      if (motor->head_two_.ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->head_two_.ligand_ == Ligand::ADPP) {
         if (chosen_head != nullptr) {
           Sys::ErrorExit("Protein_MGR::is_ADPP_ii_bound()");
         }
@@ -901,7 +901,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
   };
   auto is_ADPP_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
-      if (motor->GetActiveHead()->ligand_ == CatalyticHead::Ligand::ADPP) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
         return {motor->GetActiveHead()};
       }
     }
@@ -1027,7 +1027,12 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   filaments_->Initialize(this);
   // Initialize stat trackers
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
-  double r_max{xlinks_.r_max_};
+  // Recall, Weight = exp(0.5 * E / kbT) [assume lambda = 0.5]
+  double E_max{std::log(_max_weight) * Params::kbT};
+  double r_rest{Params::Xlinks::r_0};
+  // E = 0.5 * k * (r - r0)^2
+  double r_min{r_rest - sqrt(2 * E_max / Params::Xlinks::k_spring)};
+  double r_max{r_rest + sqrt(2 * E_max / Params::Xlinks::k_spring)};
   double r_x_max{sqrt(Square(r_max) - Square(r_y))};
   size_t x_max((size_t)std::ceil(r_x_max / Filaments::site_size));
   // printf("r_max = %g\n", r_max);
@@ -1042,7 +1047,7 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   for (int x{0}; x <= x_max; x++) {
     double r_x{x * Filaments::site_size};
     double r{sqrt(Square(r_x) + Square(r_y))};
-    if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
+    if (r < r_min or r > r_max) {
       wt_bind[x] = 0.0;
       wt_unbind[x] = 0.0;
       continue;
@@ -1198,7 +1203,12 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
   InitializeWeights();
   SetParameters();
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
-  double r_max{xlinks_.r_max_};
+  // Recall, Weight = exp(0.5 * E / kbT) [assume lambda = 0.5]
+  double E_max{std::log(_max_weight) * Params::kbT};
+  double r_rest{Params::Xlinks::r_0};
+  // E = 0.5 * k * (r - r0)^2
+  double r_min{r_rest - sqrt(2 * E_max / Params::Xlinks::k_spring)};
+  double r_max{r_rest + sqrt(2 * E_max / Params::Xlinks::k_spring)};
   double r_x_max{sqrt(Square(r_max) - Square(r_y))};
   int x_max((int)std::ceil(r_x_max / Filaments::site_size));
   // printf("r_max = %g\n", r_max);
@@ -1223,7 +1233,7 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
     int x_index{x_max + x};
     double r_x{x * Filaments::site_size + offset};
     double r{sqrt(Square(r_x) + Square(r_y))};
-    if (r < xlinks_.r_min_ or r > xlinks_.r_max_) {
+    if (r < r_min or r > r_max) {
       p_bind[x_index] *= 0.0;
       p_unbind[x_index] *= 0.0;
       continue;

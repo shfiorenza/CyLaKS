@@ -10,6 +10,9 @@ inline std::string sim_name_;  // Name of simulation
 inline std::string test_mode_; // Name of test mode, if any
 inline std::string yaml_file_; // Name of parameter file
 
+inline int teth_x_min_;
+inline int teth_x_max_;
+
 inline FILE *log_file_;      // Pointer to log fle
 inline size_t verbosity_{0}; // How much info is output to log; higher is more
 

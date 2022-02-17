@@ -530,24 +530,32 @@ void Curator::OutputData() {
         continue;
       }
       const size_t species_id{site.occupant_->GetSpeciesID()};
+      // printf("%zu\n", species_id);
+      // if (site.occupant_->parent_ == nullptr) {
+      //   printf("LOL\n");
+      // }
+      // if (site.occupant_->parent_->IsTethered()) {
+      //   printf("no\n");
+      // }
       occupancy[site.index_] = species_id;
       protein_id[site.index_] = site.occupant_->GetID();
       if (species_id == _id_xlink) {
+        // if (site.occupant_->parent_->IsTethered()) {
+        //   printf("yo\n");
+        // }
         if (site.occupant_->parent_->n_heads_active_ == 2) {
           partner_index[site.index_] =
               site.occupant_->GetOtherHead()->site_->index_;
         }
       } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
-        /*
-        if (site.occupant_->parent_->tethered_) {
-          auto partner{site.occupant_->parent_->partner_};
+        if (site.occupant_->parent_->IsTethered()) {
+          auto partner{site.occupant_->parent_->teth_partner_};
           if (partner->n_heads_active_ > 0) {
-            // double anchor_coord{partner->GetAnchorCoordinate()};
-            // tether_anchor_pos[site.index_] = anchor_coord;
+            double anchor_coord{partner->GetAnchorCoordinate(0)};
+            tether_anchor_pos[site.index_] = anchor_coord;
           }
         }
-        */
       }
     }
     data_files_.at("occupancy").Write(occupancy, n_sites_max_);

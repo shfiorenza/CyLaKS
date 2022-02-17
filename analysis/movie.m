@@ -1,5 +1,5 @@
 clear variables;
-sim_name = 'demo_filament_separation'; % Raw sim name; do not include directory
+sim_name = 'test'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -118,12 +118,10 @@ end
 
 teth_data = zeros(max_sites, n_mts, n_datapoints) - 1;
 if isfile(tethFile)
-    %{
     file = fopen(tethFile);
     data = fread(file, [n_mts * max_sites * n_datapoints], '*double');
     fclose(file);
     teth_data = reshape(data, max_sites, n_mts, n_datapoints);
-    %}
 end
 motor_trailing = zeros(max_sites, n_mts, n_datapoints);
 if isfile(motorHeadFile)
@@ -248,6 +246,59 @@ for i_data = start_frame : frames_per_plot : end_frame
                 % Draw protein head
                 pos = [pos_x-(r_prot/2) pos_y-(r_prot/2) r_prot r_prot];
                 rectangle('Position', pos,'FaceColor', color(sid, :), 'Curvature', [1 1]);
+            end 
+        end
+        % Draw tethers
+        
+        line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
+        teth_coords = teth_data(:, i_mt, i_data);
+        for i_teth=1:1:max_sites - 1
+            if(teth_coords(i_teth) ~= -1)
+                start_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
+                start_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
+                end_x = teth_coords(i_teth);
+                end_y = start_y;
+                xa = start_x; ya = start_y;
+                xb = end_x; yb = end_y + 50;
+                ne = 5; a = 2; ro = 50;
+                [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
+                plot(xs,ys,'LineWidth', 1, 'Color', 'black');
+                
+                %disp(teth_coords(i_teth))
+                %{
+                end_height = (mt_height + neighb_mt_height + site_height) / 2;
+                if(n_mts < 2)
+                    end_height = mt_height + 5*site_height; 
+                end
+                start_height = mt_height + 5*site_height / 2;
+                if(mod(i_mt, 2) == 0)
+                    start_height = mt_height - 3*site_height / 2;
+                end
+               
+                if(teth_coords(i_teth) ~= teth_coords(i_teth + 1))
+                    start_pos = i_teth*site_width + mt_pos - 1;
+                    if(i_teth > 1)
+                        if(motor_IDs(i_teth) ~= motor_IDs(i_teth - 1) ...
+                        && motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
+                            start_pos = start_pos + site_width/2 - 1;
+                        end
+                    elseif(motor_IDs(i_teth) ~= motor_IDs(i_teth + 1))
+                        start_pos = start_pos + site_width/2 - 1;
+                    end                    
+                    end_pos = teth_coords(i_teth)*site_width + (3/2)*site_width - 1;
+                    xa = start_pos; ya = start_height;
+                    xb = end_pos; yb = end_height;
+                    ne = 10; a = 10; ro = 0.5;
+                    if abs(xa - xb) <= cutoff
+                        [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
+                        plot(xs,ys,'LineWidth', 1, 'Color', 'black');
+                    else
+                        disp(xa - xb);
+                        disp(teth_coords(i_teth));
+                        disp(i_teth);
+                    end
+               end
+                %}
             end 
         end
     end

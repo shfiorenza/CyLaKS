@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.001
 dt: 0.00002
-t_run: 1000
+t_run: 10 # 00
 t_equil: 0
 t_snapshot: 0.1
 dynamic_equil_window: -1 
@@ -30,7 +30,7 @@ motors:
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
   k_on: 0.000358
-  c_bulk: 0.05
+  c_bulk: 1.5 # 0.05
   c_eff_bind: 4000000
   k_on_ATP: 2500
   c_ATP: 2

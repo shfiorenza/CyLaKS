@@ -5,11 +5,12 @@
 // Object: Basic building block of CyLaKS; foundation of all proteins/etc
 class Object {
 protected:
-  size_t unique_id_{0};
+  size_t unique_id_{0}; // Unique ID within CyLaKS among ALL objects
   size_t species_id_{0};
 
 public:
   bool visible_{true};
+  // Ligand ligand_{DISABLED};
   Vec<double> pos_; // C.O.M. position in lab frame
 
 public:
@@ -24,6 +25,7 @@ public:
   size_t GetSpeciesID() { return species_id_; }
 
   virtual bool IsOccupied() { return true; }
+  virtual bool IsTethered() { return false; }
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}
@@ -32,9 +34,10 @@ public:
   virtual int GetNumHeadsActive() { return -1; }
 
   virtual Object *GetActiveHead() { return nullptr; }
-  virtual Object *GetOtherHead() { return nullptr; }
+  virtual Object *GetDockedHead() { return nullptr; }
   virtual Object *GetHeadOne() { return nullptr; }
   virtual Object *GetHeadTwo() { return nullptr; }
+  virtual Object *GetOtherHead() { return nullptr; }
 
   virtual Vec<double> GetSpringOrientation() { return {}; }
   virtual Vec<double> GetBoundObjectOrientation() { return {}; }

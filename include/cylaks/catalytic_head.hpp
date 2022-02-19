@@ -25,13 +25,6 @@ public:
   CatalyticHead() {}
   void Initialize(size_t sid, size_t id, double radius, Motor *parent_ptr,
                   CatalyticHead *other_head_ptr);
-  //  {
-  // BindingHead::Initialize(sid, id, radius);
-  // parent_ = parent_ptr;
-  // // BindingHead::parent_ = dynamic_cast<Protein *>(parent_);
-  // other_head_ = other_head_ptr;
-  // // BindingHead::other_head_ = dynamic_cast<BindingHead *>(other_head_);
-  // }
 
   int GetNumNeighborsOccupied();
   int GetNumHeadsActive();

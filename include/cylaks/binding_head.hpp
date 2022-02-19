@@ -52,7 +52,7 @@ public:
   virtual void AddForce(Vec<double> f_applied);
   virtual void AddTorque(double tq);
 
-  virtual void UntetherSatellite();
+  virtual bool UntetherSatellite();
 
   virtual double GetWeight_Unbind_II();
   virtual bool Unbind();

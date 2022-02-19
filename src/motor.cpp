@@ -1,6 +1,22 @@
 #include "cylaks/motor.hpp"
 #include "cylaks/protofilament.hpp"
 
+double Motor::GetAnchorCoordinate(int i_dim) {
+
+  // printf("mot called\n");
+  if (n_heads_active_ == 0) {
+    Sys::ErrorExit("Motor::GetAnchorCoord()");
+  }
+  if (n_heads_active_ == 1) {
+    CatalyticHead *active_head{GetActiveHead()};
+    int dir{active_head->trailing_ ? 1 : -1};
+    int dx{active_head->site_->filament_->dx_};
+    double delta{Params::Filaments::site_size / 2.0};
+    return active_head->site_->pos_[i_dim] + (dir * dx * delta);
+  }
+  return (head_one_.site_->pos_[i_dim] + head_two_.site_->pos_[i_dim]) / 2.0;
+}
+
 void Motor::UpdateNeighbors_Bind_I_Teth() {
 
   if (n_heads_active_ != 0) {

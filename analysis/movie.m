@@ -191,7 +191,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                 % %}
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
-                    if(n_mts > 1 && i_mt == 1)
+                    if(i_mt == 1)
                         if(partner_indices(i_site, i_mt, i_data) ~= -1)
                             ii_site = partner_indices(i_site, i_mt, i_data);
                             nn_sites = mt_lengths(2);
@@ -201,6 +201,9 @@ for i_data = start_frame : frames_per_plot : end_frame
                             endpos_x = m_pos(1) + (double(ii_site)/nn_sites)*neighb_vec(1);
                             endpos_y = m_pos(2) + (double(ii_site)/nn_sites)*neighb_vec(2);
                             line([pos_x, endpos_x],[pos_y, endpos_y], ...
+                                'LineWidth', 1, 'Color', purple);
+                        else
+                            line([pos_x, pos_x], [pos_y, pos_y + 3* r_prot], ...
                                 'LineWidth', 1, 'Color', purple);
                         end
                     end
@@ -254,15 +257,17 @@ for i_data = start_frame : frames_per_plot : end_frame
         teth_coords = teth_data(:, i_mt, i_data);
         for i_teth=1:1:max_sites - 1
             if(teth_coords(i_teth) ~= -1)
-                start_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
-                start_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
-                end_x = teth_coords(i_teth);
-                end_y = start_y;
-                xa = start_x; ya = start_y;
-                xb = end_x; yb = end_y + 50;
-                ne = 5; a = 2; ro = 50;
-                [xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
-                plot(xs,ys,'LineWidth', 1, 'Color', 'black');
+                start_x = plus_pos(1) + ((i_teth-1)/n_sites)*line_vec(1);
+                start_y = plus_pos(2) + ((i_teth-1)/n_sites)*line_vec(2) + 1.045 * r_prot;
+                end_x = teth_coords(i_teth); % - 4.1;
+                end_y = start_y + 16;
+               % xa = start_x; ya = start_y;
+               % xb = end_x; yb = end_y + 50;
+               % ne = 5; a = 2; ro = 50;
+                line([start_x, end_x], [start_y, end_y], ...
+                    'LineWidth', 1, 'Color', blue);
+                %[xs,ys] = spring(xa,ya,xb,yb,ne,a,ro);
+                %plot(xs,ys,'LineWidth', 1, 'Color', 'black');
                 
                 %disp(teth_coords(i_teth))
                 %{

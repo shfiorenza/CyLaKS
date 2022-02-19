@@ -223,23 +223,29 @@ void ProteinManager::InitializeEvents() {
     return {};
   };
   auto is_bound_i = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 1 and !protein->IsTethered()) {
-      return {protein->GetActiveHead()};
+    if (protein->GetNumHeadsActive() == 1) {
+      if (!protein->IsTethered() or protein->HasSatellite()) {
+        return {protein->GetActiveHead()};
+      }
     }
     return {};
   };
   auto is_bound_ii = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 2 and !protein->IsTethered()) {
-      return {protein->GetHeadOne(), protein->GetHeadTwo()};
+    if (protein->GetNumHeadsActive() == 2) {
+      if (!protein->IsTethered() or protein->HasSatellite()) {
+        return {protein->GetHeadOne(), protein->GetHeadTwo()};
+      }
     }
     return {};
   };
   /* *** Sorting functions - specific to ATP hydrolysis cycle in motors ** */
   auto is_bound_i_NULL = [](Object *base) -> Vec<Object *> {
     Motor *motor = dynamic_cast<Motor *>(base);
-    if (motor->GetNumHeadsActive() == 1 and !motor->IsTethered()) {
-      if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
-        return {motor->GetActiveHead()};
+    if (motor->GetNumHeadsActive() == 1) {
+      if (!motor->IsTethered() or motor->HasSatellite()) {
+        if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
+          return {motor->GetActiveHead()};
+        }
       }
     }
     return {};
@@ -255,9 +261,11 @@ void ProteinManager::InitializeEvents() {
   };
   auto is_bound_i_ADPP = [](Object *base) -> Vec<Object *> {
     Motor *motor = dynamic_cast<Motor *>(base);
-    if (motor->GetNumHeadsActive() == 1 and !motor->IsTethered()) {
-      if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
-        return {motor->GetActiveHead()};
+    if (motor->GetNumHeadsActive() == 1) {
+      if (!motor->IsTethered() or motor->HasSatellite()) {
+        if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
+          return {motor->GetActiveHead()};
+        }
       }
     }
     return {};
@@ -310,13 +318,15 @@ void ProteinManager::InitializeEvents() {
   };
   /* *** Sorting functions - specific to motor-xlink tethering *** */
   auto is_a_sattelite = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 0 and protein->IsTethered()) {
+    if (protein->GetNumHeadsActive() == 0 and protein->IsTethered() and
+        !protein->HasSatellite()) {
       return {protein->GetHeadOne()};
     }
     return {};
   };
   auto is_bound_i_teth = [](Object *protein) -> Vec<Object *> {
-    if (protein->GetNumHeadsActive() == 1 and protein->IsTethered()) {
+    if (protein->GetNumHeadsActive() == 1 and protein->IsTethered() and
+        !protein->HasSatellite()) {
       return {protein->GetActiveHead()};
     }
     return {};
@@ -331,8 +341,26 @@ void ProteinManager::InitializeEvents() {
     }
     return {};
   };
-  auto is_bound_i_NULL_teth = [](Object *motor) -> Vec<Object *> { return {}; };
-  auto is_bound_i_ADPP_teth = [](Object *motor) -> Vec<Object *> { return {}; };
+  auto is_bound_i_NULL_teth = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1 and motor->IsTethered() and
+        !motor->HasSatellite()) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_bound_i_ADPP_teth = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1 and motor->IsTethered() and
+        !motor->HasSatellite()) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ADPP) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
 
   /* *** Binning functions - used to generate multi-dim. sorted lists *** */
   // Sorted array dimension {i,j,k}; 1-D for neighbs so we use k and pad i & j
@@ -520,10 +548,17 @@ void ProteinManager::InitializeEvents() {
         });
   }
   /* *** Unbind_I *** */
-  auto exe_unbind_i = [](auto *head, auto *pop, auto *fil) {
+  auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
     bool executed{head->Unbind()};
     if (executed) {
-      head->UntetherSatellite();
+      if (head->parent_->HasSatellite()) {
+        printf("boink\n");
+        alt_pop->RemoveFromActive(head->parent_->teth_partner_);
+        bool untethered_sat{head->UntetherSatellite()};
+        if (!untethered_sat) {
+          Sys::ErrorExit("exe_unbind_i");
+        }
+      }
       pop->RemoveFromActive(head->parent_);
       fil->FlagForUpdate();
     }
@@ -536,7 +571,7 @@ void ProteinManager::InitializeEvents() {
           &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
           &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+            exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_, &motors_,
                          filaments_);
           });
     }
@@ -555,7 +590,7 @@ void ProteinManager::InitializeEvents() {
           return weight_unbind_i(dynamic_cast<CatalyticHead *>(base));
         },
         [&](Object *base) {
-          exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
+          exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_, &xlinks_,
                        filaments_);
         });
   }
@@ -570,6 +605,9 @@ void ProteinManager::InitializeEvents() {
     // Here, the head belongs to the bound untethered protein (or motor)
     auto exe_tether_free = [](auto *head, auto *pop, auto *altpop, auto *fil) {
       auto satellite{altpop->GetFreeEntry()};
+      if (satellite == nullptr) {
+        return;
+      }
       bool executed{head->parent_->Tether(satellite)};
       if (executed) {
         altpop->AddToActive(satellite);
@@ -613,7 +651,26 @@ void ProteinManager::InitializeEvents() {
           exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
     /* *** Bind_ATP_I_Teth *** */
-
+    if (xlinks_.active_ and motors_.tethering_active_) {
+      motors_.AddPop("bound_i_NULL_teth", is_bound_i_NULL_teth);
+      auto weight_bind_ATP_i_teth = [](Object *base) {
+        CatalyticHead *head{dynamic_cast<CatalyticHead *>(base)};
+        double anchor_x{head->parent_->GetAnchorCoordinate(0)};
+        double site_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
+        double r_x{anchor_x - site_x};
+        double dr{Params::Motors::r_0 - r_x};
+        double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+        return exp(-std::fabs(k * dr) * Params::Motors::sigma_ATP /
+                   Params::kbT);
+      };
+      kmc_.events_.emplace_back(
+          "bind_ATP_i_teth", motors_.p_event_.at("bind_ATP_i_teth").GetVal(),
+          &motors_.sorted_.at("bound_i_NULL_teth").size_,
+          &motors_.sorted_.at("bound_i_NULL_teth").entries_, poisson,
+          weight_bind_ATP_i_teth, [&](Object *base) {
+            exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+          });
+    }
     /* *** Bind_ATP_II *** */
     if (Params::Motors::gaussian_stepping_coop and
         Params::Motors::gaussian_range > 0) {
@@ -697,6 +754,64 @@ void ProteinManager::InitializeEvents() {
           &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
           &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
+            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                     -1);
+          });
+    }
+    if (motors_.active_ and motors_.tethering_active_) {
+      xlinks_.AddPop("bound_i_teth", is_bound_i_teth);
+      auto weight_diffuse_teth = [](auto head, int dir) {
+        // Sys::Log(1, "1\n");
+        BindingSite *old_site{head->site_};
+        BindingSite *new_site{old_site->GetNeighbor(dir)};
+        if (new_site == nullptr) {
+          return 0.0;
+        }
+        double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
+        // horizontal tethers for now
+        double r_y{0.0};
+        double r_old{sqrt(Square(r_y) + Square(anchor_x - old_site->pos_[0]))};
+        double dr_old{r_old - Params::Motors::r_0};
+        double energy_old{dr_old > 0.0
+                              ? 0.5 * Params::Motors::k_spring * Square(dr_old)
+                              : 0.5 * Params::Motors::k_slack * Square(dr_old)};
+        double r_new{sqrt(Square(r_y) + Square(anchor_x - new_site->pos_[0]))};
+        double dr_new{r_new - Params::Motors::r_0};
+        double energy_new{dr_new > 0.0
+                              ? 0.5 * Params::Motors::k_spring * Square(dr_new)
+                              : 0.5 * Params::Motors::k_slack * Square(dr_new)};
+        double dE{energy_new - energy_old};
+        // Sys::Log(1, "3\n");
+        double weight{0.0};
+        if (dE < 0.0) {
+          weight = exp(_lambda_spring * fabs(dE) / Params::kbT);
+        } else {
+          weight = exp(-(1.0 - _lambda_spring) * fabs(dE) / Params::kbT);
+        }
+        if (weight > _max_weight) {
+          return 0.0;
+        }
+        return weight;
+      };
+      kmc_.events_.emplace_back(
+          "diffuse_i_fwd_teth", xlinks_.p_event_.at("diffuse_i_fwd").GetVal(0),
+          &xlinks_.sorted_.at("bound_i_teth").size_,
+          &xlinks_.sorted_.at("bound_i_teth").entries_, poisson,
+          [&](Object *base) {
+            return weight_diffuse_teth(dynamic_cast<BindingHead *>(base), 1);
+          },
+          [&](Object *base) {
+            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                     1);
+          });
+      kmc_.events_.emplace_back(
+          "diffuse_i_bck_teth", xlinks_.p_event_.at("diffuse_i_bck").GetVal(0),
+          &xlinks_.sorted_.at("bound_i_teth").size_,
+          &xlinks_.sorted_.at("bound_i_teth").entries_, poisson,
+          [&](Object *base) {
+            return weight_diffuse_teth(dynamic_cast<BindingHead *>(base), -1);
+          },
+          [&](Object *base) {
             exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
                      -1);
           });

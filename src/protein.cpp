@@ -13,7 +13,17 @@ bool Protein::HasSatellite() {
   return false;
 }
 
-void Protein::UntetherSatellite() {}
+bool Protein::UntetherSatellite() {
+
+  if (IsTethered()) {
+    if (teth_partner_->GetNumHeadsActive() == 0) {
+      teth_partner_->teth_partner_ = nullptr;
+      teth_partner_ = nullptr;
+      return true;
+    }
+  }
+  return false;
+}
 
 bool Protein::UpdateExtension() {
   if (n_heads_active_ != 2) {

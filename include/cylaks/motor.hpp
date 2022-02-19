@@ -12,7 +12,6 @@ class Motor : public Protein {
 protected:
   int n_neighbors_tether_{0};
   Vec<Protein *> neighbors_tether_;
-
   int n_neighbors_bind_i_teth_{0};
   Vec<BindingSite *> neighbors_bind_i_teth_;
 
@@ -31,6 +30,7 @@ public:
     Object::Initialize(sid, id);
     head_one_.Initialize(sid, id, _r_motor_head, this, &head_two_);
     head_two_.Initialize(sid, id, _r_motor_head, this, &head_one_);
+    // ! FIXME -- how to use endpoints for tether?
     tether_.Initialize(sid, id, &head_one_, &head_two_, Motors::k_slack,
                        Motors::r_0, Motors::k_tether, 0.0, 0.0);
     size_t x_max{(size_t)std::ceil(tether_.r_max_ / Filaments::site_size)};
@@ -68,6 +68,8 @@ public:
   bool UpdateExtension() { return false; }
   int GetDirectionTowardsRest(CatalyticHead *head);
   void ForceUntether();
+
+  double GetAnchorCoordinate(int i_dim);
 
   double GetWeight_Diffuse(CatalyticHead *head, int dir);
   double GetWeight_Bind_II();

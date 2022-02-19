@@ -111,6 +111,14 @@ public:
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();
   }
+  // ! FIXME: this is fundamentally unnecessary
+  void RemoveFromActive(Object *base) {
+    ENTRY_T *entry{dynamic_cast<ENTRY_T *>(base)};
+    size_t i_entry{entry->active_index_};
+    active_entries_[i_entry] = active_entries_[--n_active_entries_];
+    active_entries_[i_entry]->active_index_ = i_entry;
+    FlagForUpdate();
+  }
   void UpdateLatticeDeformation() {
     if (!lattice_coop_active_) {
       return;

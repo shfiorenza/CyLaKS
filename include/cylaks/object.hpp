@@ -26,6 +26,7 @@ public:
 
   virtual bool IsOccupied() { return true; }
   virtual bool IsTethered() { return false; }
+  virtual bool HasSatellite() { return false; }
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}

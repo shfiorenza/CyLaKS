@@ -102,5 +102,7 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
       Sys::Log(1, "  sorting into %s\n", pop.second.name_.c_str());
       pop.second.Sort(entry);
     }
+    Sys::Log(1, "   DONE\n");
   }
+  Sys::Log(1, "SORTING CONCLUDED FOR SPECIES %zu\n", species_id_);
 }

@@ -530,19 +530,9 @@ void Curator::OutputData() {
         continue;
       }
       const size_t species_id{site.occupant_->GetSpeciesID()};
-      // printf("%zu\n", species_id);
-      // if (site.occupant_->parent_ == nullptr) {
-      //   printf("LOL\n");
-      // }
-      // if (site.occupant_->parent_->IsTethered()) {
-      //   printf("no\n");
-      // }
       occupancy[site.index_] = species_id;
       protein_id[site.index_] = site.occupant_->GetID();
       if (species_id == _id_xlink) {
-        // if (site.occupant_->parent_->IsTethered()) {
-        //   printf("yo\n");
-        // }
         if (site.occupant_->parent_->n_heads_active_ == 2) {
           partner_index[site.index_] =
               site.occupant_->GetOtherHead()->site_->index_;

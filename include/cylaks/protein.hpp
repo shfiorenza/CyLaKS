@@ -73,7 +73,7 @@ public:
     return false;
   }
   bool HasSatellite();
-  void UntetherSatellite();
+  bool UntetherSatellite();
 
   virtual void ApplyLatticeDeformation() {}
 

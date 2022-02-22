@@ -178,15 +178,15 @@ for i_data = start_frame : frames_per_plot : end_frame
                     dx = -1;
                     mt_dir = 1;
                     line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
-                    pos_x = plus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
-                    pos_y = plus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
+                    pos_x = plus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
+                    pos_y = plus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
                 % %{   
                 else
                     dx = 1;
                     mt_dir = -1;
                     line_vec = [plus_pos(1) - minus_pos(1), plus_pos(2) - minus_pos(2)];
-                    pos_x = minus_pos(1) + ((i_site-1)/n_sites)*line_vec(1);
-                    pos_y = minus_pos(2) + ((i_site-1)/n_sites)*line_vec(2);
+                    pos_x = minus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
+                    pos_y = minus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
                 end
                 % %}
                 if sid == sid_xlink
@@ -198,8 +198,8 @@ for i_data = start_frame : frames_per_plot : end_frame
                             p_pos = filament_pos(:, 1, 2, i_data);
                             m_pos = filament_pos(:, 2, 2, i_data);
                             neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
-                            endpos_x = m_pos(1) + (double(ii_site)/nn_sites)*neighb_vec(1);
-                            endpos_y = m_pos(2) + (double(ii_site)/nn_sites)*neighb_vec(2);
+                            endpos_x = m_pos(1) + (double(ii_site-1)/(nn_sites-1))*neighb_vec(1);
+                            endpos_y = m_pos(2) + (double(ii_site-1)/(nn_sites-1))*neighb_vec(2);
                             line([pos_x, endpos_x],[pos_y, endpos_y], ...
                                 'LineWidth', 1, 'Color', purple);
                         else
@@ -257,8 +257,8 @@ for i_data = start_frame : frames_per_plot : end_frame
         teth_coords = teth_data(:, i_mt, i_data);
         for i_teth=1:1:max_sites - 1
             if(teth_coords(i_teth) ~= -1)
-                start_x = plus_pos(1) + ((i_teth-1)/n_sites)*line_vec(1);
-                start_y = plus_pos(2) + ((i_teth-1)/n_sites)*line_vec(2) + 1.045 * r_prot;
+                start_x = plus_pos(1) + ((i_teth-1)/(n_sites-1))*line_vec(1);
+                start_y = plus_pos(2) + ((i_teth-1)/(n_sites-1))*line_vec(2) + 1.045 * r_prot;
                 end_x = teth_coords(i_teth); % - 4.1;
                 end_y = start_y + 16;
                % xa = start_x; ya = start_y;

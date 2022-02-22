@@ -13,8 +13,10 @@ class Protein : public Object {
 protected:
   double ran_{0.0};
   int n_neighbors_bind_ii_{0};
-  int n_neighbors_bind_ii_teth_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
+  int n_neighbors_bind_i_teth_{0};
+  Vec<BindingSite *> neighbors_bind_i_teth_;
+  int n_neighbors_bind_ii_teth_{0};
   Vec<BindingSite *> neighbors_bind_ii_teth_;
 
 public:
@@ -30,8 +32,10 @@ protected:
   void InitializeNeighborLists();
 
   void UpdateNeighbors_Bind_II();
+  void UpdateNeighbors_Bind_I_Teth();
   void UpdateNeighbors_Bind_II_Teth();
   double GetSoloWeight_Bind_II(BindingSite *neighb);
+  double GetSoloWeight_Bind_I_Teth(BindingSite *target);
   double GetSoloWeight_Bind_II_Teth(BindingSite *neighb);
 
 public:
@@ -47,6 +51,8 @@ public:
     // Maximum possible x_distance of spring will occur when r_y = 0
     size_t x_max{(size_t)std::ceil(spring_.r_max_ / Filaments::site_size)};
     neighbors_bind_ii_.resize(2 * x_max + 1);
+    neighbors_bind_i_teth_.resize(Filaments::count *
+                                  (2 * Sys::teth_x_max_ + 1));
   }
 
   int GetNumHeadsActive() { return n_heads_active_; }
@@ -74,6 +80,8 @@ public:
   }
   bool HasSatellite();
   bool UntetherSatellite();
+  double GetWeight_Bind_I_Teth();
+  BindingSite *GetNeighbor_Bind_I_Teth();
 
   virtual void ApplyLatticeDeformation() {}
 
@@ -90,7 +98,7 @@ public:
   virtual bool Diffuse(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
-  virtual bool Tether(Motor *teth_partner);
+  virtual bool Tether(Protein *teth_partner);
   virtual bool Untether();
 };
 

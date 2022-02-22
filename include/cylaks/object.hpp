@@ -10,7 +10,6 @@ protected:
 
 public:
   bool visible_{true};
-  // Ligand ligand_{DISABLED};
   Vec<double> pos_; // C.O.M. position in lab frame
 
 public:
@@ -34,11 +33,11 @@ public:
   virtual int GetNumNeighborsOccupied() { return -1; }
   virtual int GetNumHeadsActive() { return -1; }
 
-  virtual Object *GetActiveHead() { return nullptr; }
-  virtual Object *GetDockedHead() { return nullptr; }
   virtual Object *GetHeadOne() { return nullptr; }
   virtual Object *GetHeadTwo() { return nullptr; }
   virtual Object *GetOtherHead() { return nullptr; }
+  virtual Object *GetActiveHead() { return nullptr; }
+  virtual Object *GetDockedHead() { return nullptr; }
 
   virtual Vec<double> GetSpringOrientation() { return {}; }
   virtual Vec<double> GetBoundObjectOrientation() { return {}; }

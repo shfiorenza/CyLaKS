@@ -25,6 +25,93 @@ bool Protein::UntetherSatellite() {
   return false;
 }
 
+double Protein::GetSoloWeight_Bind_I_Teth(BindingSite *target) {
+
+  double r_x{teth_partner_->GetAnchorCoordinate(0) - target->pos_[0]};
+  double x{std::fabs(r_x) / Params::Filaments::site_size};
+  if (x < Sys::teth_x_min_ or x > Sys::teth_x_max_) {
+    return 0.0;
+  }
+  double r_y{teth_partner_->GetAnchorCoordinate(1) - target->pos_[1]};
+  double r{sqrt(Square(r_x) + Square(r_y))};
+  double dr{Params::Motors::r_0 - r};
+  double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+  double weight_teth{
+      exp(-(1.0 - _lambda_spring) * 0.5 * k * Square(dr) / Params::kbT)};
+  if (weight_teth > _max_weight) {
+    printf("uhhhh\n");
+    return 0.0;
+  }
+  // double weight_teth{tether_.GetWeight_Bind(r)};
+  double weight_site{target->GetWeight_Bind()};
+  return weight_teth * weight_site;
+}
+
+void Protein::UpdateNeighbors_Bind_I_Teth() {
+
+  if (n_heads_active_ != 0) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [1]");
+  }
+  if (!IsTethered()) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [2]");
+  }
+  if (teth_partner_->GetNumHeadsActive() == 0) {
+    Sys::ErrorExit("Protein::UpdateNeighbors_Bind_I_Teth() [3]");
+  }
+  n_neighbors_bind_i_teth_ = 0;
+  // ! FIXME add n_mt = 2 case
+  BindingSite *anchor{teth_partner_->GetHeadOne()->site_};
+  if (anchor == nullptr) {
+    anchor = teth_partner_->GetHeadTwo()->site_;
+  }
+  for (int dx{Sys::teth_x_min_}; dx <= Sys::teth_x_max_; dx++) {
+    for (int dir{-1}; dir <= 1; dir += 2) {
+      int i_neighb{(int)anchor->index_ + dir * dx};
+      // printf("%i + (%i)(%i) = %i\n", (int)anchor->index_, dir, dx, i_neighb);
+      if (i_neighb < 0 or i_neighb >= anchor->filament_->sites_.size()) {
+        continue;
+      }
+      BindingSite *neighb{&anchor->filament_->sites_[i_neighb]};
+      if (!neighb->IsOccupied()) {
+        // printf("%zu\n", neighbors_bind_i_teth_.size());
+        // printf("%i\n", n_neighbors_bind_i_teth_);
+        neighbors_bind_i_teth_[n_neighbors_bind_i_teth_++] = neighb;
+      }
+    }
+  }
+}
+
+BindingSite *Protein::GetNeighbor_Bind_I_Teth() {
+
+  double weight_tot{GetWeight_Bind_I_Teth()};
+  double ran{SysRNG::GetRanProb()};
+  double p_cum{0.0};
+  Sys::Log(2, "%i NEIGHBS\n", n_neighbors_bind_i_teth_);
+  Sys::Log(2, "ran = %g\n", ran);
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    BindingSite *neighb{neighbors_bind_i_teth_[i_neighb]};
+    p_cum += GetSoloWeight_Bind_I_Teth(neighb) / weight_tot;
+    Sys::Log(2, "p_cum = %g\n", p_cum);
+    if (ran < p_cum) {
+      return neighb;
+    }
+  }
+  return nullptr;
+}
+
+double Protein::GetWeight_Bind_I_Teth() {
+
+  double tot_weight{0.0};
+  UpdateNeighbors_Bind_I_Teth();
+  for (int i_neighb{0}; i_neighb < n_neighbors_bind_i_teth_; i_neighb++) {
+    tot_weight += GetSoloWeight_Bind_I_Teth(neighbors_bind_i_teth_[i_neighb]);
+  }
+  // if (tot_weight != 0.0) {
+  //   printf("%g\n", tot_weight);
+  // }
+  return tot_weight;
+}
+
 bool Protein::UpdateExtension() {
   if (n_heads_active_ != 2) {
     return true;
@@ -278,7 +365,7 @@ bool Protein::Unbind(BindingHead *head) {
   return true;
 }
 
-bool Protein::Tether(Motor *target) {
+bool Protein::Tether(Protein *target) {
 
   if (target->IsTethered()) {
     Sys::ErrorExit("Protein::Tether()");
@@ -288,4 +375,14 @@ bool Protein::Tether(Motor *target) {
   return true;
 }
 
-bool Protein::Untether() { return false; }
+bool Protein::Untether() {
+
+  if (IsTethered() and !HasSatellite()) {
+    teth_partner_->teth_partner_ = nullptr;
+    teth_partner_ = nullptr;
+    return true;
+  } else {
+    Sys::ErrorExit("untether wot m8\n");
+  }
+  return false;
+}

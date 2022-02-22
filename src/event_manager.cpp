@@ -91,5 +91,6 @@ void EventManager::ExecuteEvents() {
              events_to_exe_[i_event]->name_.c_str(),
              events_to_exe_[i_event]->targets_[0]->GetID());
     events_to_exe_[i_event]->Execute();
+    Sys::Log(1, " DONE\n");
   }
 }

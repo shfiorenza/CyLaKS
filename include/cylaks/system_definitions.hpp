@@ -1,12 +1,17 @@
-#ifndef _CYLAKS_DEFINITIONS_HPP_
-#define _CYLAKS_DEFINITIONS_HPP_
+#ifndef _CYLAKS_SYSTEM_DEFINITIONS_HPP_
+#define _CYLAKS_SYSTEM_DEFINITIONS_HPP_
 #include <cassert>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <unordered_map>
 #include <vector>
+
+enum Ligand { NONE, ATP, ADPP, ADP };
+inline static const double _max_weight{1e3};
 
 /* Physical constants */
 inline static const size_t _n_dims_max{2};
@@ -52,7 +57,6 @@ template <typename DATA_T> inline DATA_T Pow(DATA_T x, size_t n) {
   }
   return result;
 }
-
 template <typename... ARGS> inline double Avg(ARGS... vals) {
   double sum{0.0};
   for (auto const &val : {vals...}) {
@@ -101,5 +105,4 @@ inline Vec2D<double> GetProjectionMatrix(Vec<double> a) { return Outer(a, a); }
 inline Vec2D<double> GetOrthonormalBasis(Vec<double> a) {
   return {{a[0], a[1]}, {a[1], -a[0]}};
 }
-
 #endif

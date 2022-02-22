@@ -1,23 +1,75 @@
 #include "cylaks/curator.hpp"
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/yaml.h"
-#include <iostream>
 
 void Curator::CheckArgs(int argc, char *argv[]) {
 
-  if (argc < 3 or argc > 6) {
-    printf("\nError! Incorrect number of command-line arguments\n");
-    printf("Correct format: %s parameters.yaml sim_name (required) ", argv[0]);
-    printf("test_mode (optional)\n");
-    printf("Currently-implemented test modes are:\n");
-    for (auto const &mode : test_modes_) {
-      printf("   %s\n", mode.c_str());
+  // With no other input arguments, run interactive launcher
+  if (argc == 1) {
+    printf("Running interactive launcher. You can also quick-launch via:\n");
+    printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
+    printf("test_mode (optional)\n\n");
+    Str response;
+    printf("Run test/demo mode? (y/n)\n");
+    std::getline(std::cin, response);
+    // If not a test/demo mode, we just need parameter file and sim name
+    if (response == "n" or response == "N") {
+      printf("\nEnter path to desired parameter file:\n");
+      std::getline(std::cin, Sys::yaml_file_);
+      printf("\nEnter desired name for this simulation\n");
+      std::getline(std::cin, Sys::sim_name_);
     }
+    // Otherwise, display list of scenarios for user to choose from
+    else if (response == "y" or response == "Y") {
+      printf("Currently implemented TEST MODES:\n");
+      for (int i_test{0}; i_test < test_modes_.size(); i_test++) {
+        printf(" %i. %s\n", i_test, test_modes_[i_test].c_str());
+        if (i_test == n_tests_ - 1) {
+          printf("\nCurrently implemented DEMO MODES:\n");
+        }
+      }
+      // Demand that user picks via integer index
+      printf("\nEnter list index (from 0 to %zu) to launch desired scenario.\n",
+             test_modes_.size() - 1);
+      int test_mode{-1};
+      std::cin >> test_mode;
+      std::cin.ignore(); // Use this to ignore newline character in buffer
+      // Validate chosen list index
+      if (!std::cin) {
+        printf("Input value must be an integer. Exiting\n");
+        exit(1);
+      }
+      if (test_mode < 0 or test_mode >= test_modes_.size()) {
+        printf("Invalid list index. Exiting.\n");
+        exit(1);
+      }
+      // Set test mode
+      Sys::yaml_file_ = "params/" + test_param_files_[test_mode] + ".yaml";
+      Str base{test_mode < n_tests_ ? "test_" : "demo_"};
+      Sys::sim_name_ = base + test_modes_[test_mode];
+      Sys::test_mode_ = test_modes_[test_mode];
+      printf("Setting test mode to '%s'\n", Sys::test_mode_.c_str());
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+    // Circumvent the remainder of conventional launch process
+    return;
+  }
+  // If input format is incorrect, inform user of appropriate format
+  if (argc < 3 or argc > 6) {
+    printf("Error! Incorrect number of command-line arguments\n");
+    printf("\nUse '%s' to run interactive launcher. ", argv[0]);
+    printf("Otherwise, the correct format is:\n");
+    printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
+    printf("test_mode (optional)\n\n");
+    printf("A list of currently implemented test modes is available in the "
+           "interactive launcher.\n");
     exit(1);
   }
   Sys::yaml_file_ = argv[1];
   Sys::sim_name_ = argv[2];
-  if (argc == 4 or argc == 5 or argc == 6) {
+  if (argc > 3) {
     Sys::test_mode_ = argv[3];
     bool valid_mode{false};
     for (auto const &mode : test_modes_) {
@@ -71,7 +123,7 @@ void Curator::GenerateLog() {
         printf("simulation '%s'\n\n", Sys::sim_name_.c_str());
         response_unacceptable = false;
       } else {
-        printf("Invalid response. Please choose yes or no.\n");
+        printf("Invalid response. Please choose y (yes) or n (no).\n");
       }
       n_responses++;
       if (n_responses > 5) {
@@ -91,6 +143,7 @@ void Curator::GenerateLog() {
   std::tm now_tm{*std::localtime(&now_c)};
   char now_str[256];
   strftime(now_str, sizeof now_str, "%c", &now_tm);
+  // Print formatted date/time at beginning of log file
   fprintf(Sys::log_file_, "[Log file auto-generated for simulation");
   fprintf(Sys::log_file_, " '%s' on %s]\n\n", Sys::sim_name_.c_str(), now_str);
 }
@@ -100,7 +153,7 @@ void Curator::ParseParameters() {
   using namespace Sys;
   // Check to make sure param file actually exists
   if (!std::filesystem::exists(yaml_file_)) {
-    Log("  Error: param file does not exist; aborting \n");
+    Log("  Error: parameter file does not exist; aborting \n");
     exit(1);
   }
   // Open parameter file
@@ -119,13 +172,25 @@ void Curator::ParseParameters() {
     }
     // Otherwise, look up value label directly
     else {
-      val = input[name];
+      try {
+        val = input[name];
+      } catch (...) {
+        Sys::ErrorExit("Curator::ParseParameters() [1]");
+      }
     }
     // Sometimes, size_t variables use "e" notation & must be treated as doubles
     try {
       *param = val.as<DATA_T>();
     } catch (const YAML::BadConversion err) {
-      *param = (DATA_T)val.as<double>();
+      // However, if this fails, the parameter is missing from the yaml file
+      try {
+        *param = (DATA_T)val.as<double>();
+      } catch (const YAML::BadConversion err) {
+        Sys::Log("\n");
+        Sys::Log("Parameter '%s' is missing from yaml file; exiting.\n",
+                 name.c_str());
+        exit(1);
+      }
     }
     // Convert parameter value into a string that we can easily log
     // (Since we don't know data types a priori, we can't use Log() aka printf)
@@ -139,7 +204,7 @@ void Curator::ParseParameters() {
             val[i_val].as<Str>().c_str(), units.c_str());
       }
     } else {
-      ErrorExit("Curator::ParseParameters() -- parser");
+      ErrorExit("Curator::ParseParameters() [2]");
     }
   };
   // Parse thru parameters
@@ -169,6 +234,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
             "");
   ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
+  ParseYAML(&Filaments::wca_potential_enabled,
+            "filaments.wca_potential_enabled", "");
   // Check to make sure there are enough vector entries for given MT count
   if (Filaments::count > Filaments::n_sites.size() or
       Filaments::count > Filaments::polarity.size() or
@@ -191,6 +258,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Motors::gaussian_amp_solo, "motors.gaussian_amp_solo", "kbT");
   ParseYAML(&Motors::gaussian_ceiling_bulk, "motors.gaussian_ceiling_bulk",
             "kbT");
+  ParseYAML(&Motors::gaussian_stepping_coop, "motors.gaussian_stepping_coop",
+            "");
   ParseYAML(&Motors::neighb_neighb_energy, "motors.neighb_neighb_energy",
             "kbT");
   ParseYAML(&Motors::t_active, "motors.t_active", "s");
@@ -234,6 +303,29 @@ void Curator::InitializeSimulation() {
 
   using namespace Params;
   using namespace Sys;
+  // Initialize sim objects
+  SysRNG::Initialize(seed);
+  // With no test mode active, initialize proteins and filaments normally
+  if (Sys::test_mode_.empty()) {
+    filaments_.Initialize(&proteins_);
+    proteins_.Initialize(&filaments_);
+    // Get maximum filament length in n_sites
+    for (auto const &pf : filaments_.protofilaments_) {
+      if (pf.sites_.size() > n_sites_max_) {
+        n_sites_max_ = pf.sites_.size();
+      }
+    }
+  }
+  // Otherwise, initialize test versions of proteins and filaments
+  else {
+    test_proteins_.Initialize(&test_filaments_);
+    // Get maximum filament length in n_sites
+    for (auto const &pf : test_filaments_.protofilaments_) {
+      if (pf.sites_.size() > n_sites_max_) {
+        n_sites_max_ = pf.sites_.size();
+      }
+    }
+  }
   // Calculate local parameters
   start_time_ = SysClock::now();
   n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
@@ -246,65 +338,47 @@ void Curator::InitializeSimulation() {
   }
   n_steps_run_ = (size_t)std::round(t_run / dt);
   // Log parameters
-  Log("\n");
   Log("  System variables calculated post-initialization:\n");
   Log("   n_steps_run = %zu\n", n_steps_run_);
   Log("   n_steps_equil = %zu\n", n_steps_equil_);
   Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
-  Log("   n_datapoints = %zu\n", n_steps_run_ / n_steps_per_snapshot_);
-  Log("\n");
-  // Initialize sim objects
-  SysRNG::Initialize(seed);
-  // If we're running a test, let proteins initialize filament environment
-  if (Sys::test_mode_.empty()) {
-    filaments_.Initialize(&proteins_);
-  }
-  proteins_.Initialize(&filaments_);
-  for (auto const &pf : filaments_.proto_) {
-    if (pf.sites_.size() > n_sites_max_) {
-      n_sites_max_ = pf.sites_.size();
-    }
-  }
-  if (Sys::test_mode_.empty()) {
-    Log("\n");
-  }
+  Log("   n_datapoints = %zu\n\n", n_steps_run_ / n_steps_per_snapshot_);
 }
 
 void Curator::GenerateDataFiles() {
 
   auto AddDataFile = [&](Str name) {
-    data_files_.emplace(name, DataFile(name));
+    data_files_.emplace(name, Sys::DataFile(name));
   };
+  bool motors_active{proteins_.motors_.active_};
+  bool motors_tethering{proteins_.motors_.tethering_active_};
+  bool xlinks_active{proteins_.xlinks_.active_};
+  bool xlinks_crosslinking{proteins_.xlinks_.crosslinking_active_};
+  if (!Sys::test_mode_.empty()) {
+    motors_active = test_proteins_.motors_.active_;
+    motors_tethering = test_proteins_.motors_.tethering_active_;
+    xlinks_active = test_proteins_.xlinks_.active_;
+    xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
+  }
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
-  // if (Params::Filaments::t_ablate > 0.0) {
-  //   AddDataFile("filament_pos_postSplit");
-  // }
-  if (proteins_.motors_.active_ or proteins_.xlinks_.active_) {
+  if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
     AddDataFile("occupancy");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("occupancy_postSplit");
-    // }
     // Open protein ID file, which stores the unique ID of all bound proteins
     // (unbound not tracked) at their respective site indices during DC
     AddDataFile("protein_id");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("protein_id_postSplit");
-    // }
-    if (proteins_.xlinks_.crosslinking_active_) {
+    if (xlinks_crosslinking) {
+      // ! FIXME rename this; confusing with general term
       AddDataFile("partner_index");
     }
   }
-  if (proteins_.motors_.active_) {
+  if (motors_active) {
     // bool; simply says if motor head is trailing or not
     AddDataFile("motor_head_trailing");
-    // if (Params::Filaments::t_ablate > 0.0) {
-    //   AddDataFile("motor_head_trailing_postSplit");
-    // }
-    if (proteins_.motors_.tethering_active_) {
+    if (motors_tethering) {
       // Open tether coord file, which stores the coordinates
       // of the anchor points of tethered motors
       AddDataFile("tether_anchor_pos");
@@ -318,7 +392,7 @@ void Curator::GenerateDataFiles() {
       */
     }
   }
-  if (proteins_.xlinks_.active_ and proteins_.xlinks_.crosslinking_active_) {
+  if (xlinks_active and xlinks_crosslinking) {
     /*
     // Open xlink extension file, which stores the number of stage-2
     // xlinks at a certain extension for all possible extensions
@@ -335,9 +409,27 @@ void Curator::GenerateDataFiles() {
   }
 }
 
+void Curator::UpdateObjects() {
+
+  if (Sys::test_mode_.empty()) {
+    proteins_.RunKMC();
+    filaments_.RunBD();
+  } else {
+    test_proteins_.RunKMC();
+    test_filaments_.RunBD();
+  }
+}
+
 void Curator::CheckPrintProgress() {
 
-  // FIXME report t_sim & t_elapsed_irl each milestone; not step #
+  // Choose correct object to read data from
+  bool motors_equil{proteins_.motors_.equilibrated_};
+  bool xlinks_equil{proteins_.xlinks_.equilibrated_};
+  if (!Sys::test_mode_.empty()) {
+    motors_equil = test_proteins_.motors_.equilibrated_;
+    xlinks_equil = test_proteins_.xlinks_.equilibrated_;
+  }
+  // ! FIXME report t_sim & t_elapsed_irl each milestone; not step #
   using namespace Sys;
   using namespace Params;
   // Percent milestone; controls report frequency
@@ -354,8 +446,7 @@ void Curator::CheckPrintProgress() {
       Log("Pre-equilibration is %g%% complete. (step #%zu | t = %g s)\n",
           double(i_step_) / n_steps_pre_equil_ * 100, i_step_, i_step_ * dt);
     }
-    if (proteins_.motors_.equilibrated_ and proteins_.xlinks_.equilibrated_ and
-        i_step_ >= n_steps_pre_equil_) {
+    if (motors_equil and xlinks_equil and i_step_ >= n_steps_pre_equil_) {
       n_steps_equil_ = i_step_;
       equilibrating_ = false;
       if (dynamic_equil_window > 0.0) {
@@ -390,19 +481,36 @@ void Curator::OutputData() {
   if (Sys::equilibrating_ or Sys::i_step_ % n_steps_per_snapshot_ != 0) {
     return;
   }
+  // Choose correct object to read data from
+  size_t n_pfs{filaments_.protofilaments_.size()};
+  bool motors_active{proteins_.motors_.active_};
+  bool motors_tethering{proteins_.motors_.tethering_active_};
+  bool xlinks_active{proteins_.xlinks_.active_};
+  bool xlinks_crosslinking{proteins_.xlinks_.crosslinking_active_};
+  if (!Sys::test_mode_.empty()) {
+    n_pfs = test_filaments_.protofilaments_.size();
+    motors_active = test_proteins_.motors_.active_;
+    motors_tethering = test_proteins_.motors_.tethering_active_;
+    xlinks_active = test_proteins_.xlinks_.active_;
+    xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
+  }
   Sys::i_datapoint_++;
-  for (auto &&pf : filaments_.proto_) {
+  for (int i_pf{0}; i_pf < n_pfs; i_pf++) {
+    Protofilament *pf{nullptr};
+    if (Sys::test_mode_.empty()) {
+      pf = &filaments_.protofilaments_[i_pf];
+    } else {
+      pf = &test_filaments_.protofilaments_[i_pf];
+    }
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      coord1[i_dim] = (double)pf.plus_end_->pos_[i_dim];
-      coord2[i_dim] = (double)pf.minus_end_->pos_[i_dim];
+      coord1[i_dim] = (double)pf->plus_end_->pos_[i_dim];
+      coord2[i_dim] = (double)pf->minus_end_->pos_[i_dim];
     }
-    // printf("wrote plus_end = (%g, %g)\n", coord1[0], coord1[1]);
-    // printf("wrote minus_end = (%g, %g)\n", coord2[0], coord2[1]);
     data_files_.at("filament_pos").Write(coord1, _n_dims_max);
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
-    if (!proteins_.motors_.active_ and !proteins_.xlinks_.active_) {
+    if (!motors_active and !xlinks_active) {
       continue;
     }
     int occupancy[n_sites_max_];
@@ -417,7 +525,7 @@ void Curator::OutputData() {
       motor_trailing[i_site] = false;
       tether_anchor_pos[i_site] = -1.0;
     }
-    for (auto const &site : pf.sites_) {
+    for (auto const &site : pf->sites_) {
       if (site.occupant_ == nullptr) {
         continue;
       }
@@ -431,27 +539,25 @@ void Curator::OutputData() {
         }
       } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
-        /*
-        if (site.occupant_->parent_->tethered_) {
-          auto partner{site.occupant_->parent_->partner_};
+        if (site.occupant_->parent_->IsTethered()) {
+          auto partner{site.occupant_->parent_->teth_partner_};
           if (partner->n_heads_active_ > 0) {
-            // double anchor_coord{partner->GetAnchorCoordinate()};
-            // tether_anchor_pos[site.index_] = anchor_coord;
+            double anchor_coord{partner->GetAnchorCoordinate(0)};
+            tether_anchor_pos[site.index_] = anchor_coord;
           }
         }
-        */
       }
     }
     data_files_.at("occupancy").Write(occupancy, n_sites_max_);
     data_files_.at("protein_id").Write(protein_id, n_sites_max_);
-    if (proteins_.xlinks_.crosslinking_active_) {
+    if (xlinks_crosslinking) {
       data_files_.at("partner_index").Write(partner_index, n_sites_max_);
     }
-    if (!proteins_.motors_.active_) {
+    if (!motors_active) {
       continue;
     }
     data_files_.at("motor_head_trailing").Write(motor_trailing, n_sites_max_);
-    if (!proteins_.motors_.tethering_active_) {
+    if (!motors_tethering) {
       continue;
     }
     data_files_.at("tether_anchor_pos").Write(tether_anchor_pos, n_sites_max_);

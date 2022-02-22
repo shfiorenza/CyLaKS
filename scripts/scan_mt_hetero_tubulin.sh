@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_NAME="hetero_tubulin"
-BASE_PARAMS="params_processivity.yaml"
+BASE_PARAMS="params/k401.yaml"
 echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"
 
@@ -13,11 +13,10 @@ do
 		PARAM_FILE="params_temp_${SIM_NAME}.yaml"
 		echo "Launching sim ${SIM_NAME} w/ parameter file ${PARAM_FILE}"
 		cp ${BASE_PARAMS} ${PARAM_FILE}
-		yq w -i ${PARAM_FILE} seed $(( ${BASE_SEED} + ${I_SEED} ))
+    	yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
 		# Run sim for these parameter values
-		./sim ${PARAM_FILE} ${SIM_NAME} hetero_tubulin ${FRAC} 2 &
+		./cylaks.exe ${PARAM_FILE} ${SIM_NAME} hetero_tubulin ${FRAC} 2 &
 	done
 done
 wait
 rm params_temp_${BASE_NAME}_*
-echo END SCAN

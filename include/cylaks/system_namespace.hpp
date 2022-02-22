@@ -1,7 +1,7 @@
 #ifndef _CYLAKS_SYSTEM_NAMESPACE_HPP_
 #define _CYLAKS_SYSTEM_NAMESPACE_HPP_
-#include <cstring>
 #include <filesystem>
+#include <string>
 
 // Sys namespace: Used to easily share variables across CyLaKS classes
 namespace Sys {
@@ -10,14 +10,17 @@ inline std::string sim_name_;  // Name of simulation
 inline std::string test_mode_; // Name of test mode, if any
 inline std::string yaml_file_; // Name of parameter file
 
+inline int teth_x_min_;
+inline int teth_x_max_;
+
 inline FILE *log_file_;      // Pointer to log fle
 inline size_t verbosity_{0}; // How much info is output to log; higher is more
 
 inline bool running_{true};       // If main kmc-bd loop is running
 inline bool equilibrating_{true}; // If proteins are still equilibrating
 
-inline size_t n_unique_objects_{0}; // No. of total objects across all species
-inline size_t n_unique_species_{0}; // No. of different protein species
+inline size_t n_objects_{0}; // No. of total objects across all species
+inline size_t n_species_{0}; // No. of different protein species
 
 inline size_t n_steps_pre_equil_{0}; // kMC-BD steps before proteins are checked
 inline size_t n_steps_equil_{0};     // kMC-BD steps to complete protein equil.
@@ -37,7 +40,7 @@ inline bool early_exit_triggered_{false}; // Exit after next data output?
 
 // Simple look-up tables for Boltzmann factors used throughout simulation
 inline std::vector<double> weight_neighb_bind_;   // index: [n_neighbs]
-inline std::vector<double> weight_neighb_unbind_; // index: n_neighbs]
+inline std::vector<double> weight_neighb_unbind_; // index: [n_neighbs]
 inline size_t lattice_cutoff_; // Range of long-range Gaussian in n_sites
 inline std::vector<double> weight_lattice_bind_;       // index: [delta]
 inline std::vector<double> weight_lattice_unbind_;     // index: [delta]
@@ -49,8 +52,8 @@ template <typename... Args>
 inline void Log(const char *msg, const Args... args) {
   // Tag each log pintout in terminal w/ simulation name
   printf("[%s] ", sim_name_.c_str());
-  // This is technically a horrendous vulnerability, but we don't care about
-  // 'hackers' in our sim; also Log() is never explicitly linked to input
+  // This is technically a horrendous vulnerability, but we don't really care
+  // about 'hackers' in our sim; also Log() is never explicitly linked to input
   int chars_printed{printf(msg, args..., "MISSING STRING")};
   int chars_written{fprintf(log_file_, msg, args..., "MISSING STRING")};
   if (chars_printed < 0 or chars_written < 0) {
@@ -84,5 +87,61 @@ inline void EarlyExit() {
   Log("   N_DATAPOINTS = %zu\n", i_datapoint_);
   running_ = false;
 }
+template <typename DATA_T1, typename DATA_T2>
+inline void OverrideParam(std::string name, DATA_T1 *param, DATA_T2 value) {
+  if (*param != value) {
+    Log("    %s = %s\n", name.c_str(), std::to_string(value).c_str());
+    *param = value;
+  }
+}
+/* Useful data structures */
+struct DataFile {
+  std::string name_{"example"};
+  std::string filename_{"simName_example.file"};
+  FILE *fileptr_;
+  DataFile() {}
+  DataFile(std::string name) : name_{name} {
+    filename_ = Sys::sim_name_ + "_" + name_ + ".file";
+    fileptr_ = fopen(filename_.c_str(), "w");
+    if (fileptr_ == nullptr) {
+      printf("Error; cannot open '%s'\n", filename_.c_str());
+      exit(1);
+    }
+  }
+  template <typename DATA_T> void Write(DATA_T *array, size_t count) {
+    size_t n_chars_written{fwrite(array, sizeof(DATA_T), count, fileptr_)};
+    if (n_chars_written < count) {
+      printf("Error writing to '%s'\n", filename_.c_str());
+      exit(1);
+    }
+  }
+};
+struct ProbEntry {
+  std::string event_name_;
+  double val_;
+  std::vector<std::vector<std::vector<double>>> vals_;
+  ProbEntry() {}
+  ProbEntry(Str name, double val) : event_name_{name}, val_{val} {}
+  ProbEntry(Str name, std::vector<std::vector<std::vector<double>>> vals)
+      : event_name_{name}, vals_{vals} {}
+  double GetVal() { return val_; }
+  double GetVal(size_t i) { return vals_[0][0][i]; }
+  double GetVal(size_t i, size_t j) { return vals_[0][i][j]; }
+  double GetVal(size_t i, size_t j, size_t k) { return vals_[i][j][k]; }
+};
+struct BoltzmannFactor {
+  std::string effect_name_;
+  int i_start_{0};
+  size_t size_{0};
+  Vec<double> bind_;
+  Vec<double> unbind_;
+  BoltzmannFactor() {}
+  BoltzmannFactor(std::string name, size_t sz) : BoltzmannFactor(name, sz, 0) {}
+  BoltzmannFactor(std::string name, size_t size, int i_start)
+      : effect_name_{name}, size_{size}, i_start_{i_start} {
+    bind_.resize(size);
+    unbind_.resize(size);
+  }
+};
 }; // namespace Sys
 #endif

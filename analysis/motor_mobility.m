@@ -1,7 +1,10 @@
-%
+%{
 clear variables;
-baseNames = ["kif4a_mobility_10"]; %,"kif4a_mobility_10","kif4a_mobility_50","kif4a_mobility_100"];
-folder = "run_intermediate/round1";
+baseNames = ["mobility_both"];
+%folder = ""; %"run_intermediate/round1";
+folder = "";
+dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
+%dir = sprintf("/home/shane/data_kif4a_paper/%s", folder);
 % Data for baseline mobility w/o any coop -- Kif4A
 %{
 baseNames = ["mobility_baseline_Kif4A"];
@@ -43,9 +46,7 @@ folder = "run_mobility_long";
 
 concentrations = [20, 50, 80, 120, 220, 420];
 concs_index = [1, 2, 3, 4, 5, 6];
-seeds = [0]; % , 1, 2, 3];
-
-dir = sprintf("/home/shane/projects/CyLaKS/%s", folder);
+seeds = [0,1,2,3]; %, 1, 2, 3,4,5];
 
 % Kif4A data
 exp_runlengths = [970, 1310, 2420, 1660, 1960, 2860];
@@ -73,7 +74,7 @@ err_velocities = zeros(n_runs, n_concs);
 for i_run = 1 : n_runs
     for i_concs = 1 : n_concs
         conc = int32(concentrations(i_concs));
-        simName = sprintf("%s/%s_%i_0", dir, baseNames(i_run), conc);
+        simName = sprintf("%s/%s_%i", dir, baseNames(i_run), conc);
         if length(seeds) > 1
             mot_stats = get_motor_stats(simName, seeds);
         else

@@ -1,6 +1,6 @@
 #!/bin/bash
-BASE_NAME="hybrid_motor"
-BASE_PARAMS="params_processivity_hybrid.yaml"
+BASE_NAME="motor_heterodimer"
+BASE_PARAMS="params/kif4a.yaml"
 echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"
 
@@ -13,12 +13,11 @@ do
 		PARAM_FILE="params_temp_${SIM_NAME}.yaml"
 		echo "Launching sim ${SIM_NAME} w/ parameter file ${PARAM_FILE}"
 		cp ${BASE_PARAMS} ${PARAM_FILE}
-		yq w -i ${PARAM_FILE} seed $(( ${BASE_SEED} + ${I_SEED} ))
-		yq w -i ${PARAM_FILE} xlinks.d_i ${D}
+	    yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
+   		yq eval -i ".xlinks.d_i = ${D}" ${PARAM_FILE}
 		# Run sim for these parameter values
-		./sim ${PARAM_FILE} ${SIM_NAME} kinesin_mutant &
+		./cylaks.exe ${PARAM_FILE} ${SIM_NAME} kinesin_mutant &
 	done
 done
 wait
 rm params_temp_${BASE_NAME}_*
-echo END SCAN

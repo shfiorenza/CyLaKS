@@ -12,7 +12,7 @@ inline double t_run;      // Time to run post-equilibration; s
 inline double t_equil;    // Minimum time to equilibrate; s
 inline double t_snapshot; // Time between each data output; s
 inline double dynamic_equil_window; // Set to <=0 to disable dynamic equil; s
-inline size_t verbosity; // Verbosity level; 0 (quiet) to 3 (max. verbosity)
+inline size_t verbosity;            // Verbosity level; 0 (quiet) to 3 (max)
 namespace Filaments {
 inline size_t count;                 // Number of filaments in simulation
 inline double radius;                // Radius of rod (or barrel for MTs); nm
@@ -25,7 +25,8 @@ inline std::vector<double> y_initial; // Starting y-coord of filament COM; nm
 inline std::vector<double> immobile_until; // Time at which filament can move; s
 inline std::vector<double> f_applied;      // Force applied to filament COM; pN
 inline std::vector<bool> translation_enabled; // Toggle translation in x,y
-inline bool rotation_enabled; // Toggle rotation within  x-y plane
+inline bool rotation_enabled;      // Toggle rotation within  x-y plane
+inline bool wca_potential_enabled; // Toggle WCA potential between filaments
 
 }; // namespace Filaments
 namespace Motors {
@@ -33,6 +34,7 @@ inline size_t n_runs_to_exit; // Number of post-equil. runs to trigger an exit
 inline size_t gaussian_range; // Range of Gaussian interaction; n_sites
 inline double gaussian_amp_solo; // Amplitude of interaction for one motor; kBT
 inline double gaussian_ceiling_bulk; // Ceiling of amp. for many motors; kBT
+inline bool gaussian_stepping_coop;  // Do long-rane FX apply to stepping?
 inline double neighb_neighb_energy;  // Short-range interaction magnitude; kBT
 inline double t_active;              // Time at which motors/ATP flows in; s
 inline double k_on;            // Binding rate of ADP heads to MT; 1/(nM*s)

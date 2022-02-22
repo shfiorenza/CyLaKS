@@ -1,8 +1,8 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'run_xlink_diffusion/xlink_diffusion_single_0';
-steps_per_plot = 10;
+sim_name = 'mobility_both_new3_20_0';
+steps_per_plot = 100;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';
 %file_dir='.';

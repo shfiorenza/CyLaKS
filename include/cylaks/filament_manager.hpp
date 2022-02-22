@@ -10,11 +10,8 @@ class ProteinManager;
 
 // FilamentManager: Manages the brownian dynamics and binding sites of filaments
 class FilamentManager {
-private:
+protected:
   bool up_to_date_{false};
-
-  Vec<double> weight_neighbs_bind_;
-  Vec<double> weight_neighbs_unbind_;
 
   // Some temporary hacky stuff for WCA potential
   double sigma_{4.0};     // nm
@@ -28,23 +25,24 @@ private:
 
 public:
   bool mobile_{false};
-  Vec<Protofilament> proto_;
+  Vec<Protofilament> protofilaments_;
   Vec<BindingSite *> sites_;
 
   Map<Str, Population<Object>> unoccupied_;
 
-private:
+protected:
   void SetParameters();
   void GenerateFilaments();
 
   bool AllFilamentsImmobile();
 
-  void UpdateForces();
-  void UpdateLattice();
+  virtual void UpdateForces();
+  virtual void UpdateLattice();
 
 public:
   FilamentManager() {}
-  void Initialize(ProteinManager *proteins) {
+  virtual ~FilamentManager() {}
+  virtual void Initialize(ProteinManager *proteins) {
     proteins_ = proteins;
     SetParameters();
     GenerateFilaments();
@@ -58,7 +56,7 @@ public:
     unoccupied_.emplace(name, Population<Object>(name, sort, sz, i_min, get_i));
   }
   void FlagForUpdate() { up_to_date_ = false; }
-  void UpdateUnoccupied() {
+  virtual void UpdateUnoccupied() {
     if (up_to_date_) {
       return;
     }
@@ -72,23 +70,10 @@ public:
         pop.second.Sort(site);
       }
       int n_neighbs{site->GetNumNeighborsOccupied()};
-      if (Sys::test_mode_.empty()) {
-        site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
-        site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
-        continue;
-      }
-      if (Sys::test_mode_ != "motor_lattice_step") {
-        site->SetWeight_Bind(weight_neighbs_bind_[n_neighbs]);
-        site->SetWeight_Unbind(weight_neighbs_unbind_[n_neighbs]);
-      }
+      site->SetWeight_Bind(Sys::weight_neighb_bind_[n_neighbs]);
+      site->SetWeight_Unbind(Sys::weight_neighb_unbind_[n_neighbs]);
     }
-    if (Sys::test_mode_.empty()) {
-      UpdateLattice();
-      return;
-    }
-    if (Sys::test_mode_ != "motor_lattice_step") {
-      UpdateLattice();
-    }
+    UpdateLattice();
   }
   void RunBD() {
     if (AllFilamentsImmobile()) {
@@ -96,8 +81,8 @@ public:
     }
     UpdateForces();
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
-      for (auto &&filament : proto_) {
-        filament.UpdatePosition();
+      for (auto &&entry : protofilaments_) {
+        entry.UpdatePosition();
       }
       UpdateForces();
     }

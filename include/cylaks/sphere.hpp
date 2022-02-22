@@ -4,7 +4,7 @@
 
 // Sphere: Basic point-like object with a finite radius
 class Sphere : public Object {
-private:
+protected:
   double radius_{0.0};
 
 public:

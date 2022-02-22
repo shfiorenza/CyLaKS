@@ -11,7 +11,7 @@ class Object;
 //            Creates N objects, where N is the sum of binding sites in sim.
 //            Note: objects are not modeled when fully unbound
 template <typename ENTRY_T> struct Reservoir {
-private:
+protected:
   size_t species_id_;
   Vec<ENTRY_T> reservoir_;
 
@@ -20,34 +20,6 @@ private:
   double n_bound_avg_{0.0};
   double n_bound_var_{0.0};
   Vec<size_t> n_bound_;
-
-protected:
-  struct ProbEntry {
-    Str event_name_;
-    double val_;
-    Vec3D<double> vals_;
-    ProbEntry() {}
-    ProbEntry(Str name, double val) : event_name_{name}, val_{val} {}
-    ProbEntry(Str name, Vec3D<double> vals) : event_name_{name}, vals_{vals} {}
-    double GetVal() { return val_; }
-    double GetVal(size_t i) { return vals_[0][0][i]; }
-    double GetVal(size_t i, size_t j) { return vals_[0][i][j]; }
-    double GetVal(size_t i, size_t j, size_t k) { return vals_[i][j][k]; }
-  };
-  struct BoltzmannFactor {
-    Str effect_name_;
-    int i_start_{0};
-    size_t size_{0};
-    Vec<double> bind_;
-    Vec<double> unbind_;
-    BoltzmannFactor() {}
-    BoltzmannFactor(Str name, size_t sz) : BoltzmannFactor(name, sz, 0) {}
-    BoltzmannFactor(Str name, size_t size, int i_start)
-        : effect_name_{name}, size_{size}, i_start_{i_start} {
-      bind_.resize(size);
-      unbind_.resize(size);
-    }
-  };
 
 public:
   Vec<ENTRY_T *> active_entries_;
@@ -58,19 +30,14 @@ public:
   size_t n_active_entries_{0};
 
   bool lattice_coop_active_{false};
-
   bool tethering_active_{false};
   bool crosslinking_active_{false};
 
-  double r_min_{0.0};
-  double r_rest_{0.0};
-  double r_max_{0.0};
-
-  Map<Str, ProbEntry> p_event_;
-  Map<Str, BoltzmannFactor> weights_;
+  Map<Str, Sys::ProbEntry> p_event_;
+  Map<Str, Sys::BoltzmannFactor> weights_;
   Map<Str, Population<Object>> sorted_;
 
-private:
+protected:
   void GenerateEntries(size_t n_entries);
   void SetParameters();
   void CheckEquilibration();
@@ -85,14 +52,15 @@ public:
     SetParameters();
   }
   void AddWeight(Str name, size_t size) {
-    weights_.emplace(name, BoltzmannFactor(name, size));
+    weights_.emplace(name, Sys::BoltzmannFactor(name, size));
   }
   void AddProb(Str name, double val) {
-    p_event_.emplace(name, ProbEntry(name, val));
+    p_event_.emplace(name, Sys::ProbEntry(name, val));
   }
   void AddProb(Str name, double val, Str wt_name, size_t mode) {
     assert(mode == 0 or mode == 1);
     size_t size{weights_.at(wt_name).size_};
+    // FIXME verify this padding is correct
     Vec3D<double> vals(1, Vec2D<double>(1, Vec<double>(size, val)));
     // Vec<double> vals(weights_.at(wt_name).size_, val);
     for (int i{weights_.at(wt_name).i_start_}; i < size; i++) {
@@ -102,10 +70,10 @@ public:
         vals[0][0][i] *= weights_.at(wt_name).unbind_[i];
       }
     }
-    p_event_.emplace(name, ProbEntry(name, vals));
+    p_event_.emplace(name, Sys::ProbEntry(name, vals));
   }
   void AddProb(Str name, Vec3D<double> vals) {
-    p_event_.emplace(name, ProbEntry(name, vals));
+    p_event_.emplace(name, Sys::ProbEntry(name, vals));
   }
   void AddPop(Str name, Fn<Vec<Object *>(Object *)> sort) {
     sorted_.emplace(name, Population<Object>(name, sort, reservoir_.size()));
@@ -119,7 +87,7 @@ public:
     size_t i_entry = SysRNG::GetRanInt(reservoir_.size());
     ENTRY_T *entry = &reservoir_[i_entry];
     size_t n_attempts{0};
-    while (entry->n_heads_active_ > 0 or entry->tethered_) {
+    while (entry->GetNumHeadsActive() > 0 or entry->IsTethered()) {
       if (n_attempts > reservoir_.size()) {
         return nullptr;
       }
@@ -139,6 +107,16 @@ public:
   }
   void RemoveFromActive(ENTRY_T *entry) {
     size_t i_entry{entry->active_index_};
+    // printf("%zu\n", i_entry);
+    active_entries_[i_entry] = active_entries_[--n_active_entries_];
+    active_entries_[i_entry]->active_index_ = i_entry;
+    FlagForUpdate();
+  }
+  // ! FIXME: this is fundamentally unnecessary
+  void RemoveFromActive(Object *base) {
+    ENTRY_T *entry{dynamic_cast<ENTRY_T *>(base)};
+    size_t i_entry{entry->active_index_};
+    // printf("%zu\n", i_entry);
     active_entries_[i_entry] = active_entries_[--n_active_entries_];
     active_entries_[i_entry]->active_index_ = i_entry;
     FlagForUpdate();

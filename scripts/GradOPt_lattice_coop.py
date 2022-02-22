@@ -13,13 +13,13 @@ MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
 sim_name_base = "kif4a_coop_opt_summit"
-param_file_base = "params_processivity.yaml"
+param_file_base = "params_kif4a.yaml"
 log_file = sim_name_base + ".scan"
 
-param_label = ["interaction_energy", "lattice_coop_range",
-               "lattice_coop_Emax_solo", "lattice_coop_Emax_bulk"]
-param_initialVal = [0.75, 500, 0.3, 3.75]
-param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 4.5])
+param_label = ["neighb_neighb_energy", "gaussian_range",
+               "gaussian_amp_solo", "gaussian_ceiling_bulk"]
+param_initialVal = [1.6, 1000, 0.95, 4.75]
+param_bounds = ([0.5, 100, 0.1, 1.5], [3.0, 1500, 1.5, 6])
 step_size = [0.1, 100, 0.1, 0.1]
 
 # param_label = ["interaction_energy", "lattice_coop_range",
@@ -29,7 +29,7 @@ step_size = [0.1, 100, 0.1, 0.1]
 #param_bounds = ([0.5, 100, 0.1, 1.5, 0.05, 0.05], [3.0, 1500, 1.5, 4.5, 5, 5])
 #step_size = [0.1, 100, 0.1, 0.1, 0.1, 0.5]
 
-n_runs = [50, 100, 150, 350, 350, 350]
+n_runs = [50, 125, 200, 300, 400, 500]
 
 # Kif4A concentrations in pM
 kif4a_conc = [20, 50, 80, 120, 220, 420]
@@ -68,7 +68,7 @@ def kif4a_coop_scaling(params):
     log.info("Beginning of iteration {}.{}".format(iteration_no, sub_no))
     log.info("Parameters: {}".format(params))
     # Delete all output files that weren't saved (not enough mem to keep them all)
-    call("make clean-output", shell=True)
+    call("./clean_output.sh", shell=True)
     # Make names, param files, and execution commands for sims with different kif4a concentrations
     sim_names = []
     param_files = []
@@ -84,18 +84,18 @@ def kif4a_coop_scaling(params):
         param_file = "temp_params_" + sim_name + ".yaml"
         # Copy base parameter file and make desired parameter edits
         call("cp " + param_file_base + " " + param_file, shell=True)
-        yaml_edit = "yq w -i " + param_file + " motors."
-        call(yaml_edit + "c_bulk" + " " + repr(conc * 0.001),
-             shell=True)  # Convert conc from pM to nM
-        call(yaml_edit + "n_runs_desired" + " " +
-             repr(n_runs[i_conc]), shell=True)
+        yaml_edit = "yq eval -i "
+        call(yaml_edit + '".motors.c_bulk = ' + repr(conc * 0.001) + '" ' + param_file, shell=True)  # pM to nM
+        call(yaml_edit + '".motors.n_runs_to_exit = ' + repr(n_runs[i_conc]) + '" ' + param_file, shell=True)
+        # FIXME 
         for i in range(len(params)):
-            call(yaml_edit + param_label[i] +
-                 " " + repr(params[i]), shell=True)
+            call(yaml_edit + '".motors.' + param_label[i] + ' = '
+                 " " + repr(params[i]) + '" ' + param_file, shell=True)
         # Add parameter file to param_files array so we can rm them later
         param_files.append(param_file)
         # Generate command to execute this simulation
-        exe_cmd = "./sim " + param_file + " " + sim_name
+        # exe_cmd = "./sim " + param_file + " " + sim_name
+        exe_cmd = "singularity exec --bind $PWD cylaks_latest.sif cylaks.exe  " + param_file + " " + sim_name
         # Add command to exe_commands array so we can launch them all at once
         exe_commands.append(exe_cmd)
     # Launch all sims (with different kif4a concentrations) at once
@@ -118,6 +118,7 @@ def kif4a_coop_scaling(params):
         err_velocity = (
             exp_velocities[i_conc] - kif4a_stats[0][4]) / exp_err_velocities[i_conc]
         log.info("      Velocity error: {}".format(err_velocity))
+        # Only use lifetime and velocity so as to not overconstrain 
         weighted_errors.append(err_lifetime**2 + err_velocity**2)
     log.info("Weighted errors: {}".format(weighted_errors))
     # Move log file into output folder to keep a record of all runs
@@ -129,9 +130,9 @@ def kif4a_coop_scaling(params):
     return weighted_errors
 
 
-already_made = os.path.isfile("./sim")
-if not already_made:
-    call("make -j12 CFG=release sim", shell=True)
+#already_made = os.path.isfile("./cylaks.exe")
+#if not already_made:
+#    call("./install.sh", shell=True)
 ready_for_output = os.path.isfile("/grad_descent_output/")
 if not ready_for_output:
     call("mkdir grad_descent_output", shell=True)

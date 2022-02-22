@@ -3,20 +3,17 @@
 #include "cylaks/system_namespace.hpp"
 #include "cylaks/system_rng.hpp"
 
-EventManager::EventManager() {}
-
-void EventManager::Initialize() {}
-
 void EventManager::SampleEventStatistics() {
 
   n_events_to_exe_ = 0;
   for (auto &&event : events_) {
-    // printf("event is %s\n", event.name_.c_str());
+    // Sys::Log(1, "Sampling event %s\n", event.name_.c_str());
     n_events_to_exe_ += event.SampleStatistics();
   }
   if (n_events_to_exe_ <= 1) {
     return;
   }
+  Sys::Log(1, "Validating event statistics\n");
   // Put all events with >1 target into an active_ array
   Pair<Event *, Object *> active_events[n_events_to_exe_];
   int i_active{0};
@@ -54,6 +51,7 @@ void EventManager::SampleEventStatistics() {
       }
     }
   }
+  Sys::Log(1, " - DONE\n");
 }
 
 void EventManager::GenerateExecutionSequence() {
@@ -61,6 +59,7 @@ void EventManager::GenerateExecutionSequence() {
   if (n_events_to_exe_ == 0) {
     return;
   }
+  Sys::Log(1, "Generating execute sequence\n");
   int i_array{0};
   Event *pre_array[n_events_to_exe_];
   for (auto &&event : events_) {
@@ -80,19 +79,18 @@ void EventManager::GenerateExecutionSequence() {
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     events_to_exe_[i_event] = pre_array[i_event];
   }
+  Sys::Log(1, " - DONE\n");
 }
 
 void EventManager::ExecuteEvents() {
 
   SampleEventStatistics();
   GenerateExecutionSequence();
-  // if (n_events_to_exe_ >= 1) {
-  //   printf("%i EVENTS TO EXE\n", n_events_to_exe_);
-  // }
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
     Sys::Log(1, "Executing event %s on protein #%i\n",
              events_to_exe_[i_event]->name_.c_str(),
              events_to_exe_[i_event]->targets_[0]->GetID());
     events_to_exe_[i_event]->Execute();
+    Sys::Log(1, " DONE\n");
   }
 }

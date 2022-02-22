@@ -13,10 +13,7 @@ class FilamentManager;
 // ProteinManager: Initializes proteins and the kMC events that target them
 //                 Keeps track of different protein populations as sim evolves
 class ProteinManager {
-private:
-  Map<Str, Vec<Pair<size_t, size_t>>> test_stats_;
-  Map<Str, Vec<double>> test_ref_;
-
+protected:
   FilamentManager *filaments_{nullptr};
 
 public:
@@ -24,48 +21,33 @@ public:
   Reservoir<Protein> xlinks_;
   EventManager kmc_;
 
-private:
+protected:
+  void FlagFilamentsForUpdate();
+  virtual void UpdateFilaments();
+
   void GenerateReservoirs();
   void InitializeWeights();
   void SetParameters();
-  void InitializeTestEnvironment();
-  void InitializeTestEvents();
   void InitializeEvents();
-
-  void FlagFilamentsForUpdate();
-  void UpdateFilaments();
+  void CheckProbabilities();
 
 public:
   ProteinManager() {}
-  ~ProteinManager() {
-    // If a test mode was active, report associated statistics
-    for (auto const &entry : test_stats_) {
-      Sys::Log("For event %s:\n", entry.first.c_str());
-      for (int index{0}; index < entry.second.size(); index++) {
-        auto stats = entry.second[index];
-        double p{double(stats.first) / stats.second};
-        double ref{test_ref_.at(entry.first)[index]};
-        Sys::Log("  p[%i] = %.3g (%.3g expected) [%zu / %zu events]\n", index,
-                 p, ref, stats.first, stats.second);
-      }
-    }
-  }
-  void Initialize(FilamentManager *filaments) {
+  virtual ~ProteinManager() {}
+  virtual void Initialize(FilamentManager *filaments) {
     filaments_ = filaments;
-    if (!Sys::test_mode_.empty()) {
-      InitializeTestEnvironment();
-      InitializeTestEvents();
-      return;
-    }
     GenerateReservoirs();
     InitializeWeights();
     SetParameters();
     InitializeEvents();
+    CheckProbabilities();
   }
   void UpdateLatticeDeformation() { motors_.UpdateLatticeDeformation(); }
   void UpdateExtensions() {
-    bool forced_unbind{xlinks_.UpdateExtensions()};
-    if (forced_unbind) {
+    bool motors_forced_unbind{motors_.UpdateExtensions()};
+    bool xlinks_forced_unbind{xlinks_.UpdateExtensions()};
+    if (motors_forced_unbind or xlinks_forced_unbind) {
+      motors_.FlagForUpdate();
       xlinks_.FlagForUpdate();
       FlagFilamentsForUpdate();
     }
@@ -74,8 +56,10 @@ public:
     UpdateFilaments();
     motors_.PrepForKMC();
     xlinks_.PrepForKMC();
+    // Sys::Log(1, "BEGIN KMC EVENTS\n");
     kmc_.ExecuteEvents();
+    // Sys::Log(1, "END KMC EVENTS\n");
   }
+  void RunBD() {}
 };
-
 #endif

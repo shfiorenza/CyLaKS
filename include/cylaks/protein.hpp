@@ -5,6 +5,8 @@
 #include "linear_spring.hpp"
 #include "system_namespace.hpp"
 
+class Motor;
+
 // Protein: Essentially just a passive crosslinker at this stage
 //          Has two binding heads connected by a linear hookean spring
 class Protein : public Object {
@@ -12,6 +14,10 @@ protected:
   double ran_{0.0};
   int n_neighbors_bind_ii_{0};
   Vec<BindingSite *> neighbors_bind_ii_;
+  int n_neighbors_bind_i_teth_{0};
+  Vec<BindingSite *> neighbors_bind_i_teth_;
+  int n_neighbors_bind_ii_teth_{0};
+  Vec<BindingSite *> neighbors_bind_ii_teth_;
 
 public:
   size_t active_index_{0};
@@ -19,13 +25,18 @@ public:
 
   BindingHead head_one_, head_two_;
   LinearSpring spring_;
-  AngularSpring pivot_one_, pivot_two_;
 
-  bool tethered_{false};
-  Protein *partner_{nullptr};
+  Protein *teth_partner_{nullptr};
 
-private:
-  void InitializeNeighborList();
+protected:
+  void InitializeNeighborLists();
+
+  void UpdateNeighbors_Bind_II();
+  void UpdateNeighbors_Bind_I_Teth();
+  void UpdateNeighbors_Bind_II_Teth();
+  double GetSoloWeight_Bind_II(BindingSite *neighb);
+  double GetSoloWeight_Bind_I_Teth(BindingSite *target);
+  double GetSoloWeight_Bind_II_Teth(BindingSite *neighb);
 
 public:
   Protein() {}
@@ -37,18 +48,18 @@ public:
     spring_.Initialize(sid, id, &head_one_, &head_two_, Xlinks::k_spring,
                        Xlinks::r_0, Xlinks::k_spring, Xlinks::theta_0,
                        Xlinks::k_rot);
-    // pivot_one_.Initialize(sid, id, &head_one_, &head_two_, Xlinks::theta_0,
-    //                       Xlinks::k_rot);
-    // pivot_two_.Initialize(sid, id, &head_two_, &head_one_, Xlinks::theta_0,
-    //                       Xlinks::k_rot);
     // Maximum possible x_distance of spring will occur when r_y = 0
     size_t x_max{(size_t)std::ceil(spring_.r_max_ / Filaments::site_size)};
     neighbors_bind_ii_.resize(2 * x_max + 1);
+    neighbors_bind_i_teth_.resize(Filaments::count *
+                                  (2 * Sys::teth_x_max_ + 1));
   }
+
   int GetNumHeadsActive() { return n_heads_active_; }
-  virtual BindingHead *GetHeadOne() { return &head_one_; }
-  virtual BindingHead *GetHeadTwo() { return &head_two_; }
   virtual BindingHead *GetActiveHead() {
+    if (n_heads_active_ != 1) {
+      Sys::ErrorExit("Protein::GetActiveHead()");
+    }
     if (head_one_.site_ != nullptr) {
       return &head_one_;
     } else if (head_two_.site_ != nullptr) {
@@ -58,9 +69,19 @@ public:
       return nullptr;
     }
   }
+  virtual BindingHead *GetHeadOne() { return &head_one_; }
+  virtual BindingHead *GetHeadTwo() { return &head_two_; }
 
+  bool IsTethered() {
+    if (teth_partner_ != nullptr) {
+      return true;
+    }
+    return false;
+  }
   bool HasSatellite();
-  void UntetherSatellite();
+  bool UntetherSatellite();
+  double GetWeight_Bind_I_Teth();
+  BindingSite *GetNeighbor_Bind_I_Teth();
 
   virtual void ApplyLatticeDeformation() {}
 
@@ -68,8 +89,6 @@ public:
   virtual int GetDirectionTowardRest(BindingHead *head);
   virtual double GetAnchorCoordinate(int i_dim);
 
-  virtual void UpdateNeighbors_Bind_II();
-  virtual double GetSoloWeight_Bind_II(BindingSite *neighb);
   virtual BindingSite *GetNeighbor_Bind_II();
 
   virtual double GetWeight_Diffuse(BindingHead *head, int dir);
@@ -79,7 +98,7 @@ public:
   virtual bool Diffuse(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
-  virtual bool Tether();
+  virtual bool Tether(Protein *teth_partner);
   virtual bool Untether();
 };
 

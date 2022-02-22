@@ -1,6 +1,6 @@
 #!/bin/bash
 BASE_NAME="k401_forceVel"
-BASE_PARAMS="params_processivity_k401.yaml"
+BASE_PARAMS="params/k401.yaml"
 echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"
 
@@ -14,12 +14,11 @@ do
 		PARAM_FILE="params_temp_${SIM_NAME}.yaml"
 		echo "Launching sim ${SIM_NAME} w/ parameter file ${PARAM_FILE}"
 		cp ${BASE_PARAMS} ${PARAM_FILE}
-		yq w -i ${PARAM_FILE} seed $(( ${BASE_SEED} + ${I_SEED} ))
-		yq w -i ${PARAM_FILE} motors.applied_force ${FORCE}
+	    yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
+	    yq eval -i ".motors.applied_force = ${FORCE}" ${PARAM_FILE}
 		# Run sim for these parameter values
-		./sim ${PARAM_FILE} ${SIM_NAME} &
+		./cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
 	done
 done
 wait
 rm params_temp_${BASE_NAME}_*
-echo END SCAN

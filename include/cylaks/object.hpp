@@ -1,11 +1,11 @@
 #ifndef _CYLAKS_OBJECT_HPP_
 #define _CYLAKS_OBJECT_HPP_
-#include "definitions.hpp"
+#include "system_definitions.hpp"
 
 // Object: Basic building block of CyLaKS; foundation of all proteins/etc
 class Object {
-private:
-  size_t unique_id_{0};
+protected:
+  size_t unique_id_{0}; // Unique ID within CyLaKS among ALL objects
   size_t species_id_{0};
 
 public:
@@ -24,6 +24,8 @@ public:
   size_t GetSpeciesID() { return species_id_; }
 
   virtual bool IsOccupied() { return true; }
+  virtual bool IsTethered() { return false; }
+  virtual bool HasSatellite() { return false; }
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}
@@ -31,10 +33,11 @@ public:
   virtual int GetNumNeighborsOccupied() { return -1; }
   virtual int GetNumHeadsActive() { return -1; }
 
-  virtual Object *GetActiveHead() { return nullptr; }
-  virtual Object *GetOtherHead() { return nullptr; }
   virtual Object *GetHeadOne() { return nullptr; }
   virtual Object *GetHeadTwo() { return nullptr; }
+  virtual Object *GetOtherHead() { return nullptr; }
+  virtual Object *GetActiveHead() { return nullptr; }
+  virtual Object *GetDockedHead() { return nullptr; }
 
   virtual Vec<double> GetSpringOrientation() { return {}; }
   virtual Vec<double> GetBoundObjectOrientation() { return {}; }

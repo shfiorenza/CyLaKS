@@ -8,28 +8,28 @@
 
 // Protofilament: Infinitely-thin rigid rod with a 1-D lattice of binding sites
 class Protofilament : public RigidRod {
-private:
-  size_t polarity_{0};
-  double dt_eff_{0.0};
-  double center_index_{0.0};
+protected:
+  size_t polarity_{0};       // 0 or 1 for plus-end or minus-end at i_site = 0
+  double dt_eff_{0.0};       // Effective timestep during BD sub-step
+  double center_index_{0.0}; // Rod center (relative to i_site = 0) in n_sites
 
 public:
-  size_t index_{0};
-  size_t immobile_until_{0};
+  size_t index_{0};          // Index in filament_manager's protofilament_ list
+  size_t immobile_until_{0}; // In number of timesteps
 
-  int dx_{0}; // Towards plus end
-  Vec<BindingSite> sites_;
+  int dx_{0};              // 1 or -1; gives direction to plus-end
+  Vec<BindingSite> sites_; // Binding sites that belong to this protofilament
 
-  BindingSite *plus_end_{nullptr};
-  BindingSite *minus_end_{nullptr};
-  Protofilament *neighbor_{nullptr};
+  BindingSite *plus_end_{nullptr};   // Pointer to plus-end; static as of now
+  BindingSite *minus_end_{nullptr};  // Pointer to minus-end; static as of now
+  Protofilament *neighbor_{nullptr}; // Pointer to PF that xlinks can crosslink
 
-private:
-  void SetParameters();
-  void GenerateSites();
+protected:
+  void SetParameters(); // Part of initialization routine; sets local params
+  void GenerateSites(); // Part of initialization routine; makes binding sites
 
-  void UpdateRodPosition();
-  void UpdateSitePositions();
+  void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
+  void UpdateSitePositions(); // Update lab frame coordinates of binding sites
 
 public:
   Protofilament() {}
@@ -51,9 +51,7 @@ public:
     }
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       force_[i_dim] += f_applied[i_dim];
-      // printf("f[%i] += %g\n", i_dim, f_applied[i_dim]);
     }
-    /*
     if (Params::Filaments::rotation_enabled) {
       Vec<double> r(_n_dims_max, 0.0); // Points from rod COM to site COM
       for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -61,15 +59,12 @@ public:
       }
       torque_ += Cross(r, f_applied);
     }
-    */
   }
   void AddTorque(double torque_applied) {
-    /*
-      if (Sys::i_step_ < immobile_until_) {
-        return;
-      }
-      torque_ += torque_applied;
-    */
+    if (Sys::i_step_ < immobile_until_) {
+      return;
+    }
+    torque_ += torque_applied;
   }
   void UpdatePosition() {
     if (Sys::i_step_ < immobile_until_) {

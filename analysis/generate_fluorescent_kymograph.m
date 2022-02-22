@@ -1,4 +1,4 @@
-clear variables; 
+    clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
 sim_name = 'run_heterodimer_kymograph/hybrid_motor_0.01_0';

@@ -28,10 +28,8 @@ public:
     index_ = index;
     filament_ = filament;
   }
-
-  void SetBindingAffinity(double val) { binding_affinity_ = val; }
-
   void AddNeighbor(BindingSite *site) { neighbors_.emplace_back(site); }
+  void SetBindingAffinity(double val) { binding_affinity_ = val; }
 
   bool IsOccupied() {
     if (occupant_ == nullptr) {
@@ -47,45 +45,48 @@ public:
     if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
       return;
     }
-    // printf("val = %g\n", val);
     weight_bind_ *= val;
-    if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
-      weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
-      return;
+    // If weight is greater than unity, check if it ever gets GREATER THAN max
+    if (weight_bind_ > 1.0) {
+      if (weight_bind_ > Sys::weight_lattice_bind_max_[n_neighbs]) {
+        weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      }
     }
+    // Else if weight is less than unity ,check if it ever gets LESS THAN max
+    else if (weight_bind_ < 1.0) {
+      if (weight_bind_ < Sys::weight_lattice_bind_max_[n_neighbs]) {
+        weight_bind_ = Sys::weight_lattice_bind_max_[n_neighbs];
+      }
+    }
+    // (If weight is equal to unity, neither case matters)
   }
   void AddWeight_Unbind(double val) {
     int n_neighbs{GetNumNeighborsOccupied()};
     if (weight_unbind_ == Sys::weight_lattice_unbind_max_[n_neighbs]) {
       return;
     }
-    // printf("val = %g\n", val);
     weight_unbind_ *= val;
-    if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
-      weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
-      return;
+    // If weight is greater than unity, check if it ever gets GREATER THAN max
+    if (weight_unbind_ > 1.0) {
+      if (weight_unbind_ > Sys::weight_lattice_unbind_max_[n_neighbs]) {
+        weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      }
     }
+    // Else if weight is less than unity ,check if it ever gets LESS THAN max
+    else if (weight_unbind_ < 1.0) {
+      if (weight_unbind_ < Sys::weight_lattice_unbind_max_[n_neighbs]) {
+        weight_unbind_ = Sys::weight_lattice_unbind_max_[n_neighbs];
+      }
+    }
+    // (If weight is equal to unity, neither case matters)
   }
   double GetWeight_Bind() { return weight_bind_ / binding_affinity_; }
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
-  int GetNumNeighborsOccupied() {
-    if (_n_neighbs_max == 0) {
-      return 0;
-    }
-    int n_neighbs{0};
-    for (auto const &site : neighbors_) {
-      if (site->occupant_ != nullptr) {
-        n_neighbs++;
-      }
-    }
-    // printf("n_neighbs = %i\n", n_neighbs);
-    return n_neighbs;
-  }
+  int GetNumNeighborsOccupied();
+  BindingSite *GetNeighbor(int dir);
 
   void AddForce(Vec<double> f_applied);
   void AddTorque(double tq);
-
-  BindingSite *GetNeighbor(int dir);
 };
 #endif

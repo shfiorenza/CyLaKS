@@ -10,7 +10,7 @@ class BindingSite;
 // LinearSpring: Hookean; works to hold two points at some rest distance
 // Note: currently contains some junk related to angular springs; to fix
 class LinearSpring : public Object {
-private:
+protected:
   double k_slack_{0.0};  // For when r < r_0; pN/nm
   double k_spring_{0.0}; // For when r > r_0; pN/nm
   double k_rot_{0.0};
@@ -30,12 +30,10 @@ public:
   double theta_rest_{0.0};
   double theta_max_{0.0};
 
-private:
+protected:
   void SetCutoffs() {
-    // Find cutoff values by setting a max Boltzmann weight of 1e3
-    double max_weight{1e3};
     // Recall, Weight = exp(0.5 * E / kbT) [assume lambda = 0.5]
-    double E_max{std::log(max_weight) * Params::kbT};
+    double E_max{std::log(_max_weight) * Params::kbT};
     // E = 0.5 * k * (r - r0)^2
     r_min_ = r_rest_ - sqrt(2 * E_max / k_slack_);
     r_max_ = r_rest_ + sqrt(2 * E_max / k_spring_);

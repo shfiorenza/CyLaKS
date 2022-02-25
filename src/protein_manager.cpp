@@ -179,11 +179,48 @@ void ProteinManager::SetParameters() {
   // doubles the probability to diffuse. Thus we divide p_diff by 2.
   p_diffuse_i /= 2.0;
   p_diffuse_ii /= 2.0;
-  Vec3D<double> weight_diff{{Vec<double>(_n_neighbs_max + 1, p_diffuse_i)}};
-  weight_diff[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
-  weight_diff[0][0][2] *= 0.0;
-  xlinks_.AddProb("diffuse_i_fwd", weight_diff);
-  xlinks_.AddProb("diffuse_i_bck", weight_diff);
+  // STOKES DRAG FOR XLINKS
+  // for a single MT being driven towards the right (pos dir.),
+  // hydrodynamic drag would increase p_diffuse_i_bck (neg dir.),
+  // and decrease p_diffuse_i_fwd (pos dir.) by the same proportion
+  double mt_force{Params::Filaments::f_applied[0]};
+  if (mt_force != 0.0) {
+    double vel{mt_force / filaments_->protofilaments_[0].gamma_[0]};
+    printf("MT VEL: %g um/s\n", vel * 0.001);
+    // Fluid flow experienced by crosslinkers is in opposite direction
+    // (ETA is in units of pN*s/um^2; need to convert all nm to um to be valid)
+    double f_drag{-1 * 6 * M_PI * Params::eta * (_r_xlink_head * 0.001) * vel};
+    // Convert force to an energy energy by assuming it does work
+    // on the xlink as it "jumps" from site to site
+    double dE_drag{f_drag * Params::Filaments::site_size * 0.001};
+    printf("f_drag = %g\n", f_drag);
+    printf("dE_drag = %g\n", dE_drag);
+    // Assume lambda = 0.5 for Boltzmann factor so we don't have to worry
+    // about which "jump" is the forward or reverse reaction pathway
+    double weight_drag_fwd{exp(0.5 * dE_drag / Params::kbT)};
+    double weight_drag_bck{exp(-0.5 * dE_drag / Params::kbT)};
+    printf("weight_fwd: %g\n", weight_drag_fwd);
+    printf("weight_bck: %g\n", weight_drag_bck);
+    Vec3D<double> weight_fwd{{Vec<double>(_n_neighbs_max + 1, p_diffuse_i)}};
+    Vec3D<double> weight_bck{{Vec<double>(_n_neighbs_max + 1, p_diffuse_i)}};
+    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+      weight_fwd[0][0][n_neighbs] *= weight_drag_fwd;
+      weight_bck[0][0][n_neighbs] *= weight_drag_bck;
+    }
+    weight_fwd[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
+    weight_bck[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
+    // cannot diffuse with 2 neighbs
+    weight_fwd[0][0][2] *= 0.0;
+    weight_bck[0][0][2] *= 0.0;
+    xlinks_.AddProb("diffuse_i_fwd", weight_fwd);
+    xlinks_.AddProb("diffuse_i_bck", weight_bck);
+  } else {
+    Vec3D<double> weight_diff{{Vec<double>(_n_neighbs_max + 1, p_diffuse_i)}};
+    weight_diff[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
+    weight_diff[0][0][2] *= 0.0;
+    xlinks_.AddProb("diffuse_i_fwd", weight_diff);
+    xlinks_.AddProb("diffuse_i_bck", weight_diff);
+  }
   xlinks_.AddProb("diffuse_ii_to_rest", p_diffuse_ii);
   xlinks_.AddProb("diffuse_ii_fr_rest", p_diffuse_ii);
   // Tether_Free

@@ -12,12 +12,12 @@ filaments:
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [125]
+  n_sites: [1250]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
   immobile_until: [1500, 1500]
-  f_applied: [0.0, 0.0]
+  f_applied: [10.0, 0.0]
   translation_enabled: [false, false]
   rotation_enabled: false
   wca_potential_enabled: false
@@ -43,7 +43,7 @@ motors:
   sigma_off_ii: 0.125 # 0.125
   sigma_ATP: 1.15
   endpausing_active: true
-  tethers_active: true
+  tethers_active: false # true
   k_tether: 10 #0.1
   c_eff_tether: 500
   k_untether: 0.05
@@ -51,7 +51,7 @@ motors:
   k_spring: 0.1325
   k_slack: 0.0265
 xlinks:
-  neighb_neighb_energy: 0.0 # 2.25
+  neighb_neighb_energy: 0.0
   t_active: 0
   k_on: 0.000238
   c_bulk: 10

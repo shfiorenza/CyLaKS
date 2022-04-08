@@ -27,12 +27,12 @@ protected:
     int k{indices[0]};
     int j{indices.size() > 1 ? indices[1] : 0};
     int i{indices.size() > 2 ? indices[2] : 0};
-    Sys::Log(2, "entry added w/ ijk = %i%i%i\n", i, j, k);
+    Sys::Log(3, "entry added w/ ijk = %i%i%i\n", i, j, k);
     bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry;
     if (entry->GetNumHeadsActive() == 2) {
       bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry->GetOtherHead();
     }
-    Sys::Log(2, "bin size = %i\n", bin_size_[i][j][k]);
+    Sys::Log(3, "bin size = %i\n", bin_size_[i][j][k]);
   }
 
 public:

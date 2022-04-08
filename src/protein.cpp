@@ -18,8 +18,16 @@ bool Protein::UntetherSatellite() {
   if (IsTethered()) {
     if (teth_partner_->GetNumHeadsActive() == 0) {
       teth_partner_->teth_partner_ = nullptr;
+      teth_partner_->Object::teth_partner_ = nullptr;
+      teth_partner_->head_one_.teth_partner_ = nullptr;
+      teth_partner_->head_two_.teth_partner_ = nullptr;
       teth_partner_ = nullptr;
+      Object::teth_partner_ = nullptr;
+      head_one_.teth_partner_ = nullptr;
+      head_two_.teth_partner_ = nullptr;
       return true;
+    } else {
+      Sys::ErrorExit("Protein::UntetherSatellite\n");
     }
   }
   return false;
@@ -368,10 +376,23 @@ bool Protein::Unbind(BindingHead *head) {
 bool Protein::Tether(Protein *target) {
 
   if (target->IsTethered()) {
-    Sys::ErrorExit("Protein::Tether()");
+    printf("target alrdy tethered\n");
+    return false;
+    // Sys::ErrorExit("Protein::Tether() [1]");
+  }
+  if (IsTethered()) {
+    printf("i am alrdy tethered\n");
+    return false;
+    // Sys::ErrorExit("Protein::Tether() [2]");
   }
   teth_partner_ = target;
+  Object::teth_partner_ = dynamic_cast<Object *>(target);
+  head_one_.teth_partner_ = dynamic_cast<Object *>(target);
+  head_two_.teth_partner_ = dynamic_cast<Object *>(target);
   target->teth_partner_ = this;
+  target->Object::teth_partner_ = dynamic_cast<Object *>(this);
+  target->head_one_.teth_partner_ = dynamic_cast<Object *>(this);
+  target->head_two_.teth_partner_ = dynamic_cast<Object *>(this);
   return true;
 }
 
@@ -379,10 +400,17 @@ bool Protein::Untether() {
 
   if (IsTethered() and !HasSatellite()) {
     teth_partner_->teth_partner_ = nullptr;
+    teth_partner_->Object::teth_partner_ = nullptr;
+    teth_partner_->head_one_.teth_partner_ = nullptr;
+    teth_partner_->head_two_.teth_partner_ = nullptr;
     teth_partner_ = nullptr;
+    Object::teth_partner_ = nullptr;
+    head_one_.teth_partner_ = nullptr;
+    head_two_.teth_partner_ = nullptr;
     return true;
   } else {
-    Sys::ErrorExit("untether wot m8\n");
+    printf("untether wot m8\n");
+    // Sys::ErrorExit("untether wot m8\n");
   }
   return false;
 }

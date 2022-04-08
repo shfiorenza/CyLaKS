@@ -265,13 +265,15 @@ void ProteinManager::InitializeEvents() {
     }
   };
   /* *** Sorting functions - general *** */
-  auto is_unocc = [](Object *site) -> Vec<Object *> {
+  auto is_unocc = [](Object *base) -> Vec<Object *> {
+    BindingSite *site{dynamic_cast<BindingSite *>(base)};
     if (!site->IsOccupied()) {
       return {site};
     }
     return {};
   };
-  auto is_bound_i = [](Object *protein) -> Vec<Object *> {
+  auto is_bound_i = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() == 1) {
       if (!protein->IsTethered() or protein->HasSatellite()) {
         return {protein->GetActiveHead()};
@@ -279,7 +281,8 @@ void ProteinManager::InitializeEvents() {
     }
     return {};
   };
-  auto is_bound_ii = [](Object *protein) -> Vec<Object *> {
+  auto is_bound_ii = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() == 2) {
       if (!protein->IsTethered() or protein->HasSatellite()) {
         return {protein->GetHeadOne(), protein->GetHeadTwo()};
@@ -367,21 +370,24 @@ void ProteinManager::InitializeEvents() {
   };
   /* *** Sorting functions - specific to motor-xlink tethering *** */
   // ! TODO: return protein instead of arbitrary head
-  auto is_a_satellite = [](Object *protein) -> Vec<Object *> {
+  auto is_a_satellite = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() == 0 and protein->IsTethered() and
         !protein->HasSatellite()) {
       return {protein->GetHeadOne()};
     }
     return {};
   };
-  auto is_bound_i_teth = [](Object *protein) -> Vec<Object *> {
+  auto is_bound_i_teth = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() == 1 and protein->IsTethered() and
         !protein->HasSatellite()) {
       return {protein->GetActiveHead()};
     }
     return {};
   };
-  auto is_bound_unteth = [](Object *protein) -> Vec<Object *> {
+  auto is_bound_unteth = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() > 0 and !protein->IsTethered()) {
       if (protein->GetNumHeadsActive() == 2) {
         return {protein->GetHeadOne()};
@@ -391,7 +397,8 @@ void ProteinManager::InitializeEvents() {
     }
     return {};
   };
-  auto is_bound_teth = [](Object *protein) -> Vec<Object *> {
+  auto is_bound_teth = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() > 0 and protein->IsTethered() and
         !protein->HasSatellite()) {
       if (protein->GetNumHeadsActive() == 2) {
@@ -436,17 +443,17 @@ void ProteinManager::InitializeEvents() {
   auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
   auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
     if (Sys::i_step_ < pop->step_active_) {
-      return;
+      return false;
     }
     auto entry{pop->GetFreeEntry()};
     if (entry == nullptr) {
-      return;
+      return false;
     }
     bool executed{entry->Bind(site, entry->GetHeadOne())};
     if (executed) {
       pop->AddToActive(entry);
-      fil->FlagForUpdate();
     }
+    return executed;
   };
   if (motors_.active_) {
     // Add unoccupied site tracker for motors; no binning b/c it's Poisson-based
@@ -460,7 +467,8 @@ void ProteinManager::InitializeEvents() {
           return weight_bind_i(dynamic_cast<BindingSite *>(base));
         },
         [&](Object *base) {
-          exe_bind_i(dynamic_cast<BindingSite *>(base), &motors_, filaments_);
+          return exe_bind_i(dynamic_cast<BindingSite *>(base), &motors_,
+                            filaments_);
         });
   }
   if (xlinks_.active_) {
@@ -474,10 +482,12 @@ void ProteinManager::InitializeEvents() {
           &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
           &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_, filaments_);
+            return exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_,
+                              filaments_);
           });
     }
   }
+
   /* *** Bind_I_Teth *** */
   if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
     motors_.AddPop("satellite", is_a_satellite);
@@ -489,14 +499,10 @@ void ProteinManager::InitializeEvents() {
                               auto *fil) {
       auto site{satellite_head->parent_->GetNeighbor_Bind_I_Teth()};
       if (site == nullptr) {
-        return;
+        return false;
       }
-      auto executed{satellite_head->parent_->Bind(site, satellite_head)};
-      if (executed) {
-        pop->FlagForUpdate();
-        altpop->FlagForUpdate();
-        fil->FlagForUpdate();
-      }
+      bool executed{satellite_head->parent_->Bind(site, satellite_head)};
+      return executed;
     };
     kmc_.events_.emplace_back(
         "bind_i_teth (motors)", motors_.p_event_.at("bind_i_teth").GetVal(),
@@ -506,8 +512,8 @@ void ProteinManager::InitializeEvents() {
           return weight_bind_i_teth(dynamic_cast<CatalyticHead *>(base));
         },
         [&](Object *base) {
-          exe_bind_i_teth(dynamic_cast<CatalyticHead *>(base), &motors_,
-                          &xlinks_, filaments_);
+          return exe_bind_i_teth(dynamic_cast<CatalyticHead *>(base), &motors_,
+                                 &xlinks_, filaments_);
         });
     kmc_.events_.emplace_back(
         "bind_i_teth (xlinks)", xlinks_.p_event_.at("bind_i_teth").GetVal(),
@@ -517,10 +523,11 @@ void ProteinManager::InitializeEvents() {
           return weight_bind_i_teth(dynamic_cast<BindingHead *>(base));
         },
         [&](Object *base) {
-          exe_bind_i_teth(dynamic_cast<BindingHead *>(base), &xlinks_, &motors_,
-                          filaments_);
+          return exe_bind_i_teth(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                 &motors_, filaments_);
         });
   }
+
   /* *** Bind_II *** */
   auto weight_bind_ii = [](auto *head) {
     return head->parent_->GetWeight_Bind_II();
@@ -530,10 +537,10 @@ void ProteinManager::InitializeEvents() {
     auto site{head->parent_->GetNeighbor_Bind_II()};
     auto executed{head->parent_->Bind(site, head)};
     if (executed) {
+      // FIXME check if this check is necessary / what to do
       bool still_attached{head->parent_->UpdateExtension()};
-      pop->FlagForUpdate();
-      fil->FlagForUpdate();
     }
+    return executed;
   };
   if (xlinks_.crosslinking_active_) {
     xlinks_.AddPop("singly_bound", is_bound_i);
@@ -545,7 +552,8 @@ void ProteinManager::InitializeEvents() {
           return weight_bind_ii(dynamic_cast<BindingHead *>(base));
         },
         [&](Object *base) {
-          exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_);
+          return exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                             filaments_);
         });
   }
   if (motors_.active_) {
@@ -558,8 +566,8 @@ void ProteinManager::InitializeEvents() {
           return weight_bind_ii(dynamic_cast<CatalyticHead *>(base));
         },
         [&](Object *base) {
-          exe_bind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                      filaments_);
+          return exe_bind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                             filaments_);
         });
   }
   /* *** Unbind_II *** */
@@ -568,10 +576,7 @@ void ProteinManager::InitializeEvents() {
   };
   auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
     bool executed{head->Unbind()};
-    if (executed) {
-      pop->FlagForUpdate();
-      fil->FlagForUpdate();
-    }
+    return executed;
   };
   if (xlinks_.crosslinking_active_) {
     xlinks_.AddPop("doubly_bound", is_bound_ii);
@@ -583,8 +588,8 @@ void ProteinManager::InitializeEvents() {
           return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
         },
         [&](Object *base) {
-          exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
-                        filaments_);
+          return exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                               filaments_);
         });
   }
   if (motors_.active_) {
@@ -597,8 +602,8 @@ void ProteinManager::InitializeEvents() {
           return weight_unbind_ii(dynamic_cast<CatalyticHead *>(base));
         },
         [&](Object *base) {
-          exe_unbind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                        filaments_);
+          return exe_unbind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                               filaments_);
         });
   }
   /* *** Unbind_I *** */
@@ -607,7 +612,6 @@ void ProteinManager::InitializeEvents() {
     if (executed) {
       if (head->parent_->HasSatellite()) {
         alt_pop->RemoveFromActive(head->parent_->teth_partner_);
-        alt_pop->FlagForUpdate();
         bool untethered_sat{head->UntetherSatellite()};
         if (!untethered_sat) {
           Sys::ErrorExit("exe_unbind_i");
@@ -615,12 +619,9 @@ void ProteinManager::InitializeEvents() {
       }
       if (!head->parent_->IsTethered()) {
         pop->RemoveFromActive(head->parent_);
-      } else {
-        alt_pop->FlagForUpdate();
       }
-      pop->FlagForUpdate();
-      fil->FlagForUpdate();
     }
+    return executed;
   };
   if (xlinks_.active_) {
     xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
@@ -631,8 +632,8 @@ void ProteinManager::InitializeEvents() {
           &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
           &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_, &motors_,
-                         filaments_);
+            return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                &motors_, filaments_);
           });
     }
   }
@@ -649,8 +650,8 @@ void ProteinManager::InitializeEvents() {
           return weight_unbind_i(dynamic_cast<CatalyticHead *>(base));
         },
         [&](Object *base) {
-          exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_, &xlinks_,
-                       filaments_);
+          return exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
+                              &xlinks_, filaments_);
         });
   }
   /* *** Unbind_I_Teth *** */
@@ -661,10 +662,39 @@ void ProteinManager::InitializeEvents() {
       double anchor_x{head->parent_->GetAnchorCoordinate(0)};
       double site_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
       double r_x{anchor_x - site_x};
-      double dr{Params::Motors::r_0 - r_x};
-      double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
-      double weight{
-          exp(-std::fabs(k * dr) * Params::Motors::sigma_off_i / Params::kbT)};
+      // printf("r_x is %g\n", r_x);
+      double dr{Params::Motors::r_0 - std::fabs(r_x)};
+      // printf("dr is %g\n", dr);
+      double k{dr < 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+      double f{k * dr}; // positive force means spring is compressed
+      // get direction of force; first orient using coordinates
+      int f_dir{r_x > 0.0 ? 1 : -1};
+      // if spring is compressed, flip signs since it's pushing not pulling
+      if (dr > 0.0) {
+        f_dir *= -1;
+      }
+      int dx{head->site_->filament_->dx_};
+      // if opposite direction as stepping, treat as hindering load
+      // printf("f is %g\n", f);
+      double weight{0.0};
+      if (f_dir == -dx) {
+        weight =
+            exp(std::fabs(k * dr) * Params::Motors::sigma_off_i / Params::kbT);
+        // printf("HINDERING\n");
+      }
+      // otherwise, it is an assisting load (10x unbinding rate)
+      else if (f_dir == dx) {
+        weight = 10 * exp(std::fabs(k * dr) *
+                          (0.5 * Params::Motors::sigma_off_i) / Params::kbT);
+        // printf("ASSISTING \n");
+      } else {
+        printf("wtf\n");
+      }
+      // printf("weight is %g\n", weight);
+      // printf(" ----- \n\n");
+      // double weight{
+      //     exp(-std::fabs(k * dr) * Params::Motors::sigma_off_i /
+      //     Params::kbT)};
       if (weight > _max_weight) {
         printf("huh 1\n");
         return 0.0;
@@ -677,8 +707,8 @@ void ProteinManager::InitializeEvents() {
         &motors_.sorted_.at("bound_i_ADPP_teth").size_,
         &motors_.sorted_.at("bound_i_ADPP_teth").entries_, poisson,
         weight_unbind_i_f, [&](Object *base) {
-          exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_, &xlinks_,
-                       filaments_);
+          return exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
+                              &xlinks_, filaments_);
         });
     // energy-dependent unbinding for crosslinkers
     auto weight_unbind_i_u = [](auto *base) {
@@ -686,8 +716,9 @@ void ProteinManager::InitializeEvents() {
       double site_x{head->parent_->GetAnchorCoordinate(0)};
       double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
       double r_x{anchor_x - site_x};
-      double dr{Params::Motors::r_0 - r_x};
-      double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+      // FIXME make sure this ABS is correct
+      double dr{Params::Motors::r_0 - std::fabs(r_x)};
+      double k{dr < 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
       double weight{exp(_lambda_spring * 0.5 * k * Square(dr) / Params::kbT)};
       if (weight > _max_weight) {
         return 0.0;
@@ -696,14 +727,14 @@ void ProteinManager::InitializeEvents() {
       return weight;
     };
     xlinks_.AddPop("bound_i_teth", is_bound_i_teth);
-    kmc_.events_.emplace_back("unbind_i_teth (xlinks)",
-                              xlinks_.p_event_.at("unbind_i_teth").GetVal(),
-                              &xlinks_.sorted_.at("bound_i_teth").size_,
-                              &xlinks_.sorted_.at("bound_i_teth").entries_,
-                              poisson, weight_unbind_i_u, [&](Object *base) {
-                                exe_unbind_i(dynamic_cast<BindingHead *>(base),
-                                             &xlinks_, &motors_, filaments_);
-                              });
+    kmc_.events_.emplace_back(
+        "unbind_i_teth (xlinks)", xlinks_.p_event_.at("unbind_i_teth").GetVal(),
+        &xlinks_.sorted_.at("bound_i_teth").size_,
+        &xlinks_.sorted_.at("bound_i_teth").entries_, poisson,
+        weight_unbind_i_u, [&](Object *base) {
+          return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+                              &motors_, filaments_);
+        });
   }
   /* *** Tether_Free *** */
   if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
@@ -711,62 +742,69 @@ void ProteinManager::InitializeEvents() {
     xlinks_.AddPop("bound_unteth", is_bound_unteth);
     // Here, the head belongs to the bound untethered protein (or motor)
     auto exe_tether_free = [](auto *head, auto *pop, auto *altpop, auto *fil) {
+      if (head->parent_->IsTethered()) {
+        printf("what the FUCL @ %zu\n", head->GetID());
+      }
       auto satellite{altpop->GetFreeEntry()};
       if (satellite == nullptr) {
-        return;
+        return false;
       }
       bool executed{head->parent_->Tether(satellite)};
       if (executed) {
         altpop->AddToActive(satellite);
-        altpop->FlagForUpdate();
-        pop->FlagForUpdate();
+        Sys::Log(1, "Added satellite %zu to protein %zu\n", satellite->GetID(),
+                 head->GetID());
       }
+      return executed;
     };
     kmc_.events_.emplace_back(
         "tether_free (motors)", motors_.p_event_.at("tether_free").GetVal(),
         &motors_.sorted_.at("bound_unteth").size_,
         &motors_.sorted_.at("bound_unteth").entries_, binomial,
         [&](Object *base) {
-          exe_tether_free(dynamic_cast<CatalyticHead *>(base), &motors_,
-                          &xlinks_, filaments_);
+          return exe_tether_free(dynamic_cast<CatalyticHead *>(base), &motors_,
+                                 &xlinks_, filaments_);
         });
     kmc_.events_.emplace_back(
         "tether_free (xlinks)", xlinks_.p_event_.at("tether_free").GetVal(),
         &xlinks_.sorted_.at("bound_unteth").size_,
         &xlinks_.sorted_.at("bound_unteth").entries_, binomial,
         [&](Object *base) {
-          exe_tether_free(dynamic_cast<BindingHead *>(base), &xlinks_, &motors_,
-                          filaments_);
+          return exe_tether_free(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                 &motors_, filaments_);
         });
   }
+
   /* *** Untether_Free *** */
   if (motors_.active_ and xlinks_.active_ and Params::Motors::tethers_active) {
     auto exe_untether_satellite = [](auto *head, auto *pop, auto *alt_pop) {
       if (!head->parent_->teth_partner_->HasSatellite()) {
         Sys::ErrorExit("untether_satellite");
+        return false;
       }
+      Sys::Log(1, "untethering satellite %zu from protein %zu\n", head->GetID(),
+               head->parent_->teth_partner_->GetID());
       bool executed{head->parent_->teth_partner_->UntetherSatellite()};
       if (executed) {
         pop->RemoveFromActive(head->parent_);
-        pop->FlagForUpdate();
-        alt_pop->FlagForUpdate();
       }
+      return executed;
     };
     kmc_.events_.emplace_back(
         "untether_satellite (motors)",
         motors_.p_event_.at("untether_satellite").GetVal(),
         &motors_.sorted_.at("satellite").size_,
         &motors_.sorted_.at("satellite").entries_, binomial, [&](Object *base) {
-          exe_untether_satellite(dynamic_cast<CatalyticHead *>(base), &motors_,
-                                 &xlinks_);
+          return exe_untether_satellite(dynamic_cast<CatalyticHead *>(base),
+                                        &motors_, &xlinks_);
         });
     kmc_.events_.emplace_back(
         "untether_satellite (xlinks)",
         xlinks_.p_event_.at("untether_satellite").GetVal(),
         &xlinks_.sorted_.at("satellite").size_,
         &xlinks_.sorted_.at("satellite").entries_, binomial, [&](Object *base) {
-          exe_untether_satellite(dynamic_cast<BindingHead *>(base), &xlinks_,
-                                 &motors_);
+          return exe_untether_satellite(dynamic_cast<BindingHead *>(base),
+                                        &xlinks_, &motors_);
         });
   }
   // vv motors only vv
@@ -774,9 +812,7 @@ void ProteinManager::InitializeEvents() {
   if (motors_.active_) {
     auto exe_bind_ATP = [](auto *head, auto *pop) {
       bool executed{head->parent_->Bind_ATP(head)};
-      if (executed) {
-        pop->FlagForUpdate();
-      }
+      return executed;
     };
     motors_.AddPop("bound_i_NULL", is_bound_i_NULL);
     kmc_.events_.emplace_back(
@@ -784,8 +820,9 @@ void ProteinManager::InitializeEvents() {
         &motors_.sorted_.at("bound_i_NULL").size_,
         &motors_.sorted_.at("bound_i_NULL").entries_, binomial,
         [&](Object *base) {
-          exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+          return exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
+
     /* *** Bind_ATP_I_Teth *** */
     if (xlinks_.active_ and motors_.tethering_active_) {
       motors_.AddPop("bound_i_NULL_teth", is_bound_i_NULL_teth);
@@ -794,17 +831,27 @@ void ProteinManager::InitializeEvents() {
         double anchor_x{head->parent_->GetAnchorCoordinate(0)};
         double site_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
         double r_x{anchor_x - site_x};
-        double dr{Params::Motors::r_0 - r_x};
-        double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
-        return exp(-std::fabs(k * dr) * Params::Motors::sigma_ATP /
-                   Params::kbT);
+        // FIXME check to make sure ABS is correct
+        double dr{Params::Motors::r_0 - std::fabs(r_x)};
+        double k{dr < 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+        double weight{
+            exp(-std::fabs(k * dr) * Params::Motors::sigma_ATP / Params::kbT)};
+        // printf("WEIGHT: %g\n", weight);
+        // if (std::fabs(r_x) > 135) {
+        //   printf("whut\n");
+        // }
+        if (weight < (1.0 / _max_weight)) {
+          printf("NOPE\n");
+          return 0.0;
+        }
+        return weight;
       };
       kmc_.events_.emplace_back(
           "bind_ATP_i_teth", motors_.p_event_.at("bind_ATP_i_teth").GetVal(),
           &motors_.sorted_.at("bound_i_NULL_teth").size_,
           &motors_.sorted_.at("bound_i_NULL_teth").entries_, poisson,
           weight_bind_ATP_i_teth, [&](Object *base) {
-            exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+            return exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
           });
     }
     /* *** Bind_ATP_II *** */
@@ -813,41 +860,36 @@ void ProteinManager::InitializeEvents() {
       auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
         auto *rear_head{front_head->GetOtherHead()};
         if (front_head->trailing_) {
-          return;
+          return false;
         }
         bool unbound{rear_head->Unbind()};
         bool executed{front_head->parent_->Bind_ATP(front_head)};
-        if (executed) {
-          pop->FlagForUpdate();
-          fil->FlagForUpdate();
-        }
+        return executed;
       };
       auto weight_bind_ATP_ii = [](auto *head) {
         return head->parent_->GetWeight_BindATP_II(head);
       };
-      motors_.AddPop("bound_ii_NULL", is_bound_ii_NULL);
-      kmc_.events_.emplace_back(
-          "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
-          &motors_.sorted_.at("bound_ii_NULL").size_,
-          &motors_.sorted_.at("bound_ii_NULL").entries_, poisson,
-          [&](Object *base) {
-            return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
-          },
-          [&](Object *base) {
-            exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                            filaments_);
-          });
+      // motors_.AddPop("bound_ii_NULL", is_bound_ii_NULL);
+      // kmc_.events_.emplace_back(
+      //     "bind_ATP_ii", motors_.p_event_.at("bind_ATP_ii").GetVal(),
+      //     &motors_.sorted_.at("bound_ii_NULL").size_,
+      //     &motors_.sorted_.at("bound_ii_NULL").entries_, poisson,
+      //     [&](Object *base) {
+      //       return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
+      //     },
+      //     [&](Object *base) {
+      //       return exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base),
+      //                              &motors_, filaments_);
+      //     });
     }
-    /* *** Bind_ATP_II_Teth *** */
+    // *** Bind_ATP_II_Teth ***
     // ! TODO: add
   }
   /* *** Hydrolyze_ATP *** */
   if (motors_.active_) {
     auto exe_hydrolyze = [](auto *head, auto *pop) {
       bool executed{head->parent_->Hydrolyze(head)};
-      if (executed) {
-        pop->FlagForUpdate();
-      }
+      return executed;
     };
     motors_.AddPop("bound_i_ATP", is_bound_i_ATP);
     kmc_.events_.emplace_back(
@@ -855,7 +897,7 @@ void ProteinManager::InitializeEvents() {
         &motors_.sorted_.at("bound_i_ATP").size_,
         &motors_.sorted_.at("bound_i_ATP").entries_, binomial,
         [&](Object *base) {
-          exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
+          return exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
   }
   /* *** Tether_Bound *** */
@@ -868,20 +910,22 @@ void ProteinManager::InitializeEvents() {
     auto exe_tether = [](auto *head, auto *pop, auto *alt_pop) {
       auto xlink{head->parent_->GetNeighbor_Tether()};
       if (xlink == nullptr) {
-        return;
+        return false;
       }
       bool executed{head->parent_->Tether(xlink)};
       if (executed) {
-        pop->FlagForUpdate();
-        alt_pop->FlagForUpdate();
+        Sys::Log(1, "Tethered motor %zu to protein %zu\n", head->GetID(),
+                 xlink->GetID());
       }
+      return executed;
     };
     kmc_.events_.emplace_back(
         "tether_bound (motors)", motors_.p_event_.at("tether_bound").GetVal(),
         &motors_.sorted_.at("bound_unteth").size_,
         &motors_.sorted_.at("bound_unteth").entries_, poisson, weight_tether,
         [&](Object *base) {
-          exe_tether(dynamic_cast<CatalyticHead *>(base), &motors_, &xlinks_);
+          return exe_tether(dynamic_cast<CatalyticHead *>(base), &motors_,
+                            &xlinks_);
         });
   }
   /* *** Untether_Bound *** */
@@ -893,8 +937,9 @@ void ProteinManager::InitializeEvents() {
       double anchor_x{head->parent_->GetAnchorCoordinate(0)};
       double site_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
       double r_x{anchor_x - site_x};
-      double dr{Params::Motors::r_0 - r_x};
-      double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+      // FIXME make sure this ABS is correct
+      double dr{Params::Motors::r_0 - std::fabs(r_x)};
+      double k{dr < 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
       double weight{exp(_lambda_spring * 0.5 * k * Square(dr) / Params::kbT)};
       if (weight > _max_weight) {
         return 0.0;
@@ -903,33 +948,53 @@ void ProteinManager::InitializeEvents() {
       return weight;
     };
     auto exe_untether = [](auto *head, auto *pop, auto *alt_pop) {
+      Sys::Log(1, "Untethering motor %zu from protein %zu\n", head->GetID(),
+               head->parent_->teth_partner_->GetID());
       bool executed{head->parent_->Untether()};
-      if (executed) {
-        pop->FlagForUpdate();
-        alt_pop->FlagForUpdate();
-      }
+      return executed;
     };
-    kmc_.events_.emplace_back(
-        "untether_bound (motors)",
-        motors_.p_event_.at("untether_bound").GetVal(),
-        &motors_.sorted_.at("bound_teth").size_,
-        &motors_.sorted_.at("bound_teth").entries_, poisson, weight_untether,
-        [&](Object *base) {
-          exe_untether(dynamic_cast<CatalyticHead *>(base), &motors_, &xlinks_);
-        });
+    kmc_.events_.emplace_back("untether_bound (motors)",
+                              motors_.p_event_.at("untether_bound").GetVal(),
+                              &motors_.sorted_.at("bound_teth").size_,
+                              &motors_.sorted_.at("bound_teth").entries_,
+                              poisson, weight_untether, [&](Object *base) {
+                                return exe_untether(
+                                    dynamic_cast<CatalyticHead *>(base),
+                                    &motors_, &xlinks_);
+                              });
   }
   // vv xlinks only vv
   // Diffusion
   auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
+    // if (head->parent_->IsTethered() and !head->parent_->HasSatellite()) {
+    //   double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
+    //   // horizontal tethers for now
+    //   double r_y{0.0};
+    //   double r{sqrt(Square(r_y) + Square(anchor_x - head->site_->pos_[0]))};
+    //   printf("r is %g\n", r);
+    //   // if (r > 140) {
+    //   //   exit(1);
+    //   // }
+    // }
     bool executed{head->Diffuse(dir)};
+    // if (head->parent_->IsTethered() and !head->parent_->HasSatellite()) {
+    //   double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
+    //   // horizontal tethers for now
+    //   double r_y{0.0};
+    //   double r{sqrt(Square(r_y) + Square(anchor_x - head->site_->pos_[0]))};
+    //   printf("r is now %g\n\n", r);
+    //   if (r > 140) {
+    //     exit(1);
+    //   }
+    // }
     if (executed) {
       bool still_attached{head->parent_->UpdateExtension()};
+      // TODO do I need this check??
       if (!still_attached) {
         // printf("what\n");
       }
-      pop->FlagForUpdate();
-      fil->FlagForUpdate();
     }
+    return executed;
   };
   if (xlinks_.active_) {
     for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
@@ -939,8 +1004,8 @@ void ProteinManager::InitializeEvents() {
           &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
           &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
-                     1);
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, 1);
           });
       kmc_.events_.emplace_back(
           "diffuse_i_bck",
@@ -948,8 +1013,8 @@ void ProteinManager::InitializeEvents() {
           &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
           &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
-                     -1);
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, -1);
           });
     }
     if (motors_.active_ and motors_.tethering_active_) {
@@ -980,8 +1045,22 @@ void ProteinManager::InitializeEvents() {
         } else {
           weight = exp(-(1.0 - _lambda_spring) * fabs(dE) / Params::kbT);
         }
-        if (weight > _max_weight) {
-          printf("huh 5\n");
+        if (r_new > 141) {
+          return 0.0;
+          // printf("MOTHER @ %zu - weight: %g\n", head->GetID(), weight);
+          // exit(1);
+        }
+        // if (weight > _max_weight) {
+        //   printf("r_old: %g\n", r_old);
+        //   printf("r_new: %g\n", r_new);
+        //   printf("dE: %g - %g = %g\n", energy_new, energy_old, dE);
+        //   printf("huh 5 - %g\n", weight);
+        //   Sys::ErrorExit("U NO");
+        //   // return 0.0;
+        // }
+        if (weight < (1.0 / _max_weight)) {
+          printf("HYUK\n\n");
+          // Sys::ErrorExit("U NOTT");
           return 0.0;
         }
         return weight;
@@ -994,8 +1073,8 @@ void ProteinManager::InitializeEvents() {
             return weight_diffuse_teth(dynamic_cast<BindingHead *>(base), 1);
           },
           [&](Object *base) {
-            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
-                     1);
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, 1);
           });
       kmc_.events_.emplace_back(
           "diffuse_i_bck_teth", xlinks_.p_event_.at("diffuse_i_bck").GetVal(0),
@@ -1005,8 +1084,8 @@ void ProteinManager::InitializeEvents() {
             return weight_diffuse_teth(dynamic_cast<BindingHead *>(base), -1);
           },
           [&](Object *base) {
-            exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
-                     -1);
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, -1);
           });
     }
   }
@@ -1025,7 +1104,8 @@ void ProteinManager::InitializeEvents() {
           return weight_diff_ii(dynamic_cast<BindingHead *>(base), 1);
         },
         [&](Object *base) {
-          exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_, 1);
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, 1);
         });
     kmc_.events_.emplace_back(
         "diffuse_ii_fr_rest",
@@ -1036,7 +1116,8 @@ void ProteinManager::InitializeEvents() {
           return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
         },
         [&](Object *base) {
-          exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_, -1);
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, -1);
         });
   }
   // Diffuse_II_Teth
@@ -1045,6 +1126,25 @@ void ProteinManager::InitializeEvents() {
   // ! TODO: Need to add
   // Unbind_II_Teth
   // ! TODO: Need to add
+}
+
+void ProteinManager::RunKMC() {
+
+  // if (Sys::i_step_ >= 1910000) {
+  //   Sys::verbosity_ = 1;
+  // }
+  UpdateFilaments();
+  motors_.PrepForKMC();
+  xlinks_.PrepForKMC();
+  // Sys::Log(1, "BEGIN KMC EVENTS\n");
+  bool event_executed{kmc_.ExecuteEvents()};
+  if (event_executed) {
+    motors_.FlagForUpdate();
+    xlinks_.FlagForUpdate();
+    filaments_->FlagForUpdate();
+  }
+  // UpdateExtensions();
+  // Sys::Log(1, "END KMC EVENTS\n");
 }
 
 void ProteinManager::CheckProbabilities() {

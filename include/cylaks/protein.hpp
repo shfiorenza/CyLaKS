@@ -55,6 +55,8 @@ public:
                                   (2 * Sys::teth_x_max_ + 1));
   }
 
+  Protein *GetTethPartner() { return teth_partner_; }
+
   int GetNumHeadsActive() { return n_heads_active_; }
   virtual BindingHead *GetActiveHead() {
     if (n_heads_active_ != 1) {

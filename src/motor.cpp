@@ -40,16 +40,25 @@ double Motor::GetSoloWeight_Tether(Protein *xlink) {
   double r_x{GetAnchorCoordinate(0) - xlink->GetAnchorCoordinate(0)};
   double x{std::fabs(r_x) / Params::Filaments::site_size};
   if (x < Sys::teth_x_min_ or x > Sys::teth_x_max_) {
+    // printf("y tho\n");
     return 0.0;
   }
   double r_y{GetAnchorCoordinate(1) - xlink->GetAnchorCoordinate(1)};
   double r{sqrt(Square(r_x) + Square(r_y))};
   double dr{Params::Motors::r_0 - r};
-  double k{dr > 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
+  double k{dr < 0.0 ? Params::Motors::k_spring : Params::Motors::k_slack};
   double weight_teth{
       exp(-(1.0 - _lambda_spring) * 0.5 * k * Square(dr) / Params::kbT)};
   if (weight_teth > _max_weight) {
     printf("uhhhh\n");
+    return 0.0;
+  }
+  if (weight_teth < 1.0 / _max_weight) {
+    // printf("r_x is %g\n", r_x);
+    // printf("r_y is %g\n", r_y);
+    // printf("r is %g\n", r);
+    // printf("dr is %g\n", dr);
+    printf("UHHHH - %g\n\n", weight_teth);
     return 0.0;
   }
   // double weight_teth{tether_.GetWeight_Bind(r)};
@@ -63,6 +72,10 @@ double Motor::GetWeight_Tether() {
   for (int i_neighb{0}; i_neighb < n_neighbors_tether_; i_neighb++) {
     tot_weight += GetSoloWeight_Tether(neighbors_tether_[i_neighb]);
   }
+  // if (tot_weight != 0) {
+  //   printf("tot weight is %g (%i neighbors)\n", tot_weight,
+  //          n_neighbors_tether_);
+  // }
   return tot_weight;
 }
 

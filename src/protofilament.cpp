@@ -53,6 +53,7 @@ void Protofilament::GenerateSites() {
   }
   plus_end_ = &sites_[(n_sites - 1) * polarity_];
   minus_end_ = &sites_[(n_sites - 1) * (1.0 - polarity_)];
+  // plus_end_->SetBindingAffinity(0.01);
   Sys::Log(2, "     plus_end = site %i\n", plus_end_->index_);
   Sys::Log(2, "     minus_end = site %i\n", minus_end_->index_);
   center_index_ = double(n_sites - 1) / 2;

@@ -78,6 +78,7 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
+  // TODO: add hard core potential
   if (Params::Filaments::wca_potential_enabled) {
     double r{protofilaments_[1].pos_[1] - protofilaments_[0].pos_[1]};
     if (r < threshold_) {

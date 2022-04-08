@@ -1,5 +1,5 @@
 clear variables;
-sim_name = 'test4'; % Raw sim name; do not include directory
+sim_name = 'testino11'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -69,7 +69,7 @@ frame_box = [0 0 1445 200];
 
 % Figure details
 fig1 = figure;
-set(fig1, 'Position', [50 50 1000 600]);
+set(fig1, 'Position', [50 50 1000 500]);
 
 % File info
 filamentFileName = '%s_filament_pos.file';
@@ -145,7 +145,7 @@ for i_data = start_frame : frames_per_plot : end_frame
     max_y = max(max(filament_pos(2, :, :, i_data)));
     y_avg = (min_y + max_y)/2;
     width = (max_x - min_x) + 50;
-    height = (3/5 * width); 
+    height = (3/5 * width);  % used to be 3/5 (1/30 for long MTs)
     ax.XLim = [(min_x - 25) (max_x + 25)];
     %ax.XLim = [(min_x - 25) (min_x + 1025)];
     %ax.YLim = [y_avg - 400 y_avg + 400];
@@ -198,8 +198,8 @@ for i_data = start_frame : frames_per_plot : end_frame
                             p_pos = filament_pos(:, 1, 2, i_data);
                             m_pos = filament_pos(:, 2, 2, i_data);
                             neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
-                            endpos_x = m_pos(1) + (double(ii_site-1)/(nn_sites-1))*neighb_vec(1);
-                            endpos_y = m_pos(2) + (double(ii_site-1)/(nn_sites-1))*neighb_vec(2);
+                            endpos_x = m_pos(1) + (double(ii_site)/(nn_sites-1))*neighb_vec(1);
+                            endpos_y = m_pos(2) + (double(ii_site)/(nn_sites-1))*neighb_vec(2);
                             line([pos_x, endpos_x],[pos_y, endpos_y], ...
                                 'LineWidth', 1, 'Color', purple);
                         else

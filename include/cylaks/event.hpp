@@ -11,7 +11,7 @@ protected:
   enum Distribution { Binomial, Poisson };
   Distribution mode_{Binomial};    // Which distribution we sample from
   Vec<Object *> *target_pool_;     // Ptr to list of available targets; dynamic
-  Fn<void(Object *)> exe_;         // Function that actually executes this event
+  Fn<bool(Object *)> exe_;         // Function that actually executes this event
   Fn<int(double, int)> prob_dist_; // Sampled to predict n_events each timestep
   struct PoissonToolbox {
     double weight_total_;
@@ -45,12 +45,12 @@ protected:
 
 public:
   Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
-        Fn<int(double, int)> prob_dist, Fn<void(Object *)> exe)
+        Fn<int(double, int)> prob_dist, Fn<bool(Object *)> exe)
       : name_{name}, p_occur_{p_occur}, n_avail_{n_avail},
         target_pool_{target_pool}, prob_dist_{prob_dist}, exe_{exe} {}
   Event(Str name, double p_occur, size_t *n_avail, Vec<Object *> *target_pool,
         Fn<int(double, int)> prob_dist, Fn<double(Object *)> weight_fn,
-        Fn<void(Object *)> exe)
+        Fn<bool(Object *)> exe)
       : Event(name, p_occur, n_avail, target_pool, prob_dist, exe) {
     poisson_.get_weight_ = weight_fn;
     mode_ = Poisson;
@@ -73,9 +73,12 @@ public:
       }
     }
   }
-  void Execute() {
-    exe_(targets_[--n_expected_]);
-    n_executed_tot_++;
+  bool Execute() {
+    bool executed{exe_(targets_[--n_expected_])};
+    if (executed) {
+      n_executed_tot_++;
+    }
+    return executed;
   }
 };
 #endif

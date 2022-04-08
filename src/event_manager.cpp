@@ -27,12 +27,25 @@ void EventManager::SampleEventStatistics() {
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
     Event *event_i{active_events[i_entry].first};
     Object *tar_i{active_events[i_entry].second};
+    Sys::Log(2, "   event_i = %s @ %zu\n", event_i->name_.c_str(),
+             tar_i->GetID());
     for (int j_entry{i_entry + 1}; j_entry < n_events_to_exe_; j_entry++) {
       Event *event_j{active_events[j_entry].first};
-      // wally_->Log(2, "   event_j = %s\n", event_j->name_.c_str());
       Object *tar_j{active_events[j_entry].second};
+      Sys::Log(2, "     event_j = %s @ %zu\n", event_j->name_.c_str(),
+               tar_j->GetID());
+      bool correction_needed{false};
       // If event_i and event_j target the same protein, remove one
       if (tar_i->GetID() == tar_j->GetID()) {
+        correction_needed = true;
+      }
+      // Also check teth partners since they're coupled
+      if (tar_i->IsTethered()) {
+        if (tar_i->GetTethPartner()->GetID() == tar_j->GetID()) {
+          correction_needed = true;
+        }
+      }
+      if (correction_needed) {
         double p_one{event_i->p_occur_};
         double p_two{event_j->p_occur_};
         double ran{SysRNG::GetRanProb()};
@@ -41,12 +54,16 @@ void EventManager::SampleEventStatistics() {
           active_events[i_entry] = active_events[n_events_to_exe_ - 1];
           i_entry--;
           n_events_to_exe_--;
+          Sys::Log(2, "   Removed event '%s' @ %zu\n", event_i->name_.c_str(),
+                   tar_i->GetID());
           break;
         } else {
           event_j->RemoveTarget(active_events[j_entry].second);
           active_events[j_entry] = active_events[n_events_to_exe_ - 1];
           j_entry--;
           n_events_to_exe_--;
+          Sys::Log(2, "   Removed event '%s' @ %zu\n", event_j->name_.c_str(),
+                   tar_j->GetID());
         }
       }
     }
@@ -82,15 +99,20 @@ void EventManager::GenerateExecutionSequence() {
   Sys::Log(1, " - DONE\n");
 }
 
-void EventManager::ExecuteEvents() {
+bool EventManager::ExecuteEvents() {
 
   SampleEventStatistics();
   GenerateExecutionSequence();
+  bool event_executed{false};
   for (int i_event{0}; i_event < n_events_to_exe_; i_event++) {
-    Sys::Log(1, "Executing event %s on protein #%i\n",
-             events_to_exe_[i_event]->name_.c_str(),
-             events_to_exe_[i_event]->targets_[0]->GetID());
-    events_to_exe_[i_event]->Execute();
+    Event *event{events_to_exe_[i_event]};
+    Sys::Log(1, "Executing event %s on protein #%i\n", event->name_.c_str(),
+             event->targets_[event->n_expected_ - 1]->GetID());
+    bool successful{event->Execute()};
+    if (successful) {
+      event_executed = true;
+    }
     Sys::Log(1, " DONE\n");
   }
+  return event_executed;
 }

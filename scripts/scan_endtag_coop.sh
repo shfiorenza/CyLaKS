@@ -17,7 +17,7 @@ do
 			cp $PARAM_FILE $TEMP_PARAMS
     		yq eval -i ".seed = $(( $BASE_SEED + $SEED_NO ))}" ${TEMP_PARAMS}
 			yq eval -i ".motors.gaussian_range = ${RANGE}" ${TEMP_PARAMS}
-			yq eval -i ".filaments.n_sites = ${N_SITES}" ${TEMP_PARAMS}
+			yq eval -i ".filaments.n_sites[0] = ${N_SITES}" ${TEMP_PARAMS}
 			# Run sim for these parameter values
 			echo Running new sim: file name is ${FILE_NAME}
 			./cylaks.exe $TEMP_PARAMS $FILE_NAME &

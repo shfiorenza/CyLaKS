@@ -155,6 +155,7 @@ void ProteinManager::SetParameters() {
   if (Motors::applied_force > 0.0) {
     wt_unbind_ii *= exp(-Motors::applied_force * Motors::sigma_off_ii / kbT);
   }
+  // printf("wt_unbind_ii: %g\n", wt_unbind_ii);
   motors_.AddProb("unbind_ii", Motors::k_off_ii * dt * wt_unbind_ii);
   xlinks_.AddProb("unbind_ii", Xlinks::k_off_ii * dt);
   // Unbind_II_Teth -- xlinks only
@@ -173,26 +174,32 @@ void ProteinManager::SetParameters() {
   double x_sq{Square(Filaments::site_size / 1000)}; // in um^2
   double tau_i{x_sq / (2 * Xlinks::d_i)};
   double tau_ii{x_sq / (2 * Xlinks::d_ii)};
+  // ! FIXME this should use a different x_sq for side-to-side spacing ( nm ?)
+  double tau_side{x_sq / (2 * Xlinks::d_side)};
   double p_diffuse_i{dt / tau_i};
   double p_diffuse_ii{dt / tau_ii};
+  double p_diffuse_side{dt / tau_side};
   // diff_fwd and diff_bck are two separate events, which effectively
   // doubles the probability to diffuse. Thus we divide p_diff by 2.
   p_diffuse_i /= 2.0;
   p_diffuse_ii /= 2.0;
+  p_diffuse_side /= 2.0;
   // STOKES DRAG FOR XLINKS
   // for a single MT being driven towards the right (pos dir.),
   // hydrodynamic drag would increase p_diffuse_i_bck (neg dir.),
   // and decrease p_diffuse_i_fwd (pos dir.) by the same proportion
   double mt_force{Params::Filaments::f_applied[0]};
   if (mt_force != 0.0) {
-    double vel{mt_force / filaments_->protofilaments_[0].gamma_[0]};
+    double vel{mt_force / filaments_->protofilaments_[0].gamma_[0]}; // nm/s
     printf("MT VEL: %g um/s\n", vel * 0.001);
     // Fluid flow experienced by crosslinkers is in opposite direction
     // (ETA is in units of pN*s/um^2; need to convert all nm to um to be valid)
-    double f_drag{-1 * 6 * M_PI * Params::eta * (_r_xlink_head * 0.001) * vel};
+    // double r_xlink_head{16.0}; // nm
+    double f_drag{-1 * 6 * M_PI * Params::eta * (_r_xlink_head * 0.001) *
+                  (vel * 0.001)};
     // Convert force to an energy energy by assuming it does work
     // on the xlink as it "jumps" from site to site
-    double dE_drag{f_drag * Params::Filaments::site_size * 0.001};
+    double dE_drag{f_drag * Params::Filaments::site_size}; // pN*nm
     printf("f_drag = %g\n", f_drag);
     printf("dE_drag = %g\n", dE_drag);
     // Assume lambda = 0.5 for Boltzmann factor so we don't have to worry
@@ -214,12 +221,20 @@ void ProteinManager::SetParameters() {
     weight_bck[0][0][2] *= 0.0;
     xlinks_.AddProb("diffuse_i_fwd", weight_fwd);
     xlinks_.AddProb("diffuse_i_bck", weight_bck);
+
   } else {
     Vec3D<double> weight_diff{{Vec<double>(_n_neighbs_max + 1, p_diffuse_i)}};
     weight_diff[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
     weight_diff[0][0][2] *= 0.0;
     xlinks_.AddProb("diffuse_i_fwd", weight_diff);
     xlinks_.AddProb("diffuse_i_bck", weight_diff);
+    // Side-step diffusion (from PF to PF)
+    Vec3D<double> weight_diff_side{
+        {Vec<double>(_n_neighbs_max + 1, p_diffuse_side)}};
+    weight_diff_side[0][0][1] *= xlinks_.weights_.at("neighbs").unbind_[1];
+    weight_diff_side[0][0][2] *= 0.0;
+    xlinks_.AddProb("diffuse_side_up", weight_diff_side);
+    xlinks_.AddProb("diffuse_side_down", weight_diff_side);
   }
   xlinks_.AddProb("diffuse_ii_to_rest", p_diffuse_ii);
   xlinks_.AddProb("diffuse_ii_fr_rest", p_diffuse_ii);
@@ -437,6 +452,13 @@ void ProteinManager::InitializeEvents() {
   Vec<int> i_min{0, 0, 0};
   auto get_n_neighbs = [](Object *entry) {
     Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+    return indices_vec;
+  };
+  auto get_n_neighbs_side = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Side()};
+    // for (int i{0}; i < indices_vec.size(); i++) {
+    //   printf("%i\n", indices_vec[i]);
+    // }
     return indices_vec;
   };
   /* *** Bind_I *** */
@@ -966,33 +988,25 @@ void ProteinManager::InitializeEvents() {
   // vv xlinks only vv
   // Diffusion
   auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
-    // if (head->parent_->IsTethered() and !head->parent_->HasSatellite()) {
-    //   double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
-    //   // horizontal tethers for now
-    //   double r_y{0.0};
-    //   double r{sqrt(Square(r_y) + Square(anchor_x - head->site_->pos_[0]))};
-    //   printf("r is %g\n", r);
-    //   // if (r > 140) {
-    //   //   exit(1);
-    //   // }
-    // }
     bool executed{head->Diffuse(dir)};
-    // if (head->parent_->IsTethered() and !head->parent_->HasSatellite()) {
-    //   double anchor_x{head->parent_->teth_partner_->GetAnchorCoordinate(0)};
-    //   // horizontal tethers for now
-    //   double r_y{0.0};
-    //   double r{sqrt(Square(r_y) + Square(anchor_x - head->site_->pos_[0]))};
-    //   printf("r is now %g\n\n", r);
-    //   if (r > 140) {
-    //     exit(1);
-    //   }
-    // }
     if (executed) {
+      pop->FlagForUpdate();
+      fil->FlagForUpdate();
       bool still_attached{head->parent_->UpdateExtension()};
       // TODO do I need this check??
       if (!still_attached) {
         // printf("what\n");
       }
+    }
+    return executed;
+  };
+  xlinks_.AddPop("bound_i_side", is_bound_i, dim_size, i_min,
+                 get_n_neighbs_side);
+  auto exe_diff_side = [](auto *head, auto *pop, auto *fil, int dir) {
+    bool executed{head->Diffuse_Side(dir)};
+    if (executed) {
+      pop->FlagForUpdate();
+      fil->FlagForUpdate();
     }
     return executed;
   };
@@ -1015,6 +1029,25 @@ void ProteinManager::InitializeEvents() {
           binomial, [&](Object *base) {
             return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
                             filaments_, -1);
+          });
+      // SIDE STEP DIFFUSION
+      kmc_.events_.emplace_back(
+          "diffuse_side_up",
+          xlinks_.p_event_.at("diffuse_side_up").GetVal(n_neighbs),
+          &xlinks_.sorted_.at("bound_i_side").bin_size_[0][0][n_neighbs],
+          &xlinks_.sorted_.at("bound_i_side").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            return exe_diff_side(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                 filaments_, 1);
+          });
+      kmc_.events_.emplace_back(
+          "diffuse_side_down",
+          xlinks_.p_event_.at("diffuse_side_down").GetVal(n_neighbs),
+          &xlinks_.sorted_.at("bound_i_side").bin_size_[0][0][n_neighbs],
+          &xlinks_.sorted_.at("bound_i_side").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            return exe_diff_side(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                 filaments_, -1);
           });
     }
     if (motors_.active_ and motors_.tethering_active_) {

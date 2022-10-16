@@ -1,21 +1,21 @@
-    clear variables; 
+clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'run_heterodimer_kymograph/hybrid_motor_0.01_0';
-%sim_name = 'run_tubulin_kymograph/tubulin_1_0';
-%sim_name = 'run_endtag_ablation/ablation';
-%sim_name = 'run_hetero_tubulin/hetero_tubulin_1_0';
-%sim_name = 'run_endtag_vs_coop/endtag_1750_1000_0';
+sim_name = 'shep_multiPF_1nM_20nM_0.0131_8';
+
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1; %1150; %4150;
 i_end = -1; %1650; %4650;
-frac_visible = [1, 1]; %[2,3] % [numerator, denominator]; [1,1] for all visibile
-gfp_intensity = 25; %1.5 % Controls how bright a single motor is (1 typically)
+frac_visible = [1, 2]; %[2,3] % [numerator, denominator]; [1,1] for all visibile
+xlink_intensity = (1/8); %1.5 % Controls how bright a single motor is (1 typically)
+motor_intensity = (1/8);
+
+subfilaments = true; 
 
 % Scale bar lengths 
-scale_x = 2.5; %2.5; %1; % microns
-scale_t = 10; %30; %10; % seconds
+scale_x = 2; %2.5; %1; % microns
+scale_t = 60; %30; %10; % seconds
 
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
@@ -48,6 +48,12 @@ site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in u
 n_mts = sscanf(values{contains(params, "count ")}, '%g');
 if any(contains(params, "COUNT ") ~= 0)
     n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+end
+if any(contains(params, "n_subfilaments") ~= 0)
+    n_sub = sscanf(values{contains(params, "n_subfilaments ")}, '%g');
+    if n_sub > n_mts
+       n_mts = n_sub;
+    end
 end
 % Read in MT lengths (in n_sites)
 mt_lengths = zeros(1, n_mts);
@@ -97,28 +103,33 @@ xlink_ID = 1;
 motor_ID = 2;
 
 motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %protein_ids;
+xlink_matrix = zeros(mt_lengths(1), n_mts, n_datapoints);
 for i_data = 1 : n_datapoints
-   for i_mt = 1 : n_mts
-       for i_site = 1 : mt_lengths(i_mt)
-           id = protein_ids(i_site, i_mt, i_data);
-           if id ~= -1
-               if mod(frac_visible(1)*id, frac_visible(2)) == 0
-                  motor_matrix(i_site, i_mt, i_data) = gfp_intensity;
-               end
-           end
-       end
-   end
+    for i_mt = 1 : n_mts
+        for i_site = 1 : mt_lengths(i_mt)
+            id = protein_ids(i_site, i_mt, i_data);
+            sid = occupancy(i_site, i_mt, i_data);
+            if sid == 1 %~= -1
+                    xlink_matrix(i_site, i_mt, i_data) = xlink_intensity;
+            elseif sid == 2
+                %if mod(frac_visible(1)*id, frac_visible(2)) == 0
+                    motor_matrix(i_site, i_mt, i_data) = motor_intensity;
+                %end
+            end
+        end
+    end
 end
+% change from 'zeros' to 'ones' to make MTs fluorescent 
 site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %occupancy;
 
 if i_end == -1
     i_end = n_datapoints;
 end
 
-dwell_steps = dwell_time / time_per_datapoint;
+dwell_steps = int32(dwell_time / time_per_datapoint);
 
 pixels_x = ceil(max_sites*siteLength/pixelLength)+2*pixelPad;
-if n_mts == 2
+if n_mts == 2 && subfilaments == false
     pixels_x = ceil(2*max_sites*siteLength/pixelLength)+2*pixelPad;
     max_diff_x = 0;
     for i_data = i_start : dwell_steps : i_end - dwell_steps
@@ -135,16 +146,15 @@ if n_mts == 2
 end
 % Sometimes you gotta add or subtract 1 here -- must be some kind of
 % rounding error 
-if n_mts == 2
+if n_mts == 2 && subfilaments == false
    pixels_x = pixels_x + 1; 
 end
 pixels_y = ceil((i_end - i_start) / dwell_steps);
 final_img = zeros(pixels_y, pixels_x, 3);
  % RGB image; 
-
 % Run through movie frames and create each one
-for i_data = i_start : dwell_steps :i_end - dwell_steps
-    if n_mts == 2
+for i_data = i_start : dwell_steps : i_end - dwell_steps
+    if n_mts == 2 && subfilaments == false
         minus_one = filament_pos(:, 2, 1, i_data);
         plus_two = filament_pos(:, 1, 2, i_data);
         diff_x = plus_two(1) - minus_one(1);
@@ -161,12 +171,13 @@ for i_data = i_start : dwell_steps :i_end - dwell_steps
         sites2 = sum(site_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
         lineMatrix = [sites1 buffer sites2 leftover];
     else
-        dataMatrix = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), 3)';
-        lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), 3)';
+        dataMatrixMotors = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
+        dataMatrixXlinks = sum(xlink_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
+        lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
     end
     
     % green channel - motors
-    imageMotors = imageGaussianOverlap(dataMatrix,siteLength,pixelLength,pixelPad,...
+    imageMotors = imageGaussianOverlap(dataMatrixMotors,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
     imageMotors = imageMotors + ones(size(imageMotors))*bkgLevel + randn(size(imageMotors))*noiseStd;
     imageMotors = imageMotors/intensityMax; %convert to grayscale
@@ -176,17 +187,23 @@ for i_data = i_start : dwell_steps :i_end - dwell_steps
     imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
     imageLine = imageLine/intensityMax; %convert to grayscale
-    % blue channel - noise
+    % blue channel - noise (now xlinks)
+    
     imageBlue = ones(size(imageLine))*bkgLevel + randn(size(imageLine))*noiseStd;
     imageBlue = imageBlue/intensityMax;
+    
+    imageXlinks = imageGaussianOverlap(dataMatrixXlinks,siteLength,pixelLength,pixelPad,...
+        gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
+    imageXlinks = imageXlinks + ones(size(imageXlinks))*bkgLevel + randn(size(imageXlinks))*noiseStd;
+    imageXlinks = imageXlinks/intensityMax; %convert to grayscale
     % merge into RGB image
-    imageRGB = cat(3, imageLine, imageMotors, imageBlue);
+    imageRGB = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
     index = (i_data - i_start) / dwell_steps + 1;
     final_img(index, :, :) = mean(imageRGB(:, :, :), 1);
 end
 %} 
 fig1 = figure;
-set(fig1, 'Position', [100 100 200 700]);
+set(fig1, 'Position', [100 100 350 350]);
 %set(fig1, 'Position', [100 100 540 700]);
 axes('Units','Normalize','Position',[0 0 1 1]);
 img1 = imagesc(final_img);
@@ -203,8 +220,12 @@ l2 = line([103 103],[2600 2600-len_y],'Color','w','LineWidth',4); %endtags
 l = line([57 57-len_x],[980 980],'Color','w','LineWidth',4); %tubulin
 l2 = line([56.75 56.75],[970 970-len_y],'Color','w','LineWidth',4); %tubulin
 %}
-l = line([57 57-len_x],[980 980],'Color','w','LineWidth',4); %tubulin
-l2 = line([56.25 56.25],[970 970-len_y],'Color','w','LineWidth',4); %tubulin
+x1 = (95/100)*pixels_x;
+x2 = (94.25/100)*pixels_x;
+y1 = (95/100)*pixels_y;
+y2 = (93/100)*pixels_y;
+l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
+l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
 
 set(l,'clipping','off')
 set(l2,'clipping','off')

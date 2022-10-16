@@ -32,6 +32,8 @@ public:
   int GetDirectionTowardRest();
   virtual int GetNumHeadsActive();
   virtual int GetNumNeighborsOccupied();
+  virtual int GetNumNeighborsOccupied_Side();
+
   BindingHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }
 
@@ -59,5 +61,6 @@ public:
 
   virtual double GetWeight_Diffuse(int dir);
   virtual bool Diffuse(int dir);
+  virtual bool Diffuse_Side(int dir);
 };
 #endif

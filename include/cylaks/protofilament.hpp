@@ -24,6 +24,9 @@ public:
   BindingSite *minus_end_{nullptr};  // Pointer to minus-end; static as of now
   Protofilament *neighbor_{nullptr}; // Pointer to PF that xlinks can crosslink
 
+  Protofilament *top_neighb_{nullptr}; // higher index PF in explicit MT barrel
+  Protofilament *bot_neighb_{nullptr}; // lower index PF in explicit MT barrel
+
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
   void GenerateSites(); // Part of initialization routine; makes binding sites

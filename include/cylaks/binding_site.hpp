@@ -84,7 +84,9 @@ public:
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
   int GetNumNeighborsOccupied();
+  int GetNumNeighborsOccupied_Side();
   BindingSite *GetNeighbor(int dir);
+  BindingSite *GetNeighbor_Side(int dir);
 
   void AddForce(Vec<double> f_applied);
   void AddTorque(double tq);

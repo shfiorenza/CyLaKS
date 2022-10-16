@@ -98,6 +98,7 @@ public:
   virtual double GetWeight_Unbind_II(BindingHead *head);
 
   virtual bool Diffuse(BindingHead *head, int dir);
+  virtual bool Diffuse_Side(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
   virtual bool Tether(Protein *teth_partner);

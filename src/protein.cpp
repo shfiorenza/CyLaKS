@@ -353,6 +353,25 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   return true;
 }
 
+bool Protein::Diffuse_Side(BindingHead *head, int dir) {
+
+  if (dir != 1 and dir != -1) {
+    Sys::ErrorExit("Whoops in Diffuse_Side [Protein]");
+  }
+  BindingSite *old_site{head->site_};
+  BindingSite *new_site{old_site->GetNeighbor_Side(dir)};
+  if (new_site == nullptr) {
+    return false;
+  }
+  if (new_site->occupant_ != nullptr) {
+    return false;
+  }
+  old_site->occupant_ = nullptr;
+  new_site->occupant_ = head;
+  head->site_ = new_site;
+  return true;
+}
+
 bool Protein::Bind(BindingSite *site, BindingHead *head) {
 
   if (site->occupant_ != nullptr) {

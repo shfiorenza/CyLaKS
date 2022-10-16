@@ -221,6 +221,9 @@ void Curator::ParseParameters() {
   ParseYAML(&verbosity, "verbosity", "");
   Log(" Filament parameters:\n");
   ParseYAML(&Filaments::count, "filaments.count", "filaments");
+  ParseYAML(&Filaments::n_subfilaments, "filaments.n_subfilaments",
+            "subfilaments");
+  ParseYAML(&Filaments::periodic_barrel, "filaments.periodic_barrel", "");
   ParseYAML(&Filaments::radius, "filaments.radius", "nm");
   ParseYAML(&Filaments::site_size, "filaments.site_size", "nm");
   ParseYAML(&Filaments::n_bd_per_kmc, "filaments.n_bd_per_kmc", "");
@@ -300,6 +303,7 @@ void Curator::ParseParameters() {
   ParseYAML(&Xlinks::k_off_ii, "xlinks.k_off_ii", "1/s");
   ParseYAML(&Xlinks::d_i, "xlinks.d_i", "um^2/s");
   ParseYAML(&Xlinks::d_ii, "xlinks.d_ii", "um^2/s");
+  ParseYAML(&Xlinks::d_side, "xlinks.d_side", "um^2/s");
   ParseYAML(&Xlinks::r_0, "xlinks.r_0", "nm");
   ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
   ParseYAML(&Xlinks::theta_0, "xlinks.theta_0", "degrees");

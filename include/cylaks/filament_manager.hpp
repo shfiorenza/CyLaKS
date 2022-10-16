@@ -14,7 +14,7 @@ protected:
   bool up_to_date_{false};
 
   // Some temporary hacky stuff for WCA potential
-  double sigma_{4.0};     // nm
+  double sigma_{25.0};    // nm
   double epsilon_{1.0};   // kbT
   double threshold_{0.0}; // nm
 

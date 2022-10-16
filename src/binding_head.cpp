@@ -11,6 +11,10 @@ int BindingHead::GetNumNeighborsOccupied() {
   return site_->GetNumNeighborsOccupied();
 }
 
+int BindingHead::GetNumNeighborsOccupied_Side() {
+  return site_->GetNumNeighborsOccupied_Side();
+}
+
 int BindingHead::GetNumHeadsActive() { return parent_->n_heads_active_; }
 
 Vec<double> BindingHead::GetBoundObjectOrientation() {
@@ -33,3 +37,7 @@ double BindingHead::GetWeight_Diffuse(int dir) {
 }
 
 bool BindingHead::Diffuse(int dir) { return parent_->Diffuse(this, dir); }
+
+bool BindingHead::Diffuse_Side(int dir) {
+  return parent_->Diffuse_Side(this, dir);
+}

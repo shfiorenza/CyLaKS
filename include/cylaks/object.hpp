@@ -29,20 +29,20 @@ public:
 
   virtual bool IsOccupied() { return true; }
   virtual bool IsTethered() {
-    if (teth_partner_ != nullptr) {
-      return true;
-    }
-    return false;
+    return teth_partner_ == nullptr ? false : true;
+    // if (teth_partner_ != nullptr) {
+    //   return true;
+    // }
+    // return false;
   }
-  virtual bool HasSatellite() {
-    printf("uhhhh\n");
-    return false;
-  }
+  virtual bool HasSatellite() { return false; }
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}
 
   virtual int GetNumNeighborsOccupied() { return -1; }
+  virtual int GetNumNeighborsOccupied_Side() { return -1; }
+
   virtual int GetNumHeadsActive() { return -1; }
 
   virtual Object *GetHeadOne() { return nullptr; }

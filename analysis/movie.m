@@ -1,5 +1,5 @@
 clear variables;
-sim_name = 'testino11'; % Raw sim name; do not include directory
+sim_name = 'test'; % Raw sim name; do not include directory
 movie_name = 'testin2';
 
 % Movie details
@@ -38,17 +38,30 @@ n_mts = sscanf(values{contains(params, "count ")}, '%g');
 if any(contains(params, "COUNT ") ~= 0)
     n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
 end
+if any(contains(params, "n_subfilaments") ~= 0)
+    n_sub = sscanf(values{contains(params, "n_subfilaments ")}, '%g');
+    if n_sub > n_mts
+       n_mts = n_sub;
+    end
+end
 % Read in MT lengths (in n_sites)
 mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
-    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
+    mt_lengths(i_mt) =  sscanf(values{contains(params, string)}, '%i');
     if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
         string = sprintf("N_SITES[%i] ", i_mt - 1);
         mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
     end
 end
 max_sites = max(mt_lengths);
+polarity = zeros(1, n_mts);
+for i_mt = 1 : n_mts
+    string = sprintf("polarity[%i] ", i_mt - 1);
+    polarity(i_mt) =  sscanf(values{contains(params, string)}, '%i');
+end
+
+
 n_dims = 2; % hard-coded for now; CyLaKS always outputs data in 2-D
 xlink_cutoff = 5; % FIXME: dynamically get this from log
 teth_cutoff = 10; % FIXME: dynamically get this from log
@@ -143,17 +156,13 @@ for i_data = start_frame : frames_per_plot : end_frame
     max_x = max(max(filament_pos(1, :, :, i_data)));
     min_y = min(min(filament_pos(2, :, :, i_data)));
     max_y = max(max(filament_pos(2, :, :, i_data)));
-    y_avg = (min_y + max_y)/2;
-    width = (max_x - min_x) + 50;
-    height = (3/5 * width);  % used to be 3/5 (1/30 for long MTs)
+    avg_y = (min_y + max_y)/2;
+    height = 400; % (1/10)*(max_x - min_x);
     ax.XLim = [(min_x - 25) (max_x + 25)];
-    %ax.XLim = [(min_x - 25) (min_x + 1025)];
-    %ax.YLim = [y_avg - 400 y_avg + 400];
-    ax.YLim = [y_avg - height/2 y_avg + height/2];
-    %ax.XLim = [(min_x - 25) (min_x + 225)];
-    %ax.YLim = [-75 75];
-    %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
-    %ax.YTick = linspace(roundn((3/5)*min_x, 2), roundn((3/5)*max_x, 2), 5);
+    %ax.XLim = [(min_x - 25) (min_x + 475)];
+    ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
+    ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
+    ax.YTick = linspace(roundn(avg_y - height/2, 2), roundn(avg_y + height/2, 2), 3);
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';
@@ -161,7 +170,7 @@ for i_data = start_frame : frames_per_plot : end_frame
     if(n_mts > 1)
         com_y_one = (filament_pos(2, 1, 1, i_data) + filament_pos(2, 2, 1, i_data))/2;
         com_y_two = (filament_pos(2, 1, 2, i_data) + filament_pos(2, 2, 2, i_data))/2;
-        disp(com_y_one - com_y_two);
+        %disp(com_y_one - com_y_two);
     end
     for i_mt = 1:1:n_mts
         plus_pos = filament_pos(:, 1, i_mt, i_data);
@@ -169,29 +178,31 @@ for i_data = start_frame : frames_per_plot : end_frame
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
             'LineWidth', 4, 'Color', [0.7 0.7 0.7]);
         n_sites = mt_lengths(i_mt);
+        dx = -1;
+        mt_dir = 1;
+        line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
+        if polarity(i_mt) == 1
+            dx = 1;
+            mt_dir = -1;
+            line_vec = [plus_pos(1) - minus_pos(1), plus_pos(2) - minus_pos(2)];
+        end
+        
+        
         % Draw proteins
         for i_site = 1 : n_sites
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
             if(id ~= -1)
-                if i_mt == 1 % comment here for ablation
-                    dx = -1;
-                    mt_dir = 1;
-                    line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
-                    pos_x = plus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
-                    pos_y = plus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
-                % %{   
-                else
-                    dx = 1;
-                    mt_dir = -1;
-                    line_vec = [plus_pos(1) - minus_pos(1), plus_pos(2) - minus_pos(2)];
+                pos_x = plus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
+                pos_y = plus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
+                if polarity(i_mt) == 1
                     pos_x = minus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
                     pos_y = minus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
                 end
-                % %}
+                
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
-                    if(i_mt == 1)
+                    if(i_mt == 0) % lol
                         if(partner_indices(i_site, i_mt, i_data) ~= -1)
                             ii_site = partner_indices(i_site, i_mt, i_data);
                             nn_sites = mt_lengths(2);
@@ -200,11 +211,11 @@ for i_data = start_frame : frames_per_plot : end_frame
                             neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
                             endpos_x = m_pos(1) + (double(ii_site)/(nn_sites-1))*neighb_vec(1);
                             endpos_y = m_pos(2) + (double(ii_site)/(nn_sites-1))*neighb_vec(2);
-                            line([pos_x, endpos_x],[pos_y, endpos_y], ...
-                                'LineWidth', 1, 'Color', purple);
+  %                          line([pos_x, endpos_x],[pos_y, endpos_y], ...
+  %                              'LineWidth', 1, 'Color', purple);
                         else
-                            line([pos_x, pos_x], [pos_y, pos_y + 3* r_prot], ...
-                                'LineWidth', 1, 'Color', purple);
+  %                          line([pos_x, pos_x], [pos_y, pos_y + 3* r_prot], ...
+  %                              'LineWidth', 1, 'Color', purple);
                         end
                     end
                 elseif sid == sid_motor

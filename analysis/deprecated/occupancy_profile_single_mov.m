@@ -1,8 +1,14 @@
 clear variables;
 % Often-changed variables
 
-sim_name = 'mobility_both_new3_20_0';
-steps_per_plot = 100;
+%sim_name = 'shep_0_glide_1.1ums'
+%sim_name = 'shep_0_glide_11ums';
+%sim_name = 'shep_20x';
+%sim_name = 'shep_200x';
+%sim_name = 'shep_20x_1.1ums'
+sim_name = 'shep_200x_1.1ums'
+sim_name = 'shep_20x_noStick'
+steps_per_plot = 10;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';
 %file_dir='.';
@@ -43,7 +49,7 @@ motor_speciesID = 2;
 xlink_speciesID = 1;
 
 fileStruct = '%s_occupancy.file';
-legendLabel = {'Fractional occupancy of motors'}; %, 'Crosslinkers', 'Combined'};
+legendLabel = {'Motors', 'Crosslinkers'}; %, 'Crosslinkers', 'Combined'};
 % Videowriter details
 v = VideoWriter(movie_name);
 v.FrameRate = (n_datapoints / steps_per_plot) / 15;
@@ -133,9 +139,10 @@ for i = 1:1:int32(n_datapoints)
         axis.Box = 'off';
         axis.GridLineStyle = '-';
         set(findall(axis, 'Type', 'Line'), 'LineWidth', 2);
-        %legend(legendLabel, 'Location', 'northeast');
+        %legendLabel = 
+        legend(legendLabel, 'Location', 'northeast');
 
-        dim = [0.75 0.55 .3 .3];
+        dim = [0.77 0.45 .3 .3];
         time = i * time_per_datapoint;
         str = sprintf('Time: %i seconds', int32(time));
         annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');

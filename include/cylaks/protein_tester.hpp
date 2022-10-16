@@ -27,6 +27,7 @@ protected:
   void InitializeTest_Motor_LatticeBind();
   void InitializeTest_Xlink_Diffusion();
   void InitializeTest_Xlink_Bind_II();
+  void InitializeTest_Shepherding();
 
 public:
   ProteinTester() : ProteinManager() {}

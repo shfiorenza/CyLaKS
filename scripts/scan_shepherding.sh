@@ -35,8 +35,8 @@ do
 			# yq eval -i ".filaments.n_sites[1] = ${N_SITES}" ${PARAM_FILE}
 		    # yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
 			# Run sim for these parameter values
-			# ./cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
-			singularity exec --bind $PWD cylaks_latest.sif cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
+			./cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
+			# singularity exec --bind $PWD cylaks_latest.sif cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
 
 	    done
 	#   done

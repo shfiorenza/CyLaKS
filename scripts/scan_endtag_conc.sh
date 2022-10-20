@@ -1,6 +1,6 @@
 #!/bin/bash 
 BASE_NAME="endtag_fluorescence"
-BASE_PARAMS="params_endtag.yaml"
+BASE_PARAMS="params/endtag.yaml"
 echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"
 
@@ -19,20 +19,19 @@ do
 	do
 		#for SEED_NO in 0 1 2 3
 		#do
-	#		SEED=$(( $BASE_SEED + $SEED_NO ))
 	#		SIM_NAME="${BASE_NAME}_${E_INT}_${N_SITES}_${SEED_NO}"
 	#		SIM_NAME="${BASE_NAME}_${N_SITES}_${SEED_NO}"
 			SIM_NAME="${BASE_NAME}_${MOT_CONC[I_CONC]}"
        		PARAM_FILE="params_temp_${SIM_NAME}.yaml"
         	echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
       		cp ${BASE_PARAMS} ${PARAM_FILE}
-    	#	yq w -i ${PARAM_FILE} seed ${SEED}
-			yq w -i ${PARAM_FILE} microtubules.length[0] ${N_SITES}
-			yq w -i ${PARAM_FILE} motors.c_bulk ${MOT_CONC[I_CONC]}
-			yq w -i ${PARAM_FILE} motors.n_runs_desired ${N_RUNS[I_CONC]}
-		#	yq w -i ${PARAM_FILE} motors.interaction_energy ${E_INT}
+		    # yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
+			yq eval -i ".filaments.n_sites[0] = ${N_SITES}" ${PARAM_FILE}
+			yq eval -i ".motors.c_bulk = ${MOT_CONC[I_CONC]}" ${PARAM_FILE}
+    		yq eval -i ".motors.n_runs_to_exit = ${N_RUNS[I_CONC]}" ${PARAM_FILE}
+			yq eval -i ".motors.interaction_energy = ${E_INT}" ${PARAM_FILE} 
 	       	# Run simulation; '&' allows for all to run concurrently 
-     	   	./sim ${PARAM_FILE} ${SIM_NAME} & 
+     	   	./cylaks.exe ${PARAM_FILE} ${SIM_NAME} & 
 			N_SIM_RUNS=$(($N_SIM_RUNS + 1))
 			echo "N_SIM_RUNS = ${N_SIM_RUNS}"
 			if [ ${N_SIM_RUNS} -ge ${N_CORES} ]

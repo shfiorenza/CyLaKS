@@ -26,13 +26,13 @@ do
 		KON=$(echo "scale=2; ${BASE_KON} * ${XLINK_AFF}" | bc)
 		KOFF=$(echo "scale=2; ${BASE_KOFF} / ${XLINK_AFF}" | bc)
 		echo "Launching sim ${SIM_NAME} with parameter file ${PARAM_FILE}"
-    	# yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
+    	yq eval -i ".seed = $(( ${BASE_SEED} + ${I_SEED} ))" ${PARAM_FILE}
 	    # yq eval -i ".xlinks.c_bulk = ${XLINK_CONC}" ${PARAM_FILE}
 	    yq eval -i ".xlinks.k_on = ${KON}" ${PARAM_FILE}
 	    yq eval -i ".xlinks.k_off_i = ${KOFF}" ${PARAM_FILE}
 		# Run sim for these parameter values
 		./cylaks.exe ${PARAM_FILE} ${SIM_NAME} &
 	done
-	# wait
+	wait
 done
-	# rm params_temp_${BASE_NAME}_*
+rm params_temp_${BASE_NAME}_*

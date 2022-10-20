@@ -1,26 +1,25 @@
 clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'shep_multiPF_1nM_20nM_0.0131_8';
+sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.0000131_1';
 
-
-dwell_time = 0.1;  % dwell time of theoretical camera
-i_start = 1; %1150; %4150;
-i_end = -1; %1650; %4650;
-frac_visible = [1, 2]; %[2,3] % [numerator, denominator]; [1,1] for all visibile
-xlink_intensity = (1/8); %1.5 % Controls how bright a single motor is (1 typically)
-motor_intensity = (1/8);
+dwell_time = 3;  % dwell time of theoretical camera
+i_start = 1;
+i_end = -1; 
+frac_visible = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+xlink_intensity = 0.03; %35/sqrt(8); % Controls how bright a single motor is (1 typically)
+motor_intensity = 0.03; % 35/sqrt(8);
 
 subfilaments = true; 
 
 % Scale bar lengths 
-scale_x = 2; %2.5; %1; % microns
-scale_t = 60; %30; %10; % seconds
+scale_x = 1; %2.5; %1; % microns
+scale_t = 300; %30; %10; % seconds
 
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
-pixelPad = 5;
+pixelPad = 3; %15;
 gaussSigma = 1.0;
 doPlot = 0;
 gaussAmp = 4000;
@@ -98,29 +97,41 @@ if isfile(proteinFile)
     protein_ids = reshape(protein_raw_data, max_sites, n_mts, n_datapoints);
 end
 
+
+
+if subfilaments % rescale so we can compare across different n_subfilaments
+    xlink_intensity = xlink_intensity/n_mts;
+    motor_intensity = motor_intensity/n_mts;
+end
+
+
+
 site_ID = 0;
 xlink_ID = 1;
 motor_ID = 2;
 
-motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %protein_ids;
-xlink_matrix = zeros(mt_lengths(1), n_mts, n_datapoints);
+motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); % from protein_ids;
+xlink_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); % from protein_ids;
 for i_data = 1 : n_datapoints
     for i_mt = 1 : n_mts
         for i_site = 1 : mt_lengths(i_mt)
-            id = protein_ids(i_site, i_mt, i_data);
-            sid = occupancy(i_site, i_mt, i_data);
-            if sid == 1 %~= -1
+            id = protein_ids(i_site, i_mt, i_data); % unique individual ID
+            sid = occupancy(i_site, i_mt, i_data);  % species label ID 
+            if sid == 1
+                if mod(frac_visible(1)*id, frac_visible(2)) == 0
                     xlink_matrix(i_site, i_mt, i_data) = xlink_intensity;
+                end
             elseif sid == 2
-                %if mod(frac_visible(1)*id, frac_visible(2)) == 0
+                if mod(frac_visible(1)*id, frac_visible(2)) == 0
                     motor_matrix(i_site, i_mt, i_data) = motor_intensity;
-                %end
+                end
             end
         end
     end
 end
+% currently have MT labeling off
 % change from 'zeros' to 'ones' to make MTs fluorescent 
-site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); %occupancy;
+site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints);
 
 if i_end == -1
     i_end = n_datapoints;
@@ -153,6 +164,7 @@ pixels_y = ceil((i_end - i_start) / dwell_steps);
 final_img = zeros(pixels_y, pixels_x, 3);
  % RGB image; 
 % Run through movie frames and create each one
+
 for i_data = i_start : dwell_steps : i_end - dwell_steps
     if n_mts == 2 && subfilaments == false
         minus_one = filament_pos(:, 2, 1, i_data);
@@ -200,6 +212,7 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
     imageRGB = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
     index = (i_data - i_start) / dwell_steps + 1;
     final_img(index, :, :) = mean(imageRGB(:, :, :), 1);
+    %final_img(index, :, :) = sum(imageRGB(:, :, :), 1);
 end
 %} 
 fig1 = figure;

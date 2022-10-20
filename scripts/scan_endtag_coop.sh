@@ -1,7 +1,7 @@
 #!/bin/bash
 SCAN_NAME="endtag"
-echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params/endtag.yaml"
+echo Starting ${SCAN_NAME} scan
 echo Base parameter file is ${PARAM_FILE}
 
 BASE_SEED=198261346419

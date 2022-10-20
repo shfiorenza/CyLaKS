@@ -13,7 +13,7 @@ MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
 sim_base = "least_squares_scan"
-params_base = "params_endtag.yaml"
+params_base = "params/endtag.yaml"
 log_file = sim_base + "_teth_singleMT" + ".scan"
 mt_lengths = [2, 4, 6, 8, 10, 14]
 exp_endtags_0 = [1.1, 1.3, 1.5, 1.7, 1.8, 2.2]
@@ -49,7 +49,7 @@ log.addHandler(file_log_handler)
 
 call_no = 0
 def endtag_lengths(params):
-    call('make clean-output', shell=True)
+    call('./clean_output.sh', shell=True)
     global call_no
     iteration_no = int(call_no / len(params))
     sub_no = int(call_no % len(params))

@@ -15,9 +15,9 @@ void ProteinManager::GenerateReservoirs() {
                     sqrt(2 * E_max / Params::Motors::k_spring)};
   Sys::teth_x_min_ = (int)std::floor(teth_r_min / Params::Filaments::site_size);
   Sys::teth_x_max_ = (int)std::ceil(teth_r_max / Params::Filaments::site_size);
-  printf("%g < %g < %g\n", teth_r_min, Params::Motors::r_0, teth_r_max);
-  printf("x_min: %i\n", Sys::teth_x_min_);
-  printf("x_max: %i\n", Sys::teth_x_max_);
+  // printf("%g < %g < %g\n", teth_r_min, Params::Motors::r_0, teth_r_max);
+  // printf("x_min: %i\n", Sys::teth_x_min_);
+  // printf("x_max: %i\n", Sys::teth_x_max_);
 
   // To model an infinite reservoir, we generate a number of proteins equal to
   // the total number of binding sites in the simulation. This value is static.

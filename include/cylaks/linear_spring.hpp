@@ -130,6 +130,16 @@ public:
       endpoints_[i_endpoint]->AddTorque(torque_[i_endpoint]);
     }
   }
+  double GetForceApplied(int i_dim, Object *endpoint) {
+    if (endpoint == endpoints_[0]) {
+      return f_vec_[0][i_dim];
+    } else if (endpoint == endpoints_[1]) {
+      return f_vec_[1][i_dim];
+    } else {
+      Sys::ErrorExit("LinearSpring::GetForceApplied");
+      return 0.0;
+    }
+  }
   double GetWeight_Bind(double r) {
     if (r < r_min_ or r > r_max_) {
       return 0.0;

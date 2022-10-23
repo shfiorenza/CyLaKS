@@ -53,6 +53,7 @@ public:
 
   virtual void AddForce(Vec<double> f_applied);
   virtual void AddTorque(double tq);
+  virtual double GetForceApplied(int i_dim);
 
   virtual bool UntetherSatellite();
 

@@ -9,6 +9,8 @@ dynamic_equil_window: 10
 verbosity: 0
 filaments:
   count: 1
+  n_subfilaments: 1 # 4
+  periodic_barrel: false
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
@@ -60,6 +62,7 @@ xlinks:
   k_off_ii: 0.0143
   d_i: 0.131
   d_ii: 0.0655
+  d_side: 0.000131
   r_0: 32
   k_spring: 0.453
   theta_0: 90

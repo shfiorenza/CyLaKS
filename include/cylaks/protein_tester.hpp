@@ -21,6 +21,7 @@ protected:
   void SetTestMode();
   void InitializeTest_Filament_Ablation();
   void InitializeTest_Filament_Separation();
+  void InitializeTest_Filament_ForcedSlide();
   void InitializeTest_Filament_HeteroTubulin();
   void InitializeTest_Motor_Heterodimer();
   void InitializeTest_Motor_LatticeStep();

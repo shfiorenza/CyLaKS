@@ -24,6 +24,10 @@ Vec<double> BindingHead::GetBoundObjectOrientation() {
 void BindingHead::AddForce(Vec<double> f) { site_->AddForce(f); }
 void BindingHead::AddTorque(double tq) { site_->AddTorque(tq); }
 
+double BindingHead::GetForceApplied(int i_dim) {
+  return parent_->GetForceApplied(i_dim, this);
+}
+
 bool BindingHead::UntetherSatellite() { return parent_->UntetherSatellite(); }
 
 double BindingHead::GetWeight_Unbind_II() {

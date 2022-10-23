@@ -85,6 +85,10 @@ public:
   double GetWeight_Bind_I_Teth();
   BindingSite *GetNeighbor_Bind_I_Teth();
 
+  virtual double GetForceApplied(int i_dim, BindingHead *head) {
+    return spring_.GetForceApplied(i_dim, head);
+  }
+
   virtual void ApplyLatticeDeformation() {}
 
   virtual bool UpdateExtension();

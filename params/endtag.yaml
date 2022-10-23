@@ -10,6 +10,8 @@ verbosity: 0
 filaments:
   count: 1
   radius: 12.5
+  n_subfilaments: 1
+  periodic_barrel: false
   site_size: 8.2
   n_bd_per_kmc: 10
   n_sites: [1250]
@@ -17,7 +19,7 @@ filaments:
   x_initial: [0, 0]
   y_initial: [0, 32]
   immobile_until: [1500, 1500]
-  f_applied: [0.1, 0.0]
+  f_applied: [0.0, 0.0]
   translation_enabled: [false, false]
   rotation_enabled: false
   wca_potential_enabled: false
@@ -60,6 +62,7 @@ xlinks:
   k_off_ii: 0.0143
   d_i: 0.131
   d_ii: 0.0655
+  d_side: 0.0
   r_0: 32
   k_spring: 0.453
   theta_0: 90

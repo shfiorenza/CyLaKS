@@ -3,15 +3,16 @@
 #include <filesystem>
 #include <string>
 
-// Sys namespace: Used to easily share variables across CyLaKS classes
+// Sys namespace: Used to easily share variables and functions across CyLaKS
+// classes
 namespace Sys {
 
 inline std::string sim_name_;  // Name of simulation
 inline std::string test_mode_; // Name of test mode, if any
 inline std::string yaml_file_; // Name of parameter file
 
-inline int teth_x_min_;
-inline int teth_x_max_;
+inline int teth_x_min_; // temporary trash variable
+inline int teth_x_max_; // temporary trash variable
 
 inline FILE *log_file_;      // Pointer to log fle
 inline size_t verbosity_{0}; // How much info is output to log; higher is more
@@ -28,15 +29,23 @@ inline size_t n_steps_run_{0};       // kMC-BD steps to run post-equil.
 
 inline size_t i_step_{0};      // Current kMC-BD step
 inline size_t i_datapoint_{0}; // Current datapoint index
-
-// Auxiliary variables related to test_modes
-inline int n_xlinks_{-1};              // For 'filament_separation'
-inline double p_mutant_{-1.0};         // For 'hetero_tubulin'
-inline double binding_affinity_{-1.0}; // For 'hetero_tubulin'
-inline size_t ablation_step_{0};       // For 'filament_ablation'
+inline size_t n_datapoints_max_{0};
 
 inline size_t n_runs_recorded_{0}; // No. of motor runs post-equilibration
 inline bool early_exit_triggered_{false}; // Exit after next data output?
+
+// Auxiliary variables related to test_modes
+inline size_t ablation_step_{0}; // For 'filament_ablation'
+
+inline int n_xlinks_{-1};       // For 'filament_separation' and 'forced_slide'
+inline int binding_active_{-1}; // bool+1; -1 for null; 0 for false; 1 for true
+inline double slide_velocity_{-1.0}; // For 'forced_slide'
+inline int i_pause_{-1};             // when to pause force clamp
+inline int i_resume_{-1};            // when to resume force clamp
+inline bool rescale_times_{false};
+
+inline double p_mutant_{-1.0};         // For 'hetero_tubulin'
+inline double binding_affinity_{-1.0}; // For 'hetero_tubulin'
 
 // Simple look-up tables for Boltzmann factors used throughout simulation
 inline std::vector<double> weight_neighb_bind_;   // index: [n_neighbs]

@@ -39,6 +39,7 @@ public:
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}
+  virtual double GetForceApplied(int i_dim) { return 0.0; }
 
   virtual int GetNumNeighborsOccupied() { return -1; }
   virtual int GetNumNeighborsOccupied_Side() { return -1; }

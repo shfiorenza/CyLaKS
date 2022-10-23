@@ -41,6 +41,8 @@ void ProteinTester::SetTestMode() {
     InitializeTest_Filament_Ablation();
   } else if (Sys::test_mode_ == "filament_separation") {
     InitializeTest_Filament_Separation();
+  } else if (Sys::test_mode_ == "filament_forced_slide") {
+    InitializeTest_Filament_ForcedSlide();
   } else if (Sys::test_mode_ == "hetero_tubulin") {
     InitializeTest_Filament_HeteroTubulin();
   } else if (Sys::test_mode_ == "kinesin_mutant") {
@@ -178,6 +180,291 @@ void ProteinTester::InitializeTest_Filament_Separation() {
       bool still_attached{head->parent_->UpdateExtension()};
     }
     return executed;
+  };
+  kmc_.events_.emplace_back(
+      "diffuse_ii_to_rest", xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), 1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        1);
+      });
+  kmc_.events_.emplace_back(
+      "diffuse_ii_fr_rest", xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        -1);
+      });
+}
+
+void ProteinTester::InitializeTest_Filament_ForcedSlide() {
+
+  using namespace Params;
+  // Initialize filament environment
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  // double pos_to_alignment{(Filaments::n_sites[0] - Filaments::n_sites[1]) *
+  //                         Filaments::site_size / 2};
+  // Sys::OverrideParam("filaments: x_initial[0]", &Filaments::x_initial[0],
+  //                    pos_to_alignment);
+  Sys::OverrideParam("filaments. immobile_until[0]",
+                     &Filaments::immobile_until[0], 100000.0);
+  Sys::OverrideParam("filaments. immobile_until[1]",
+                     &Filaments::immobile_until[1], 0.0);
+  // Sys::Log("Rotational filament movement has been disabled.\n");
+  // Filaments::translation_enabled[0] = true;
+  // Filaments::translation_enabled[1] = true;
+  // Filaments::rotation_enabled = false;
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
+  filaments_->Initialize(this);
+  // Get number of crosslinkers to initialize in the starting overlap
+  int n_xlinks{Sys::n_xlinks_};
+  if (n_xlinks == -1) {
+    Str response;
+    printf("Top microtubule is %zu sites in length.\n", Filaments::n_sites[1]);
+    printf("Enter number of crosslinkers to insert: ");
+    std::getline(std::cin, response);
+    n_xlinks = (int)std::stoi(response);
+    Sys::n_xlinks_ = n_xlinks;
+  }
+  int n_places{(int)Filaments::n_sites[1]};
+  if (n_xlinks > n_places) {
+    printf("\nError! Too many crosslinkers for filament length used.\n");
+    exit(1);
+  }
+  // Get desired sliding velocity for top microtubule (bottom is fixed)
+  if (Sys::slide_velocity_ == -1.0) {
+    Str response;
+    printf("Enter constant sliding velocity (in nm/s) desired for top MT.\n");
+    std::getline(std::cin, response);
+    Sys::slide_velocity_ = (double)std::stod(response);
+  }
+  if (Sys::slide_velocity_ >= 1000) {
+    printf("\nError! Please keep velocity below 1 um/s (1000 nm/s).\n");
+    exit(1);
+  }
+  // Check if binding/unbinding of crosslinkers should be enabled
+  if (Sys::binding_active_ == -1) {
+    Str response;
+    printf("Enable binding/unbinding of second crosslinker head? (y/n)\n");
+    // printf("(Binding/unbinding of first head is disabled for either case, so
+    // "
+    //        "that total crosslinker number is constant.)\n");
+    std::getline(std::cin, response);
+    if (response == "n" or response == "N") {
+      Sys::binding_active_ = 0;
+    } else if (response == "y" or response == "Y") {
+      Sys::binding_active_ = 1;
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+  }
+  // Check if a pause in force-clamping is desired
+  if (Sys::i_pause_ == -1) {
+    Str response;
+    printf("Enable pause in force clamp?\n");
+    std::getline(std::cin, response);
+    if (response == "n" or response == "N") {
+      printf("No pause scheduled.\n");
+      Sys::i_pause_ = std::numeric_limits<int>::max();
+      Sys::i_resume_ = std::numeric_limits<int>::max();
+    } else if (response == "y" or response == "Y") {
+      Str str_pause;
+      printf(
+          "Enter time at which force clamp should be paused. (in seconds)\n");
+      std::getline(std::cin, str_pause);
+      double t_pause{(double)std::stod(str_pause)};
+      Str str_duration;
+      printf("Enter duration of pause.(in seconds)\n");
+      std::getline(std::cin, str_duration);
+      double t_resume{t_pause + (double)std::stod(str_duration)};
+      if (t_resume > Params::t_run) {
+        printf("Error. Pause must occur and end before simulation end.\n");
+        exit(1);
+      }
+      Sys::i_pause_ = (int)std::round(t_pause / Params::dt);
+      Sys::i_resume_ = (int)std::round(t_resume / Params::dt);
+      printf("i_pause is %i\n", Sys::i_pause_);
+      printf("i_resume is %i\n", Sys::i_resume_);
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+  }
+  // Rescale pause/resume variables if initialized via quick-launcher
+  if (Sys::rescale_times_) {
+    double t_pause{(double)Sys::i_pause_};
+    double t_duration{(double)Sys::i_resume_};
+    double t_resume{t_pause + t_duration};
+    if (t_resume > Params::t_run) {
+      printf("Error. Pause must occur and end before simulation end.\n");
+      exit(1);
+    }
+    Sys::i_pause_ = (int)std::round(t_pause / Params::dt);
+    Sys::i_resume_ = (int)std::round(t_resume / Params::dt);
+    Sys::rescale_times_ = false;
+  }
+
+  // Randomly place crosslinkers on filaments w/ x = 0
+  int site_indices[n_places];
+  for (int index{0}; index < n_places; index++) {
+    site_indices[index] = index;
+  }
+  SysRNG::Shuffle(site_indices, n_places, sizeof(int));
+  for (int i_xlink{0}; i_xlink < n_xlinks; i_xlink++) {
+    Protein *xlink{xlinks_.GetFreeEntry()};
+    int i_site{site_indices[i_xlink]};
+    BindingSite *site_one{&filaments_->protofilaments_[1].sites_[i_site]};
+    // printf("site one: %zu\n", site_one->index_);
+    BindingSite *site_two{
+        filaments_->protofilaments_[0].GetNeighb(site_one, 0)};
+    // printf("site two: %zu\n", site_two->index_);
+    bool exe_one{xlink->Bind(site_one, &xlink->head_one_)};
+    bool exe_two{xlink->Bind(site_two, &xlink->head_two_)};
+    if (exe_one and exe_two) {
+      bool still_attached{xlink->UpdateExtension()};
+      if (still_attached) {
+        xlinks_.AddToActive(xlink);
+        filaments_->FlagForUpdate();
+      } else {
+        Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [2]");
+      }
+    } else {
+      Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [1]");
+    }
+  }
+  Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
+  // Probability distributions
+  auto poisson = [&](double p, int n) { // For events w/ time-variable probs.
+    if (p > 0.0) {
+      return SysRNG::SamplePoisson(p);
+    } else {
+      return 0;
+    }
+  };
+  auto binomial = [&](double p, int n) { // For events w/ constant probs.
+    if (n > 0) {
+      return SysRNG::SampleBinomial(p, n);
+    } else {
+      return 0;
+    }
+  };
+  // Sorting criteria functions
+  auto is_bound_i = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
+    if (protein->GetNumHeadsActive() == 1) {
+      if (!protein->IsTethered() or protein->HasSatellite()) {
+        return {protein->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto is_bound_ii = [&](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 2) {
+      return {protein->GetHeadOne(), protein->GetHeadTwo()};
+    }
+    return {};
+  };
+  // Event execution functions
+  auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
+    bool executed{head->Diffuse(dir)};
+    if (executed) {
+      bool still_attached{head->parent_->UpdateExtension()};
+    }
+    return executed;
+  };
+  if (Sys::binding_active_) {
+    // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)
+    auto weight_bind_ii = [](auto *head) {
+      return head->parent_->GetWeight_Bind_II();
+    };
+    auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
+      auto head{bound_head->GetOtherHead()};
+      auto site{head->parent_->GetNeighbor_Bind_II()};
+      auto executed{head->parent_->Bind(site, head)};
+      if (executed) {
+        // FIXME check if this check is necessary / what to do
+        bool still_attached{head->parent_->UpdateExtension()};
+      }
+      return executed;
+    };
+    xlinks_.AddPop("singly_bound", is_bound_i);
+    kmc_.events_.emplace_back(
+        "bind_ii (xlinks)", xlinks_.p_event_.at("bind_ii").GetVal(),
+        &xlinks_.sorted_.at("singly_bound").size_,
+        &xlinks_.sorted_.at("singly_bound").entries_, poisson,
+        [&](Object *base) {
+          return weight_bind_ii(dynamic_cast<BindingHead *>(base));
+        },
+        [&](Object *base) {
+          return exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                             filaments_);
+        });
+    // Doubly bound unbinding (stage 2 -> stage 1; crosslinking -> singly bound)
+    auto weight_unbind_ii = [](auto *head) {
+      return head->GetWeight_Unbind_II();
+    };
+    auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
+      bool executed{head->Unbind()};
+      return executed;
+    };
+    xlinks_.AddPop("doubly_bound", is_bound_ii);
+    kmc_.events_.emplace_back(
+        "unbind_ii (xlinks)", xlinks_.p_event_.at("unbind_ii").GetVal(),
+        &xlinks_.sorted_.at("doubly_bound").size_,
+        &xlinks_.sorted_.at("doubly_bound").entries_, poisson,
+        [&](Object *base) {
+          return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
+        },
+        [&](Object *base) {
+          return exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                               filaments_);
+        });
+    // Singly bound diffusion
+    Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
+    Vec<int> i_min{0, 0, 0};
+    auto get_n_neighbs = [](Object *entry) {
+      Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+      return indices_vec;
+    };
+    xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+    for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+      kmc_.events_.emplace_back(
+          "diffuse_i_fwd",
+          xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
+          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, 1);
+          });
+      kmc_.events_.emplace_back(
+          "diffuse_i_bck",
+          xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
+          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                            filaments_, -1);
+          });
+    }
+  }
+  // Doubly bound diffusion
+  xlinks_.AddPop("diffuse_ii_to_rest", is_bound_ii);
+  xlinks_.AddPop("diffuse_ii_fr_rest", is_bound_ii);
+  auto weight_diff_ii = [](auto *head, int dir) {
+    return head->GetWeight_Diffuse(dir);
   };
   kmc_.events_.emplace_back(
       "diffuse_ii_to_rest", xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),

@@ -57,7 +57,7 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     return;
   }
   // If input format is incorrect, inform user of appropriate format
-  if (argc < 3 or argc > 6) {
+  if (argc < 3 or argc > 9) {
     printf("Error! Incorrect number of command-line arguments\n");
     printf("\nUse '%s' to run interactive launcher. ", argv[0]);
     printf("Otherwise, the correct format is:\n");
@@ -84,6 +84,27 @@ void Curator::CheckArgs(int argc, char *argv[]) {
           if (Sys::test_mode_ == "hetero_tubulin") {
             Sys::p_mutant_ = std::stod(argv[4]);
             Sys::binding_affinity_ = std::stod(argv[5]);
+          } else {
+            break;
+          }
+        } else if (argc == 7) {
+          if (Sys::test_mode_ == "filament_forced_slide") {
+            Sys::n_xlinks_ = std::stoi(argv[4]);
+            Sys::slide_velocity_ = std::stod(argv[5]);
+            Sys::binding_active_ = std::stoi(argv[6]);
+            Sys::i_pause_ = std::numeric_limits<int>::max();
+            Sys::i_resume_ = std::numeric_limits<int>::max();
+          } else {
+            break;
+          }
+        } else if (argc == 9) {
+          if (Sys::test_mode_ == "filament_forced_slide") {
+            Sys::n_xlinks_ = std::stoi(argv[4]);
+            Sys::slide_velocity_ = std::stod(argv[5]);
+            Sys::binding_active_ = std::stoi(argv[6]);
+            Sys::i_pause_ = std::stod(argv[7]);
+            Sys::i_resume_ = std::stod(argv[8]);
+            Sys::rescale_times_ = true;
           } else {
             break;
           }
@@ -314,6 +335,24 @@ void Curator::InitializeSimulation() {
 
   using namespace Params;
   using namespace Sys;
+  // Calculate local parameters
+  start_time_ = SysClock::now();
+  n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
+  // Calculate system parameters
+  verbosity_ = verbosity;
+  n_steps_pre_equil_ = (size_t)std::round(t_equil / dt);
+  n_steps_equil_ = n_steps_pre_equil_;
+  if (n_steps_pre_equil_ == 0) {
+    equilibrating_ = false;
+  }
+  n_steps_run_ = (size_t)std::round(t_run / dt);
+  Sys::n_datapoints_max_ = n_steps_run_ / n_steps_per_snapshot_;
+  // Log parameters
+  Log("  System variables calculated pre-initialization:\n");
+  Log("   n_steps_run = %zu\n", n_steps_run_);
+  Log("   n_steps_equil = %zu\n", n_steps_equil_);
+  Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
+  Log("   n_datapoints = %zu\n\n", Sys::n_datapoints_max_);
   // Initialize sim objects
   SysRNG::Initialize(seed);
   // With no test mode active, initialize proteins and filaments normally
@@ -337,23 +376,6 @@ void Curator::InitializeSimulation() {
       }
     }
   }
-  // Calculate local parameters
-  start_time_ = SysClock::now();
-  n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
-  // Calculate system parameters
-  verbosity_ = verbosity;
-  n_steps_pre_equil_ = (size_t)std::round(t_equil / dt);
-  n_steps_equil_ = n_steps_pre_equil_;
-  if (n_steps_pre_equil_ == 0) {
-    equilibrating_ = false;
-  }
-  n_steps_run_ = (size_t)std::round(t_run / dt);
-  // Log parameters
-  Log("  System variables calculated post-initialization:\n");
-  Log("   n_steps_run = %zu\n", n_steps_run_);
-  Log("   n_steps_equil = %zu\n", n_steps_equil_);
-  Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
-  Log("   n_datapoints = %zu\n\n", n_steps_run_ / n_steps_per_snapshot_);
 }
 
 void Curator::GenerateDataFiles() {
@@ -404,13 +426,13 @@ void Curator::GenerateDataFiles() {
     }
   }
   if (xlinks_active and xlinks_crosslinking) {
-    /*
     // Open xlink extension file, which stores the number of stage-2
     // xlinks at a certain extension for all possible extensions
-    AddDataFile("xlink_ext");
+    // AddDataFile("xlink_ext");
     // Open xlink force file, which stores the sum
     // of forces coming from xlink extensions
     AddDataFile("xlink_force");
+    /*
     if (proteins_.motors_.tethering_active_) {
       // Open total force file, which stores the sum of ALL
       // forces coming from xlink and motor tether extensions
@@ -506,6 +528,10 @@ void Curator::OutputData() {
     xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
   }
   Sys::i_datapoint_++;
+  double force_vec[_n_dims_max];
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    force_vec[i_dim] = 0.0;
+  }
   for (int i_pf{0}; i_pf < n_pfs; i_pf++) {
     Protofilament *pf{nullptr};
     if (Sys::test_mode_.empty()) {
@@ -547,6 +573,13 @@ void Curator::OutputData() {
         if (site.occupant_->parent_->n_heads_active_ == 2) {
           partner_index[site.index_] =
               site.occupant_->GetOtherHead()->site_->index_;
+          // Sum up all xlink forces on bottom microtubule
+          if (i_pf == 0) {
+            for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+              force_vec[i_dim] =
+                  force_vec[i_dim] + site.occupant_->GetForceApplied(i_dim);
+            }
+          }
         }
       } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
@@ -573,6 +606,12 @@ void Curator::OutputData() {
     }
     data_files_.at("tether_anchor_pos").Write(tether_anchor_pos, n_sites_max_);
   }
+  if (xlinks_active and xlinks_crosslinking) {
+    data_files_.at("xlink_force").Write(force_vec, _n_dims_max);
+  }
+  // for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+  //   printf("F = <%g, %g> pN\n", force_vec[0], force_vec[1]);
+  // }
   if (Sys::early_exit_triggered_) {
     Sys::EarlyExit();
   }

@@ -1,5 +1,6 @@
 clear variables;
-sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.131_2'; % Raw sim name; do not include directory
+%sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.131_2'; % Raw sim name; do not include directory
+sim_name = 'demo';
 movie_name = 'testin2';
 
 % Movie details
@@ -202,7 +203,7 @@ for i_data = start_frame : frames_per_plot : end_frame
                 
                 if sid == sid_xlink
                     % Draw spring connecting crosslinker if appropriate
-                    if(i_mt == 0) % lol
+                    if(i_mt == 1) % lol
                         if(partner_indices(i_site, i_mt, i_data) ~= -1)
                             ii_site = partner_indices(i_site, i_mt, i_data);
                             nn_sites = mt_lengths(2);
@@ -211,11 +212,11 @@ for i_data = start_frame : frames_per_plot : end_frame
                             neighb_vec = [p_pos(1) - m_pos(1), p_pos(2) - m_pos(2)];
                             endpos_x = m_pos(1) + (double(ii_site)/(nn_sites-1))*neighb_vec(1);
                             endpos_y = m_pos(2) + (double(ii_site)/(nn_sites-1))*neighb_vec(2);
-  %                          line([pos_x, endpos_x],[pos_y, endpos_y], ...
-  %                              'LineWidth', 1, 'Color', purple);
+                            line([pos_x, endpos_x],[pos_y, endpos_y], ...
+                                'LineWidth', 1, 'Color', purple);
                         else
-  %                          line([pos_x, pos_x], [pos_y, pos_y + 3* r_prot], ...
-  %                              'LineWidth', 1, 'Color', purple);
+                            line([pos_x, pos_x], [pos_y, pos_y + 3* r_prot], ...
+                                'LineWidth', 1, 'Color', purple);
                         end
                     end
                 elseif sid == sid_motor

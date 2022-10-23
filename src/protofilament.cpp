@@ -90,7 +90,11 @@ void Protofilament::UpdateRodPosition() {
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
     // Only update pos in dimensions with translational movement enabled
     if (Params::Filaments::translation_enabled[i_dim]) {
-      pos_[i_dim] += Dot(xi_inv[i_dim], force_) * dt_eff_;
+      double vel{Dot(xi_inv[i_dim], force_)};
+      // if (i_dim == 0 and vel != 50) {
+      //   printf("v[%i] = %g\n", i_dim, vel);
+      // }
+      pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
       // Check for NaN positions
@@ -156,10 +160,14 @@ BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
 
   using namespace Params;
   Sys::Log(2, "i_site = %i, delta = %i\n", site->index_, delta);
+  if (site->filament_ == this) {
+    Sys::ErrorExit("Protofilament::GetNeighb()");
+  }
   // First, we find which site best aligns vertically w/ given site
-  int site_x{(int)site->pos_[0]};
+  double site_x{site->pos_[0]};
   // x-coords equal, so site_pos_x = (i_align - center_index) * site_size + pos
-  int i_aligned{int((site_x - pos_[0]) / Filaments::site_size + center_index_)};
+  int i_aligned{(int)std::round((site_x - pos_[0]) / Filaments::site_size +
+                                center_index_)};
   // Scan relative to aligned site using given delta value
   int i_neighb{i_aligned + delta};
   Sys::Log(2, "i_neighb is %i\n", i_neighb);

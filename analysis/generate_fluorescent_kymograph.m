@@ -1,127 +1,74 @@
 clear variables; 
 
 file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.0000131_1';
+sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.131_8';
 
-dwell_time = 3;  % dwell time of theoretical camera
+dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = -1; 
-frac_visible = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
-xlink_intensity = 0.03; %35/sqrt(8); % Controls how bright a single motor is (1 typically)
-motor_intensity = 0.03; % 35/sqrt(8);
-
+i_end = 600; %-1; 
+frac_visible = [1, 2]; % [numerator, denominator]; [1,1] for all visibile
+xlink_intensity = 0; %0.0001; % Controls how bright a single xlink is 
+motor_intensity = 0.01; 
 subfilaments = true; 
 
 % Scale bar lengths 
 scale_x = 1; %2.5; %1; % microns
 scale_t = 300; %30; %10; % seconds
-
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
-pixelPad = 3; %15;
+pixelPad = 2;
 gaussSigma = 1.0;
 doPlot = 0;
-gaussAmp = 4000;
+gaussAmp = 40000;
 bkgLevel = 200;
 noiseStd = 100;
 intensityMax = gaussAmp/2 + bkgLevel;
 
-% Open log file and parse it into param labels & their values
-fileDirectory = '../%s';
-log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
-log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
-params = log{1, 1};
-values = log{1, 2};
-% Read in system params
-dt = sscanf(values{contains(params, "dt ")}, '%g');
-steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
-time_per_datapoint = dt * steps_per_datapoint;
-n_datapoints = str2double(values{contains(params, "n_datapoints ")});
-% Use actual recorded number of datapoints to parse thru data/etc
-if any(contains(params, "N_DATAPOINTS ") ~= 0)
-    n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
-end
-site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in um
-% Read in number of MTs
-n_mts = sscanf(values{contains(params, "count ")}, '%g');
-if any(contains(params, "COUNT ") ~= 0)
-    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
-end
-if any(contains(params, "n_subfilaments") ~= 0)
-    n_sub = sscanf(values{contains(params, "n_subfilaments ")}, '%g');
-    if n_sub > n_mts
-       n_mts = n_sub;
-    end
-end
-% Read in MT lengths (in n_sites)
-mt_lengths = zeros(1, n_mts);
-for i_mt = 1 : n_mts
-    string = sprintf("n_sites[%i] ", i_mt - 1);
-    mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
-        string = sprintf("N_SITES[%i] ", i_mt - 1);
-        mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-    end
-end
-max_sites = max(mt_lengths);
+% Load parameter structure
+file_dir = '..';  % Default; only change if you move CyLaKS output files
+params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
 
-n_dims = 2;
+% Open data files 
+filament_filename = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);
+filament_pos = zeros(params.n_dims, 2, params.n_mts, params.n_datapoints);
+filament_pos = load_data(filament_pos, filament_filename, '*double'); 
 
-posFile = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);
-occuFile = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
-proteinFile = sprintf('%s/%s_protein_id.file', file_dir, sim_name);
+protein_filename = sprintf('%s/%s_protein_id.file', file_dir, sim_name);
+protein_ids = zeros(params.max_sites, params.n_mts, params.n_datapoints) - 1;
+protein_ids = load_data(protein_ids, protein_filename, '*int');
 
-% filament position data; gives coordinates of each endpoint
-filament_pos = zeros(n_mts, n_datapoints);
-if isfile(posFile)
-    mt_data_file = fopen(posFile);
-    mt_data = fread(mt_data_file, 2*n_dims * n_mts * n_datapoints, '*double');
-    fclose(mt_data_file);
-    filament_pos = reshape(mt_data, n_dims, 2, n_mts, n_datapoints);
-end
-% occupancy data on each MT
-occupancy = zeros(max_sites, n_mts, n_datapoints);
-if isfile(occuFile)
-    occupancy_file = fopen(occuFile);
-    occu_raw_data = fread(occupancy_file, n_datapoints * n_mts * max_sites, '*int');
-    occupancy = reshape(occu_raw_data, max_sites, n_mts, n_datapoints);
-    fclose(occupancy_file);
-end
-% protein ID data
-protein_ids = zeros(max_sites, n_mts, n_datapoints) - 1;
-if isfile(proteinFile)
-    protein_data_file = fopen(proteinFile);
-    protein_raw_data = fread(protein_data_file, [n_mts * max_sites * n_datapoints], '*int');
-    fclose(protein_data_file);
-    protein_ids = reshape(protein_raw_data, max_sites, n_mts, n_datapoints);
-end
-
-
-
-if subfilaments % rescale so we can compare across different n_subfilaments
-    xlink_intensity = xlink_intensity/n_mts;
-    motor_intensity = motor_intensity/n_mts;
-end
-
-
+occupancy_filename = sprintf('%s/%s_occupancy.file', file_dir, sim_name);
+occupancy = zeros(params.max_sites, params.n_mts, params.n_datapoints) - 1;
+occupancy = load_data(occupancy, occupancy_filename, '*int');
 
 site_ID = 0;
 xlink_ID = 1;
 motor_ID = 2;
+if i_end == -1
+    i_end = params.n_datapoints;
+end
+if subfilaments % rescale so we can compare across different n_subfilaments
+    xlink_intensity = xlink_intensity/sqrt(params.n_mts);
+    motor_intensity = motor_intensity/sqrt(params.n_mts);
+end
+dwell_steps = int32(dwell_time / params.time_per_datapoint);
 
-motor_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); % from protein_ids;
-xlink_matrix = zeros(mt_lengths(1), n_mts, n_datapoints); % from protein_ids;
-for i_data = 1 : n_datapoints
-    for i_mt = 1 : n_mts
-        for i_site = 1 : mt_lengths(i_mt)
+% change from 'zeros' to 'ones' to make MTs fluorescent 
+site_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints);
+% Get motor and xlink matrices from occupancy data
+motor_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints); % from protein_ids;
+xlink_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints); % from protein_ids;
+for i_data = 1 : params.n_datapoints
+    for i_mt = 1 : params.n_mts
+        for i_site = 1 : params.mt_lengths(i_mt)
             id = protein_ids(i_site, i_mt, i_data); % unique individual ID
             sid = occupancy(i_site, i_mt, i_data);  % species label ID 
-            if sid == 1
+            if sid == xlink_ID
                 if mod(frac_visible(1)*id, frac_visible(2)) == 0
                     xlink_matrix(i_site, i_mt, i_data) = xlink_intensity;
                 end
-            elseif sid == 2
+            elseif sid == motor_ID
                 if mod(frac_visible(1)*id, frac_visible(2)) == 0
                     motor_matrix(i_site, i_mt, i_data) = motor_intensity;
                 end
@@ -129,19 +76,12 @@ for i_data = 1 : n_datapoints
         end
     end
 end
-% currently have MT labeling off
-% change from 'zeros' to 'ones' to make MTs fluorescent 
-site_matrix = zeros(mt_lengths(1), n_mts, n_datapoints);
 
-if i_end == -1
-    i_end = n_datapoints;
-end
-
-dwell_steps = int32(dwell_time / time_per_datapoint);
-
-pixels_x = ceil(max_sites*siteLength/pixelLength)+2*pixelPad;
-if n_mts == 2 && subfilaments == false
-    pixels_x = ceil(2*max_sites*siteLength/pixelLength)+2*pixelPad;
+% Calculate final image dimensions
+pixels_y = ceil((i_end - i_start) / dwell_steps);
+pixels_x = ceil(params.max_sites*siteLength/pixelLength)+2*pixelPad;
+if params.n_mts == 2 && subfilaments == false
+    pixels_x = ceil(2*params.max_sites*siteLength/pixelLength)+2*pixelPad;
     max_diff_x = 0;
     for i_data = i_start : dwell_steps : i_end - dwell_steps
         minus_one = filament_pos(:, 2, 1, i_data);
@@ -155,18 +95,11 @@ if n_mts == 2 && subfilaments == false
     pixel_diff_max = ceil(max_diff_x / pixelLength);
     pixels_x = pixels_x + (pixel_diff_max - 1);
 end
-% Sometimes you gotta add or subtract 1 here -- must be some kind of
-% rounding error 
-if n_mts == 2 && subfilaments == false
-   pixels_x = pixels_x + 1; 
-end
-pixels_y = ceil((i_end - i_start) / dwell_steps);
-final_img = zeros(pixels_y, pixels_x, 3);
- % RGB image; 
-% Run through movie frames and create each one
 
+final_img = zeros(pixels_y, pixels_x, 3); % RGB image; 
+% Run through data and create each line of kymograph step-by-step
 for i_data = i_start : dwell_steps : i_end - dwell_steps
-    if n_mts == 2 && subfilaments == false
+    if params.n_mts == 2 && subfilaments == false
         minus_one = filament_pos(:, 2, 1, i_data);
         plus_two = filament_pos(:, 1, 2, i_data);
         diff_x = plus_two(1) - minus_one(1);
@@ -188,51 +121,40 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
         lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
     end
     
-    % green channel - motors
-    imageMotors = imageGaussianOverlap(dataMatrixMotors,siteLength,pixelLength,pixelPad,...
-        gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
-    imageMotors = imageMotors + ones(size(imageMotors))*bkgLevel + randn(size(imageMotors))*noiseStd;
-    imageMotors = imageMotors/intensityMax; %convert to grayscale
-    % red channel - microtubule
-    %lineMatrix = ones(size(dataMatrix));
-   
-    imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
+    % Motors - purple (red + blue) channel
+    imageMotors = imageGaussianOverlapSlice(dataMatrixMotors,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
-    imageLine = imageLine/intensityMax; %convert to grayscale
-    % blue channel - noise (now xlinks)
+    imageMotors = imageMotors + ones(size(imageMotors))*bkgLevel + randn(size(imageMotors))*noiseStd;
+    imageMotors = imageMotors/intensityMax;
     
-    imageBlue = ones(size(imageLine))*bkgLevel + randn(size(imageLine))*noiseStd;
-    imageBlue = imageBlue/intensityMax;
+    % Microtubules - red channel
+    %lineMatrix = ones(size(dataMatrix));
+    %imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
+    %    gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
+    %imageLine = imageLine/intensityMax; %convert to grayscale
+    imageLine = zeros(size(imageMotors));
     
-    imageXlinks = imageGaussianOverlap(dataMatrixXlinks,siteLength,pixelLength,pixelPad,...
+    % Crosslinkers - green channel 
+    imageXlinks = imageGaussianOverlapSlice(dataMatrixXlinks,siteLength,pixelLength,pixelPad,...
         gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);  
     imageXlinks = imageXlinks + ones(size(imageXlinks))*bkgLevel + randn(size(imageXlinks))*noiseStd;
-    imageXlinks = imageXlinks/intensityMax; %convert to grayscale
+    imageXlinks = imageXlinks/intensityMax;
+
     % merge into RGB image
     imageRGB = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
     index = (i_data - i_start) / dwell_steps + 1;
-    final_img(index, :, :) = mean(imageRGB(:, :, :), 1);
-    %final_img(index, :, :) = sum(imageRGB(:, :, :), 1);
+    final_img(index, :, :) = imageRGB;
 end
 %} 
 fig1 = figure;
 set(fig1, 'Position', [100 100 350 350]);
-%set(fig1, 'Position', [100 100 540 700]);
 axes('Units','Normalize','Position',[0 0 1 1]);
-img1 = imagesc(final_img);
+img1 = imagesc(final_img, [min(final_img, [], 'all') max(final_img, [], 'all')]);
 set(gca,'Xtick',[]); set(gca,'Ytick',[]);
 set(gca, 'Box', 'off');
-% Add a scale bar
+% Add scale bars
 len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
-%{
-l = line([103.5 103.5-len_x],[2625 2625],'Color','w','LineWidth',4); %endtags
-l2 = line([103 103],[2600 2600-len_y],'Color','w','LineWidth',4); %endtags
-%}
-%{
-l = line([57 57-len_x],[980 980],'Color','w','LineWidth',4); %tubulin
-l2 = line([56.75 56.75],[970 970-len_y],'Color','w','LineWidth',4); %tubulin
-%}
 x1 = (95/100)*pixels_x;
 x2 = (94.25/100)*pixels_x;
 y1 = (95/100)*pixels_y;

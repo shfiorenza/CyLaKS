@@ -279,8 +279,28 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     }
   }
   BindingSite *new_loc{head->site_->GetNeighbor(dx)};
+  // ! FIXME temporary hacky solution for forced_slide test mode
   if (new_loc == nullptr) {
-    return 0.0;
+    if (Sys::test_mode_.empty()) {
+      return 0.0;
+    }
+    // Rather than use ghost sites, just use other crosslinker head to get
+    // spring weight
+    BindingHead *other_head{head->GetOtherHead()};
+    new_loc = other_head->site_->GetNeighbor(-1 * dx);
+    // If other head is also trying to diffuse off the end, we're S.O.L.
+    if (new_loc == nullptr) {
+      return 0.0;
+    }
+    BindingSite *old_loc{other_head->site_};
+    BindingSite *static_loc{head->site_};
+    if (old_loc->filament_ == static_loc->filament_) {
+      Sys::ErrorExit("Protein::GetWeight_diffuse [3]");
+    }
+    spring_.UpdatePosition();
+    double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
+    double weight_neighb{head->site_->GetWeight_Unbind()};
+    return weight_spring * weight_neighb;
   }
   if (new_loc->occupant_ != nullptr) {
     return 0.0;

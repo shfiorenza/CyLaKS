@@ -378,11 +378,24 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   };
   // Event execution functions
   auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
-    bool executed{head->Diffuse(dir)};
-    if (executed) {
-      bool still_attached{head->parent_->UpdateExtension()};
+    if ((head->site_ == head->site_->filament_->plus_end_ or
+         head->site_ == head->site_->filament_->minus_end_) and
+        head->parent_->GetNumHeadsActive() == 2 and
+        Params::Xlinks::p_diffuse_off_end > 0.0) {
+      double ran{SysRNG::GetRanProb()};
+      if (ran < Params::Xlinks::p_diffuse_off_end) {
+        bool executed{head->Unbind()};
+        return executed;
+      }
+      return false;
+
+    } else {
+      bool executed{head->Diffuse(dir)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+      }
+      return executed;
     }
-    return executed;
   };
   if (Sys::binding_active_) {
     // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)

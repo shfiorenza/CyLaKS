@@ -77,7 +77,8 @@ inline double r_0;      // Rest length of coiled-coil domain; nm
 inline double k_spring; // Spring constant of CC-domain; pN/nm
 inline double theta_0;  // Rotational rest angle
 inline double k_rot;    // Rotational spring constant;
-};                      // namespace Xlinks
-};                      // namespace Params
+inline double p_diffuse_off_end;
+}; // namespace Xlinks
+}; // namespace Params
 
 #endif

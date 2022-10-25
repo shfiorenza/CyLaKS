@@ -1,6 +1,6 @@
 clear variables;
 % *** modify these variables ***
-sim_name = 'demo_75_5';
+sim_name = 'test01';
 start_time = 0;  % in seconds 
 end_time = -1;   % in seconds; -1 defaults to full data 
 smoothing_window  = 1;   % in seconds

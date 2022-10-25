@@ -329,6 +329,11 @@ void Curator::ParseParameters() {
   ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
   ParseYAML(&Xlinks::theta_0, "xlinks.theta_0", "degrees");
   ParseYAML(&Xlinks::k_rot, "xlinks.k_rot", "pN*nm/rad");
+  ParseYAML(&Xlinks::p_diffuse_off_end, "xlinks.p_diffuse_off_end", "");
+  if (Xlinks::p_diffuse_off_end < 0.0 or Xlinks::p_diffuse_off_end > 1) {
+    printf("Error; xlinks.p_diffuse_off_end must be between 0 and 1.\n");
+    exit(1);
+  }
 }
 
 void Curator::InitializeSimulation() {

@@ -2,10 +2,11 @@ clear variables;
 
 sim_name = 'demo_nopause'; % Raw sim name; do not include directory
 sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.0000131_8';
+sim_name = 'test'
 output_movie_name = 'testin2';
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
-frames_per_plot = 1000; 
+frames_per_plot = 10; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure

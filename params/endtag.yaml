@@ -67,3 +67,4 @@ xlinks:
   k_spring: 0.453
   theta_0: 90
   k_rot: 0 # 1000
+  p_diffuse_off_end: 0.0

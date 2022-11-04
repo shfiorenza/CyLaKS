@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 fileDirectory = "/home/shane/projects/CyLaKS/run_xlink_diffusion";
 simNames = ["xlink_diffusion_single", "xlink_diffusion"];

@@ -1,12 +1,12 @@
 clear variables;
 
-sim_name = 'demo_nopause'; % Raw sim name; do not include directory
-sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.0000131_8';
-sim_name = 'test'
-output_movie_name = 'testin2';
+sim_name = 'test_100_100b'; % Raw sim name; do not include directory
+output_movie_name = 'test';
+
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
-frames_per_plot = 10; 
+
+frames_per_plot = 100; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure
@@ -76,10 +76,14 @@ for i_data = start_frame : frames_per_plot : end_frame
     max_y = max(max(filament_pos(2, :, :, i_data)));
     avg_y = (min_y + max_y)/2;
     height = 400; % (1/10)*(max_x - min_x);
-    ax.XLim = [(min_x - 25) (max_x + 25)];
+    top_start = filament_pos(1, 2, 2, i_data);
+    top_end = filament_pos(1, 1, 2, i_data);
+    %ax.XLim = [(min_x - 25) (max_x + 25)];
     %ax.XLim = [(min_x - 25) (min_x + 475)];
+    ax.XLim = [(top_start - 25) (top_end + 25)];
     ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
-    ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
+    %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
+    ax.XTick = linspace(-2000, 2000, 11);
     ax.YTick = linspace(roundn(avg_y - height/2, 2), roundn(avg_y + height/2, 2), 3);
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';

@@ -285,7 +285,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
       return 0.0;
     }
     // Rather than use ghost sites, just use other crosslinker head to get
-    // spring weight
+    // spring weight (should be the exact same dE)
     BindingHead *other_head{head->GetOtherHead()};
     new_loc = other_head->site_->GetNeighbor(-1 * dx);
     // If other head is also trying to diffuse off the end, we're S.O.L.
@@ -394,6 +394,9 @@ bool Protein::Diffuse_Side(BindingHead *head, int dir) {
 
 bool Protein::Bind(BindingSite *site, BindingHead *head) {
 
+  if (site == nullptr) {
+    return false;
+  }
   if (site->occupant_ != nullptr) {
     return false;
   }

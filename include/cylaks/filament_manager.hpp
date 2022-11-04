@@ -79,12 +79,11 @@ public:
     if (AllFilamentsImmobile()) {
       return;
     }
-    UpdateForces();
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
+      UpdateForces();
       for (auto &&entry : protofilaments_) {
         entry.UpdatePosition();
       }
-      UpdateForces();
     }
   }
 };

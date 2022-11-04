@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 10 # 0.001 # 0.001
 dt: 0.00002 
-t_run: 10
+t_run: 20
 t_equil: 0
 t_snapshot: 0.01
 dynamic_equil_window: -1 
@@ -13,7 +13,7 @@ filaments:
   n_subfilaments: 1
   periodic_barrel: false
   site_size: 8.2
-  n_bd_per_kmc: 1 # 0
+  n_bd_per_kmc: 1
   n_sites: [100, 100]
   polarity: [0, 1]
   x_initial: [0, 0]
@@ -54,6 +54,7 @@ motors:
   k_slack: 0.0265
 xlinks:
   neighb_neighb_energy: 2.25
+  side_neighbs_counted: false
   t_active: 0
   k_on: 0.000238
   c_bulk: 0.5 # 1.0 

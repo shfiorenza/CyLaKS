@@ -210,7 +210,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   using namespace Params;
   // Initialize filament environment
   Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
-  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  // Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
   // double pos_to_alignment{(Filaments::n_sites[0] - Filaments::n_sites[1]) *
   //                         Filaments::site_size / 2};
   // Sys::OverrideParam("filaments: x_initial[0]", &Filaments::x_initial[0],
@@ -238,6 +238,9 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
     Sys::n_xlinks_ = n_xlinks;
   }
   int n_places{(int)Filaments::n_sites[1]};
+  if (n_places > (int)Filaments::n_sites[0]) {
+    n_places = Filaments::n_sites[0];
+  }
   if (n_xlinks > n_places) {
     printf("\nError! Too many crosslinkers for filament length used.\n");
     exit(1);
@@ -256,10 +259,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   // Check if binding/unbinding of crosslinkers should be enabled
   if (Sys::binding_active_ == -1) {
     Str response;
-    printf("Enable binding/unbinding of second crosslinker head? (y/n)\n");
-    // printf("(Binding/unbinding of first head is disabled for either case, so
-    // "
-    //        "that total crosslinker number is constant.)\n");
+    printf("Enable binding/unbinding to/from solution? (y/n)\n");
     std::getline(std::cin, response);
     if (response == "n" or response == "N") {
       Sys::binding_active_ = 0;
@@ -322,13 +322,20 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
     site_indices[index] = index;
   }
   SysRNG::Shuffle(site_indices, n_places, sizeof(int));
+  int i_mt_short{1};
+  int i_mt_long{0};
+  if (Filaments::n_sites[1] > Filaments::n_sites[0]) {
+    i_mt_short = 0;
+    i_mt_long = 1;
+  }
   for (int i_xlink{0}; i_xlink < n_xlinks; i_xlink++) {
     Protein *xlink{xlinks_.GetFreeEntry()};
     int i_site{site_indices[i_xlink]};
-    BindingSite *site_one{&filaments_->protofilaments_[1].sites_[i_site]};
+    BindingSite *site_one{
+        &filaments_->protofilaments_[i_mt_short].sites_[i_site]};
     // printf("site one: %zu\n", site_one->index_);
     BindingSite *site_two{
-        filaments_->protofilaments_[0].GetNeighb(site_one, 0)};
+        filaments_->protofilaments_[i_mt_long].GetNeighb(site_one, 0)};
     // printf("site two: %zu\n", site_two->index_);
     bool exe_one{xlink->Bind(site_one, &xlink->head_one_)};
     bool exe_two{xlink->Bind(site_two, &xlink->head_two_)};
@@ -360,7 +367,21 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
       return 0;
     }
   };
+  // Binning helper functions
+  Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
+  Vec<int> i_min{0, 0, 0};
+  auto get_n_neighbs = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+    return indices_vec;
+  };
   // Sorting criteria functions
+  auto is_unocc = [](Object *base) -> Vec<Object *> {
+    BindingSite *site{dynamic_cast<BindingSite *>(base)};
+    if (!site->IsOccupied()) {
+      return {site};
+    }
+    return {};
+  };
   auto is_bound_i = [](Object *base) -> Vec<Object *> {
     Protein *protein{dynamic_cast<Protein *>(base)};
     if (protein->GetNumHeadsActive() == 1) {
@@ -398,80 +419,132 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
     }
   };
   if (Sys::binding_active_) {
-    // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)
-    auto weight_bind_ii = [](auto *head) {
-      return head->parent_->GetWeight_Bind_II();
-    };
-    auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
-      auto head{bound_head->GetOtherHead()};
-      auto site{head->parent_->GetNeighbor_Bind_II()};
-      auto executed{head->parent_->Bind(site, head)};
+    // Bind from solution (stage 0 -> stage 1)
+    // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
+    filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+    auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
+      if (Sys::i_step_ < pop->step_active_) {
+        return false;
+      }
+      auto entry{pop->GetFreeEntry()};
+      if (entry == nullptr) {
+        return false;
+      }
+      bool executed{entry->Bind(site, entry->GetHeadOne())};
       if (executed) {
-        // FIXME check if this check is necessary / what to do
-        bool still_attached{head->parent_->UpdateExtension()};
+        pop->AddToActive(entry);
       }
       return executed;
     };
-    xlinks_.AddPop("singly_bound", is_bound_i);
-    kmc_.events_.emplace_back(
-        "bind_ii (xlinks)", xlinks_.p_event_.at("bind_ii").GetVal(),
-        &xlinks_.sorted_.at("singly_bound").size_,
-        &xlinks_.sorted_.at("singly_bound").entries_, poisson,
-        [&](Object *base) {
-          return weight_bind_ii(dynamic_cast<BindingHead *>(base));
-        },
-        [&](Object *base) {
-          return exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
-                             filaments_);
-        });
-    // Doubly bound unbinding (stage 2 -> stage 1; crosslinking -> singly bound)
-    auto weight_unbind_ii = [](auto *head) {
-      return head->GetWeight_Unbind_II();
-    };
-    auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
-      bool executed{head->Unbind()};
-      return executed;
-    };
-    xlinks_.AddPop("doubly_bound", is_bound_ii);
-    kmc_.events_.emplace_back(
-        "unbind_ii (xlinks)", xlinks_.p_event_.at("unbind_ii").GetVal(),
-        &xlinks_.sorted_.at("doubly_bound").size_,
-        &xlinks_.sorted_.at("doubly_bound").entries_, poisson,
-        [&](Object *base) {
-          return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
-        },
-        [&](Object *base) {
-          return exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
-                               filaments_);
-        });
-    // Singly bound diffusion
-    Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
-    Vec<int> i_min{0, 0, 0};
-    auto get_n_neighbs = [](Object *entry) {
-      Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
-      return indices_vec;
-    };
-    xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
-    for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+    // Create a binomial event for each n_neighb possibility
+    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
       kmc_.events_.emplace_back(
-          "diffuse_i_fwd",
-          xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
-          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
-          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
+          "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+          xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
+          &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
+          &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
           binomial, [&](Object *base) {
-            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
-                            filaments_, 1);
-          });
-      kmc_.events_.emplace_back(
-          "diffuse_i_bck",
-          xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
-          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
-          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
-          binomial, [&](Object *base) {
-            return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
-                            filaments_, -1);
+            return exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_,
+                              filaments_);
           });
     }
+    // Singly bound unbinding to solution (stage 1 -> stage 0)
+    xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+    auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
+      bool executed{head->Unbind()};
+      if (executed) {
+        if (head->parent_->HasSatellite()) {
+          alt_pop->RemoveFromActive(head->parent_->teth_partner_);
+          bool untethered_sat{head->UntetherSatellite()};
+          if (!untethered_sat) {
+            Sys::ErrorExit("exe_unbind_i");
+          }
+        }
+        if (!head->parent_->IsTethered()) {
+          pop->RemoveFromActive(head->parent_);
+        }
+      }
+      return executed;
+    };
+    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+      kmc_.events_.emplace_back(
+          "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+          xlinks_.p_event_.at("unbind_i").GetVal(n_neighbs),
+          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
+          binomial, [&](Object *base) {
+            return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+                                &motors_, filaments_);
+          });
+    }
+  }
+  // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)
+  auto weight_bind_ii = [](auto *head) {
+    return head->parent_->GetWeight_Bind_II();
+  };
+  auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
+    auto head{bound_head->GetOtherHead()};
+    auto site{head->parent_->GetNeighbor_Bind_II()};
+    auto executed{head->parent_->Bind(site, head)};
+    if (executed) {
+      // FIXME check if this check is necessary / what to do
+      bool still_attached{head->parent_->UpdateExtension()};
+    }
+    return executed;
+  };
+  xlinks_.AddPop("singly_bound", is_bound_i);
+  kmc_.events_.emplace_back(
+      "bind_ii (xlinks)", xlinks_.p_event_.at("bind_ii").GetVal(),
+      &xlinks_.sorted_.at("singly_bound").size_,
+      &xlinks_.sorted_.at("singly_bound").entries_, poisson,
+      [&](Object *base) {
+        return weight_bind_ii(dynamic_cast<BindingHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                           filaments_);
+      });
+  // Doubly bound unbinding (stage 2 -> stage 1; crosslinking -> singly bound)
+  auto weight_unbind_ii = [](auto *head) {
+    return head->GetWeight_Unbind_II();
+  };
+  auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
+    bool executed{head->Unbind()};
+    return executed;
+  };
+  xlinks_.AddPop("doubly_bound", is_bound_ii);
+  kmc_.events_.emplace_back(
+      "unbind_ii (xlinks)", xlinks_.p_event_.at("unbind_ii").GetVal(),
+      &xlinks_.sorted_.at("doubly_bound").size_,
+      &xlinks_.sorted_.at("doubly_bound").entries_, poisson,
+      [&](Object *base) {
+        return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                             filaments_);
+      });
+  // Singly bound diffusion
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "diffuse_i_" + std::to_string(n_neighbs) + "_fwd",
+        xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, 1);
+        });
+    kmc_.events_.emplace_back(
+        "diffuse_i_" + std::to_string(n_neighbs) + "_bck",
+        xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, -1);
+        });
   }
   // Doubly bound diffusion
   xlinks_.AddPop("diffuse_ii_to_rest", is_bound_ii);

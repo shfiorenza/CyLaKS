@@ -54,6 +54,7 @@ motors:
   k_slack: 0.0265
 xlinks:
   neighb_neighb_energy: 2.25
+  side_neighbs_counted: false
   t_active: 0
   k_on: 0.00238 # x10
   c_bulk: 1 # 50 # 0

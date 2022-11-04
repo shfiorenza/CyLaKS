@@ -113,7 +113,7 @@ void Curator::CheckArgs(int argc, char *argv[]) {
       }
     }
     if (!valid_mode) {
-      printf("\nError! Invalid test mode.\n");
+      printf("\nError! Invalid test mode or incorrect input syntax.\n");
       printf("Currently-implemented test modes are:\n");
       for (auto const &mode : test_modes_) {
         printf("   %s\n", mode.c_str());
@@ -372,6 +372,7 @@ void Curator::InitializeSimulation() {
     }
   }
   // Otherwise, initialize test versions of proteins and filaments
+  // (Filaments are initialized in test_proteins_ Initialize routine)
   else {
     test_proteins_.Initialize(&test_filaments_);
     // Get maximum filament length in n_sites

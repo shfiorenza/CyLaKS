@@ -217,8 +217,8 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   //                    pos_to_alignment);
   Sys::OverrideParam("filaments. immobile_until[0]",
                      &Filaments::immobile_until[0], 100000.0);
-  Sys::OverrideParam("filaments. immobile_until[1]",
-                     &Filaments::immobile_until[1], 0.0);
+  // Sys::OverrideParam("filaments. immobile_until[1]",
+  //                    &Filaments::immobile_until[1], 0.0);
   // Sys::Log("Rotational filament movement has been disabled.\n");
   // Filaments::translation_enabled[0] = true;
   // Filaments::translation_enabled[1] = true;

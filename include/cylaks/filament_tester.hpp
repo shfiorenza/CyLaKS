@@ -21,9 +21,9 @@ public:
     double avg_force{0.0};
     for (int i_step{0}; i_step < recorded_force_.size(); i_step++) {
       avg_force += recorded_force_[i_step];
-      if (recorded_force_[i_step] == 0) {
-        printf("%i\n", i_step);
-      }
+      // if (recorded_force_[i_step] == 0) {
+      //   printf("%i\n", i_step);
+      // }
     }
     avg_force = avg_force / recorded_force_.size();
     double var_force{0.0};

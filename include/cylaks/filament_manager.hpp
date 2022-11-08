@@ -24,7 +24,7 @@ protected:
   ProteinManager *proteins_{nullptr};
 
 public:
-  bool mobile_{false};
+  bool never_mobile_{true};
   Vec<Protofilament> protofilaments_;
   Vec<BindingSite *> sites_;
 

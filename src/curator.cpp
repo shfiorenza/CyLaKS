@@ -254,9 +254,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
   ParseYAML(&Filaments::y_initial, "filaments.y_initial", "nm");
   ParseYAML(&Filaments::f_applied, "filaments.f_applied", "pN");
-  ParseYAML(&Filaments::immobile_until, "filaments.immobile_until", "s");
-  ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
-            "");
+  ParseYAML(&Filaments::x_immobile_until, "filaments.x_immobile_until", "s");
+  ParseYAML(&Filaments::y_immobile_until, "filaments.y_immobile_until", "s");
   ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
   ParseYAML(&Filaments::wca_potential_enabled,
             "filaments.wca_potential_enabled", "");
@@ -265,8 +264,9 @@ void Curator::ParseParameters() {
       Filaments::count > Filaments::polarity.size() or
       Filaments::count > Filaments::x_initial.size() or
       Filaments::count > Filaments::y_initial.size() or
-      Filaments::count > Filaments::immobile_until.size() or
-      _n_dims_max > Filaments::translation_enabled.size()) {
+      Filaments::count > Filaments::x_immobile_until.size() or
+      Filaments::count > Filaments::y_immobile_until.size() or
+      Filaments::count > Filaments::rotation_enabled.size()) {
     Log("Error! Incorrect number of filament parameters provided.\n");
     exit(1);
   }

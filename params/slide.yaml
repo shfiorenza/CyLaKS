@@ -18,11 +18,11 @@ filaments:
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  immobile_until: [1500, 50]
-  f_applied: [0.0, 0.0]
-  translation_enabled: [true, true]
-  rotation_enabled: false
+  x_immobile_until: [1500, 0]
+  y_immobile_until: [1500, 0]
+  rotation_enabled: [false, false]
   wca_potential_enabled: true
+  f_applied: [0.0, 0.0]
 motors:
   n_runs_to_exit: -1
   gaussian_range: 0 # 1000 # 1200 # 1000

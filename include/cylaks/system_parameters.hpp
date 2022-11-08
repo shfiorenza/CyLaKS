@@ -24,11 +24,11 @@ inline std::vector<size_t> n_sites;  // Length of each filament; n_sites
 inline std::vector<size_t> polarity; // 0 (1) sets plus-end to i=0 (n_sites - 1)
 inline std::vector<double> x_initial; // Starting x-coord of filament COM; nm
 inline std::vector<double> y_initial; // Starting y-coord of filament COM; nm
-inline std::vector<double> immobile_until; // Time at which filament can move; s
-inline std::vector<double> f_applied;      // Force applied to filament COM; pN
-inline std::vector<bool> translation_enabled; // Toggle translation in x,y
-inline bool rotation_enabled;      // Toggle rotation within  x-y plane
-inline bool wca_potential_enabled; // Toggle WCA potential between filaments
+inline std::vector<double> x_immobile_until; // Time when fil. can move in x; s
+inline std::vector<double> y_immobile_until; // Time when fil. can move in y; s
+inline std::vector<bool> rotation_enabled; // Toggle rotation within  x-y plane
+inline bool wca_potential_enabled;    // Toggle WCA potential between filaments
+inline std::vector<double> f_applied; // Force applied to filament COM; pN
 
 }; // namespace Filaments
 namespace Motors {

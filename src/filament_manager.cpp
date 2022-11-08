@@ -3,15 +3,6 @@
 
 void FilamentManager::SetParameters() {
 
-  // Filaments are mobile so long as at least 1 dimension is enabled
-  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    if (Params::Filaments::translation_enabled[i_dim]) {
-      mobile_ = true;
-    }
-  }
-  if (Params::Filaments::rotation_enabled) {
-    mobile_ = true;
-  }
   threshold_ = std::pow(2, 1.0 / 6.0) * sigma_;
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;
@@ -39,7 +30,8 @@ void FilamentManager::GenerateFilaments() {
     }
     printf("\n\n");
     f_applied = std::vector(n_subfilaments, f_applied[0]);
-    immobile_until = std::vector(n_subfilaments, immobile_until[0]);
+    x_immobile_until = std::vector(n_subfilaments, x_immobile_until[0]);
+    y_immobile_until = std::vector(n_subfilaments, y_immobile_until[0]);
   }
   // Initialize the protofilaments we implicitly created w/ the resize
   for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
@@ -111,12 +103,11 @@ void FilamentManager::GenerateFilaments() {
 
 bool FilamentManager::AllFilamentsImmobile() {
 
-  if (!mobile_) {
-    return true;
-  }
   for (auto const &pf : protofilaments_) {
-    if (Sys::i_step_ >= pf.immobile_until_) {
-      return false;
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      if (Sys::i_step_ > pf.immobile_until_[i_dim]) {
+        return false;
+      }
     }
   }
   return true;

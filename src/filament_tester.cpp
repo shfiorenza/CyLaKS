@@ -17,12 +17,12 @@ void FilamentTester::UpdateForces() {
   // (only applies to x dimension, so i = 0 index)
   double f_required{Sys::slide_velocity_ * protofilaments_[1].gamma_[0]};
   double f_applied{f_required - protofilaments_[1].force_[0]};
-  // Record applied force
-  if (recorded_force_[Sys::i_step_] == 0) {
-    recorded_force_[Sys::i_step_] = f_applied;
-  }
   if (Sys::i_step_ < Sys::i_pause_ or Sys::i_step_ >= Sys::i_resume_) {
     protofilaments_[1].force_[0] = f_required;
+    // Record applied force
+    if (recorded_force_[Sys::i_step_] == 0) {
+      recorded_force_[Sys::i_step_] = f_applied;
+    }
   }
   // else {
   //   printf("i_step is %zu\n", Sys::i_step_);

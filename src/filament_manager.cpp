@@ -21,14 +21,14 @@ void FilamentManager::GenerateFilaments() {
     polarity = std::vector(n_subfilaments, polarity[0]);
     x_initial = std::vector(n_subfilaments, x_initial[0]);
     y_initial = std::vector(n_subfilaments, y_initial[0]);
-    printf("\n\n");
+    // printf("\n\n");
     for (int i_sub{1}; i_sub < n_subfilaments; i_sub++) {
       y_initial[i_sub] =
           y_initial[0] + (i_sub * 2 * Params::Filaments::site_size);
       Sys::Log("n_sites[%i] = %zu\n", i_sub, n_sites[i_sub]);
       Sys::Log("polarity[%i] = %zu\n", i_sub, polarity[i_sub]);
     }
-    printf("\n\n");
+    // printf("\n\n");
     f_applied = std::vector(n_subfilaments, f_applied[0]);
     x_immobile_until = std::vector(n_subfilaments, x_immobile_until[0]);
     y_immobile_until = std::vector(n_subfilaments, y_immobile_until[0]);

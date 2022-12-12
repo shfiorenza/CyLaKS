@@ -29,6 +29,7 @@ protected:
     int i{indices.size() > 2 ? indices[2] : 0};
     Sys::Log(3, "entry added w/ ijk = %i%i%i\n", i, j, k);
     bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry;
+    //! FIXME is this correct?
     if (entry->GetNumHeadsActive() == 2) {
       bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry->GetOtherHead();
     }

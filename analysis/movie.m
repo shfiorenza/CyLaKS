@@ -1,13 +1,13 @@
 clear variables;
 
-sim_name = 'test_100_100b'; % Raw sim name; do not include directory
+sim_name = 'testino_0'; % Raw sim name; do not include directory
 output_movie_name = 'test';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
 frames_per_plot = 100; 
-movie_duration = 30; % in seconds
+movie_duration = 60; % in seconds
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files
@@ -53,7 +53,7 @@ occupancy = load_data(occupancy, occupancy_filename, '*int');
 
 motor_trailing_filename = sprintf('%s/%s_motor_head_trailing.file', file_dir, sim_name);
 motor_trailing = zeros(params.max_sites, params.n_mts, params.n_datapoints);
-motor_trailing = load_data(motor_trailing, motor_trailing_filename, '*bool');
+%motor_trailing = load_data(motor_trailing, motor_trailing_filename, '*bool');
 
 partner_filename = sprintf('%s/%s_partner_index.file', file_dir, sim_name);
 partner_indices = zeros(params.max_sites, params.n_mts, params.n_datapoints) - 1;
@@ -78,9 +78,9 @@ for i_data = start_frame : frames_per_plot : end_frame
     height = 400; % (1/10)*(max_x - min_x);
     top_start = filament_pos(1, 2, 2, i_data);
     top_end = filament_pos(1, 1, 2, i_data);
-    %ax.XLim = [(min_x - 25) (max_x + 25)];
+    ax.XLim = [(min_x - 25) (max_x + 25)];
     %ax.XLim = [(min_x - 25) (min_x + 475)];
-    ax.XLim = [(top_start - 25) (top_end + 25)];
+    %ax.XLim = [(top_start - 25) (top_end + 25)];
     ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
     ax.XTick = linspace(-2000, 2000, 11);

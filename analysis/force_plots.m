@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'test_100_100b';
+sim_name = 'testino';
 start_time = 0;          % in seconds 
 end_time = -1;           % in seconds; -1 defaults to full data 
 smoothing_window  = 1;   % in seconds

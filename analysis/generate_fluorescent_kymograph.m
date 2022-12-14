@@ -1,19 +1,20 @@
 clear variables; 
 
-file_dir = '/home/shane/projects/CyLaKS';
-sim_name = 'run_multiPF_hiBind/shep_multiPF_10x_5x_0.131_8';
+sim_name = 'testinoB';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = 600; %-1; 
-frac_visible = [1,m 2]; % [numerator, denominator]; [1,1] for all visibile
-xlink_intensity = 0; %0.0001; % Controls how bright a single xlink is 
-motor_intensity = 0.01; 
-subfilaments = true; 
+i_end = -1; 
+frac_visible = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+
+tubulin_intensity = 0.0025;
+xlink_intensity = 0.0025; % Controls how bright a single xlink is 
+motor_intensity = 1; 
+subfilaments = false; 
 
 % Scale bar lengths 
 scale_x = 1; %2.5; %1; % microns
-scale_t = 300; %30; %10; % seconds
+scale_t = 30; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
@@ -55,10 +56,10 @@ end
 dwell_steps = int32(dwell_time / params.time_per_datapoint);
 
 % change from 'zeros' to 'ones' to make MTs fluorescent 
-site_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints);
+site_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints);
 % Get motor and xlink matrices from occupancy data
-motor_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints); % from protein_ids;
-xlink_matrix = zeros(params.mt_lengths(1), params.n_mts, params.n_datapoints); % from protein_ids;
+motor_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
+xlink_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
 for i_data = 1 : params.n_datapoints
     for i_mt = 1 : params.n_mts
         for i_site = 1 : params.mt_lengths(i_mt)
@@ -81,6 +82,18 @@ end
 pixels_y = ceil((i_end - i_start) / dwell_steps);
 pixels_x = ceil(params.max_sites*siteLength/pixelLength)+2*pixelPad;
 if params.n_mts == 2 && subfilaments == false
+    max_span = 0;
+    for i_data = i_start : dwell_steps : i_end - dwell_steps
+        plus_one = filament_pos(1, 1, 1, i_data);
+        plus_two = filament_pos(1, 1, 2, i_data);
+        span = max(plus_one, plus_two) - min(plus_one, plus_two);
+        if span > max_span
+           max_span = span;
+        end
+    end
+    span_sites_max = int32(max_span / siteLength);
+    pixels_x = ceil(max_span/pixelLength) + 2*pixelPad;
+    %{
     pixels_x = ceil(2*params.max_sites*siteLength/pixelLength)+2*pixelPad;
     max_diff_x = 0;
     for i_data = i_start : dwell_steps : i_end - dwell_steps
@@ -94,12 +107,39 @@ if params.n_mts == 2 && subfilaments == false
     n_sites_diff_max = ceil(max_diff_x / siteLength);
     pixel_diff_max = ceil(max_diff_x / pixelLength);
     pixels_x = pixels_x + (pixel_diff_max - 1);
+    %}
 end
 
 final_img = zeros(pixels_y, pixels_x, 3); % RGB image; 
 % Run through data and create each line of kymograph step-by-step
 for i_data = i_start : dwell_steps : i_end - dwell_steps
     if params.n_mts == 2 && subfilaments == false
+        % for sliding 
+        plus_one = filament_pos(1, 1, 1, i_data);
+        plus_two = filament_pos(1, 1, 2, i_data);
+        span = max(plus_one, plus_two) - min(plus_one, plus_two);
+        span_sites = int32(span / siteLength);
+        i_offset = span_sites - params.mt_lengths(2);
+        if i_offset < 1
+            i_offset = 1;
+        end
+        
+        xlinks1 = sum(xlink_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
+        xlinks2 = sum(xlink_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        dataMatrixXlinks = zeros(1, span_sites_max);
+        dataMatrixXlinks(1:length(xlinks1)) = xlinks1; 
+        dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) = dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) + xlinks2;
+        leftover = zeros(1, span_sites_max - length(dataMatrixXlinks));
+        dataMatrixXlinks = [dataMatrixXlinks leftover];
+        
+        lineMatrix = zeros(1, span_sites_max);
+        lineMatrix(1:length(xlinks1)) = tubulin_intensity * ones(1, length(xlinks1)); 
+        lineMatrix(i_offset:i_offset+length(xlinks2)-1) = lineMatrix(i_offset:i_offset+length(xlinks2)-1) + tubulin_intensity * ones(1, length(xlinks2)); 
+        lineMatrix = [lineMatrix leftover];
+        
+        dataMatrixMotors = zeros(1,length(dataMatrixXlinks));
+        % for ablation
+        %{
         minus_one = filament_pos(:, 2, 1, i_data);
         plus_two = filament_pos(:, 1, 2, i_data);
         diff_x = plus_two(1) - minus_one(1);
@@ -110,11 +150,16 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
         
         motors1 = sum(motor_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
         motors2 = sum(motor_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
-        dataMatrix = [motors1 buffer motors2 leftover];
+        dataMatrixMotors = [motors1 buffer motors2 leftover];
+        
+        xlinks1 = sum(xlink_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
+        xlinks2 = sum(xlink_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        dataMatrixXlinks = [xlinks1 xlinks2 buffer leftover];
         
         sites1 = sum(site_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
         sites2 = sum(site_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
-        lineMatrix = [sites1 buffer sites2 leftover];
+        lineMatrix = [sites1 sites2 buffer leftover];
+        %}
     else
         dataMatrixMotors = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
         dataMatrixXlinks = sum(xlink_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
@@ -129,10 +174,10 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
     
     % Microtubules - red channel
     %lineMatrix = ones(size(dataMatrix));
-    %imageLine = imageGaussianOverlap(lineMatrix,siteLength,pixelLength,pixelPad,...
-    %    gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
-    %imageLine = imageLine/intensityMax; %convert to grayscale
-    imageLine = zeros(size(imageMotors));
+    imageLine = imageGaussianOverlapSlice(lineMatrix,siteLength,pixelLength,pixelPad,...
+        gaussSigma,gaussAmp,bkgLevel,noiseStd,doPlot);
+    imageLine = imageLine/intensityMax; %convert to grayscale
+    %imageLine = zeros(size(imageMotors));
     
     % Crosslinkers - green channel 
     imageXlinks = imageGaussianOverlapSlice(dataMatrixXlinks,siteLength,pixelLength,pixelPad,...

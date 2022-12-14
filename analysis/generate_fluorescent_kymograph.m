@@ -126,16 +126,16 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
         
         xlinks1 = sum(xlink_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
         xlinks2 = sum(xlink_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
-        dataMatrixXlinks = zeros(1, span_sites_max);
+        dataMatrixXlinks = zeros(1, span_sites);
         dataMatrixXlinks(1:length(xlinks1)) = xlinks1; 
         dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) = dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) + xlinks2;
-        leftover = zeros(1, span_sites_max - length(dataMatrixXlinks));
-        dataMatrixXlinks = [dataMatrixXlinks leftover];
+        leftover = zeros(1, (span_sites_max - length(dataMatrixXlinks))/2);
+        dataMatrixXlinks = [leftover dataMatrixXlinks leftover];
         
-        lineMatrix = zeros(1, span_sites_max);
+        lineMatrix = zeros(1, span_sites);
         lineMatrix(1:length(xlinks1)) = tubulin_intensity * ones(1, length(xlinks1)); 
         lineMatrix(i_offset:i_offset+length(xlinks2)-1) = lineMatrix(i_offset:i_offset+length(xlinks2)-1) + tubulin_intensity * ones(1, length(xlinks2)); 
-        lineMatrix = [lineMatrix leftover];
+        lineMatrix = [leftover lineMatrix leftover];
         
         dataMatrixMotors = zeros(1,length(dataMatrixXlinks));
         % for ablation

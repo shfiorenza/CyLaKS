@@ -27,6 +27,8 @@ void FilamentTester::UpdateForces() {
     }
   } else {
     protofilaments_[1].force_[0] += f_required;
+    f_required = Sys::slide_velocity_ * protofilaments_[0].gamma_[0];
+    protofilaments_[0].force_[0] -= f_required;
   }
   // else {
   //   printf("i_step is %zu\n", Sys::i_step_);

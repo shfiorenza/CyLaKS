@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'testino'; % Raw sim name; do not include directory
+sim_name = 'testinoC'; % Raw sim name; do not include directory
 output_movie_name = 'test';
 
 start_frame = 1;

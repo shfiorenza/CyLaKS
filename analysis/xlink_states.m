@@ -6,7 +6,7 @@ output_movie_name = 'test';
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 10; 
+frames_per_plot = 100; 
 movie_duration = 60; % in seconds
 
 % Load parameter structure
@@ -56,8 +56,6 @@ xlink_data = load_data(xlink_data, xlink_filename, 'double');
 
 % Run through all datapoints; each one is a frame in our movie
 for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
-    % Clear figure so that it only displays figures from current datapoint
-    clf;
     % determine overlap start and end coordinates 
     plus_pos_top = filament_pos(:, 1, 2, i_data);
     minus_pos_top = filament_pos(:, 2, 2, i_data);
@@ -65,6 +63,11 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
     minus_pos_bot = filament_pos(:, 2, 1, i_data);
     overlap_start = minus_pos_top(1); % x-coord of where overlap starts
     overlap_end = minus_pos_bot(1);   % x-coord of where overlap ends
+    if overlap_start > overlap_end
+        return
+    end
+    % Clear figure so that it only displays figures from current datapoint
+    clf;
     % scan over microtubules and bin crosslinkers appropriately
     n_single_in = 0;
     n_single_out = 0;
@@ -103,7 +106,7 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
                             if i_scan >= 1 && i_scan <= params.mt_lengths(i_mt)
                                 sid_neighb = occupancy(i_scan, i_mt, i_data + i_window);
                                 if sid_neighb == sid_xlink
-                                    neighb_distance(n_double + (i_mt - 1)) = delta;
+                                    neighb_distance(n_double + (i_mt - 1)) = delta - 1;
                                     neighb_found = true;
                                     break;
                                 end
@@ -114,15 +117,49 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
             end
         end
     end
-    end
-    
-    % Plot simplified movie snapshot
+    end   
+    % Plot occupancy profile
     subplot(2, 2, 1)
-    hold all
-    if overlap_start > overlap_end
-        return
+    occupancy(occupancy ~= sid_xlink) = 0;
+    occupancy(occupancy == sid_xlink) = 1;
+    avg_top = zeros([params.mt_lengths(2) 1]);
+    avg_bot = zeros([params.mt_lengths(1) 1]);   
+    for i_window = 0 : 1 : frames_per_plot
+        for i_site = 1 : params.mt_lengths(1)
+            avg_top(i_site) = avg_top(i_site) + double(occupancy(i_site, 2, i_data + i_window))./ frames_per_plot;
+        end
+        for i_site = 1 : params.mt_lengths(2)
+            avg_bot(i_site) = avg_bot(i_site) + double(occupancy(i_site, 1, i_data + i_window)) ./ frames_per_plot;
+        end
     end
-    xlim([(overlap_start - 25) (overlap_end + 25)]);
+    x_begin = plus_pos_bot(1);
+    x_end = plus_pos_top(1);
+    span = x_end - x_begin;
+    span_sites = int32(span / (params.site_size * 1000));
+   % i_offset = int32((minus_pos_top(1) - plus_pos_bot(1)) / (params.site_size * 1000)) + 1; 
+    i_offset = span_sites - params.mt_lengths(2);
+    if i_offset < 1
+       i_offset = 1; 
+    end
+    avg_tot = zeros([span_sites 1]);
+    avg_tot(1:params.mt_lengths(1)) = avg_bot;
+    avg_tot(i_offset:i_offset+params.mt_lengths(2) - 1) = avg_tot(i_offset:i_offset+params.mt_lengths(2) - 1 ) + avg_top;    
+    plot(avg_tot, 'LineWidth', 1.5);
+    xlim([0 span_sites]);
+    ylim([-0.1 2]);
+    ylabel("Fractional occupancy");
+    xlabel("Site number"); 
+    % Plot histogram of xlink angles
+    subplot(2, 2, 2)
+    histfit(angles);
+    xlim([0 180]);
+    xticks([0 90 180]);
+    ylabel("Count");
+    xlabel("Crosslinker angle (deg)");
+    % Plot simplified movie snapshot
+    subplot(2, 2, 3)
+    hold all
+    xlim([(overlap_start - 200) (overlap_end + 200)]);
     ylim([(plus_pos_bot(2) - 2.5) (plus_pos_top(2) + 2.5)]);
     line([plus_pos_top(1), minus_pos_top(1)],[plus_pos_top(2), minus_pos_top(2)], ...
         'LineWidth', 4, 'Color', [0.7 0.7 0.7]);
@@ -149,38 +186,22 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
     end
     xlabel("Position in x (nm)");
     ylabel("Position in y (nm)");
-    % Plot histogram of xlink angles
-    subplot(2, 2, 2)
-    histfit(angles);
-    xlim([0 180]);
-    xticks([0 90 180]);
-    ylabel("Count");
-    xlabel("Crosslinker angle (deg)");
-    % Plot ?
-    subplot(2, 2, 3)
-    angle_dist = fitdist(angles', 'Normal');
-    avg_theta = angle_dist.mu;
-    sig_theta = angle_dist.sigma;
-    length_dist = fitdist(lengths', 'Normal');
-    avg_length = length_dist.mu;
-    x_avg = (avg_length / 2)*cos(avg_theta * pi / 180);
-    y_avg = (avg_length / 2)*sin(avg_theta * pi / 180);
-    line([x_avg -x_avg],[-y_avg y_avg], 'LineWidth', 3, 'Color', purple)
-    xlim([-25 25]);
-    ylim([-25 25]);  
    % Plot histogram of xlink neighbor distance
     subplot(2, 2, 4)
-    histfit(neighb_distance);
-    xlim([0 6]);
-    xticks([0 3 6]);
+    n_bins = int32(sqrt(length(neighb_distance)));
+    h = histfit(neighb_distance, n_bins, 'exponential');
+    xlim([-1 8]);
+    xticks([0 4 8]);
     ylabel("Count");
     xlabel("Distance to neighbor (n_sites)");
 
     
-    
     time = (i_data - start_frame) * params.time_per_datapoint;
     str = sprintf('Time: %#.2f seconds', time);
-    dim = [0.25 0.69 .3 .3];
-    annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');   
+    dim = [0.15 0.69 .3 .3];
+    annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on'); 
+    str = sprintf('Force: %#.2f pN', xlink_data(1, i_data));
+    dim = [0.35 0.69 0.3 0.3];
+    annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on'); 
     drawnow();
 end

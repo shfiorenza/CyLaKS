@@ -193,7 +193,7 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
     xlim([-1 8]);
     xticks([0 4 8]);
     ylabel("Count");
-    xlabel("Distance to neighbor (n_sites)");
+    xlabel("Distance to neighbor (n sites)");
 
     
     time = (i_data - start_frame) * params.time_per_datapoint;

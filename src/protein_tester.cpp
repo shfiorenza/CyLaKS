@@ -250,7 +250,19 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   // Get desired sliding velocity for top microtubule (bottom is fixed)
   if (Sys::slide_velocity_ == -1.0) {
     Str response;
-    printf("Enter constant sliding velocity (in nm/s) desired for top MT.\n");
+    printf("Input 0 for constant force or 1 for constant velocity mode.\n");
+    std::getline(std::cin, response);
+    int vel_flag{std::stoi(response)};
+    if (vel_flag == 1) {
+      Sys::constant_velocity_ = true;
+    } else if (vel_flag == 0) {
+      Sys::constant_velocity_ = false;
+    } else {
+      printf("Error. Flag must be 0 or 1.\n");
+      exit(1);
+    }
+    printf("Enter constant (or average) sliding velocity (in nm/s) desired for "
+           "top MT.\n");
     std::getline(std::cin, response);
     Sys::slide_velocity_ = (double)std::stod(response);
   }
@@ -258,6 +270,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
     printf("\nError! Please keep velocity below 1 um/s (1000 nm/s).\n");
     exit(1);
   }
+  /*
   // Check if binding/unbinding of crosslinkers should be enabled
   if (Sys::binding_active_ == -1) {
     Str response;
@@ -272,6 +285,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
       exit(1);
     }
   }
+  */
   // Check if a pause in force-clamping is desired
   if (Sys::i_pause_ == -1) {
     Str response;
@@ -420,66 +434,66 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
       return executed;
     }
   };
-  if (Sys::binding_active_) {
-    // Bind from solution (stage 0 -> stage 1)
-    // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
-    filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
-    auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
-      if (Sys::i_step_ < pop->step_active_) {
-        return false;
-      }
-      auto entry{pop->GetFreeEntry()};
-      if (entry == nullptr) {
-        return false;
-      }
-      bool executed{entry->Bind(site, entry->GetHeadOne())};
-      if (executed) {
-        pop->AddToActive(entry);
-      }
-      return executed;
-    };
-    // Create a binomial event for each n_neighb possibility
-    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
-      kmc_.events_.emplace_back(
-          "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
-          xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
-          &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
-          &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
-          binomial, [&](Object *base) {
-            return exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_,
-                              filaments_);
-          });
+  // if (Sys::binding_active_) {
+  // Bind from solution (stage 0 -> stage 1)
+  // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
+  filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+  auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
+    if (Sys::i_step_ < pop->step_active_) {
+      return false;
     }
-    // Singly bound unbinding to solution (stage 1 -> stage 0)
-    xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
-    auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
-      bool executed{head->Unbind()};
-      if (executed) {
-        if (head->parent_->HasSatellite()) {
-          alt_pop->RemoveFromActive(head->parent_->teth_partner_);
-          bool untethered_sat{head->UntetherSatellite()};
-          if (!untethered_sat) {
-            Sys::ErrorExit("exe_unbind_i");
-          }
-        }
-        if (!head->parent_->IsTethered()) {
-          pop->RemoveFromActive(head->parent_);
-        }
-      }
-      return executed;
-    };
-    for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
-      kmc_.events_.emplace_back(
-          "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
-          xlinks_.p_event_.at("unbind_i").GetVal(n_neighbs),
-          &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
-          &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs],
-          binomial, [&](Object *base) {
-            return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
-                                &motors_, filaments_);
-          });
+    auto entry{pop->GetFreeEntry()};
+    if (entry == nullptr) {
+      return false;
     }
+    bool executed{entry->Bind(site, entry->GetHeadOne())};
+    if (executed) {
+      pop->AddToActive(entry);
+    }
+    return executed;
+  };
+  // Create a binomial event for each n_neighb possibility
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+        xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
+        &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
+        &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
+        binomial, [&](Object *base) {
+          return exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_,
+                            filaments_);
+        });
   }
+  // Singly bound unbinding to solution (stage 1 -> stage 0)
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
+    bool executed{head->Unbind()};
+    if (executed) {
+      if (head->parent_->HasSatellite()) {
+        alt_pop->RemoveFromActive(head->parent_->teth_partner_);
+        bool untethered_sat{head->UntetherSatellite()};
+        if (!untethered_sat) {
+          Sys::ErrorExit("exe_unbind_i");
+        }
+      }
+      if (!head->parent_->IsTethered()) {
+        pop->RemoveFromActive(head->parent_);
+      }
+    }
+    return executed;
+  };
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+        xlinks_.p_event_.at("unbind_i").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+                              &motors_, filaments_);
+        });
+  }
+  // }
   // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)
   auto weight_bind_ii = [](auto *head) {
     return head->parent_->GetWeight_Bind_II();

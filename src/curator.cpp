@@ -91,7 +91,16 @@ void Curator::CheckArgs(int argc, char *argv[]) {
           if (Sys::test_mode_ == "filament_forced_slide") {
             Sys::n_xlinks_ = std::stoi(argv[4]);
             Sys::slide_velocity_ = std::stod(argv[5]);
-            Sys::binding_active_ = std::stoi(argv[6]);
+            //  Sys::binding_active_ = std::stoi(argv[6]);
+            int vel_flag{std::stoi(argv[6])};
+            if (vel_flag == 1) {
+              Sys::constant_velocity_ = true;
+            } else if (vel_flag == 0) {
+              Sys::constant_velocity_ = false;
+            } else {
+              printf("Error. Velocity flag must be 0 or 1.\n");
+              exit(1);
+            }
             Sys::i_pause_ = std::numeric_limits<int>::max();
             Sys::i_resume_ = std::numeric_limits<int>::max();
           } else {
@@ -101,7 +110,16 @@ void Curator::CheckArgs(int argc, char *argv[]) {
           if (Sys::test_mode_ == "filament_forced_slide") {
             Sys::n_xlinks_ = std::stoi(argv[4]);
             Sys::slide_velocity_ = std::stod(argv[5]);
-            Sys::binding_active_ = std::stoi(argv[6]);
+            int vel_flag{std::stoi(argv[6])};
+            if (vel_flag == 1) {
+              Sys::constant_velocity_ = true;
+            } else if (vel_flag == 0) {
+              Sys::constant_velocity_ = false;
+            } else {
+              printf("Error. Velocity flag must be 0 or 1.\n");
+              exit(1);
+            }
+            //  Sys::binding_active_ = std::stoi(argv[6]);
             Sys::i_pause_ = std::stod(argv[7]);
             Sys::i_resume_ = std::stod(argv[8]);
             Sys::rescale_times_ = true;

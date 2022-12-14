@@ -39,6 +39,7 @@ inline size_t ablation_step_{0}; // For 'filament_ablation'
 
 inline int n_xlinks_{-1};       // For 'filament_separation' and 'forced_slide'
 inline int binding_active_{-1}; // bool+1; -1 for null; 0 for false; 1 for true
+inline bool constant_velocity_{true};
 inline double slide_velocity_{-1.0}; // For 'forced_slide'
 inline int i_pause_{-1};             // when to pause force clamp
 inline int i_resume_{-1};            // when to resume force clamp

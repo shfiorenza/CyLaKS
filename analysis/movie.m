@@ -1,7 +1,8 @@
 clear variables;
 
-sim_name = 'testino'; % Raw sim name; do not include directory
-output_movie_name = 'test';
+sim_name = 'runs_new/runs_1kT/shep_1kT_0.0033_8'; % Raw sim name; do not include directory
+sim_name = 'testino';
+output_movie_name = 'test_8';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
@@ -76,8 +77,8 @@ for i_data = start_frame : frames_per_plot : end_frame
     max_y = max(max(filament_pos(2, :, :, i_data)));
     avg_y = (min_y + max_y)/2;
     height = 400; % (1/10)*(max_x - min_x);
-    top_start = filament_pos(1, 2, 2, i_data);
-    top_end = filament_pos(1, 1, 2, i_data);
+    %top_start = filament_pos(1, 2, 2, i_data);
+    %top_end = filament_pos(1, 1, 2, i_data);
     ax.XLim = [(min_x - 25) (max_x + 25)];
     %ax.XLim = [(min_x - 25) (min_x + 475)];
     %ax.XLim = [(top_start - 25) (top_end + 25)];

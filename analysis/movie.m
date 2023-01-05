@@ -1,14 +1,14 @@
 clear variables;
 
 sim_name = 'runs_new/runs_1kT/shep_1kT_0.0033_8'; % Raw sim name; do not include directory
-sim_name = 'testinoC';
-output_movie_name = 'test_8';
+sim_name = 'testinoI';
+output_movie_name = 'test';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
 frames_per_plot = 100; 
-movie_duration = 60; % in seconds
+movie_duration = 30; % in seconds
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files

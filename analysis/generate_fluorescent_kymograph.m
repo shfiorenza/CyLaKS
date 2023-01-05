@@ -1,6 +1,6 @@
 clear variables; 
 
-sim_name = 'testinoB';
+sim_name = 'testinoH';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
@@ -84,8 +84,8 @@ pixels_x = ceil(params.max_sites*siteLength/pixelLength)+2*pixelPad;
 if params.n_mts == 2 && subfilaments == false
     max_span = 0;
     for i_data = i_start : dwell_steps : i_end - dwell_steps
-        plus_one = filament_pos(1, 1, 1, i_data);
-        plus_two = filament_pos(1, 1, 2, i_data);
+        plus_one = filament_pos(1, 2, 1, i_data); % actually minus
+        plus_two = filament_pos(1, 2, 2, i_data); % actually minus
         span = max(plus_one, plus_two) - min(plus_one, plus_two);
         if span > max_span
            max_span = span;
@@ -115,8 +115,8 @@ final_img = zeros(pixels_y, pixels_x, 3); % RGB image;
 for i_data = i_start : dwell_steps : i_end - dwell_steps
     if params.n_mts == 2 && subfilaments == false
         % for sliding 
-        plus_one = filament_pos(1, 1, 1, i_data);
-        plus_two = filament_pos(1, 1, 2, i_data);
+        plus_one = filament_pos(1, 2, 1, i_data); % actually minus
+        plus_two = filament_pos(1, 2, 2, i_data); % actually minus
         span = max(plus_one, plus_two) - min(plus_one, plus_two);
         span_sites = int32(span / siteLength);
         i_offset = span_sites - params.mt_lengths(2);
@@ -124,8 +124,8 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
             i_offset = 1;
         end
         
-        xlinks1 = sum(xlink_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
-        xlinks2 = sum(xlink_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        xlinks1 = sum(xlink_matrix(:, 2, i_data:i_data + dwell_steps), 3)';
+        xlinks2 = sum(xlink_matrix(:, 1, i_data:i_data + dwell_steps), 3)';
         dataMatrixXlinks = zeros(1, span_sites);
         dataMatrixXlinks(1:length(xlinks1)) = xlinks1; 
         dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) = dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) + xlinks2;

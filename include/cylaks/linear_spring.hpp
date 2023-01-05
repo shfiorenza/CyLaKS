@@ -43,11 +43,11 @@ protected:
   }
   void ForceUnbind() {
     // FIXME need to incorporate influence from other springs, e.g. tethers
-    if (SysRNG::GetRanProb() < 0.5) {
-      endpoints_[0]->Unbind();
-    } else {
-      endpoints_[1]->Unbind();
-    }
+    // if (SysRNG::GetRanProb() < 0.5) {
+    //   // endpoints_[0]->Unbind();
+    // } else {
+    //   // endpoints_[1]->Unbind();
+    // }
   }
   void ForceUnbind(int i_head) { endpoints_[i_head]->Unbind(); }
 
@@ -79,10 +79,10 @@ public:
       r_sq += Square(r_hat[i_dim]);
     }
     double r_mag{sqrt(r_sq)};
-    // printf("r = %g\n", r_mag);
     if (r_mag < r_min_ or r_mag > r_max_) {
+      printf("r = %g\n", r_mag);
       // ForceUnbind();
-      // return false;
+      return false;
     }
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       r_hat[i_dim] /= r_mag;

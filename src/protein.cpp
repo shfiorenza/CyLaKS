@@ -134,6 +134,13 @@ bool Protein::UpdateExtension() {
   // Update spring position
   bool spring_attached{spring_.UpdatePosition()};
   if (!spring_attached) {
+    printf("yup\n");
+    // FIXME need to incorporate influence from other springs, e.g. tethers
+    if (SysRNG::GetRanProb() < 0.5) {
+      head_one_.Unbind();
+    } else {
+      head_two_.Unbind();
+    }
     return false;
   }
   // bool head_one_attached{pivot_one_.UpdatePosition()};

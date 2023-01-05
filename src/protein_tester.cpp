@@ -425,7 +425,6 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
         return executed;
       }
       return false;
-
     } else {
       bool executed{head->Diffuse(dir)};
       if (executed) {

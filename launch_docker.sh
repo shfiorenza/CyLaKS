@@ -1,36 +1,48 @@
 #! /bin/bash
 
-# Shamelessly stolen from jeffmm/simcore project
-
-# Run to launch a docker container named "cylaks".
-# Provide the flag '-b' to force rebuilding the project image:
-# >> ./run_docker.sh -b
-# Provide the flag '-e' to force rebuilding the project image environment:
-# >> ./run_docker.sh -e
-# Provide the flag '-d' to to launch run_demos.sh script in Docker
-# >> ./run_docker.sh -d
+# *** Shamelessly stolen/adapted from jeffmm/simcore project ***
 
 show_help() {
-    echo "Without additional options, $0 launches a docker container named 'cylaks' to run in the background"
     echo "USAGE:"
-    echo "  $0 [-hbed]"
+    echo "  $0 [flag]"
     echo "OPTIONS:"
-    echo "  -h      show this menu"
-    echo "  -b      force rebuild of CyLaKS docker image"
-    echo "  -e      force rebuild of CyLaKS base environment docker image"
-    echo "  -d      launch run_demos.sh script in Docker container"
+    echo "  -h      help: show this menu (default if no options are provided)"
+    echo "  -i      initialize: start a new docker container named 'cylaks' using docker image" 
+    echo "  -r      run: launch CyLaKS program in 'cylaks' docker container and link output to local dir"
+    echo "  -c      clean up: stop 'cylaks' docker container and remove docker image from local system"
+    echo "  -b      build: force local rebuild of CyLaKS docker image (use if pulled image does not work)"
+    echo "  -e      build: force local rebuild of base Linux environment docker image"
 }
 
-# Reset in case getopts has been used previously in the shell.
-OPTIND=1 
+if [[ $# -gt 1 ]]; then
+    echo "Error; please select just one flag at a time"
+    exit 0
+fi
+
+OPTIND=1
+init=false
+run=false
+clean=false 
 build=false
 build_base=false
-launch_demos=false
-while getopts "h?bed" opt; do
+while getopts "h?ircbd" opt; do
+    if $init OR $run OR $clean OR $build OR $build_base; then
+        echo "Error; please select just one flag at a time"
+        exit 0
+    fi
     case "$opt" in
     h|\?)
         show_help
         exit 0
+        ;;
+    i)  
+        init=true
+        ;;
+    r)  
+        run=true
+        ;;
+    c)  
+        clean=true
         ;;
     b)  
         build=true
@@ -38,46 +50,30 @@ while getopts "h?bed" opt; do
     e)
         build_base=true
         ;;
-    d)
-        launch_demos=true
-        ;;
     esac
 done
 
 shift $((OPTIND-1))
-
 [ "${1:-}" = "--" ] && shift
 
-if $build; then
+if $init; then
+    echo "Launching CyLaKS docker container named 'cylaks'"
+    docker run --rm -itd -v "${PWD}":/mnt --name "cylaks" shfiorenza/cylaks bash
+elif $run; then
+    echo "Running CyLaKS program in docker container. Data files will be output to local directory"
+    echo "(Interactive launcher only; quick-launch syntax currently not supported w/ Docker)"
+    echo ""
+    docker exec -it cylaks cylaks.exe
+elif $clean; then 
+    echo "Stopping CyLaKS container and removing docker image from local system."
+    docker container stop cylaks
+    docker image rm shfiorenza/cylaks
+elif $build; then
     echo "Building CyLaKS docker image"
     docker build --no-cache -t shfiorenza/cylaks:latest docker
 elif $build_base; then
     echo "Building CyLaKS base environment docker image"
     docker build --no-cache -f docker/Dockerfile_base -t shfiorenza/cylaks_base:latest docker
-elif $launch_demos; then
-    echo "Please select which demo you would like to run: "
-    echo "  1. End-tag formation"
-    echo "  2. Tubulin heterogeneity"
-    echo "  3. Kinesin heterodimer"
-    echo "  4. Filament separation"
-    read MODE 
-    case "$MODE" in 
-
-        1)
-            docker exec -it cylaks cylaks.exe params/params_endtag.yaml demo_endtag 
-            ;;
-        2)
-            docker exec -it cylaks cylaks.exe params/params_endtag.yaml demo_tubulin hetero_tubulin
-            ;;
-        3)
-            docker exec -it cylaks cylaks.exe params/params_heterodimer.yaml demo_heterodimer kinesin_mutant
-            ;;
-        4)
-            docker exec -it cylaks cylaks.exe params/params_separation.yaml demo_separation filament_separation
-            ;;
-
-    esac 
 else
-    echo "Launching CyLaKS docker container"
-    docker run --rm -itd -v "${PWD}":/mnt --name "cylaks" shfiorenza/cylaks bash
+    show_help
 fi

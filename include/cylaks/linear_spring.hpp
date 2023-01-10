@@ -80,7 +80,7 @@ public:
     }
     double r_mag{sqrt(r_sq)};
     if (r_mag < r_min_ or r_mag > r_max_) {
-      printf("r = %g\n", r_mag);
+      // printf("r = %g\n", r_mag);
       // ForceUnbind();
       return false;
     }

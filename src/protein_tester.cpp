@@ -504,6 +504,9 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
     if (executed) {
       // FIXME check if this check is necessary / what to do
       bool still_attached{head->parent_->UpdateExtension()};
+      if (!still_attached) {
+        return false;
+      }
     }
     return executed;
   };

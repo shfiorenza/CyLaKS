@@ -134,8 +134,8 @@ bool Protein::UpdateExtension() {
   // Update spring position
   bool spring_attached{spring_.UpdatePosition()};
   if (!spring_attached) {
-    printf("yup\n");
-    // FIXME need to incorporate influence from other springs, e.g. tethers
+    // printf("yup\n");
+    // ! FIXME need to incorporate influence from other springs, e.g. tethers
     if (SysRNG::GetRanProb() < 0.5) {
       head_one_.Unbind();
     } else {
@@ -177,12 +177,23 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
     double dr{r - spring_.r_rest_};
     double dr_fwd{r_fwd - spring_.r_rest_};
     double dr_bck{r_bck - spring_.r_rest_};
+    if (Square(dr_fwd) == Square(dr_bck)) {
+      // printf("HUH\n");
+      return 0;
+    }
     if (Square(dr_fwd) < Square(dr)) {
       return 1;
     }
     if (Square(dr_bck) < Square(dr)) {
       return -1;
     }
+    if (Square(dr_fwd) < Square(dr_bck)) {
+      return 1;
+    }
+    if (Square(dr_fwd) > Square(dr_bck)) {
+      return -1;
+    }
+    Sys::ErrorExit("Protein::GetDirectionTowardRest()");
     return 0;
     /*
     // printf("%g > %g?\n", head->site_->pos_[0], GetAnchorCoordinate(0));

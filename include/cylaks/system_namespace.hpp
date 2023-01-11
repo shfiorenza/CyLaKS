@@ -7,6 +7,7 @@
 // classes
 namespace Sys {
 
+inline std::string exe_name_;  // Name of executable (argv[0])
 inline std::string sim_name_;  // Name of simulation
 inline std::string test_mode_; // Name of test mode, if any
 inline std::string yaml_file_; // Name of parameter file

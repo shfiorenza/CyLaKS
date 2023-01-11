@@ -115,6 +115,12 @@ void ProteinTester::InitializeTest_Filament_Separation() {
   InitializeWeights();
   SetParameters();
   filaments_->Initialize(this);
+  printf("\nRunning interactive launcher for 'filament_separation'.\n");
+  printf("You can also use the following quick-launch syntax:\n\n");
+  printf("  %s params.yaml sim_name filament_separation n_xlinks\n\n",
+         Sys::exe_name_.c_str());
+  printf("where n_xlinks is the number of doubly bound crosslinkers to "
+         "be inserted.\n\n");
   int n_xlinks{Sys::n_xlinks_};
   if (n_xlinks == -1) {
     Str response;
@@ -229,6 +235,21 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   InitializeWeights();
   SetParameters();
   filaments_->Initialize(this);
+  printf("\nRunning interactive launcher for 'filament_forced_slide'.\n");
+  printf("You can also use the following quick-launch syntax:\n\n");
+  printf("  %s params.yaml sim_name filament_forced_slide "
+         "n_xlinks slide_velocity mode_flag\n",
+         Sys::exe_name_.c_str());
+  printf("       OR\n");
+  printf("  %s params.yaml sim_name filament_forced_slide "
+         "n_xlinks slide_velocity mode_flag t_pause pause_duration\n",
+         Sys::exe_name_.c_str());
+  printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+         "be inserted,\nslide_velocity is the imposed average velocity "
+         "on microtubules, and\nmode_flag is set to 0 for a constant "
+         "force assay or 1 for a constant velocity assay.\n");
+  printf("t_pause and pause_duration (in seconds) are optional and allow for a "
+         "temporary pause in the applied force at a specified time.\n\n");
   // Get number of crosslinkers to initialize in the starting overlap
   int n_xlinks{Sys::n_xlinks_};
   if (n_xlinks == -1) {

@@ -25,7 +25,7 @@ void Curator::CheckArgs(int argc, char *argv[]) {
       for (int i_test{0}; i_test < test_modes_.size(); i_test++) {
         printf(" %i. %s\n", i_test, test_modes_[i_test].c_str());
         if (i_test == n_tests_ - 1) {
-          printf("\nCurrently implemented DEMO MODES:\n");
+          printf("Currently implemented DEMO MODES:\n");
         }
       }
       // Demand that user picks via integer index
@@ -57,76 +57,26 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     return;
   }
   // If input format is incorrect, inform user of appropriate format
-  if (argc < 3 or argc > 9) {
+  if (argc < 3) {
     printf("Error! Incorrect number of command-line arguments\n");
     printf("\nUse '%s' to run interactive launcher. ", argv[0]);
     printf("Otherwise, the correct format is:\n");
     printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
-    printf("test_mode (optional)\n\n");
+    printf("test_mode test_mode_flags (optional)\n\n");
     printf("A list of currently implemented test modes is available in the "
            "interactive launcher.\n");
     exit(1);
   }
+  // Get required inputs
+  Sys::exe_name_ = argv[0];
   Sys::yaml_file_ = argv[1];
   Sys::sim_name_ = argv[2];
+  // Check for test_mode selection and ensure it's valid
   if (argc > 3) {
     Sys::test_mode_ = argv[3];
     bool valid_mode{false};
     for (auto const &mode : test_modes_) {
       if (Sys::test_mode_ == mode) {
-        if (argc == 5) {
-          if (Sys::test_mode_ == "filament_separation") {
-            Sys::n_xlinks_ = std::stoi(argv[4]);
-          } else {
-            break;
-          }
-        } else if (argc == 6) {
-          if (Sys::test_mode_ == "hetero_tubulin") {
-            Sys::p_mutant_ = std::stod(argv[4]);
-            Sys::binding_affinity_ = std::stod(argv[5]);
-          } else {
-            break;
-          }
-        } else if (argc == 7) {
-          if (Sys::test_mode_ == "filament_forced_slide") {
-            Sys::n_xlinks_ = std::stoi(argv[4]);
-            Sys::slide_velocity_ = std::stod(argv[5]);
-            //  Sys::binding_active_ = std::stoi(argv[6]);
-            int vel_flag{std::stoi(argv[6])};
-            if (vel_flag == 1) {
-              Sys::constant_velocity_ = true;
-            } else if (vel_flag == 0) {
-              Sys::constant_velocity_ = false;
-            } else {
-              printf("Error. Velocity flag must be 0 or 1.\n");
-              exit(1);
-            }
-            Sys::i_pause_ = std::numeric_limits<int>::max();
-            Sys::i_resume_ = std::numeric_limits<int>::max();
-          } else {
-            break;
-          }
-        } else if (argc == 9) {
-          if (Sys::test_mode_ == "filament_forced_slide") {
-            Sys::n_xlinks_ = std::stoi(argv[4]);
-            Sys::slide_velocity_ = std::stod(argv[5]);
-            int vel_flag{std::stoi(argv[6])};
-            if (vel_flag == 1) {
-              Sys::constant_velocity_ = true;
-            } else if (vel_flag == 0) {
-              Sys::constant_velocity_ = false;
-            } else {
-              printf("Error. Velocity flag must be 0 or 1.\n");
-              exit(1);
-            }
-            //  Sys::binding_active_ = std::stoi(argv[6]);
-            Sys::i_pause_ = std::stod(argv[7]);
-            Sys::i_resume_ = std::stod(argv[8]);
-            Sys::rescale_times_ = true;
-          } else {
-            break;
-          }
-        }
         valid_mode = true;
       }
     }
@@ -136,6 +86,84 @@ void Curator::CheckArgs(int argc, char *argv[]) {
       for (auto const &mode : test_modes_) {
         printf("   %s\n", mode.c_str());
       }
+      exit(1);
+    }
+  }
+  // If valid test_mode, check for potential test_mode flags
+  if (argc > 4) {
+    if (Sys::test_mode_ == "filament_separation") {
+      if (argc == 5) {
+        Sys::n_xlinks_ = std::stoi(argv[4]);
+      } else {
+        printf("Error. Quick-launch syntax for 'filament_separation' test mode "
+               "is:\n");
+        printf("\n  %s params.yaml sim_name filament_separation n_xlinks\n",
+               argv[0]);
+        printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+               "be inserted.\n");
+        exit(1);
+      }
+    } else if (Sys::test_mode_ == "hetero_tubulin") {
+      if (argc == 6) {
+        Sys::p_mutant_ = std::stod(argv[4]);
+        Sys::binding_affinity_ = std::stod(argv[5]);
+      } else {
+        printf(
+            "Error. Quick-launch syntax for 'hetero_tubulin' test mode is:\n");
+        printf("\n  %s params.yaml sim_name hetero_tubulin p_mutant bind_aff\n",
+               argv[0]);
+        printf(
+            "\nwhere p_mutant is the fraction of mutant sites (0 to 1) and\n");
+        printf("bind_aff is the binding affinity of normal sites relative "
+               "to mutant.\n");
+        printf("(bind_aff = 3 will make binding 3x weaker and unbinding 3x "
+               "stronger on mutant sites.)\n");
+        exit(1);
+      }
+    } else if (Sys::test_mode_ == "filament_forced_slide") {
+      bool valid_syntax{true};
+      if (argc >= 7) {
+        Sys::n_xlinks_ = std::stoi(argv[4]);
+        Sys::slide_velocity_ = std::stod(argv[5]);
+        int vel_flag{std::stoi(argv[6])};
+        if (vel_flag == 1) {
+          Sys::constant_velocity_ = true;
+        } else if (vel_flag == 0) {
+          Sys::constant_velocity_ = false;
+        } else {
+          printf("Error. Velocity flag must be 0 or 1.\n");
+          exit(1);
+        }
+      }
+      if (argc == 7) {
+        Sys::i_pause_ = std::numeric_limits<int>::max();
+        Sys::i_resume_ = std::numeric_limits<int>::max();
+      } else if (argc == 9) {
+        Sys::i_pause_ = std::stod(argv[7]);
+        Sys::i_resume_ = std::stod(argv[8]);
+        Sys::rescale_times_ = true;
+      } else {
+        printf("Error. Quick-launch syntax for 'filament_forced_slide' test "
+               "mode is:\n");
+        printf("\n  %s params.yaml sim_name filament_forced_slide "
+               "n_xlinks slide_velocity mode_flag\n",
+               argv[0]);
+        printf("       OR\n");
+        printf("  %s params.yaml sim_name filament_forced_slide "
+               "n_xlinks slide_velocity mode_flag t_pause pause_duration\n",
+               argv[0]);
+        printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+               "be inserted,\nslide_velocity is the imposed average velocity "
+               "on microtubules, and\nmode_flag is set to 0 for a constant "
+               "force assay or 1 for a constant velocity assay.\n");
+        printf("t_pause and pause_duration (in seconds) are optional and allow "
+               "for a "
+               "temporary pause in the applied force at a specified time.\n");
+        exit(1);
+      }
+    } else {
+      printf("Error. Test mode '%s' does not accept any additional inputs.\n",
+             argv[3]);
       exit(1);
     }
   }

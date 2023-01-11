@@ -1,7 +1,7 @@
 clear variables;
 
 sim_name = 'runs_new/runs_1kT/shep_1kT_0.0033_8'; % Raw sim name; do not include directory
-sim_name = 'testinoI';
+sim_name = 'testinoDb';
 output_movie_name = 'test';
 
 start_frame = 1;

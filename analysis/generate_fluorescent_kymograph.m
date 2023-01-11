@@ -1,6 +1,6 @@
 clear variables; 
 
-sim_name = 'testinoH';
+sim_name = 'testinoDb';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;

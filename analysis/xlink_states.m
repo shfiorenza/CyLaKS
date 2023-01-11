@@ -1,12 +1,12 @@
 clear variables;
 
-sim_name = 'testinoB'; % Raw sim name; do not include directory
+sim_name = 'testinoDb'; % Raw sim name; do not include directory
 output_movie_name = 'mov';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 25; % in n_datapoints
+frames_per_plot = 50; % in n_datapoints
 movie_duration = 30; % in seconds
 
 % Load parameter structure
@@ -211,7 +211,8 @@ for i_data = start_frame : frames_per_plot : end_frame - frames_per_plot
    % Plot 1-to-1 axis plot so we can see angles accurately 
     subplot(2, 3, 3)
     hold all
-    xlim([(overlap_start - 10) (overlap_start + 40)]);
+    %xlim([(overlap_start - 10) (overlap_start + 40)]);
+    xlim([(overlap_end - 40) (overlap_end + 10)]);
     ylim([(plus_pos_bot(2) - 10) (plus_pos_bot(2) + 40)]);
     line([plus_pos_top(1), minus_pos_top(1)],[plus_pos_top(2), minus_pos_top(2)], ...
         'LineWidth', 4, 'Color', [0.7 0.7 0.7]);

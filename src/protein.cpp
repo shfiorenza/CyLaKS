@@ -160,7 +160,7 @@ bool Protein::UpdateExtension() {
 }
 
 int Protein::GetDirectionTowardRest(BindingHead *head) {
-
+  // ! FIXME for asymmetric sprangs
   if (n_heads_active_ == 1) {
     return 1;
   } else if (n_heads_active_ == 2) {

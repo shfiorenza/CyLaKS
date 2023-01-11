@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 10 # 0.001 # 0.001
 dt: 0.00002 
-t_run: 90 # 120
+t_run: 60 # 120
 t_equil: 0
 t_snapshot: 0.01
 dynamic_equil_window: -1 
@@ -18,7 +18,7 @@ filaments:
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  x_immobile_until: [2, 2]
+  x_immobile_until: [5, 5]
   y_immobile_until: [0, 0]
   rotation_enabled: [false, false]
   wca_potential_enabled: true
@@ -61,10 +61,10 @@ xlinks:
   k_off_i: 0.002 # 0.143
   k_off_ii: 0.002 # 0.0143
   d_i: 0.04 # 0.131
-  d_ii: 0.004 # 0.0655
+  d_ii: 0.01 # 0.0655
   d_side: 0.000131
   r_0: 32
   k_spring: 0.453
   theta_0: 90
   k_rot: 0 # 1000
-  p_diffuse_off_end: 1 # 0.01
+  p_diffuse_off_end: 0.01 # 0 # 0.01 # 0.01

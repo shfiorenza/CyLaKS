@@ -1,7 +1,7 @@
 # CyLaKS
 The **Cy**toskeleton **La**ttice-based **K**inetic **S**imulator
 ## Installation
-### Using pre-built Docker image
+### Using a pre-built Docker image
 A pre-built image of CyLaKS is available as a [Docker](https://www.docker.com/) image. To download this image, run
 ```
 docker pull shfiorenza/cylaks
@@ -13,19 +13,19 @@ dockerd
 ```
 On Windows and MacOS, you can use [Docker Desktop](https://www.docker.com/products/docker-desktop). 
 
-Once you have downloaded the CyLaKS image, you can use the provided `launch_docker.sh` script to easily initialize the Docker environemnt and run simulations within it. (Data files are still be output to your local directory.) To see a full list of script run options, use the _help_ flag: 
+Once you have downloaded the CyLaKS image, you can use the provided `launch_docker.sh` script to easily initialize the Docker environment and run simulations within it. (Data files are still output to your local directory.) To see a full list of script run options, use the _help_ (-h) flag: 
 ```
 ./launch_docker.sh -h
 ```
-Before running any simulations, the Docker container must first be appropriately launched in the background. To do this, use the _initialize_ flag:  
+Before running simulations, the Docker container must first be appropriately launched in the background. To do this, use the _initialize_ (-i) flag:  
 ```
 ./launch_docker.sh -i
 ```
-Again, you may need to add 'sudo' depending on your local Docker permissions. Once the container is initialized, you can start the interactive simulation launcher using the _run_ flag:
+Again, you may need to add 'sudo' depending on your local Docker permissions. Once the container is initialized, you can start the interactive simulation launcher using the _run_ (-r) flag:
 ```
 ./launch_docker.sh -r
 ```
-You can also manually launch CyLaKS simulations via Docker while the container is running:
+You can also manually launch CyLaKS simulations via Docker while the container is running using the quick-launch syntax:
 ```
 docker exec -it cylaks cylaks.exe [parameter-file] [sim-name] [optional-flags]
 ```
@@ -35,18 +35,18 @@ To close the cylaks container, use the `stop` command:
 ```
 docker stop cylaks
 ```
-This will leave the docker image on your computer. To fully remove the docker image, use the _clean up_ flag: 
+This will leave the Docker image on your computer for later use. To fully remove the Docker image, use the _clean up_ (-c) flag: 
 ```
 ./launch_docker.sh -c
 ```
-Finally, if the Dockerhub image does not work for whatever reason, try building the environment and simulation images locally on your machine:
+Finally, if the Dockerhub image does not work for whatever reason, try building the environment and simulation images locally:
 ```
 ./launch_docker.sh -e
 ./launch_docker.sh -b
 ```
 
 ### Building from source 
-If you plan on compiling or instally CyLaKS locally, first clone the repo:
+If you plan on compiling or installing CyLaKS locally, first clone the repo:
 ```
 git clone https://github.com/Betterton-Lab/CyLaKS
 cd CyLaKS
@@ -66,11 +66,11 @@ To use the provided installation script, you must have CMake (version 3.13+) ins
 ```
 sudo apt-get install cmake
 ```
-Once CMake is installed, call the installation script to compile CyLaKS. An executable will be added to the main folder. 
+Once CMake is installed, call the installation script to compile CyLaKS. An executable named `cylaks.exe.` will be added to the main folder. 
 ```
 ./install.sh 
 ```
-There are additional flags to build CyLaKS in debug mode or clean the build directory. To view these options, use the _help_ flag:
+There are additional flags to build CyLaKS in debug mode or clean the build directory. To view these options, use the _help_ (-h) flag:
 ```
 ./install.sh -h
 ```
@@ -78,17 +78,28 @@ Once compiled, you can run the interactive CyLaKS launcher by simply calling the
 ```
 ./cylaks.exe
 ```
+See the _Running simulations_ section for more information. 
 ## Running simulations
-With no provided input arguments, the 'cylaks.exe' executable will run an interactive simulation launcher. 
-To launch simulations more quickly, use the _quick-launch syntax_ with the `cylaks.exe` executable as follows:
-```
-./cylaks.exe [parameter-file] [sim-name] [optional-flags]
-```
+With no other provided input arguments, the 'cylaks.exe' executable will run an interactive simulation launcher. 
+
+If you choose to run a test/demo mode, the simulation name and parameters will be automatically generated. 
+You may be prompted to input additional parameters that are specific to the chosen mode. 
+
+If you choose to run a 'regular' simulation, you simply need to input the desired parameter file and simulation name.
+
 The parameter file must be a YAML file. See the files included in `params/` for an example of proper formatting. 
 
 The sim name sets the prefix of all output files and can be whatever you'd like. 
 
-The optional flags allow you to choose from and configure a variety of test/demo modes, as discussed below. 
+To launch simulations more quickly, you can use the following _quick-launch_ syntax:
+```
+./cylaks.exe [parameter-file] [sim-name]
+```
+You can also manually run test/demo modes with your own simulation name by using additional input arguments
+```
+./cylaks.exe [parameter-file] [sim-name] [test mode] [test mode args]
+```
+To see more information on available demos and test modes, see the _Demos_ and _Test modes_ sections. 
 ### Demos
 To select from currently available demos, use the `run_demos.sh` script. 
 ### Test modes

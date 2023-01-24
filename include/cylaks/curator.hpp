@@ -18,7 +18,7 @@ private:
                        "filament_ablation",     "filament_separation",
                        "filament_forced_slide", "shepherding"};
   Vec<Str> test_param_files_{"overlap", "prc1",   "kif4a",   "kif4a",   "k401",
-                             "kif4a",   "endtag", "overlap", "overlap", "k401"};
+                             "k401",    "endtag", "overlap", "overlap", "k401"};
   size_t n_sites_max_{0}; // Largest microtubule length (for padding data)
   size_t n_steps_per_snapshot_{0}; // kMC steps per data output
   SysTimepoint start_time_;

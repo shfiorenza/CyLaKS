@@ -695,7 +695,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       return false;
     }
     auto entry{pop->GetFreeEntry()};
-    Sys::Log("bound motor %zu\n", entry->GetID());
+    Sys::Log(1, "bound motor %zu\n", entry->GetID());
     // always bind catalytic head first
     bool executed{entry->Bind(site, &entry->head_one_)};
     if (executed) {

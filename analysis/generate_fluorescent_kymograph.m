@@ -1,20 +1,20 @@
 clear variables; 
 
-sim_name = 'testinoDb';
+sim_name = 'test7';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = -1; 
+i_end = 9000; 
 frac_visible = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
-tubulin_intensity = 0.0025;
-xlink_intensity = 0.0025; % Controls how bright a single xlink is 
+tubulin_intensity = 0.003;
+xlink_intensity = 0.003; % Controls how bright a single xlink is 
 motor_intensity = 1; 
 subfilaments = false; 
 
 % Scale bar lengths 
-scale_x = 1; %2.5; %1; % microns
-scale_t = 30; %30; %10; % seconds
+scale_x = 2; %2.5; %1; % microns
+scale_t = 10; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
@@ -129,13 +129,16 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
         dataMatrixXlinks = zeros(1, span_sites);
         dataMatrixXlinks(1:length(xlinks1)) = xlinks1; 
         dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) = dataMatrixXlinks(i_offset:i_offset+length(xlinks2)-1) + xlinks2;
+        dataMatrixXlinks(i_offset:length(xlinks2)-1) = dataMatrixXlinks(i_offset:length(xlinks2)-1) / 2;
         leftover = zeros(1, (span_sites_max - length(dataMatrixXlinks))/2);
         dataMatrixXlinks = [leftover dataMatrixXlinks leftover];
+       % dataMatrixXlinks = [dataMatrixXlinks leftover leftover];
         
         lineMatrix = zeros(1, span_sites);
         lineMatrix(1:length(xlinks1)) = tubulin_intensity * ones(1, length(xlinks1)); 
         lineMatrix(i_offset:i_offset+length(xlinks2)-1) = lineMatrix(i_offset:i_offset+length(xlinks2)-1) + tubulin_intensity * ones(1, length(xlinks2)); 
         lineMatrix = [leftover lineMatrix leftover];
+       % lineMatrix = [lineMatrix leftover leftover];
         
         dataMatrixMotors = zeros(1,length(dataMatrixXlinks));
         % for ablation

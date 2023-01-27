@@ -14,8 +14,8 @@ protected:
   double center_index_{0.0}; // Rod center (relative to i_site = 0) in n_sites
 
 public:
-  size_t index_{0};          // Index in filament_manager's protofilament_ list
-  size_t immobile_until_{0}; // In number of timesteps
+  size_t index_{0}; // Index in filament_manager's protofilament_ list
+  Vec<size_t> immobile_until_; // In number of timesteps; x/y dim
 
   int dx_{0};              // 1 or -1; gives direction to plus-end
   Vec<BindingSite> sites_; // Binding sites that belong to this protofilament
@@ -23,6 +23,9 @@ public:
   BindingSite *plus_end_{nullptr};   // Pointer to plus-end; static as of now
   BindingSite *minus_end_{nullptr};  // Pointer to minus-end; static as of now
   Protofilament *neighbor_{nullptr}; // Pointer to PF that xlinks can crosslink
+
+  Protofilament *top_neighb_{nullptr}; // higher index PF in explicit MT barrel
+  Protofilament *bot_neighb_{nullptr}; // lower index PF in explicit MT barrel
 
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
@@ -46,13 +49,10 @@ public:
     return {c * orientation_[0], c * orientation_[1]};
   }
   void AddForce(BindingSite *location, Vec<double> f_applied) {
-    if (Sys::i_step_ < immobile_until_) {
-      return;
-    }
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       force_[i_dim] += f_applied[i_dim];
     }
-    if (Params::Filaments::rotation_enabled) {
+    if (Params::Filaments::rotation_enabled[index_]) {
       Vec<double> r(_n_dims_max, 0.0); // Points from rod COM to site COM
       for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
         r[i_dim] = location->pos_[i_dim] - pos_[i_dim];
@@ -60,14 +60,10 @@ public:
       torque_ += Cross(r, f_applied);
     }
   }
-  void AddTorque(double torque_applied) {
-    if (Sys::i_step_ < immobile_until_) {
-      return;
-    }
-    torque_ += torque_applied;
-  }
+  void AddTorque(double torque_applied) { torque_ += torque_applied; }
   void UpdatePosition() {
-    if (Sys::i_step_ < immobile_until_) {
+    if (Sys::i_step_ <= immobile_until_[0] and
+        Sys::i_step_ <= immobile_until_[1]) {
       return;
     }
     UpdateRodPosition();

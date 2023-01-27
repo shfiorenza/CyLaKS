@@ -10,17 +10,19 @@ verbosity: 0
 filaments:
   count: 2
   radius: 12.5
+  n_subfilaments: 1
+  periodic_barrel: false
   site_size: 8.2
   n_bd_per_kmc: 10
   n_sites: [13, 13]
   polarity: [0, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  immobile_until: [1500, 1500]
-  f_applied: [0.0, 0.0]
-  translation_enabled: [true, true]
-  rotation_enabled: true
+  x_immobile_until: [1500, 1500]
+  y_immobile_until: [1500, 1500]
+  rotation_enabled: [false, false]
   wca_potential_enabled: true
+  f_applied: [0.0, 0.0]
 motors:
   n_runs_to_exit: 250
   gaussian_range: 1000 # 1200 # 1000
@@ -60,7 +62,9 @@ xlinks:
   k_off_ii: 0.0143
   d_i: 0.131
   d_ii: 0.0655
+  d_side: 0.0 # 0.0131
   r_0: 32
   k_spring: 0.453
   theta_0: 90
   k_rot: 0 # 1000
+  p_diffuse_off_end: 0.0

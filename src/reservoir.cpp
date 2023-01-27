@@ -94,15 +94,14 @@ template <typename ENTRY_T> void Reservoir<ENTRY_T>::SortPopulations() {
   }
   for (int i_entry{0}; i_entry < n_active_entries_; i_entry++) {
     ENTRY_T *entry{active_entries_[i_entry]};
-    Sys::Log(1, " entry no %i (ID %i - SID %i)\n", i_entry, entry->GetID(),
+    Sys::Log(3, " entry no %i (ID %i - SID %i)\n", i_entry, entry->GetID(),
              entry->GetSpeciesID());
-    // ! FIXME: should this be commented out or not?
-    // entry->UpdateExtension();
+    entry->UpdateExtension();
     for (auto &&pop : sorted_) {
-      Sys::Log(1, "  sorting into %s\n", pop.second.name_.c_str());
+      Sys::Log(3, "  sorting into %s\n", pop.second.name_.c_str());
       pop.second.Sort(entry);
     }
-    Sys::Log(1, "   DONE\n");
+    Sys::Log(3, "   DONE\n");
   }
-  Sys::Log(1, "SORTING CONCLUDED FOR SPECIES %zu\n", species_id_);
+  Sys::Log(3, "SORTING CONCLUDED FOR SPECIES %zu\n", species_id_);
 }

@@ -1,9 +1,9 @@
 
 clear variables;
-fileDirectory = '/home/shane/projects/CyLaKS/run_xlink_bind_ii/%s';
-sim_name_base = 'xlink_bind_ii';
-offsets = [0.0, 4.1]; % , 8.2];
-labels = ["0.0", "4.1"]; %, "8.2"];
+fileDirectory = '/home/shane/projects/CyLaKS/%s';
+sim_name_base = 'test_xlink_bind_ii';
+offsets = [0.0]; %[0.0, 4.1]; % , 8.2];
+labels = [""]; % ["0.0", "4.1"]; %, "8.2"];
 dist_cutoff = 4;                % no. sites
 
 
@@ -22,7 +22,11 @@ n_offsets = length(offsets);
 avg_occu = zeros(n_offsets, 2 * dist_cutoff + 1);
 for i_offset = 1 : n_offsets
     % Occupancy data -- species ID of each occupant or -1 for none
-    sim_name = sprintf('%s_%s', sim_name_base, labels(i_offset));
+    if n_offsets > 1
+        sim_name = sprintf('%s_%s', sim_name_base, labels(i_offset));
+    else 
+        sim_name = sim_name_base;
+    end
     log_file = sprintf(fileDirectory, sprintf('%s.log', sim_name));
     log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
     params = log{1, 1};

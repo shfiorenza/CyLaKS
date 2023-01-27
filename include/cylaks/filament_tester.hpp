@@ -8,11 +8,31 @@ class FilamentTester : public FilamentManager {
 protected:
   ProteinTester *proteins_{nullptr};
 
+  Vec<double> recorded_force_;
+
 public:
 protected:
+  void UpdateForces();
+
 public:
   FilamentTester() {}
-  ~FilamentTester() {}
+  ~FilamentTester() {
+    if (Sys::test_mode_.empty()) {
+      return;
+    }
+    double avg_force{0.0};
+    for (int i_step{0}; i_step < recorded_force_.size(); i_step++) {
+      avg_force += recorded_force_[i_step];
+    }
+    avg_force = avg_force / recorded_force_.size();
+    double var_force{0.0};
+    for (int i_step{0}; i_step < recorded_force_.size(); i_step++) {
+      double var{recorded_force_[i_step] - avg_force};
+      var_force += var * var;
+    }
+    var_force = std::sqrt(var_force) / recorded_force_.size();
+    Sys::Log("Avg force on mobile MT: %g +/- %g pN\n", avg_force, var_force);
+  }
   void Initialize(ProteinTester *proteins);
   void UpdateUnoccupied() {
     if (up_to_date_) {

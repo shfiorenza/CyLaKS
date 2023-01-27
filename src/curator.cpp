@@ -25,7 +25,7 @@ void Curator::CheckArgs(int argc, char *argv[]) {
       for (int i_test{0}; i_test < test_modes_.size(); i_test++) {
         printf(" %i. %s\n", i_test, test_modes_[i_test].c_str());
         if (i_test == n_tests_ - 1) {
-          printf("\nCurrently implemented DEMO MODES:\n");
+          printf("Currently implemented DEMO MODES:\n");
         }
       }
       // Demand that user picks via integer index
@@ -57,46 +57,113 @@ void Curator::CheckArgs(int argc, char *argv[]) {
     return;
   }
   // If input format is incorrect, inform user of appropriate format
-  if (argc < 3 or argc > 6) {
+  if (argc < 3) {
     printf("Error! Incorrect number of command-line arguments\n");
     printf("\nUse '%s' to run interactive launcher. ", argv[0]);
     printf("Otherwise, the correct format is:\n");
     printf("\n  %s parameter_file.yaml sim_name (required) ", argv[0]);
-    printf("test_mode (optional)\n\n");
+    printf("test_mode test_mode_flags (optional)\n\n");
     printf("A list of currently implemented test modes is available in the "
            "interactive launcher.\n");
     exit(1);
   }
+  // Get required inputs
+  Sys::exe_name_ = argv[0];
   Sys::yaml_file_ = argv[1];
   Sys::sim_name_ = argv[2];
+  // Check for test_mode selection and ensure it's valid
   if (argc > 3) {
     Sys::test_mode_ = argv[3];
     bool valid_mode{false};
     for (auto const &mode : test_modes_) {
       if (Sys::test_mode_ == mode) {
-        if (argc == 5) {
-          if (Sys::test_mode_ == "filament_separation") {
-            Sys::n_xlinks_ = std::stoi(argv[4]);
-          } else {
-            break;
-          }
-        } else if (argc == 6) {
-          if (Sys::test_mode_ == "hetero_tubulin") {
-            Sys::p_mutant_ = std::stod(argv[4]);
-            Sys::binding_affinity_ = std::stod(argv[5]);
-          } else {
-            break;
-          }
-        }
         valid_mode = true;
       }
     }
     if (!valid_mode) {
-      printf("\nError! Invalid test mode.\n");
+      printf("\nError! Invalid test mode or incorrect input syntax.\n");
       printf("Currently-implemented test modes are:\n");
       for (auto const &mode : test_modes_) {
         printf("   %s\n", mode.c_str());
       }
+      exit(1);
+    }
+  }
+  // If valid test_mode, check for potential test_mode flags
+  if (argc > 4) {
+    if (Sys::test_mode_ == "filament_separation") {
+      if (argc == 5) {
+        Sys::n_xlinks_ = std::stoi(argv[4]);
+      } else {
+        printf("Error. Quick-launch syntax for 'filament_separation' test mode "
+               "is:\n");
+        printf("\n  %s params.yaml sim_name filament_separation n_xlinks\n",
+               argv[0]);
+        printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+               "be inserted.\n");
+        exit(1);
+      }
+    } else if (Sys::test_mode_ == "hetero_tubulin") {
+      if (argc == 6) {
+        Sys::p_mutant_ = std::stod(argv[4]);
+        Sys::binding_affinity_ = std::stod(argv[5]);
+      } else {
+        printf(
+            "Error. Quick-launch syntax for 'hetero_tubulin' test mode is:\n");
+        printf("\n  %s params.yaml sim_name hetero_tubulin p_mutant bind_aff\n",
+               argv[0]);
+        printf(
+            "\nwhere p_mutant is the fraction of mutant sites (0 to 1) and\n");
+        printf("bind_aff is the binding affinity of normal sites relative "
+               "to mutant.\n");
+        printf("(bind_aff = 3 will make binding 3x weaker and unbinding 3x "
+               "stronger on mutant sites.)\n");
+        exit(1);
+      }
+    } else if (Sys::test_mode_ == "filament_forced_slide") {
+      bool valid_syntax{true};
+      if (argc >= 7) {
+        Sys::n_xlinks_ = std::stoi(argv[4]);
+        Sys::slide_velocity_ = std::stod(argv[5]);
+        int vel_flag{std::stoi(argv[6])};
+        if (vel_flag == 1) {
+          Sys::constant_velocity_ = true;
+        } else if (vel_flag == 0) {
+          Sys::constant_velocity_ = false;
+        } else {
+          printf("Error. Velocity flag must be 0 or 1.\n");
+          exit(1);
+        }
+      }
+      if (argc == 7) {
+        Sys::i_pause_ = std::numeric_limits<int>::max();
+        Sys::i_resume_ = std::numeric_limits<int>::max();
+      } else if (argc == 9) {
+        Sys::i_pause_ = std::stod(argv[7]);
+        Sys::i_resume_ = std::stod(argv[8]);
+        Sys::rescale_times_ = true;
+      } else {
+        printf("Error. Quick-launch syntax for 'filament_forced_slide' test "
+               "mode is:\n");
+        printf("\n  %s params.yaml sim_name filament_forced_slide "
+               "n_xlinks slide_velocity mode_flag\n",
+               argv[0]);
+        printf("       OR\n");
+        printf("  %s params.yaml sim_name filament_forced_slide "
+               "n_xlinks slide_velocity mode_flag t_pause pause_duration\n",
+               argv[0]);
+        printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+               "be inserted,\nslide_velocity is the imposed average velocity "
+               "on microtubules, and\nmode_flag is set to 0 for a constant "
+               "force assay or 1 for a constant velocity assay.\n");
+        printf("t_pause and pause_duration (in seconds) are optional and allow "
+               "for a "
+               "temporary pause in the applied force at a specified time.\n");
+        exit(1);
+      }
+    } else {
+      printf("Error. Test mode '%s' does not accept any additional inputs.\n",
+             argv[3]);
       exit(1);
     }
   }
@@ -221,6 +288,9 @@ void Curator::ParseParameters() {
   ParseYAML(&verbosity, "verbosity", "");
   Log(" Filament parameters:\n");
   ParseYAML(&Filaments::count, "filaments.count", "filaments");
+  ParseYAML(&Filaments::n_subfilaments, "filaments.n_subfilaments",
+            "subfilaments");
+  ParseYAML(&Filaments::periodic_barrel, "filaments.periodic_barrel", "");
   ParseYAML(&Filaments::radius, "filaments.radius", "nm");
   ParseYAML(&Filaments::site_size, "filaments.site_size", "nm");
   ParseYAML(&Filaments::n_bd_per_kmc, "filaments.n_bd_per_kmc", "");
@@ -230,9 +300,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::x_initial, "filaments.x_initial", "nm");
   ParseYAML(&Filaments::y_initial, "filaments.y_initial", "nm");
   ParseYAML(&Filaments::f_applied, "filaments.f_applied", "pN");
-  ParseYAML(&Filaments::immobile_until, "filaments.immobile_until", "s");
-  ParseYAML(&Filaments::translation_enabled, "filaments.translation_enabled",
-            "");
+  ParseYAML(&Filaments::x_immobile_until, "filaments.x_immobile_until", "s");
+  ParseYAML(&Filaments::y_immobile_until, "filaments.y_immobile_until", "s");
   ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
   ParseYAML(&Filaments::wca_potential_enabled,
             "filaments.wca_potential_enabled", "");
@@ -241,8 +310,9 @@ void Curator::ParseParameters() {
       Filaments::count > Filaments::polarity.size() or
       Filaments::count > Filaments::x_initial.size() or
       Filaments::count > Filaments::y_initial.size() or
-      Filaments::count > Filaments::immobile_until.size() or
-      _n_dims_max > Filaments::translation_enabled.size()) {
+      Filaments::count > Filaments::x_immobile_until.size() or
+      Filaments::count > Filaments::y_immobile_until.size() or
+      Filaments::count > Filaments::rotation_enabled.size()) {
     Log("Error! Incorrect number of filament parameters provided.\n");
     exit(1);
   }
@@ -285,6 +355,8 @@ void Curator::ParseParameters() {
   ParseYAML(&Motors::k_spring, "motors.k_spring", "pN/nm");
   ParseYAML(&Motors::k_slack, "motors.k_slack", "pN/nm");
   Sys::Log("  Crosslinker (xlink) parameters:\n");
+  ParseYAML(&Xlinks::neighb_neighb_energy, "xlinks.neighb_neighb_energy",
+            "kBT");
   ParseYAML(&Xlinks::t_active, "xlinks.t_active", "s");
   ParseYAML(&Xlinks::k_on, "xlinks.k_on", "1/nM*s");
   ParseYAML(&Xlinks::c_bulk, "xlinks.c_bulk", "nM");
@@ -293,16 +365,40 @@ void Curator::ParseParameters() {
   ParseYAML(&Xlinks::k_off_ii, "xlinks.k_off_ii", "1/s");
   ParseYAML(&Xlinks::d_i, "xlinks.d_i", "um^2/s");
   ParseYAML(&Xlinks::d_ii, "xlinks.d_ii", "um^2/s");
+  ParseYAML(&Xlinks::d_side, "xlinks.d_side", "um^2/s");
   ParseYAML(&Xlinks::r_0, "xlinks.r_0", "nm");
   ParseYAML(&Xlinks::k_spring, "xlinks.k_spring", "pN/nm");
   ParseYAML(&Xlinks::theta_0, "xlinks.theta_0", "degrees");
   ParseYAML(&Xlinks::k_rot, "xlinks.k_rot", "pN*nm/rad");
+  ParseYAML(&Xlinks::p_diffuse_off_end, "xlinks.p_diffuse_off_end", "");
+  if (Xlinks::p_diffuse_off_end < 0.0 or Xlinks::p_diffuse_off_end > 1) {
+    printf("Error; xlinks.p_diffuse_off_end must be between 0 and 1.\n");
+    exit(1);
+  }
 }
 
 void Curator::InitializeSimulation() {
 
   using namespace Params;
   using namespace Sys;
+  // Calculate local parameters
+  start_time_ = SysClock::now();
+  n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
+  // Calculate system parameters
+  verbosity_ = verbosity;
+  n_steps_pre_equil_ = (size_t)std::round(t_equil / dt);
+  n_steps_equil_ = n_steps_pre_equil_;
+  if (n_steps_pre_equil_ == 0) {
+    equilibrating_ = false;
+  }
+  n_steps_run_ = (size_t)std::round(t_run / dt);
+  Sys::n_datapoints_max_ = n_steps_run_ / n_steps_per_snapshot_;
+  // Log parameters
+  Log("  System variables calculated pre-initialization:\n");
+  Log("   n_steps_run = %zu\n", n_steps_run_);
+  Log("   n_steps_equil = %zu\n", n_steps_equil_);
+  Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
+  Log("   n_datapoints = %zu\n\n", Sys::n_datapoints_max_);
   // Initialize sim objects
   SysRNG::Initialize(seed);
   // With no test mode active, initialize proteins and filaments normally
@@ -317,6 +413,7 @@ void Curator::InitializeSimulation() {
     }
   }
   // Otherwise, initialize test versions of proteins and filaments
+  // (Filaments are initialized in test_proteins_ Initialize routine)
   else {
     test_proteins_.Initialize(&test_filaments_);
     // Get maximum filament length in n_sites
@@ -326,23 +423,6 @@ void Curator::InitializeSimulation() {
       }
     }
   }
-  // Calculate local parameters
-  start_time_ = SysClock::now();
-  n_steps_per_snapshot_ = (size_t)std::round(t_snapshot / dt);
-  // Calculate system parameters
-  verbosity_ = verbosity;
-  n_steps_pre_equil_ = (size_t)std::round(t_equil / dt);
-  n_steps_equil_ = n_steps_pre_equil_;
-  if (n_steps_pre_equil_ == 0) {
-    equilibrating_ = false;
-  }
-  n_steps_run_ = (size_t)std::round(t_run / dt);
-  // Log parameters
-  Log("  System variables calculated post-initialization:\n");
-  Log("   n_steps_run = %zu\n", n_steps_run_);
-  Log("   n_steps_equil = %zu\n", n_steps_equil_);
-  Log("   n_steps_per_snapshot = %zu\n", n_steps_per_snapshot_);
-  Log("   n_datapoints = %zu\n\n", n_steps_run_ / n_steps_per_snapshot_);
 }
 
 void Curator::GenerateDataFiles() {
@@ -393,13 +473,13 @@ void Curator::GenerateDataFiles() {
     }
   }
   if (xlinks_active and xlinks_crosslinking) {
-    /*
     // Open xlink extension file, which stores the number of stage-2
     // xlinks at a certain extension for all possible extensions
-    AddDataFile("xlink_ext");
+    // AddDataFile("xlink_ext");
     // Open xlink force file, which stores the sum
     // of forces coming from xlink extensions
     AddDataFile("xlink_force");
+    /*
     if (proteins_.motors_.tethering_active_) {
       // Open total force file, which stores the sum of ALL
       // forces coming from xlink and motor tether extensions
@@ -495,6 +575,10 @@ void Curator::OutputData() {
     xlinks_crosslinking = test_proteins_.xlinks_.crosslinking_active_;
   }
   Sys::i_datapoint_++;
+  double force_vec[_n_dims_max];
+  for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+    force_vec[i_dim] = 0.0;
+  }
   for (int i_pf{0}; i_pf < n_pfs; i_pf++) {
     Protofilament *pf{nullptr};
     if (Sys::test_mode_.empty()) {
@@ -536,6 +620,13 @@ void Curator::OutputData() {
         if (site.occupant_->parent_->n_heads_active_ == 2) {
           partner_index[site.index_] =
               site.occupant_->GetOtherHead()->site_->index_;
+          // Sum up all xlink forces on bottom microtubule
+          if (i_pf == 0) {
+            for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+              force_vec[i_dim] =
+                  force_vec[i_dim] + site.occupant_->GetForceApplied(i_dim);
+            }
+          }
         }
       } else if (species_id == _id_motor) {
         motor_trailing[site.index_] = site.occupant_->Trailing();
@@ -562,6 +653,12 @@ void Curator::OutputData() {
     }
     data_files_.at("tether_anchor_pos").Write(tether_anchor_pos, n_sites_max_);
   }
+  if (xlinks_active and xlinks_crosslinking) {
+    data_files_.at("xlink_force").Write(force_vec, _n_dims_max);
+  }
+  // for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+  //   printf("F = <%g, %g> pN\n", force_vec[0], force_vec[1]);
+  // }
   if (Sys::early_exit_triggered_) {
     Sys::EarlyExit();
   }

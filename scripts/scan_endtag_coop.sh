@@ -1,7 +1,7 @@
 #!/bin/bash
 SCAN_NAME="endtag"
-echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params/endtag.yaml"
+echo Starting ${SCAN_NAME} scan
 echo Base parameter file is ${PARAM_FILE}
 
 BASE_SEED=198261346419
@@ -17,7 +17,7 @@ do
 			cp $PARAM_FILE $TEMP_PARAMS
     		yq eval -i ".seed = $(( $BASE_SEED + $SEED_NO ))}" ${TEMP_PARAMS}
 			yq eval -i ".motors.gaussian_range = ${RANGE}" ${TEMP_PARAMS}
-			yq eval -i ".filaments.n_sites = ${N_SITES}" ${TEMP_PARAMS}
+			yq eval -i ".filaments.n_sites[0] = ${N_SITES}" ${TEMP_PARAMS}
 			# Run sim for these parameter values
 			echo Running new sim: file name is ${FILE_NAME}
 			./cylaks.exe $TEMP_PARAMS $FILE_NAME &

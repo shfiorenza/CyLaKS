@@ -12,6 +12,8 @@ public:
   bool visible_{true};
   Vec<double> pos_; // C.O.M. position in lab frame
 
+  Object *teth_partner_{nullptr};
+
 public:
   Object() {}
   virtual ~Object() {}
@@ -23,14 +25,25 @@ public:
   size_t GetID() { return unique_id_; }
   size_t GetSpeciesID() { return species_id_; }
 
+  virtual Object *GetTethPartner() { return teth_partner_; }
+
   virtual bool IsOccupied() { return true; }
-  virtual bool IsTethered() { return false; }
+  virtual bool IsTethered() {
+    return teth_partner_ == nullptr ? false : true;
+    // if (teth_partner_ != nullptr) {
+    //   return true;
+    // }
+    // return false;
+  }
   virtual bool HasSatellite() { return false; }
 
   virtual void AddForce(Vec<double> f) {}
   virtual void AddTorque(double tq) {}
+  virtual double GetForceApplied(int i_dim) { return 0.0; }
 
   virtual int GetNumNeighborsOccupied() { return -1; }
+  virtual int GetNumNeighborsOccupied_Side() { return -1; }
+
   virtual int GetNumHeadsActive() { return -1; }
 
   virtual Object *GetHeadOne() { return nullptr; }

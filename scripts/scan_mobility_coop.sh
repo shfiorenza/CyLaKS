@@ -1,14 +1,15 @@
 #!/bin/bash
 SCAN_NAME="kif4a_mobility"
-echo Starting ${SCAN_NAME} scan
 PARAM_FILE="params/kif4a.yaml"
+echo Starting ${SCAN_NAME} scan
 echo Base parameter file is ${PARAM_FILE}
+
+BASE_SEED=198261346419
 
 MOT_CONC=(0.02 0.05 0.08 0.120 0.220 0.420)
 CONC_SCALE=(20 50 80 120 220 420)
 #N_RUNS=(50 125 200 300 500 800)
 N_RUNS=(20 50 80 120 220 420)
-BASE_SEED=198261346419
 
 for RANGE in 5 10 50 100
 do

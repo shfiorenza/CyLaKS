@@ -8,14 +8,16 @@ void Protofilament::SetParameters() {
   pos_[1] = Filaments::y_initial[index_];
   orientation_[0] = 1.0;
   orientation_[1] = 0.0; // Begin aligned with x-axis
-  length_ = Filaments::site_size * Filaments::n_sites[index_]; // nm
+  immobile_until_.resize(2);
+  immobile_until_[0] = Filaments::x_immobile_until[index_] / dt; // n_steps
+  immobile_until_[1] = Filaments::y_immobile_until[index_] / dt; // n_steps
+  length_ = Filaments::site_size * Filaments::n_sites[index_];   // nm
   polarity_ = Filaments::polarity[index_];
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
-  immobile_until_ = Filaments::immobile_until[index_] / dt; // n_steps
-  dt_eff_ = dt / Filaments::n_bd_per_kmc;                   // s
+  dt_eff_ = dt / Filaments::n_bd_per_kmc;       // s
   double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
   // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
-  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled) {
+  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_]) {
     Sys::Log("Filament #%i aspect ratio is too small for the form of gamma_rot "
              "we use. Please increase filament length.\n",
              index_);
@@ -53,6 +55,12 @@ void Protofilament::GenerateSites() {
   }
   plus_end_ = &sites_[(n_sites - 1) * polarity_];
   minus_end_ = &sites_[(n_sites - 1) * (1.0 - polarity_)];
+  // plus_end_->SetBindingAffinity(0.1);
+  // for (int i_site{0}; i_site < 10; i_site++) {
+  //   int index = plus_end_->index_ - (dx_ * i_site);
+  //   sites_[index].SetBindingAffinity(0.1);
+  //   printf("site %i binding affinity set\n", index);
+  // }
   Sys::Log(2, "     plus_end = site %i\n", plus_end_->index_);
   Sys::Log(2, "     minus_end = site %i\n", minus_end_->index_);
   center_index_ = double(n_sites - 1) / 2;
@@ -82,9 +90,13 @@ void Protofilament::UpdateRodPosition() {
   Vec<double> torque_proj{Cross(torque_, orientation_)};
   double u_norm{0.0};
   for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-    // Only update pos in dimensions with translational movement enabled
-    if (Params::Filaments::translation_enabled[i_dim]) {
-      pos_[i_dim] += Dot(xi_inv[i_dim], force_) * dt_eff_;
+    // Only update position if protofilament isnt immobilized
+    if (Sys::i_step_ > immobile_until_[i_dim]) {
+      double vel{Dot(xi_inv[i_dim], force_)};
+      // if (i_dim == 0 and vel != 50) {
+      //   printf("v[%i] = %g\n", i_dim, vel);
+      // }
+      pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
       // Check for NaN positions
@@ -94,7 +106,7 @@ void Protofilament::UpdateRodPosition() {
       }
     }
     // Only update orientation if rotation is enabled
-    if (Params::Filaments::rotation_enabled) {
+    if (Params::Filaments::rotation_enabled[index_]) {
       orientation_[i_dim] += torque_proj[i_dim] / gamma_[2] * dt_eff_;
       orientation_[i_dim] += rod_basis[1][i_dim] * noise_rot;
       // Check for NaN orientations
@@ -105,7 +117,7 @@ void Protofilament::UpdateRodPosition() {
       u_norm += Square(orientation_[i_dim]);
     }
   }
-  if (Params::Filaments::rotation_enabled) {
+  if (Params::Filaments::rotation_enabled[index_]) {
     // Re-normalize orientation vector
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       orientation_[i_dim] /= sqrt(u_norm);
@@ -150,10 +162,14 @@ BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
 
   using namespace Params;
   Sys::Log(2, "i_site = %i, delta = %i\n", site->index_, delta);
+  if (site->filament_ == this) {
+    Sys::ErrorExit("Protofilament::GetNeighb()");
+  }
   // First, we find which site best aligns vertically w/ given site
-  int site_x{(int)site->pos_[0]};
+  double site_x{site->pos_[0]};
   // x-coords equal, so site_pos_x = (i_align - center_index) * site_size + pos
-  int i_aligned{int((site_x - pos_[0]) / Filaments::site_size + center_index_)};
+  int i_aligned{(int)std::round((site_x - pos_[0]) / Filaments::site_size +
+                                center_index_)};
   // Scan relative to aligned site using given delta value
   int i_neighb{i_aligned + delta};
   Sys::Log(2, "i_neighb is %i\n", i_neighb);

@@ -4,6 +4,7 @@
 *.out
 *.swp
 *.m~
+*.asv
 *.json
 *.avi
 .vscode/

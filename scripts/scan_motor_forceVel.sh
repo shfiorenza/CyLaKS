@@ -5,6 +5,7 @@ echo "Starting ${BASE_NAME} scan"
 echo "Base parameter file is ${BASE_PARAMS}"
 
 BASE_SEED=198261346419
+
 for FORCE in 0 1 2 3 4 5 6
 do
 	for I_SEED in 0 1 2 3 4 5

@@ -55,6 +55,8 @@ public:
                                   (2 * Sys::teth_x_max_ + 1));
   }
 
+  Protein *GetTethPartner() { return teth_partner_; }
+
   int GetNumHeadsActive() { return n_heads_active_; }
   virtual BindingHead *GetActiveHead() {
     if (n_heads_active_ != 1) {
@@ -83,6 +85,10 @@ public:
   double GetWeight_Bind_I_Teth();
   BindingSite *GetNeighbor_Bind_I_Teth();
 
+  virtual double GetForceApplied(int i_dim, BindingHead *head) {
+    return spring_.GetForceApplied(i_dim, head);
+  }
+
   virtual void ApplyLatticeDeformation() {}
 
   virtual bool UpdateExtension();
@@ -96,6 +102,7 @@ public:
   virtual double GetWeight_Unbind_II(BindingHead *head);
 
   virtual bool Diffuse(BindingHead *head, int dir);
+  virtual bool Diffuse_Side(BindingHead *head, int dir);
   virtual bool Bind(BindingSite *site, BindingHead *head);
   virtual bool Unbind(BindingHead *head);
   virtual bool Tether(Protein *teth_partner);

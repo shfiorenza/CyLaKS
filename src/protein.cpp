@@ -18,8 +18,16 @@ bool Protein::UntetherSatellite() {
   if (IsTethered()) {
     if (teth_partner_->GetNumHeadsActive() == 0) {
       teth_partner_->teth_partner_ = nullptr;
+      teth_partner_->Object::teth_partner_ = nullptr;
+      teth_partner_->head_one_.teth_partner_ = nullptr;
+      teth_partner_->head_two_.teth_partner_ = nullptr;
       teth_partner_ = nullptr;
+      Object::teth_partner_ = nullptr;
+      head_one_.teth_partner_ = nullptr;
+      head_two_.teth_partner_ = nullptr;
       return true;
+    } else {
+      Sys::ErrorExit("Protein::UntetherSatellite\n");
     }
   }
   return false;
@@ -126,6 +134,13 @@ bool Protein::UpdateExtension() {
   // Update spring position
   bool spring_attached{spring_.UpdatePosition()};
   if (!spring_attached) {
+    // printf("yup\n");
+    // ! FIXME need to incorporate influence from other springs, e.g. tethers
+    if (SysRNG::GetRanProb() < 0.5) {
+      head_one_.Unbind();
+    } else {
+      head_two_.Unbind();
+    }
     return false;
   }
   // bool head_one_attached{pivot_one_.UpdatePosition()};
@@ -145,7 +160,7 @@ bool Protein::UpdateExtension() {
 }
 
 int Protein::GetDirectionTowardRest(BindingHead *head) {
-
+  // ! FIXME for asymmetric sprangs
   if (n_heads_active_ == 1) {
     return 1;
   } else if (n_heads_active_ == 2) {
@@ -162,12 +177,23 @@ int Protein::GetDirectionTowardRest(BindingHead *head) {
     double dr{r - spring_.r_rest_};
     double dr_fwd{r_fwd - spring_.r_rest_};
     double dr_bck{r_bck - spring_.r_rest_};
+    if (Square(dr_fwd) == Square(dr_bck)) {
+      // printf("HUH\n");
+      return 0;
+    }
     if (Square(dr_fwd) < Square(dr)) {
       return 1;
     }
     if (Square(dr_bck) < Square(dr)) {
       return -1;
     }
+    if (Square(dr_fwd) < Square(dr_bck)) {
+      return 1;
+    }
+    if (Square(dr_fwd) > Square(dr_bck)) {
+      return -1;
+    }
+    Sys::ErrorExit("Protein::GetDirectionTowardRest()");
     return 0;
     /*
     // printf("%g > %g?\n", head->site_->pos_[0], GetAnchorCoordinate(0));
@@ -271,8 +297,28 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     }
   }
   BindingSite *new_loc{head->site_->GetNeighbor(dx)};
+  // ! FIXME temporary hacky solution for forced_slide test mode
   if (new_loc == nullptr) {
-    return 0.0;
+    if (Sys::test_mode_.empty()) {
+      return 0.0;
+    }
+    // Rather than use ghost sites, just use other crosslinker head to get
+    // spring weight (should be the exact same dE)
+    BindingHead *other_head{head->GetOtherHead()};
+    new_loc = other_head->site_->GetNeighbor(-1 * dx);
+    // If other head is also trying to diffuse off the end, we're S.O.L.
+    if (new_loc == nullptr) {
+      return 0.0;
+    }
+    BindingSite *old_loc{other_head->site_};
+    BindingSite *static_loc{head->site_};
+    if (old_loc->filament_ == static_loc->filament_) {
+      Sys::ErrorExit("Protein::GetWeight_diffuse [3]");
+    }
+    spring_.UpdatePosition();
+    double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
+    double weight_neighb{head->site_->GetWeight_Unbind()};
+    return weight_spring * weight_neighb;
   }
   if (new_loc->occupant_ != nullptr) {
     return 0.0;
@@ -345,8 +391,30 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   return true;
 }
 
+bool Protein::Diffuse_Side(BindingHead *head, int dir) {
+
+  if (dir != 1 and dir != -1) {
+    Sys::ErrorExit("Whoops in Diffuse_Side [Protein]");
+  }
+  BindingSite *old_site{head->site_};
+  BindingSite *new_site{old_site->GetNeighbor_Side(dir)};
+  if (new_site == nullptr) {
+    return false;
+  }
+  if (new_site->occupant_ != nullptr) {
+    return false;
+  }
+  old_site->occupant_ = nullptr;
+  new_site->occupant_ = head;
+  head->site_ = new_site;
+  return true;
+}
+
 bool Protein::Bind(BindingSite *site, BindingHead *head) {
 
+  if (site == nullptr) {
+    return false;
+  }
   if (site->occupant_ != nullptr) {
     return false;
   }
@@ -368,10 +436,23 @@ bool Protein::Unbind(BindingHead *head) {
 bool Protein::Tether(Protein *target) {
 
   if (target->IsTethered()) {
-    Sys::ErrorExit("Protein::Tether()");
+    printf("target alrdy tethered\n");
+    return false;
+    // Sys::ErrorExit("Protein::Tether() [1]");
+  }
+  if (IsTethered()) {
+    printf("i am alrdy tethered\n");
+    return false;
+    // Sys::ErrorExit("Protein::Tether() [2]");
   }
   teth_partner_ = target;
+  Object::teth_partner_ = dynamic_cast<Object *>(target);
+  head_one_.teth_partner_ = dynamic_cast<Object *>(target);
+  head_two_.teth_partner_ = dynamic_cast<Object *>(target);
   target->teth_partner_ = this;
+  target->Object::teth_partner_ = dynamic_cast<Object *>(this);
+  target->head_one_.teth_partner_ = dynamic_cast<Object *>(this);
+  target->head_two_.teth_partner_ = dynamic_cast<Object *>(this);
   return true;
 }
 
@@ -379,10 +460,17 @@ bool Protein::Untether() {
 
   if (IsTethered() and !HasSatellite()) {
     teth_partner_->teth_partner_ = nullptr;
+    teth_partner_->Object::teth_partner_ = nullptr;
+    teth_partner_->head_one_.teth_partner_ = nullptr;
+    teth_partner_->head_two_.teth_partner_ = nullptr;
     teth_partner_ = nullptr;
+    Object::teth_partner_ = nullptr;
+    head_one_.teth_partner_ = nullptr;
+    head_two_.teth_partner_ = nullptr;
     return true;
   } else {
-    Sys::ErrorExit("untether wot m8\n");
+    printf("untether wot m8\n");
+    // Sys::ErrorExit("untether wot m8\n");
   }
   return false;
 }

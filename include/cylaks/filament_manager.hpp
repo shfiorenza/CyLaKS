@@ -14,7 +14,7 @@ protected:
   bool up_to_date_{false};
 
   // Some temporary hacky stuff for WCA potential
-  double sigma_{4.0};     // nm
+  double sigma_{25.0};    // nm
   double epsilon_{1.0};   // kbT
   double threshold_{0.0}; // nm
 
@@ -24,7 +24,7 @@ protected:
   ProteinManager *proteins_{nullptr};
 
 public:
-  bool mobile_{false};
+  bool never_mobile_{true};
   Vec<Protofilament> protofilaments_;
   Vec<BindingSite *> sites_;
 
@@ -79,12 +79,11 @@ public:
     if (AllFilamentsImmobile()) {
       return;
     }
-    UpdateForces();
     for (int i_itr{0}; i_itr < n_bd_iterations_; i_itr++) {
+      UpdateForces();
       for (auto &&entry : protofilaments_) {
         entry.UpdatePosition();
       }
-      UpdateForces();
     }
   }
 };

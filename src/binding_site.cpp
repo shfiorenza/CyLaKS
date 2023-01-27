@@ -22,6 +22,22 @@ int BindingSite::GetNumNeighborsOccupied() {
   return n_neighbs;
 }
 
+int BindingSite::GetNumNeighborsOccupied_Side() {
+
+  int n_neighbs{0};
+  if (filament_->top_neighb_ != nullptr) {
+    if (filament_->top_neighb_->sites_[index_].occupant_ != nullptr) {
+      n_neighbs++;
+    }
+  }
+  if (filament_->bot_neighb_ != nullptr) {
+    if (filament_->bot_neighb_->sites_[index_].occupant_ != nullptr) {
+      n_neighbs++;
+    }
+  }
+  return n_neighbs;
+}
+
 BindingSite *BindingSite::GetNeighbor(int dir) {
 
   if (dir != 1 and dir != -1) {
@@ -31,6 +47,24 @@ BindingSite *BindingSite::GetNeighbor(int dir) {
     if (index_ + dir == neighb->index_) {
       return neighb;
     }
+  }
+  return nullptr;
+}
+
+BindingSite *BindingSite::GetNeighbor_Side(int dir) {
+
+  if (dir == 1) {
+    if (filament_->top_neighb_ == nullptr) {
+      return nullptr;
+    }
+    return &filament_->top_neighb_->sites_[index_];
+  } else if (dir == -1) {
+    if (filament_->bot_neighb_ == nullptr) {
+      return nullptr;
+    }
+    return &filament_->bot_neighb_->sites_[index_];
+  } else {
+    Sys::ErrorExit("BindingSite::GetNeighb_Side()");
   }
   return nullptr;
 }

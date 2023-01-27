@@ -14,19 +14,21 @@ inline double t_snapshot; // Time between each data output; s
 inline double dynamic_equil_window; // Set to <=0 to disable dynamic equil; s
 inline size_t verbosity;            // Verbosity level; 0 (quiet) to 3 (max)
 namespace Filaments {
-inline size_t count;                 // Number of filaments in simulation
-inline double radius;                // Radius of rod (or barrel for MTs); nm
-inline double site_size;             // Length of each binding site; nm
-inline size_t n_bd_per_kmc;          // BD iterations done per KMC iteration
+inline size_t count;          // Number of filaments in simulation
+inline size_t n_subfilaments; // For multiple protofilaments in a MT
+inline bool periodic_barrel;  // whether or not barrel wraps around completelty
+inline double radius;         // Radius of rod (or barrel for MTs); nm
+inline double site_size;      // Length of each binding site; nm
+inline size_t n_bd_per_kmc;   // BD iterations done per KMC iteration
 inline std::vector<size_t> n_sites;  // Length of each filament; n_sites
 inline std::vector<size_t> polarity; // 0 (1) sets plus-end to i=0 (n_sites - 1)
 inline std::vector<double> x_initial; // Starting x-coord of filament COM; nm
 inline std::vector<double> y_initial; // Starting y-coord of filament COM; nm
-inline std::vector<double> immobile_until; // Time at which filament can move; s
-inline std::vector<double> f_applied;      // Force applied to filament COM; pN
-inline std::vector<bool> translation_enabled; // Toggle translation in x,y
-inline bool rotation_enabled;      // Toggle rotation within  x-y plane
-inline bool wca_potential_enabled; // Toggle WCA potential between filaments
+inline std::vector<double> x_immobile_until; // Time when fil. can move in x; s
+inline std::vector<double> y_immobile_until; // Time when fil. can move in y; s
+inline std::vector<bool> rotation_enabled; // Toggle rotation within  x-y plane
+inline bool wca_potential_enabled;    // Toggle WCA potential between filaments
+inline std::vector<double> f_applied; // Force applied to filament COM; pN
 
 }; // namespace Filaments
 namespace Motors {
@@ -70,11 +72,13 @@ inline double k_off_i;              // Unbinding rate while singly-bound;  1/s
 inline double k_off_ii;             // Unbinding rate while doubly-bound;  1/s
 inline double d_i;                  // Diffusion coefficient; um^2/s
 inline double d_ii;                 // Diffusion coefficient; um^2/s
-inline double r_0;                  // Rest length of coiled-coil domain; nm
-inline double k_spring;             // Spring constant of CC-domain; pN/nm
-inline double theta_0;              // Rotational rest angle
-inline double k_rot;                // Rotational spring constant;
-};                                  // namespace Xlinks
-};                                  // namespace Params
+inline double d_side;   // Diffusion coefficient; um^2/s (side-stepping)
+inline double r_0;      // Rest length of coiled-coil domain; nm
+inline double k_spring; // Spring constant of CC-domain; pN/nm
+inline double theta_0;  // Rotational rest angle
+inline double k_rot;    // Rotational spring constant;
+inline double p_diffuse_off_end;
+}; // namespace Xlinks
+}; // namespace Params
 
 #endif

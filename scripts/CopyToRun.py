@@ -2,10 +2,10 @@ import subprocess
 import os
 import argparse
 
-# this script is supposed to be called from the base folder of AMSOS
-# python3 ./scripts/CopyTuRun.py /path/to/run/folder
-
 # (Shamelessly stolen from Wen Yan's AMSOS code)
+
+# this script is supposed to be called from the base folder of CyLaKS:
+#   python3 ./scripts/CopyTuRun.py /path/to/run/folder
 
 
 def dir_path(string):
@@ -23,12 +23,11 @@ args = parser.parse_args()
 exePath = args.path
 print('copy executables to ', exePath)
 
-os.system('rsync -avP sim '+exePath+'/')
-os.system('rsync -avP Makefile '+exePath+'/')
-os.system('rsync -avP params_processivity.yaml '+exePath+'/')
-os.system('rsync -avP analysis_code/get_motor_stats.m '+exePath+'/')
-os.system('rsync -avP gradOpt_lattice_coop.py '+exePath+'/')
-os.system('rsync -avP job_gradOpt_lattice.slurm '+exePath+'/')
+os.system('rsync -avP cylaks_latest.sif '+exePath+'/')
+os.system('rsync -avP params/kif4a.yaml '+exePath+'/')
+# os.system('rsync -avP analysis_/get_motor_stats.m '+exePath+'/')
+# os.system('rsync -avP gradOpt_lattice_coop.py '+exePath+'/')
+os.system('rsync -avP SubmitJob.slurm '+exePath+'/')
 
 # this script then creates a txt file to the executable folder:
 # commit.txt

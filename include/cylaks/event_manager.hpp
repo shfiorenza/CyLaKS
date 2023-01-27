@@ -25,7 +25,7 @@ public:
                event.n_executed_tot_);
     }
   }
-  void ExecuteEvents();
+  bool ExecuteEvents();
 };
 
 #endif

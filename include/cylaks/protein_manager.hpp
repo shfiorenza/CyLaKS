@@ -52,14 +52,7 @@ public:
       FlagFilamentsForUpdate();
     }
   }
-  void RunKMC() {
-    UpdateFilaments();
-    motors_.PrepForKMC();
-    xlinks_.PrepForKMC();
-    // Sys::Log(1, "BEGIN KMC EVENTS\n");
-    kmc_.ExecuteEvents();
-    // Sys::Log(1, "END KMC EVENTS\n");
-  }
+  void RunKMC();
   void RunBD() {}
 };
 #endif

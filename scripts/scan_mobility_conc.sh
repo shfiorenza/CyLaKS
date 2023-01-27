@@ -43,4 +43,3 @@ do
 done
 wait
 rm params_temp_${SCAN_NAME}*
-echo END SCAN

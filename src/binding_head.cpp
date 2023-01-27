@@ -11,6 +11,10 @@ int BindingHead::GetNumNeighborsOccupied() {
   return site_->GetNumNeighborsOccupied();
 }
 
+int BindingHead::GetNumNeighborsOccupied_Side() {
+  return site_->GetNumNeighborsOccupied_Side();
+}
+
 int BindingHead::GetNumHeadsActive() { return parent_->n_heads_active_; }
 
 Vec<double> BindingHead::GetBoundObjectOrientation() {
@@ -19,6 +23,10 @@ Vec<double> BindingHead::GetBoundObjectOrientation() {
 
 void BindingHead::AddForce(Vec<double> f) { site_->AddForce(f); }
 void BindingHead::AddTorque(double tq) { site_->AddTorque(tq); }
+
+double BindingHead::GetForceApplied(int i_dim) {
+  return parent_->GetForceApplied(i_dim, this);
+}
 
 bool BindingHead::UntetherSatellite() { return parent_->UntetherSatellite(); }
 
@@ -33,3 +41,7 @@ double BindingHead::GetWeight_Diffuse(int dir) {
 }
 
 bool BindingHead::Diffuse(int dir) { return parent_->Diffuse(this, dir); }
+
+bool BindingHead::Diffuse_Side(int dir) {
+  return parent_->Diffuse_Side(this, dir);
+}

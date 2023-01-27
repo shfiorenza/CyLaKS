@@ -13,7 +13,7 @@ MATLAB = matlab.engine.start_matlab()
 np.set_printoptions(suppress=True)
 
 sim_name_base = "kif4a_coop_opt_summit"
-param_file_base = "params_kif4a.yaml"
+param_file_base = "params/kif4a.yaml"
 log_file = sim_name_base + ".scan"
 
 param_label = ["neighb_neighb_energy", "gaussian_range",
@@ -94,7 +94,7 @@ def kif4a_coop_scaling(params):
         # Add parameter file to param_files array so we can rm them later
         param_files.append(param_file)
         # Generate command to execute this simulation
-        # exe_cmd = "./sim " + param_file + " " + sim_name
+        # exe_cmd = "./cylaks.exe " + param_file + " " + sim_name
         exe_cmd = "singularity exec --bind $PWD cylaks_latest.sif cylaks.exe  " + param_file + " " + sim_name
         # Add command to exe_commands array so we can launch them all at once
         exe_commands.append(exe_cmd)

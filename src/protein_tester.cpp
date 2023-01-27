@@ -2,7 +2,6 @@
 #include "cylaks/filament_tester.hpp"
 
 void ProteinTester::Initialize(FilamentTester *filaments) {
-
   filaments_ = filaments;
   ProteinManager::filaments_ = dynamic_cast<FilamentManager *>(filaments_);
   SetTestMode();
@@ -10,7 +9,6 @@ void ProteinTester::Initialize(FilamentTester *filaments) {
 }
 
 void ProteinTester::UpdateFilaments() {
-
   filaments_->UpdateUnoccupied();
   if (Sys::test_mode_ != "filament_ablation") {
     return;
@@ -22,7 +20,6 @@ void ProteinTester::UpdateFilaments() {
 }
 
 void ProteinTester::ReportTestStatistics() {
-
   for (auto const &entry : test_stats_) {
     Sys::Log("For event %s:\n", entry.first.c_str());
     for (int index{0}; index < entry.second.size(); index++) {
@@ -36,7 +33,6 @@ void ProteinTester::ReportTestStatistics() {
 }
 
 void ProteinTester::SetTestMode() {
-
   Sys::Log("\n");
   Sys::Log("Initializing test '%s'. Overidden parameters listed below:\n",
            Sys::test_mode_.c_str());
@@ -45,6 +41,8 @@ void ProteinTester::SetTestMode() {
     InitializeTest_Filament_Ablation();
   } else if (Sys::test_mode_ == "filament_separation") {
     InitializeTest_Filament_Separation();
+  } else if (Sys::test_mode_ == "filament_forced_slide") {
+    InitializeTest_Filament_ForcedSlide();
   } else if (Sys::test_mode_ == "hetero_tubulin") {
     InitializeTest_Filament_HeteroTubulin();
   } else if (Sys::test_mode_ == "kinesin_mutant") {
@@ -57,13 +55,14 @@ void ProteinTester::SetTestMode() {
     InitializeTest_Xlink_Diffusion();
   } else if (Sys::test_mode_ == "xlink_bind_ii") {
     InitializeTest_Xlink_Bind_II();
+  } else if (Sys::test_mode_ == "shepherding") {
+    InitializeTest_Shepherding();
   } else {
     Sys::ErrorExit("ProteinTester::SetTestMode()");
   }
 }
 
 void ProteinTester::InitializeTest_Filament_Ablation() {
-
   using namespace Params;
   Sys::OverrideParam("filaments. COUNT", &Filaments::count, 2);
   Sys::OverrideParam("filaments. N_SITES[0]", &Filaments::n_sites[0], 875);
@@ -75,10 +74,11 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
                      (Filaments::n_sites[0] - 1) * Filaments::site_size);
   Sys::OverrideParam("filaments. y_initial[0]", &Filaments::y_initial[0], 0.0);
   Sys::OverrideParam("filaments. y_initial[1]", &Filaments::y_initial[1], 0.0);
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
   Sys::Log("Motor end-pausing has been activated by default.\n");
   Motors::endpausing_active = true;
   printf("Enter ablation time: ");
@@ -94,7 +94,6 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
 }
 
 void ProteinTester::InitializeTest_Filament_Separation() {
-
   using namespace Params;
   // Initialize filament environment
   if (Filaments::n_sites[0] != Filaments::n_sites[1]) {
@@ -103,18 +102,25 @@ void ProteinTester::InitializeTest_Filament_Separation() {
   }
   Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
   Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
-  Sys::OverrideParam("filaments. immobile_until[0]",
-                     &Filaments::immobile_until[0], 0.0);
-  Sys::OverrideParam("filaments. immobile_until[1]",
-                     &Filaments::immobile_until[1], 0.0);
-  Sys::Log("Horizontal and rotational filament movement has been disabled.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = true;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::OverrideParam("filaments. immobile_until[0]",
+  //                    &Filaments::immobile_until[0], 0.0);
+  // Sys::OverrideParam("filaments. immobile_until[1]",
+  //                    &Filaments::immobile_until[1], 0.0);
+  // Sys::Log("Horizontal and rotational filament movement has been
+  // disabled.\n"); Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = true;
+  // Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
   filaments_->Initialize(this);
+  printf("\nRunning interactive launcher for 'filament_separation'.\n");
+  printf("You can also use the following quick-launch syntax:\n\n");
+  printf("  %s params.yaml sim_name filament_separation n_xlinks\n\n",
+         Sys::exe_name_.c_str());
+  printf("where n_xlinks is the number of doubly bound crosslinkers to "
+         "be inserted.\n\n");
   int n_xlinks{Sys::n_xlinks_};
   if (n_xlinks == -1) {
     Str response;
@@ -173,56 +179,448 @@ void ProteinTester::InitializeTest_Filament_Separation() {
   };
   xlinks_.AddPop("diffuse_ii_to_rest", is_doubly_bound);
   xlinks_.AddPop("diffuse_ii_fr_rest", is_doubly_bound);
-  auto exe_diffuse_fwd = [&](Object *base) {
-    auto head{dynamic_cast<BindingHead *>(base)};
-    bool executed{head->Diffuse(1)};
+  auto weight_diff_ii = [](auto *head, int dir) {
+    return head->GetWeight_Diffuse(dir);
+  };
+  auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
+    bool executed{head->Diffuse(dir)};
     if (executed) {
       bool still_attached{head->parent_->UpdateExtension()};
-      if (!still_attached) {
+    }
+    return executed;
+  };
+  kmc_.events_.emplace_back(
+      "diffuse_ii_to_rest", xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), 1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        1);
+      });
+  kmc_.events_.emplace_back(
+      "diffuse_ii_fr_rest", xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        -1);
+      });
+}
+
+void ProteinTester::InitializeTest_Filament_ForcedSlide() {
+
+  using namespace Params;
+  // Initialize filament environment
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
+  // Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  // double pos_to_alignment{(Filaments::n_sites[0] - Filaments::n_sites[1]) *
+  //                         Filaments::site_size / 2};
+  // Sys::OverrideParam("filaments: x_initial[0]", &Filaments::x_initial[0],
+  //                    pos_to_alignment);
+  // Sys::OverrideParam("filaments. immobile_until[0]",
+  //  &Filaments::immobile_until[0], 100000.0);
+  // Sys::OverrideParam("filaments. immobile_until[1]",
+  //                    &Filaments::immobile_until[1], 0.0);
+  // Sys::Log("Rotational filament movement has been disabled.\n");
+  // Filaments::translation_enabled[0] = true;
+  // Filaments::translation_enabled[1] = true;
+  // Filaments::rotation_enabled = false;
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
+  filaments_->Initialize(this);
+  printf("\nRunning interactive launcher for 'filament_forced_slide'.\n");
+  printf("You can also use the following quick-launch syntax:\n\n");
+  printf("  %s params.yaml sim_name filament_forced_slide "
+         "n_xlinks slide_velocity mode_flag\n",
+         Sys::exe_name_.c_str());
+  printf("       OR\n");
+  printf("  %s params.yaml sim_name filament_forced_slide "
+         "n_xlinks slide_velocity mode_flag t_pause pause_duration\n",
+         Sys::exe_name_.c_str());
+  printf("\nwhere n_xlinks is the number of doubly bound crosslinkers to "
+         "be inserted,\nslide_velocity is the imposed average velocity "
+         "on microtubules, and\nmode_flag is set to 0 for a constant "
+         "force assay or 1 for a constant velocity assay.\n");
+  printf("t_pause and pause_duration (in seconds) are optional and allow for a "
+         "temporary pause in the applied force at a specified time.\n\n");
+  // Get number of crosslinkers to initialize in the starting overlap
+  int n_xlinks{Sys::n_xlinks_};
+  if (n_xlinks == -1) {
+    Str response;
+    printf("Top microtubule is %zu sites in length.\n", Filaments::n_sites[1]);
+    printf("Enter number of crosslinkers to insert: ");
+    std::getline(std::cin, response);
+    n_xlinks = (int)std::stoi(response);
+    Sys::n_xlinks_ = n_xlinks;
+  }
+  int n_places{(int)Filaments::n_sites[1]};
+  if (n_places > (int)Filaments::n_sites[0]) {
+    n_places = Filaments::n_sites[0];
+  }
+  if (n_xlinks > n_places) {
+    printf("\nError! Too many crosslinkers for filament length used.\n");
+    exit(1);
+  }
+  // Get desired sliding velocity for top microtubule (bottom is fixed)
+  if (Sys::slide_velocity_ == -1.0) {
+    Str response;
+    printf("Input 0 for constant force or 1 for constant velocity mode.\n");
+    std::getline(std::cin, response);
+    int vel_flag{std::stoi(response)};
+    if (vel_flag == 1) {
+      Sys::constant_velocity_ = true;
+    } else if (vel_flag == 0) {
+      Sys::constant_velocity_ = false;
+    } else {
+      printf("Error. Flag must be 0 or 1.\n");
+      exit(1);
+    }
+    printf("Enter constant (or average) sliding velocity (in nm/s) desired for "
+           "top MT.\n");
+    std::getline(std::cin, response);
+    Sys::slide_velocity_ = (double)std::stod(response);
+  }
+  if (Sys::slide_velocity_ >= 1000) {
+    printf("\nError! Please keep velocity below 1 um/s (1000 nm/s).\n");
+    exit(1);
+  }
+  /*
+  // Check if binding/unbinding of crosslinkers should be enabled
+  if (Sys::binding_active_ == -1) {
+    Str response;
+    printf("Enable binding/unbinding to/from solution? (y/n)\n");
+    std::getline(std::cin, response);
+    if (response == "n" or response == "N") {
+      Sys::binding_active_ = 0;
+    } else if (response == "y" or response == "Y") {
+      Sys::binding_active_ = 1;
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+  }
+  */
+  // Check if a pause in force-clamping is desired
+  if (Sys::i_pause_ == -1) {
+    Str response;
+    printf("Enable pause in force clamp?\n");
+    std::getline(std::cin, response);
+    if (response == "n" or response == "N") {
+      printf("No pause scheduled.\n");
+      Sys::i_pause_ = std::numeric_limits<int>::max();
+      Sys::i_resume_ = std::numeric_limits<int>::max();
+    } else if (response == "y" or response == "Y") {
+      Str str_pause;
+      printf(
+          "Enter time at which force clamp should be paused. (in seconds)\n");
+      std::getline(std::cin, str_pause);
+      double t_pause{(double)std::stod(str_pause)};
+      Str str_duration;
+      printf("Enter duration of pause.(in seconds)\n");
+      std::getline(std::cin, str_duration);
+      double t_resume{t_pause + (double)std::stod(str_duration)};
+      if (t_resume > Params::t_run) {
+        printf("Error. Pause must occur and end before simulation end.\n");
+        exit(1);
+      }
+      Sys::i_pause_ = (int)std::round(t_pause / Params::dt);
+      Sys::i_resume_ = (int)std::round(t_resume / Params::dt);
+      printf("i_pause is %i\n", Sys::i_pause_);
+      printf("i_resume is %i\n", Sys::i_resume_);
+    } else {
+      printf("Invalid response. Please choose y (yes) or n (no).\n");
+      exit(1);
+    }
+  }
+  // Rescale pause/resume variables if initialized via quick-launcher
+  if (Sys::rescale_times_) {
+    double t_pause{(double)Sys::i_pause_};
+    double t_duration{(double)Sys::i_resume_};
+    double t_resume{t_pause + t_duration};
+    if (t_resume > Params::t_run) {
+      printf("Error. Pause must occur and end before simulation end.\n");
+      exit(1);
+    }
+    Sys::i_pause_ = (int)std::round(t_pause / Params::dt);
+    Sys::i_resume_ = (int)std::round(t_resume / Params::dt);
+    Sys::rescale_times_ = false;
+  }
+
+  // Randomly place crosslinkers on filaments w/ x = 0
+  int site_indices[n_places];
+  for (int index{0}; index < n_places; index++) {
+    site_indices[index] = index;
+  }
+  SysRNG::Shuffle(site_indices, n_places, sizeof(int));
+  int i_mt_short{1};
+  int i_mt_long{0};
+  if (Filaments::n_sites[1] > Filaments::n_sites[0]) {
+    i_mt_short = 0;
+    i_mt_long = 1;
+  }
+  for (int i_xlink{0}; i_xlink < n_xlinks; i_xlink++) {
+    Protein *xlink{xlinks_.GetFreeEntry()};
+    int i_site{site_indices[i_xlink]};
+    BindingSite *site_one{
+        &filaments_->protofilaments_[i_mt_short].sites_[i_site]};
+    // printf("site one: %zu\n", site_one->index_);
+    BindingSite *site_two{
+        filaments_->protofilaments_[i_mt_long].GetNeighb(site_one, 0)};
+    // printf("site two: %zu\n", site_two->index_);
+    bool exe_one{xlink->Bind(site_one, &xlink->head_one_)};
+    bool exe_two{xlink->Bind(site_two, &xlink->head_two_)};
+    if (exe_one and exe_two) {
+      bool still_attached{xlink->UpdateExtension()};
+      if (still_attached) {
+        xlinks_.AddToActive(xlink);
+        filaments_->FlagForUpdate();
+      } else {
+        Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [2]");
+      }
+    } else {
+      Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [1]");
+    }
+  }
+  Sys::Log("%i crosslinkers initialized.\n", n_xlinks);
+  // Probability distributions
+  auto poisson = [&](double p, int n) { // For events w/ time-variable probs.
+    if (p > 0.0) {
+      return SysRNG::SamplePoisson(p);
+    } else {
+      return 0;
+    }
+  };
+  auto binomial = [&](double p, int n) { // For events w/ constant probs.
+    if (n > 0) {
+      return SysRNG::SampleBinomial(p, n);
+    } else {
+      return 0;
+    }
+  };
+  // Binning helper functions
+  Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
+  Vec<int> i_min{0, 0, 0};
+  auto get_n_neighbs = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+    return indices_vec;
+  };
+  // Sorting criteria functions
+  auto is_unocc = [](Object *base) -> Vec<Object *> {
+    BindingSite *site{dynamic_cast<BindingSite *>(base)};
+    if (!site->IsOccupied()) {
+      return {site};
+    }
+    return {};
+  };
+  auto is_bound_i = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
+    if (protein->GetNumHeadsActive() == 1) {
+      if (!protein->IsTethered() or protein->HasSatellite()) {
+        return {protein->GetActiveHead()};
       }
     }
-    // FIXME had to move this from if statement above -- why ?
-    filaments_->FlagForUpdate();
-    xlinks_.FlagForUpdate();
+    return {};
   };
-  auto exe_diffuse_bck = [&](Object *base) {
-    auto head{dynamic_cast<BindingHead *>(base)};
-    bool executed{head->Diffuse(-1)};
+  auto is_bound_ii = [&](Object *protein) -> Vec<Object *> {
+    if (protein->GetNumHeadsActive() == 2) {
+      return {protein->GetHeadOne(), protein->GetHeadTwo()};
+    }
+    return {};
+  };
+  // Event execution functions
+  auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
+    if ((head->site_ == head->site_->filament_->plus_end_ or
+         head->site_ == head->site_->filament_->minus_end_) and
+        head->parent_->GetNumHeadsActive() == 2 and
+        Params::Xlinks::p_diffuse_off_end > 0.0) {
+      double ran{SysRNG::GetRanProb()};
+      if (ran < Params::Xlinks::p_diffuse_off_end) {
+        bool executed{head->Unbind()};
+        return executed;
+      }
+      return false;
+    } else {
+      bool executed{head->Diffuse(dir)};
+      if (executed) {
+        bool still_attached{head->parent_->UpdateExtension()};
+      }
+      return executed;
+    }
+  };
+  // if (Sys::binding_active_) {
+  // Bind from solution (stage 0 -> stage 1)
+  // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
+  filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+  auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
+    if (Sys::i_step_ < pop->step_active_) {
+      return false;
+    }
+    auto entry{pop->GetFreeEntry()};
+    if (entry == nullptr) {
+      return false;
+    }
+    bool executed{entry->Bind(site, entry->GetHeadOne())};
     if (executed) {
+      pop->AddToActive(entry);
+    }
+    return executed;
+  };
+  // Create a binomial event for each n_neighb possibility
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+        xlinks_.p_event_.at("bind_i").GetVal(n_neighbs),
+        &filaments_->unoccupied_.at("neighbs").bin_size_[0][0][n_neighbs],
+        &filaments_->unoccupied_.at("neighbs").bin_entries_[0][0][n_neighbs],
+        binomial, [&](Object *base) {
+          return exe_bind_i(dynamic_cast<BindingSite *>(base), &xlinks_,
+                            filaments_);
+        });
+  }
+  // Singly bound unbinding to solution (stage 1 -> stage 0)
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
+    bool executed{head->Unbind()};
+    if (executed) {
+      if (head->parent_->HasSatellite()) {
+        alt_pop->RemoveFromActive(head->parent_->teth_partner_);
+        bool untethered_sat{head->UntetherSatellite()};
+        if (!untethered_sat) {
+          Sys::ErrorExit("exe_unbind_i");
+        }
+      }
+      if (!head->parent_->IsTethered()) {
+        pop->RemoveFromActive(head->parent_);
+      }
+    }
+    return executed;
+  };
+  for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
+        xlinks_.p_event_.at("unbind_i").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_unbind_i(dynamic_cast<BindingHead *>(base), &xlinks_,
+                              &motors_, filaments_);
+        });
+  }
+  // }
+  // Doubly bound binding (stage 1 -> stage 2; singly bound -> crosslinking)
+  auto weight_bind_ii = [](auto *head) {
+    return head->parent_->GetWeight_Bind_II();
+  };
+  auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
+    auto head{bound_head->GetOtherHead()};
+    auto site{head->parent_->GetNeighbor_Bind_II()};
+    auto executed{head->parent_->Bind(site, head)};
+    if (executed) {
+      // FIXME check if this check is necessary / what to do
       bool still_attached{head->parent_->UpdateExtension()};
       if (!still_attached) {
+        return false;
       }
     }
-    // FIXME had to move this from if statement above -- why ?
-    filaments_->FlagForUpdate();
-    xlinks_.FlagForUpdate();
+    return executed;
   };
-  auto get_weight_diff_ii_to = [](Object *base) {
-    auto head{dynamic_cast<BindingHead *>(base)};
-    return head->GetWeight_Diffuse(1);
+  xlinks_.AddPop("singly_bound", is_bound_i);
+  kmc_.events_.emplace_back(
+      "bind_ii (xlinks)", xlinks_.p_event_.at("bind_ii").GetVal(),
+      &xlinks_.sorted_.at("singly_bound").size_,
+      &xlinks_.sorted_.at("singly_bound").entries_, poisson,
+      [&](Object *base) {
+        return weight_bind_ii(dynamic_cast<BindingHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_bind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                           filaments_);
+      });
+  // Doubly bound unbinding (stage 2 -> stage 1; crosslinking -> singly bound)
+  auto weight_unbind_ii = [](auto *head) {
+    return head->GetWeight_Unbind_II();
   };
-  auto get_weight_diff_ii_fr = [](Object *base) {
-    auto head{dynamic_cast<BindingHead *>(base)};
-    return head->GetWeight_Diffuse(-1);
+  auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
+    bool executed{head->Unbind()};
+    return executed;
   };
-  kmc_.events_.emplace_back("diffuse_ii_to_rest",
-                            xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
-                            &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
-                            &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_,
-                            poisson, get_weight_diff_ii_to, exe_diffuse_fwd);
-  kmc_.events_.emplace_back("diffuse_ii_fr_rest",
-                            xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
-                            &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
-                            &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_,
-                            poisson, get_weight_diff_ii_fr, exe_diffuse_bck);
+  xlinks_.AddPop("doubly_bound", is_bound_ii);
+  kmc_.events_.emplace_back(
+      "unbind_ii (xlinks)", xlinks_.p_event_.at("unbind_ii").GetVal(),
+      &xlinks_.sorted_.at("doubly_bound").size_,
+      &xlinks_.sorted_.at("doubly_bound").entries_, poisson,
+      [&](Object *base) {
+        return weight_unbind_ii(dynamic_cast<BindingHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_unbind_ii(dynamic_cast<BindingHead *>(base), &xlinks_,
+                             filaments_);
+      });
+  // Singly bound diffusion
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "diffuse_i_" + std::to_string(n_neighbs) + "_fwd",
+        xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, 1);
+        });
+    kmc_.events_.emplace_back(
+        "diffuse_i_" + std::to_string(n_neighbs) + "_bck",
+        xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, -1);
+        });
+  }
+  // Doubly bound diffusion
+  xlinks_.AddPop("diffuse_ii_to_rest", is_bound_ii);
+  xlinks_.AddPop("diffuse_ii_fr_rest", is_bound_ii);
+  auto weight_diff_ii = [](auto *head, int dir) {
+    return head->GetWeight_Diffuse(dir);
+  };
+  kmc_.events_.emplace_back(
+      "diffuse_ii_to_rest", xlinks_.p_event_.at("diffuse_ii_to_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_to_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), 1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        1);
+      });
+  kmc_.events_.emplace_back(
+      "diffuse_ii_fr_rest", xlinks_.p_event_.at("diffuse_ii_fr_rest").GetVal(),
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").size_,
+      &xlinks_.sorted_.at("diffuse_ii_fr_rest").entries_, poisson,
+      [&](Object *base) {
+        return weight_diff_ii(dynamic_cast<BindingHead *>(base), -1);
+      },
+      [&](Object *base) {
+        return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_,
+                        -1);
+      });
 }
 
 void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
-
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Params::Filaments::translation_enabled[0] = false;
-  Params::Filaments::translation_enabled[1] = false;
-  Params::Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Params::Filaments::translation_enabled[0] = false;
+  // Params::Filaments::translation_enabled[1] = false;
+  // Params::Filaments::rotation_enabled = false;
   double p_hetero{Sys::p_mutant_};
   if (p_hetero == -1.0) {
     printf("Enter fraction of heterogenous tubulin: ");
@@ -266,11 +664,11 @@ void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
 }
 
 void ProteinTester::InitializeTest_Motor_Heterodimer() {
-
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Params::Filaments::translation_enabled[0] = false;
-  Params::Filaments::translation_enabled[1] = false;
-  Params::Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Params::Filaments::translation_enabled[0] = false;
+  // Params::Filaments::translation_enabled[1] = false;
+  // Params::Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
@@ -294,16 +692,17 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   // head_one_ is catalytic; head_two_ is passive
   auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
     if (Sys::i_step_ < pop->step_active_) {
-      return;
+      return false;
     }
     auto entry{pop->GetFreeEntry()};
-    Sys::Log("bound motor %zu\n", entry->GetID());
+    Sys::Log(1, "bound motor %zu\n", entry->GetID());
     // always bind catalytic head first
     bool executed{entry->Bind(site, &entry->head_one_)};
     if (executed) {
       pop->AddToActive(entry);
       fil->FlagForUpdate();
     }
+    return executed;
   };
   auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
   auto is_unocc = [](Object *site) -> Vec<Object *> {
@@ -321,7 +720,8 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         return weight_bind_i(dynamic_cast<BindingSite *>(base));
       },
       [&](Object *base) {
-        exe_bind_i(dynamic_cast<BindingSite *>(base), &motors_, filaments_);
+        return exe_bind_i(dynamic_cast<BindingSite *>(base), &motors_,
+                          filaments_);
       });
   // Bind_II
   auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
@@ -333,6 +733,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       pop->FlagForUpdate();
       fil->FlagForUpdate();
     }
+    return executed;
   };
   auto weight_bind_ii = [](auto *head) {
     return head->parent_->GetWeight_Bind_II();
@@ -355,7 +756,8 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         return weight_bind_ii(dynamic_cast<CatalyticHead *>(base));
       },
       [&](Object *base) {
-        exe_bind_ii(dynamic_cast<CatalyticHead *>(base), &motors_, filaments_);
+        return exe_bind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                           filaments_);
       });
   // Unbind_II
   auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
@@ -364,6 +766,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       pop->FlagForUpdate();
       fil->FlagForUpdate();
     }
+    return executed;
   };
   auto weight_unbind_ii = [](auto *head) {
     return head->GetWeight_Unbind_II();
@@ -403,8 +806,8 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         return weight_unbind_ii(dynamic_cast<CatalyticHead *>(base));
       },
       [&](Object *base) {
-        exe_unbind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                      filaments_);
+        return exe_unbind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                             filaments_);
       });
   // Unbind_I: Unbind first (singly bound) head of a protein
   auto exe_unbind_i = [](auto *head, auto *pop, auto *fil) {
@@ -414,6 +817,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       pop->RemoveFromActive(head->parent_);
       fil->FlagForUpdate();
     }
+    return executed;
   };
   auto weight_unbind_i = [](auto *head) {
     return head->parent_->GetWeight_Unbind_I();
@@ -437,7 +841,8 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         return weight_unbind_i(dynamic_cast<CatalyticHead *>(base));
       },
       [&](Object *base) {
-        exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_, filaments_);
+        return exe_unbind_i(dynamic_cast<CatalyticHead *>(base), &motors_,
+                            filaments_);
       });
   // Bind_ATP
   auto exe_bind_ATP = [](auto *head, auto *pop) {
@@ -445,6 +850,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
     if (executed) {
       pop->FlagForUpdate();
     }
+    return executed;
   };
   auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
@@ -462,7 +868,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       &motors_.sorted_.at("bound_i_NULL").size_,
       &motors_.sorted_.at("bound_i_NULL").entries_, binomial,
       [&](Object *base) {
-        exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+        return exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
       });
   // Hydrolyze_ATP
   if (motors_.active_) {
@@ -471,6 +877,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       if (executed) {
         pop->FlagForUpdate();
       }
+      return executed;
     };
     auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
       if (motor->n_heads_active_ == 1) {
@@ -488,7 +895,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         &motors_.sorted_.at("bound_i_ATP").size_,
         &motors_.sorted_.at("bound_i_ATP").entries_, binomial,
         [&](Object *base) {
-          exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
+          return exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
         });
   }
   // Diffusion
@@ -498,6 +905,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       pop->FlagForUpdate();
       fil->FlagForUpdate();
     }
+    return executed;
   };
   auto is_singly_bound = [](auto *protein) -> Vec<Object *> {
     if (protein->n_heads_active_ == 1) {
@@ -526,20 +934,21 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
         &motors_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
         &motors_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
         [&](Object *base) {
-          exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_, 1);
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, 1);
         });
     kmc_.events_.emplace_back(
         "diffuse_i_bck", xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
         &motors_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
         &motors_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
         [&](Object *base) {
-          exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_, filaments_, -1);
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, -1);
         });
   }
 }
 
 void ProteinTester::InitializeTest_Motor_LatticeStep() {
-
   using namespace Params;
   Sys::OverrideParam("t_run", &t_run, 100.0);
   Sys::OverrideParam("t_equil", &t_equil, 0.0);
@@ -550,10 +959,11 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
                      1000000);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 100000);
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
   printf("Enter test delta (-1 to check against self-coop): ");
   Str response;
   std::getline(std::cin, response);
@@ -635,6 +1045,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     } else {
       Sys::ErrorExit("EXE_Bind_ATP_I()");
     }
+    return executed;
   };
   auto is_NULL_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
@@ -652,7 +1063,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       &motors_.sorted_.at("bound_i_NULL").size_,
       &motors_.sorted_.at("bound_i_NULL").entries_, binomial,
       [&](Object *base) {
-        exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+        return exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
       });
   // Bind_ATP_II
   auto poisson_ATP = [&](double p, int n) {
@@ -667,10 +1078,10 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     }
   };
   auto exe_bind_ATP_ii = [](auto *front_head, auto *pop, auto *fil) {
-    return;
+    // return;
     auto *rear_head{front_head->GetOtherHead()};
     if (front_head->trailing_) {
-      return;
+      return false;
     }
     auto partner{front_head->test_partner_};
     if (front_head->trailing_ != partner->trailing_) {
@@ -688,6 +1099,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     } else {
       Sys::ErrorExit("EXE_Bind_ATP_II()");
     }
+    return executed;
   };
   auto weight_bind_ATP_ii = [](auto *head) {
     return head->parent_->GetWeight_BindATP_II(head);
@@ -722,8 +1134,8 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
         return weight_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base));
       },
       [&](Object *base) {
-        exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
-                        filaments_);
+        return exe_bind_ATP_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                               filaments_);
       });
   // Hydrolyze
   auto exe_hydrolyze = [](auto *head, auto *pop) {
@@ -735,6 +1147,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     } else {
       Sys::ErrorExit("EXE_Hydrolyze");
     }
+    return executed;
   };
   auto is_ATP_i_bound = [](auto *motor) -> Vec<Object *> {
     if (motor->n_heads_active_ == 1) {
@@ -751,7 +1164,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
       "hydrolyze", motors_.p_event_.at("hydrolyze").GetVal(),
       &motors_.sorted_.at("bound_i_ATP").size_,
       &motors_.sorted_.at("bound_i_ATP").entries_, binomial, [&](Object *base) {
-        exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
+        return exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
       });
   // Bind_II
   auto exe_bind_ii = [&](Object *base) {
@@ -783,6 +1196,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     } else {
       Sys::ErrorExit("EXE_Bind_II()");
     }
+    return executed;
   };
   auto weight_bind_ii = [](auto *head) {
     return head->parent_->GetWeight_Bind_II();
@@ -830,6 +1244,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     } else {
       Sys::ErrorExit("EXE_Unbind_II()");
     }
+    return executed;
   };
   auto poisson_unbind_ii = [&](double p, int n) {
     test_stats_.at("unbind_ii")[0].second +=
@@ -882,6 +1297,7 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
     // Count stats for unbind_i but do not actually execute it
     test_stats_.at("unbind_i")[0].first++;
     filaments_->FlagForUpdate();
+    return true;
   };
   auto poisson_unbind_i = [&](double p, int n) {
     test_stats_.at("unbind_i")[0].second +=
@@ -921,7 +1337,6 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
 }
 
 void ProteinTester::InitializeTest_Motor_LatticeBind() {
-
   using namespace Params;
   size_t cutoff{Motors::gaussian_range};
   // Set parameters
@@ -938,10 +1353,11 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
                      2 * cutoff + 1);
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
@@ -985,6 +1401,7 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
     int delta{abs(i_site - (int)Motors::gaussian_range)};
     test_stats_.at("bind")[delta].first++;
     filaments_->FlagForUpdate();
+    return true;
   };
   auto weight_bind_i = [](auto *site) { return site->GetWeight_Bind(); };
   auto is_unocc = [](Object *site) -> Vec<Object *> {
@@ -1005,7 +1422,6 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
 }
 
 void ProteinTester::InitializeTest_Xlink_Diffusion() {
-
   using namespace Params;
   // Initialize sim objects
   Sys::OverrideParam("t_run", &t_run, 100.0);
@@ -1016,10 +1432,11 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 1000);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1], 1000);
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
@@ -1123,6 +1540,7 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
       filaments_->FlagForUpdate();
       test_stats_.at("to_rest")[x].first++;
     }
+    return executed;
   };
   auto exe_diff_fr = [&](Object *base) {
     BindingHead *head{dynamic_cast<BindingHead *>(base)};
@@ -1135,6 +1553,7 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
       filaments_->FlagForUpdate();
       test_stats_.at("fr_rest")[x].first++;
     }
+    return executed;
   };
   auto weight_diff_ii = [](auto *head, int dir) {
     return head->GetWeight_Diffuse(dir);
@@ -1193,7 +1612,6 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
 }
 
 void ProteinTester::InitializeTest_Xlink_Bind_II() {
-
   using namespace Params;
   Sys::OverrideParam("t_run", &t_run, 1000.0);
   Sys::OverrideParam("t_equil", &t_equil, 0.0);
@@ -1219,10 +1637,11 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
                      2 * x_max + 1);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1],
                      2 * x_max + 1);
-  Sys::Log("All filament movement has been disabled by default.\n");
-  Filaments::translation_enabled[0] = false;
-  Filaments::translation_enabled[1] = false;
-  Filaments::rotation_enabled = false;
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
   // Initialize filament environment
   filaments_->Initialize(this);
   Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
@@ -1293,7 +1712,7 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
       filaments_->FlagForUpdate();
       bool still_attached{head->parent_->UpdateExtension()};
       if (!still_attached) {
-        return;
+        return false;
       }
       double r_x{head->pos_[0] - bound_head->pos_[0]};
       double offset(Filaments::x_initial[1] - Filaments::x_initial[0]);
@@ -1303,6 +1722,7 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
     } else {
       Sys::ErrorExit("Bind_II (TEST)");
     }
+    return executed;
   };
   // Construct KMC event fr Bind_II
   kmc_.events_.emplace_back("bind_ii", xlinks_.p_event_.at("bind_ii").GetVal(),
@@ -1351,10 +1771,239 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
     } else {
       Sys::ErrorExit("Unbind_II (TEST)");
     }
+    return executed;
   };
   kmc_.events_.emplace_back(
       "unbind_ii", xlinks_.p_event_.at("unbind_ii").GetVal(),
       &xlinks_.sorted_.at("unbind_ii").size_,
       &xlinks_.sorted_.at("unbind_ii").entries_, poisson_unbind_ii,
       get_weight_unbind_ii, exe_unbind_ii);
+}
+
+void ProteinTester::InitializeTest_Shepherding() {
+  using namespace Params;
+  Sys::OverrideParam("t_run", &t_run, 10.0);
+  Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
+  Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 1.0);
+  Sys::OverrideParam("motors: t_active", &Motors::t_active, 0.0);
+  Sys::OverrideParam("motors: n_runs_to_exit", &Motors::n_runs_to_exit, -1);
+  Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
+  Sys::OverrideParam("xlinks: t_active", &Xlinks::t_active, 0.0);
+  Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
+  Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 1000);
+  Sys::OverrideParam("filaments: f_applied[0]", &Filaments::f_applied[0], 0.0);
+  Sys::OverrideParam("filaments: f_applied[1]", &Filaments::f_applied[1], 0.0);
+
+  // ! FIXME update if new immobile_until syntax is permanently adopted
+  // Sys::Log("All filament movement has been disabled by default.\n");
+  // Filaments::translation_enabled[0] = false;
+  // Filaments::translation_enabled[1] = false;
+  // Filaments::rotation_enabled = false;
+  // Initialize sim objects
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
+  // Initialize filaments
+  filaments_->Initialize(this);
+  // Place motor head on minus end of microtubule
+  BindingSite *site{filaments_->protofilaments_[0].minus_end_};
+  Motor *motor{motors_.GetFreeEntry()};
+  bool executed{motor->Bind(site, &motor->head_one_)};
+  if (executed) {
+    motors_.AddToActive(motor);
+    filaments_->FlagForUpdate();
+  } else {
+    Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [0]");
+  }
+  // Place crosslinker head on neighboring site
+  BindingSite *neighb{site->GetNeighbor(site->filament_->dx_)};
+  Protein *xlink{xlinks_.GetFreeEntry()};
+  bool pexecuted{xlink->Bind(neighb, &xlink->head_one_)};
+  if (pexecuted) {
+    xlinks_.AddToActive(xlink);
+    filaments_->FlagForUpdate();
+  } else {
+    Sys::ErrorExit("ProteinTester::InitializeTestEnvironment() [1]");
+  }
+  auto binomial = [&](double p, int n) { // For events w/ constant probs.
+    if (n > 0) {
+      return SysRNG::SampleBinomial(p, n);
+    } else {
+      return 0;
+    }
+  };
+  auto poisson = [&](double p, int n) { // For events w/ time-variable probs.
+    if (p > 0.0) {
+      return SysRNG::SamplePoisson(p);
+    } else {
+      return 0;
+    }
+  };
+  // Bind_ATP
+  auto is_bound_i_NULL = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1) {
+      if (!motor->IsTethered() or motor->HasSatellite()) {
+        if (motor->GetActiveHead()->ligand_ == Ligand::NONE) {
+          return {motor->GetActiveHead()};
+        }
+      }
+    }
+    return {};
+  };
+  auto exe_bind_ATP = [](auto *head, auto *pop) {
+    bool executed{head->parent_->Bind_ATP(head)};
+    return executed;
+  };
+  motors_.AddPop("bound_i_NULL", is_bound_i_NULL);
+  kmc_.events_.emplace_back(
+      "bind_ATP_i", motors_.p_event_.at("bind_ATP_i").GetVal(),
+      &motors_.sorted_.at("bound_i_NULL").size_,
+      &motors_.sorted_.at("bound_i_NULL").entries_, binomial,
+      [&](Object *base) {
+        return exe_bind_ATP(dynamic_cast<CatalyticHead *>(base), &motors_);
+      });
+  // Hydrolyze_ATP
+  auto is_bound_i_ATP = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 1) {
+      if (motor->GetActiveHead()->ligand_ == Ligand::ATP) {
+        return {motor->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  auto exe_hydrolyze = [](auto *head, auto *pop) {
+    bool executed{head->parent_->Hydrolyze(head)};
+    return executed;
+  };
+  motors_.AddPop("bound_i_ATP", is_bound_i_ATP);
+  kmc_.events_.emplace_back(
+      "hydrolyze", motors_.p_event_.at("hydrolyze").GetVal(),
+      &motors_.sorted_.at("bound_i_ATP").size_,
+      &motors_.sorted_.at("bound_i_ATP").entries_, binomial, [&](Object *base) {
+        return exe_hydrolyze(dynamic_cast<CatalyticHead *>(base), &motors_);
+      });
+  // Bind_II
+  auto is_docked = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    auto *docked_head{motor->GetDockedHead()};
+    if (docked_head != nullptr) {
+      return {docked_head->GetOtherHead()};
+    }
+    return {};
+  };
+  auto weight_bind_ii = [](auto *head) {
+    return head->parent_->GetWeight_Bind_II();
+  };
+  auto exe_bind_ii = [](auto *bound_head, auto *pop, auto *fil) {
+    auto head{bound_head->GetOtherHead()};
+    auto site{head->parent_->GetNeighbor_Bind_II()};
+    auto executed{head->parent_->Bind(site, head)};
+    if (executed) {
+      // FIXME check if this check is necessary / what to do
+      bool still_attached{head->parent_->UpdateExtension()};
+    }
+    return executed;
+  };
+  motors_.AddPop("docked", is_docked);
+  kmc_.events_.emplace_back(
+      "bind_ii (motors)", motors_.p_event_.at("bind_ii").GetVal(),
+      &motors_.sorted_.at("docked").size_,
+      &motors_.sorted_.at("docked").entries_, poisson,
+      [&](Object *base) {
+        return weight_bind_ii(dynamic_cast<CatalyticHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_bind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                           filaments_);
+      });
+  // Unbind_II
+  auto is_bound_ii_ADPP = [](Object *base) -> Vec<Object *> {
+    Motor *motor = dynamic_cast<Motor *>(base);
+    if (motor->GetNumHeadsActive() == 2) {
+      Object *chosen_head{nullptr};
+      if (motor->GetHeadOne()->ligand_ == Ligand::ADPP) {
+        chosen_head = motor->GetHeadOne();
+      }
+      if (motor->GetHeadTwo()->ligand_ == Ligand::ADPP) {
+        if (chosen_head != nullptr) {
+          Sys::ErrorExit("Protein_MNGR::is_bound_ii_ADPP()");
+        }
+        chosen_head = motor->GetHeadTwo();
+      }
+      if (chosen_head != nullptr) {
+        return {chosen_head};
+      }
+    }
+    return {};
+  };
+  auto weight_unbind_ii = [](auto *head) {
+    return head->GetWeight_Unbind_II();
+  };
+  auto exe_unbind_ii = [](auto *head, auto *pop, auto *fil) {
+    bool executed{head->Unbind()};
+    return executed;
+  };
+  motors_.AddPop("doubly_bound_ADPP", is_bound_ii_ADPP);
+  kmc_.events_.emplace_back(
+      "unbind_ii (motors)", motors_.p_event_.at("unbind_ii").GetVal(),
+      &motors_.sorted_.at("doubly_bound_ADPP").size_,
+      &motors_.sorted_.at("doubly_bound_ADPP").entries_, poisson,
+      [&](Object *base) {
+        return weight_unbind_ii(dynamic_cast<CatalyticHead *>(base));
+      },
+      [&](Object *base) {
+        return exe_unbind_ii(dynamic_cast<CatalyticHead *>(base), &motors_,
+                             filaments_);
+      });
+  // Xlink diffusion
+  auto is_bound_i = [](Object *base) -> Vec<Object *> {
+    Protein *protein{dynamic_cast<Protein *>(base)};
+    if (protein->GetNumHeadsActive() == 1) {
+      if (!protein->IsTethered() or protein->HasSatellite()) {
+        return {protein->GetActiveHead()};
+      }
+    }
+    return {};
+  };
+  // Sorted array dimension {i,j,k}; 1-D for neighbs so we use k and pad i & j
+  Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
+  // Starting indices {i, j, k} of array for neighb coop, only use k dimension
+  Vec<int> i_min{0, 0, 0};
+  auto get_n_neighbs = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+    return indices_vec;
+  };
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  auto exe_diff = [](auto *head, auto *pop, auto *fil, int dir) {
+    bool executed{head->Diffuse(dir)};
+    if (executed) {
+      bool still_attached{head->parent_->UpdateExtension()};
+      // TODO do I need this check??
+      if (!still_attached) {
+        // printf("what\n");
+      }
+    }
+    return executed;
+  };
+  for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
+    kmc_.events_.emplace_back(
+        "diffuse_i_fwd", xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, 1);
+        });
+    kmc_.events_.emplace_back(
+        "diffuse_i_bck", xlinks_.p_event_.at("diffuse_i_bck").GetVal(n_neighbs),
+        &xlinks_.sorted_.at("bound_i").bin_size_[0][0][n_neighbs],
+        &xlinks_.sorted_.at("bound_i").bin_entries_[0][0][n_neighbs], binomial,
+        [&](Object *base) {
+          return exe_diff(dynamic_cast<BindingHead *>(base), &xlinks_,
+                          filaments_, -1);
+        });
+  }
 }

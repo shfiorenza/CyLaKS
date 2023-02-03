@@ -26,6 +26,7 @@ void FilamentTester::UpdateForces() {
       }
     }
   } else {
+    /* FORCE-DEP UNBINDING */
     double f_stall{6.0}; // pN
     // Add motor force to 'bottom' microtubule
     size_t n_motors_bot{
@@ -43,11 +44,16 @@ void FilamentTester::UpdateForces() {
     double v_mot_top{Sys::slide_velocity_ *
                      (1.0 - std::fabs(f_per_mot_top / f_stall))};
     protofilaments_[1].force_[0] -= v_mot_top * protofilaments_[1].gamma_[0];
+    /* END FORCE-DEP UNBINDING*/
+
     // printf("f_per_mot: %g // %g\n", f_per_mot_bot, f_per_mot_top);
     // printf("v_exp: %g\n\n", v_mot_top);
+
+    /* OLD PRIMITIVE FORCE (NON) DEPENDENCE BELOW */
     // protofilaments_[1].force_[0] -= f_required;
     // f_required = Sys::slide_velocity_ * protofilaments_[0].gamma_[0];
     // protofilaments_[0].force_[0] += f_required;
+    /* END OLD BOI */
   }
   // else {
   //   printf("i_step is %zu\n", Sys::i_step_);

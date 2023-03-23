@@ -9,10 +9,13 @@ void ProteinManager::GenerateReservoirs() {
 
   // To model an infinite reservoir, we generate a number of proteins equal to
   // the total number of binding sites in the simulation. This value is static.
+  size_t reservoir_size{filaments_->sites_.size()};
+  /*
   size_t reservoir_size{0};
   for (int i_mt{0}; i_mt < Params::Filaments::count; i_mt++) {
     reservoir_size += Params::Filaments::n_sites[i_mt];
   }
+  */
   // Convert t_active parameter from seconds to number of simulation timesteps
   size_t motor_step_active{size_t(Params::Motors::t_active / Params::dt)};
   if (Params::Motors::c_bulk == 0.0) {
@@ -182,14 +185,22 @@ void ProteinManager::SetParameters() {
   xlinks_.AddProb("unbind_i", Xlinks::k_off_i * dt, "neighbs", 1);
   if (Params::Filaments::n_subfilaments > 1) {
     double p_bind_i{Xlinks::k_on * Xlinks::c_bulk * dt};
+    // printf("p_base = %g\n", p_bind_i);
     double p_unbind_i{Xlinks::k_off_i * dt};
     Vec3D<double> p_bind{{Vec<double>(2 * _n_neighbs_max + 1, p_bind_i)}};
     Vec3D<double> p_unbind{{Vec<double>(2 * _n_neighbs_max + 1, p_unbind_i)}};
     for (int n_neighbs{0}; n_neighbs <= 2 * _n_neighbs_max; n_neighbs++) {
       double dE{-1 * Params::Xlinks::neighb_neighb_energy * n_neighbs};
+      // printf("dE = %g\n", dE);
       p_bind[0][0][n_neighbs] *= exp(-(1.0 - _lambda_neighb) * dE);
       p_unbind[0][0][n_neighbs] *= exp(_lambda_neighb * dE);
     }
+    // for (int n_neighbs{0}; n_neighbs <= 2 * _n_neighbs_max; n_neighbs++) {
+    //   printf("p_bind[%i] = %g\n", n_neighbs, p_bind[0][0][n_neighbs]);
+    // }
+    // for (int n_neighbs{0}; n_neighbs <= 2 * _n_neighbs_max; n_neighbs++) {
+    //   printf("p_unbind[%i] = %g\n", n_neighbs, p_unbind[0][0][n_neighbs]);
+    // }
     xlinks_.AddProb("bind_i_multi", p_bind);
     xlinks_.AddProb("unbind_i_multi", p_unbind);
   }
@@ -446,6 +457,8 @@ void ProteinManager::InitializeEvents() {
     }
     auto entry{pop->GetFreeEntry()};
     if (entry == nullptr) {
+      Sys::Log("Infinite reservoir ran out ?!\n");
+      Sys::ErrorExit("ProteinManager::exe_bind_i");
       return false;
     }
     bool executed{entry->Bind(site, entry->GetHeadOne())};

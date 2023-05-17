@@ -21,6 +21,7 @@ protected:
   PoissonToolbox poisson_; // Auxiliary resources for poisson mode
 
 public:
+  size_t n_knockout_tot_{0};      // # of times this event has been knocked out
   size_t n_executed_tot_{0};      // # of times event has been executed
   size_t n_opportunities_tot_{0}; // # of opportunities event had to execute
   Str name_{"void"};              // Name of this event, e.g., "Bind_II_Teth"
@@ -69,6 +70,7 @@ public:
     for (int i_entry{0}; i_entry < n_expected_; i_entry++) {
       if (tar == targets_[i_entry]) {
         targets_[i_entry] = targets_[--n_expected_];
+        n_knockout_tot_++;
         return;
       }
     }

@@ -24,6 +24,10 @@ public:
                double(event.n_executed_tot_) / event.n_opportunities_tot_,
                event.n_executed_tot_);
     }
+    for (auto &&event : events_) {
+      Sys::Log("%s knocked out %zu times\n", event.name_.c_str(),
+               event.n_knockout_tot_);
+    }
   }
   bool ExecuteEvents();
 };

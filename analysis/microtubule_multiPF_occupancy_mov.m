@@ -1,6 +1,11 @@
 clear variables;
 
-sim_name = 'test2';
+sim_name = 'shep_multiPF_0_0.131_8';
+sim_name = 'testino_sideLongHi';
+sim_name = 'testinoLongHi';
+%sim_name = 'testino_sideLong';
+%sim_name = 'testinoLongHi2x';
+sim_name = 'test10x175'
 output_movie_name = 'test_out';
 
 start_frame = 1;
@@ -40,7 +45,7 @@ motor_avg_occupancy = zeros([params.max_sites params.n_mts]);
 motor_avg_occupancy_tot = zeros([params.max_sites 1]);
 xlink_avg_occupancy_tot = zeros([params.max_sites 1]);
 
-fig1 = figure(1);
+fig1 = figure();
 set(fig1, 'Position', [50, 50, 1200, 600])
 
 % Read in and average occupancy data over all datapoints
@@ -101,7 +106,7 @@ for i = 1:1:int32(params.n_datapoints)
         legendLabel{params.n_mts + 1} = 'Average across all';
         legend(legendLabel, 'Location', 'northeastoutside');
 
-        dim = [0.7425 0.3 .3 .3];
+        dim = [0.7425 0.1 .3 .3];
         time = i * params.time_per_datapoint;
         str = sprintf('Time: %i seconds', int32(time));
         annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');

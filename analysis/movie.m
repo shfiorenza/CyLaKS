@@ -1,13 +1,13 @@
 clear variables;
 
-sim_name = 'runs_new/runs_1kT/shep_1kT_0.0033_8'; % Raw sim name; do not include directory
-sim_name = 'testinoDb';
+sim_name = 'shep_multiPF_0_0.131_4'; % Raw sim name; do not include directory
+sim_name = 'test10x175';
 output_movie_name = 'test';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 100; 
+frames_per_plot = 10; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure

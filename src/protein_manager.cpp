@@ -781,7 +781,6 @@ void ProteinManager::InitializeEvents() {
       };
       xlinks_.AddPop("bound_i_multi", is_bound_i, dim_size_multi, i_min,
                      get_n_neighbs_multi);
-      // FIXME make 2-d loop
       for (int n_same{0}; n_same <= _n_neighbs_max; n_same++) {
         for (int n_side{0}; n_side <= _n_neighbs_max; n_side++) {
           Str neighb_label{std::to_string(n_side) + "_" +

@@ -1,12 +1,11 @@
 clear variables;
 
-sim_name = 'shep_multiPF_0_0.131_8';
-sim_name = 'testino_sideLongHi';
-sim_name = 'testinoLongHi';
-%sim_name = 'testino_sideLong';
-%sim_name = 'testinoLongHi2x';
-sim_name = 'test10x175'
-output_movie_name = 'test_out';
+sim_name = 'endtags_3/endtag_0.003275_25_0.1nM_200nM_8_1.375kT_500_1';
+sim_name = 'endtags_3/endtag_0.0524_25_1nM_200nM_8_1.375kT_500_2';
+sim_name = 'endtags_3/endtag_0.0524_25_0.1nM_20nM_8_1.375kT_500_0';
+sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0'
+
+output_movie_name = 'out0032_25_0.1_20';
 
 start_frame = 1;
 frames_per_plot = 100; % in n_datapoints; number of timesteps per output plot
@@ -26,10 +25,13 @@ occupancy = load_data(occupancy, occupancy_filename, '*int');
 v = VideoWriter(output_movie_name);
 v.FrameRate = (params.n_datapoints / frames_per_plot) / 15;
 open(v);
-frame_box = [0, 0, 1.5 * 480, 1.5 * 300];
+frame_box = [0, 0, 1200, 300];
 
 xlink_speciesID = 1;
 motor_speciesID = 2;
+
+colors = get(gca,'colororder');
+colors = [colors; [0.4940    0.1840    0.5560]; [ 0.2500    0.2500    0.2500]];
 
 xlink_raw_data = occupancy; 
 motor_raw_data = occupancy; 
@@ -45,8 +47,8 @@ motor_avg_occupancy = zeros([params.max_sites params.n_mts]);
 motor_avg_occupancy_tot = zeros([params.max_sites 1]);
 xlink_avg_occupancy_tot = zeros([params.max_sites 1]);
 
-fig1 = figure();
-set(fig1, 'Position', [50, 50, 1200, 600])
+fig1 = figure('Position', [50, 250, 1200, 300]);
+%set(fig1, 'Position', [50, 50, 1200, 300])
 
 % Read in and average occupancy data over all datapoints
 for i = 1:1:int32(params.n_datapoints)
@@ -77,10 +79,20 @@ for i = 1:1:int32(params.n_datapoints)
         clf;
         ax = axes('Units', 'normalized', 'Position', [0.1 0.1 0.8 0.8]);
         hold all
-
-        %plot(linspace(0, params.max_sites * params.site_size, params.max_sites), motor_occupancy);
-        plot(linspace(0, params.max_sites * params.site_size, params.max_sites), xlink_occupancy, 'LineWidth', 1.5);
-        plot(linspace(0, params.max_sites * params.site_size, params.max_sites), xlink_occupancy_tot, 'LineWidth', 3);
+        
+        for i_pf = 1 : 1 : params.n_mts
+            plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ...
+                xlink_occupancy(:, i_pf), 'Color', colors(i_pf, :), 'LineWidth', 1.25);
+        end
+        
+        plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
+            xlink_occupancy_tot, 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
+        for i_pf = 1 : 1 : params.n_mts
+            plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
+                motor_occupancy(:, i_pf), '--', 'Color', colors(i_pf, :), 'LineWidth', 1.25);
+        end
+        plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
+            motor_occupancy_tot, '--', 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
         %plot(linspace(0, n_sites*0.008, n_sites), net_occupancy);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_accel);
@@ -106,7 +118,7 @@ for i = 1:1:int32(params.n_datapoints)
         legendLabel{params.n_mts + 1} = 'Average across all';
         legend(legendLabel, 'Location', 'northeastoutside');
 
-        dim = [0.7425 0.1 .3 .3];
+        dim = [0.7425 0.0 .3 .2];
         time = i * params.time_per_datapoint;
         str = sprintf('Time: %i seconds', int32(time));
         annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');

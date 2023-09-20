@@ -74,11 +74,15 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
                      (Filaments::n_sites[0] - 1) * Filaments::site_size);
   Sys::OverrideParam("filaments. y_initial[0]", &Filaments::y_initial[0], 0.0);
   Sys::OverrideParam("filaments. y_initial[1]", &Filaments::y_initial[1], 0.0);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
   // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
-  // Filaments::rotation_enabled = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   Sys::Log("Motor end-pausing has been activated by default.\n");
   Motors::endpausing_active = true;
   printf("Enter ablation time: ");
@@ -86,10 +90,10 @@ void ProteinTester::InitializeTest_Filament_Ablation() {
   std::getline(std::cin, response);
   double t_ablate{(double)std::stod(response)};
   Sys::ablation_step_ = size_t(std::round(t_ablate / dt));
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   InitializeEvents();
 }
 
@@ -102,19 +106,19 @@ void ProteinTester::InitializeTest_Filament_Separation() {
   }
   Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 0.0);
   Sys::OverrideParam("xlinks: c_bulk", &Xlinks::c_bulk, 1.0);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::OverrideParam("filaments. immobile_until[0]",
-  //                    &Filaments::immobile_until[0], 0.0);
-  // Sys::OverrideParam("filaments. immobile_until[1]",
-  //                    &Filaments::immobile_until[1], 0.0);
-  // Sys::Log("Horizontal and rotational filament movement has been
-  // disabled.\n"); Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = true;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Filaments::rotation_enabled = false;
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   printf("\nRunning interactive launcher for 'filament_separation'.\n");
   printf("You can also use the following quick-launch syntax:\n\n");
   printf("  %s params.yaml sim_name filament_separation n_xlinks\n\n",
@@ -231,10 +235,10 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   // Filaments::translation_enabled[0] = true;
   // Filaments::translation_enabled[1] = true;
   // Filaments::rotation_enabled = false;
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   printf("\nRunning interactive launcher for 'filament_forced_slide'.\n");
   printf("You can also use the following quick-launch syntax:\n\n");
   printf("  %s params.yaml sim_name filament_forced_slide "
@@ -616,10 +620,15 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
 }
 
 void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Params::Filaments::translation_enabled[0] = false;
-  // Params::Filaments::translation_enabled[1] = false;
+  using namespace Params;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Params::Filaments::rotation_enabled = false;
   double p_hetero{Sys::p_mutant_};
   if (p_hetero == -1.0) {
@@ -644,10 +653,10 @@ void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
     printf("Error. Fractional change must be positive!\n");
     exit(1);
   }
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   int n_sites{(int)filaments_->sites_.size()};
   int n_hetero{(int)std::round(n_sites * p_hetero)};
   // Randomly place heterogeneous sites on lattice
@@ -664,15 +673,21 @@ void ProteinTester::InitializeTest_Filament_HeteroTubulin() {
 }
 
 void ProteinTester::InitializeTest_Motor_Heterodimer() {
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Params::Filaments::translation_enabled[0] = false;
-  // Params::Filaments::translation_enabled[1] = false;
+  using namespace Params;
+  Sys::OverrideParam("dt", &dt, 0.00005);
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Params::Filaments::rotation_enabled = false;
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   //  Binomial probabilitiy distribution; sampled to predict most events
   auto binomial = [&](double p, int n) {
     if (n > 0) {
@@ -959,21 +974,25 @@ void ProteinTester::InitializeTest_Motor_LatticeStep() {
                      1000000);
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 100000);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Filaments::rotation_enabled = false;
   printf("Enter test delta (-1 to check against self-coop): ");
   Str response;
   std::getline(std::cin, response);
   int test_delta{(int)std::stoi(response)};
+  // Initialize filaments
+  filaments_->Initialize(this);
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  // Initialize filaments
-  filaments_->Initialize(this);
 
   double test_weight_bind{1.0};
   double test_weight_unbind{1.0};
@@ -1353,16 +1372,20 @@ void ProteinTester::InitializeTest_Motor_LatticeBind() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 1);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0],
                      2 * cutoff + 1);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Filaments::rotation_enabled = false;
+  filaments_->Initialize(this);
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  filaments_->Initialize(this);
   // Initialize statistic trackers
   Vec<double> p_theory(cutoff + 1, motors_.p_event_.at("bind_i").GetVal());
   for (int delta{0}; delta <= Motors::gaussian_range; delta++) {
@@ -1432,16 +1455,19 @@ void ProteinTester::InitializeTest_Xlink_Diffusion() {
   Sys::OverrideParam("filaments: COUNT", &Filaments::count, 2);
   Sys::OverrideParam("filaments: N_SITES[0]", &Filaments::n_sites[0], 1000);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1], 1000);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
-  // Filaments::rotation_enabled = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
+  // Initialize filaments
+  filaments_->Initialize(this);
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  // Initialize filaments
-  filaments_->Initialize(this);
   // Initialize stat trackers
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
   // Recall, Weight = exp(0.5 * E / kbT) [assume lambda = 0.5]
@@ -1617,9 +1643,6 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
   Sys::OverrideParam("t_equil", &t_equil, 0.0);
   Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
   Sys::OverrideParam("xlinks: k_off_ii", &Xlinks::k_off_ii, 143);
-  GenerateReservoirs();
-  InitializeWeights();
-  SetParameters();
   double r_y{std::fabs(Filaments::y_initial[0] - Filaments::y_initial[1])};
   // Recall, Weight = exp(0.5 * E / kbT) [assume lambda = 0.5]
   double E_max{std::log(_max_weight) * Params::kbT};
@@ -1637,13 +1660,20 @@ void ProteinTester::InitializeTest_Xlink_Bind_II() {
                      2 * x_max + 1);
   Sys::OverrideParam("filaments: N_SITES[1]", &Filaments::n_sites[1],
                      2 * x_max + 1);
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
   // Filaments::rotation_enabled = false;
   // Initialize filament environment
   filaments_->Initialize(this);
+  GenerateReservoirs();
+  InitializeWeights();
+  SetParameters();
   Vec<double> p_bind(2 * x_max + 1, xlinks_.p_event_.at("bind_ii").GetVal());
   Vec<double> p_unbind(2 * x_max + 1,
                        xlinks_.p_event_.at("unbind_ii").GetVal());
@@ -1784,6 +1814,7 @@ void ProteinTester::InitializeTest_Shepherding() {
   using namespace Params;
   Sys::OverrideParam("t_run", &t_run, 10.0);
   Sys::OverrideParam("t_equil", &t_equil, 0.0);
+  Sys::OverrideParam("dt", &dt, 0.00005);
   Sys::OverrideParam("dynamic_equil_window", &dynamic_equil_window, -1);
   Sys::OverrideParam("motors: c_bulk", &Motors::c_bulk, 1.0);
   Sys::OverrideParam("motors: t_active", &Motors::t_active, 0.0);
@@ -1795,17 +1826,20 @@ void ProteinTester::InitializeTest_Shepherding() {
   Sys::OverrideParam("filaments: f_applied[0]", &Filaments::f_applied[0], 0.0);
   Sys::OverrideParam("filaments: f_applied[1]", &Filaments::f_applied[1], 0.0);
 
-  // ! FIXME update if new immobile_until syntax is permanently adopted
-  // Sys::Log("All filament movement has been disabled by default.\n");
-  // Filaments::translation_enabled[0] = false;
-  // Filaments::translation_enabled[1] = false;
-  // Filaments::rotation_enabled = false;
+  Sys::OverrideParam("filaments. x_immobile_until[0]",
+                     &Filaments::x_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. x_immobile_until[1]",
+                     &Filaments::x_immobile_until[1], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[0]",
+                     &Filaments::y_immobile_until[0], 2 * t_run);
+  Sys::OverrideParam("filaments. y_immobile_until[1]",
+                     &Filaments::y_immobile_until[1], 2 * t_run);
+  // Initialize filaments
+  filaments_->Initialize(this);
   // Initialize sim objects
   GenerateReservoirs();
   InitializeWeights();
   SetParameters();
-  // Initialize filaments
-  filaments_->Initialize(this);
   // Place motor head on minus end of microtubule
   BindingSite *site{filaments_->protofilaments_[0].minus_end_};
   Motor *motor{motors_.GetFreeEntry()};

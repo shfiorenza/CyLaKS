@@ -2,12 +2,16 @@ clear variables;
 
 sim_name = 'shep_multiPF_0_0.131_4'; % Raw sim name; do not include directory
 sim_name = 'test10x175';
+sim_name = 'shepherding_baseline/shep_1nM_200nM_8_1.5kT';
+sim_name = 'endtags_3/endtag_0.0524_25_1nM_200nM_8_1.375kT_500_1';
+sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0';
+
 output_movie_name = 'test';
 
 start_frame = 1;
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 10; 
+frames_per_plot = 100; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure

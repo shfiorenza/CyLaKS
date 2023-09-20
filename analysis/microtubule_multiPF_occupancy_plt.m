@@ -1,10 +1,13 @@
 clear variables;
 
-sim_name = 'shep_multiPF_0_0.131_8';
-sim_name = 'test2'
+sim_name = 'shep_10nM_20nM_8_0.0kT';
+sim_name = 'coop_131_3.6nM_0nM_8_1.45kT_0';
+sim_name = 'endtags_3/endtag_0.0524_25_0.1nM_20nM_8_1.375kT_500_3';
 
 % Load parameter structure
-file_dir = '..';  % Default; only change if you move CyLaKS output files
+file_dir = '../shepherding_baseline';  % Default; only change if you move CyLaKS output files
+file_dir = '../coop_fit3_10xDiff/usable_output';
+file_dir = '..';
 params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
 
 % Open occupancy data file 
@@ -50,23 +53,10 @@ fig = figure();
 
 plot(xlink_avg_occupancy);
 hold on
+plot(motor_avg_occupancy); 
 plot(xlink_avg_occupancy_tot, 'LineWidth', 2);
 
 ylim([0 1]);
 
+saveas(fig, 'yeet.jpg', 'jpg');
 
-%{
-for i_mt = 1 : n_mts
-   for i_species = 1 : n_species
-      fractional_occupancy(i_mt, :, i_species) = smoothdata(fractional_occupancy(i_mt, :, i_species)); 
-   end
-end
-
-fig1 = figure();
-hold all;
-
-for i_mt = 1 : n_mts
-    plot(linspace(0, delta_t * n_steps, n_datapoints), squeeze(fractional_occupancy(i_mt, :, :)));
-end
-legend(["static mt", "dynamic mt"]);
-%}

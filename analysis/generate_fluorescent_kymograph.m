@@ -1,20 +1,21 @@
 clear variables; 
 
-sim_name = 'test7';
+sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0'
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = 9000; 
-frac_visible = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+i_end = -1; 
+frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
-tubulin_intensity = 0.003;
-xlink_intensity = 0.003; % Controls how bright a single xlink is 
-motor_intensity = 1; 
-subfilaments = false; 
+tubulin_intensity = 0.01;
+xlink_intensity = 0.003; %003; % Controls how bright a single xlink is 
+motor_intensity = 0.003; %003; 
+subfilaments = true; 
 
 % Scale bar lengths 
-scale_x = 2; %2.5; %1; % microns
-scale_t = 10; %30; %10; % seconds
+scale_x = 1; %2.5; %1; % microns
+scale_t = 60; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
@@ -60,23 +61,27 @@ site_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints);
 % Get motor and xlink matrices from occupancy data
 motor_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
 xlink_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
+n_xlinks_avg = 0;
 for i_data = 1 : params.n_datapoints
     for i_mt = 1 : params.n_mts
         for i_site = 1 : params.mt_lengths(i_mt)
             id = protein_ids(i_site, i_mt, i_data); % unique individual ID
             sid = occupancy(i_site, i_mt, i_data);  % species label ID 
             if sid == xlink_ID
-                if mod(frac_visible(1)*id, frac_visible(2)) == 0
+                if mod(frac_visible_xlink(1)*id, frac_visible_xlink(2)) == 0
                     xlink_matrix(i_site, i_mt, i_data) = xlink_intensity;
+                    n_xlinks_avg = n_xlinks_avg + 1/(params.n_datapoints);
                 end
             elseif sid == motor_ID
-                if mod(frac_visible(1)*id, frac_visible(2)) == 0
+                if mod(frac_visible_motor(1)*id, frac_visible_motor(2)) == 0
                     motor_matrix(i_site, i_mt, i_data) = motor_intensity;
                 end
             end
         end
     end
 end
+
+disp(n_xlinks_avg)
 
 % Calculate final image dimensions
 pixels_y = ceil((i_end - i_start) / dwell_steps);

@@ -23,6 +23,12 @@ void EventManager::SampleEventStatistics() {
       active_events[i_active++] = std::make_pair(&event, event.targets_[i_tar]);
     }
   }
+  // SF TODO: This shuffle shouldn't be necessary, should it?
+  // SF TODO: Write out knock-out algorithm to check
+  // Shuffle active array before performing knock-outs
+  SysRNG::Shuffle(active_events, n_events_to_exe_,
+                  sizeof(Pair<Event *, Object *>));
+  // SF TODO: maybe I need to bin competitors rather than doing 1on1 brackets?
   // Scan through all active events to ensure that no 2 target the same
   for (int i_entry{0}; i_entry < n_events_to_exe_; i_entry++) {
     Event *event_i{active_events[i_entry].first};

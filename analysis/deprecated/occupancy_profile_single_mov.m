@@ -7,7 +7,7 @@ clear variables;
 %sim_name = 'shep_200x';
 %sim_name = 'shep_20x_1.1ums'
 sim_name = 'shep_200x_1.1ums'
-sim_name = 'shep_20x_noStick'
+sim_name = 'test'
 steps_per_plot = 10;
 movie_name = 'test2';
 file_dir = '/home/shane/projects/CyLaKS';

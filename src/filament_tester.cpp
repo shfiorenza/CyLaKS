@@ -13,6 +13,9 @@ void FilamentTester::Initialize(ProteinTester *proteins) {
 void FilamentTester::UpdateForces() {
 
   FilamentManager::UpdateForces();
+  if (Sys::test_mode_ != "filament_forced_slide") {
+    return;
+  }
   // Add necessary force to get desired sliding velocity
   // (only applies to x dimension, so i = 0 index)
   double f_required{Sys::slide_velocity_ * protofilaments_[1].gamma_[0]};

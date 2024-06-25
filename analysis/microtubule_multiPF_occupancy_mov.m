@@ -1,9 +1,6 @@
 clear variables;
 
-sim_name = 'endtags_3/endtag_0.003275_25_0.1nM_200nM_8_1.375kT_500_1';
-sim_name = 'endtags_3/endtag_0.0524_25_1nM_200nM_8_1.375kT_500_2';
-sim_name = 'endtags_3/endtag_0.0524_25_0.1nM_20nM_8_1.375kT_500_0';
-sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0'
+sim_name = 'output12/shep_0.1nM_10nM_8_1.2kT_1x_0';
 
 output_movie_name = 'out0032_25_0.1_20';
 
@@ -79,18 +76,20 @@ for i = 1:1:int32(params.n_datapoints)
         clf;
         ax = axes('Units', 'normalized', 'Position', [0.1 0.1 0.8 0.8]);
         hold all
-        
+        %{
         for i_pf = 1 : 1 : params.n_mts
             plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ...
                 xlink_occupancy(:, i_pf), 'Color', colors(i_pf, :), 'LineWidth', 1.25);
         end
-        
+        %}
         plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
             xlink_occupancy_tot, 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
+        %{
         for i_pf = 1 : 1 : params.n_mts
             plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
                 motor_occupancy(:, i_pf), '--', 'Color', colors(i_pf, :), 'LineWidth', 1.25);
         end
+        %}
         plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
             motor_occupancy_tot, '--', 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
         %plot(linspace(0, n_sites*0.008, n_sites), net_occupancy);
@@ -111,11 +110,14 @@ for i = 1:1:int32(params.n_datapoints)
         axis.Box = 'off';
         axis.GridLineStyle = '-';
         %set(findall(axis, 'Type', 'Line'), 'LineWidth', 2);
+        %{
         legendLabel = cell(params.n_mts + 1, 1); %, 'Crosslinkers', 'Combined'};
         for i_pf = 1 : 1 : params.n_mts
            legendLabel{i_pf} = sprintf('Protofilament %i', int32(i_pf)); 
         end
         legendLabel{params.n_mts + 1} = 'Average across all';
+        %}
+        legendLabel = {'Xlinks (avg)', 'Motors(avg)'};
         legend(legendLabel, 'Location', 'northeastoutside');
 
         dim = [0.7425 0.0 .3 .2];

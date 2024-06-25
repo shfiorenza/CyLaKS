@@ -281,8 +281,10 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     Sys::ErrorExit("Protein::GetWeight_diffuse");
   }
   int dx{dir * head->GetDirectionTowardRest()};
+  bool exactly_vertical{false};
   // For xlinks exactly at rest,
   if (dx == 0) {
+    exactly_vertical = true;
     // Diffuse from rest in a random direction
     if (dir == -1) {
       ran_ = SysRNG::GetRanProb();
@@ -318,7 +320,10 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     spring_.UpdatePosition();
     double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
     double weight_neighb{head->site_->GetWeight_Unbind()};
-    return weight_spring * weight_neighb;
+    // If xlink is exactly vertical, multiply weight by 2 for proper statistics
+    // (Each head needs 2 directions sampled -- only 1 sampled when vert)
+    double weight_config{exactly_vertical ? 2.0 : 1.0};
+    return weight_spring * weight_neighb * weight_config;
   }
   if (new_loc->occupant_ != nullptr) {
     return 0.0;
@@ -334,8 +339,11 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   spring_.UpdatePosition();
   double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
   double weight_neighb{head->site_->GetWeight_Unbind()};
+  // If xlink is exactly vertical, multiply weight by 2 for proper statistics
+  // (Each head needs 2 directions sampled -- only 1 sampled when exactly vert)
+  double weight_config{exactly_vertical ? 2.0 : 1.0};
   // printf("WT[%i] = %g\n", dx, weight_spring * weight_neighb);
-  return weight_spring * weight_neighb;
+  return weight_spring * weight_neighb * weight_config;
 }
 
 double Protein::GetWeight_Bind_II() {

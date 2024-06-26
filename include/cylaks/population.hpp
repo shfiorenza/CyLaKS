@@ -20,20 +20,23 @@ protected:
   Fn<Vec<int>(ENTRY_T *)> get_bin_indices_;
 
   // (1-D use) Add member to population and increase population size
-  void AddEntry(ENTRY_T *entry) { entries_[size_++] = entry; }
+  void AddEntry(ENTRY_T *entry) {
+    entries_[size_++] = entry;
+    Sys::Log(3, "     entry added\n");
+  }
   // (M-D use) Add member to apt pop. bin at [i][j][k] and increase bin size
   // Indices are input via vector in format <k>, <j, k>, or <i, j, k>
   void AddEntry(ENTRY_T *entry, Vec<int> indices) {
     int k{indices[0]};
     int j{indices.size() > 1 ? indices[1] : 0};
     int i{indices.size() > 2 ? indices[2] : 0};
-    Sys::Log(3, "entry added w/ ijk = %i%i%i\n", i, j, k);
+    Sys::Log(4, "     entry added w/ ijk = %i%i%i\n", i, j, k);
     bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry;
     //! FIXME is this correct?
     if (entry->GetNumHeadsActive() == 2) {
       bin_entries_[i][j][k][bin_size_[i][j][k]++] = entry->GetOtherHead();
     }
-    Sys::Log(3, "bin size = %i\n", bin_size_[i][j][k]);
+    Sys::Log(4, "     bin size = %i\n", bin_size_[i][j][k]);
   }
 
 public:

@@ -304,6 +304,9 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     if (Sys::test_mode_.empty()) {
       return 0.0;
     }
+    if (Sys::test_mode_ != "filament_forced_slide") {
+      return 0.0;
+    }
     // Rather than use ghost sites, just use other crosslinker head to get
     // spring weight (should be the exact same dE)
     BindingHead *other_head{head->GetOtherHead()};
@@ -387,7 +390,19 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   BindingSite *old_site = head->site_;
   int i_new{(int)old_site->index_ + dx};
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
-    return false;
+    if (Sys::test_mode_.empty()) {
+      return false;
+    }
+    if (Sys::test_mode_ != "filament_forced_slide") {
+      return false;
+    }
+    double ran{SysRNG::GetRanProb()};
+    if (ran < Params::Xlinks::p_diffuse_off_end) {
+      bool executed{head->Unbind()};
+      return executed;
+    } else {
+      return true; // return true so that lists update
+    }
   }
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {

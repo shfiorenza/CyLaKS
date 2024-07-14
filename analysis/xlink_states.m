@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'testino3'; % Raw sim name; do not include directory
+sim_name = 'xlFreeze'; % Raw sim name; do not include directory
 output_movie_name = 'mov';
 
 start_frame = 1;
@@ -33,7 +33,7 @@ frame_box = [0 0 1445 300];
 
 % Open figure and set to desired size (each frame must be this same size)
 fig1 = figure;
-set(fig1, 'Position', [15 15 1500 750]);
+set(fig1, 'Position', [15 15 1080 640]);
 
 % Open data files
 filament_filename = sprintf('%s/%s_filament_pos.file', file_dir, sim_name);

@@ -1,11 +1,11 @@
 clear variables;
 
-sim_name = 'output12/shep_0.1nM_10nM_8_1.2kT_1x_0';
+sim_name = 'out_endtags1/shep_1nM_100nM_8_500_0.2kT_1x_0';
 
-output_movie_name = 'out0032_25_0.1_20';
+output_movie_name = 'out_multiPF';
 
 start_frame = 1;
-frames_per_plot = 100; % in n_datapoints; number of timesteps per output plot
+frames_per_plot = 1000; % in n_datapoints; number of timesteps per output plot
 end_frame = -1;  % set to -1 to run until end of data
 movie_duration = 30; % in seconds
 
@@ -83,7 +83,7 @@ for i = 1:1:int32(params.n_datapoints)
         end
         %}
         plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
-            xlink_occupancy_tot, 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
+            xlink_occupancy_tot, 'LineWidth', 2.5); %, 'Color', colors(params.n_mts + 1, :));
         %{
         for i_pf = 1 : 1 : params.n_mts
             plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
@@ -91,7 +91,9 @@ for i = 1:1:int32(params.n_datapoints)
         end
         %}
         plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
-            motor_occupancy_tot, '--', 'Color', colors(params.n_mts + 1, :), 'LineWidth', 2.5);
+            motor_occupancy_tot, '--', 'LineWidth', 2.5); %, 'Color', colors(params.n_mts + 1, :));
+                plot(linspace(0, params.max_sites * params.site_size, params.max_sites), ... 
+            motor_occupancy_tot + xlink_occupancy_tot, '.', 'LineWidth', 2.5); %, 'Color', colors(params.n_mts + 1, :));
         %plot(linspace(0, n_sites*0.008, n_sites), net_occupancy);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_slope);
         % plot(linspace(0, n_sites*0.008, n_sites), occupancy_accel);

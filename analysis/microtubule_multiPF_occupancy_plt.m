@@ -1,12 +1,9 @@
 clear variables;
 
-sim_name = 'shep_10nM_20nM_8_0.0kT';
-sim_name = 'coop_131_3.6nM_0nM_8_1.45kT_0';
-sim_name = 'endtags_3/endtag_0.0524_25_0.1nM_20nM_8_1.375kT_500_3';
+%sim_name = 'out_endtags1/shep_0.1nM_100nM_8_500_0.2kT_1x_0';
+sim_name = 'output16/shep_1nM_100nM_8_0.2kT_1x_0';
 
 % Load parameter structure
-file_dir = '../shepherding_baseline';  % Default; only change if you move CyLaKS output files
-file_dir = '../coop_fit3_10xDiff/usable_output';
 file_dir = '..';
 params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
 
@@ -44,19 +41,35 @@ for i_data = 1 : params.n_datapoints
                 xlink_avg_occupancy_tot(i_data, 1) = xlink_avg_occupancy_tot(i_data, 1) + 1.0 / double(n_sites * params.n_mts);
             elseif species_id == motor_speciesID
                 motor_avg_occupancy(i_data, i_mt) = motor_avg_occupancy(i_data, i_mt) + 1.0 / double(n_sites);
+                motor_avg_occupancy_tot(i_data, 1) = motor_avg_occupancy_tot(i_data, 1) + 1.0 / double(n_sites * params.n_mts);
             end
         end
     end
 end
 
-fig = figure();
+color_xlink = [12 220 210] / 255;
+color_motor = [214 77 156] / 255;
 
-plot(xlink_avg_occupancy);
-hold on
-plot(motor_avg_occupancy); 
-plot(xlink_avg_occupancy_tot, 'LineWidth', 2);
+fig_xlink = figure('Position',[50 50 720 540]);
+plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints), xlink_avg_occupancy_tot, ... 
+    'LineWidth', 5, 'Color', color_xlink);
+xlabel("Time (s)");
+%xlim([0 200]);
+ylabel("Fractional occupancy");
+%ylim([0 0.35]);
+set(gca,'box','off')
+set(gca, 'FontSize', 24);
 
-ylim([0 1]);
+fig_motor = figure('Position',[50 50 720 540]);
+plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints), motor_avg_occupancy_tot, ...
+    'LineWidth', 5, 'Color', color_motor);
+xlabel("Time (s)");
+%xlim([0 200]);
+ylabel("Fractional occupancy");
+%ylim([0 0.35]);
+set(gca,'box','off')
+set(gca, 'FontSize', 24);
 
-saveas(fig, 'yeet.jpg', 'jpg');
+saveas(fig_xlink, 'occu_vs_t_xlink.png', 'png');
+saveas(fig_motor, 'occu_vs_t_motor.png', 'png');
 

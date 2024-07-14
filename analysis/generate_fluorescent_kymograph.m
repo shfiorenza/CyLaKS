@@ -1,6 +1,7 @@
 clear variables; 
 
-sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0'
+%sim_name = 'out_endtags1/shep_1nM_100nM_8_250_0.2kT_1x_0';
+sim_name = 'output16/shep_0.1nM_10nM_8_0.2kT_1x_0';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
@@ -8,9 +9,9 @@ i_end = -1;
 frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
-tubulin_intensity = 0.01;
-xlink_intensity = 0.003; %003; % Controls how bright a single xlink is 
-motor_intensity = 0.003; %003; 
+tubulin_intensity = 0.0; % 0.01;
+xlink_intensity = 0.02; % Controls how bright a single xlink is 
+motor_intensity = 0.01; %0.006;
 subfilaments = true; 
 
 % Scale bar lengths 
@@ -115,7 +116,9 @@ if params.n_mts == 2 && subfilaments == false
     %}
 end
 
-final_img = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_motors = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_xlinks = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_combined = zeros(pixels_y, pixels_x, 3); % RGB image; 
 % Run through data and create each line of kymograph step-by-step
 for i_data = i_start : dwell_steps : i_end - dwell_steps
     if params.n_mts == 2 && subfilaments == false
@@ -194,15 +197,23 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
     imageXlinks = imageXlinks/intensityMax;
 
     % merge into RGB image
-    imageRGB = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
+    imageNull = zeros(size(imageLine));
+
+    imageRGB_motor = cat(3, imageMotors, imageNull, imageMotors);
+    imageRGB_xlink = cat(3, imageNull, imageXlinks, imageNull);
+    imageRGB_combined = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
+    
     index = (i_data - i_start) / dwell_steps + 1;
-    final_img(index, :, :) = imageRGB;
+
+    final_img_motors(index, :, :) = imageRGB_motor;
+    final_img_xlinks(index, :, :) = imageRGB_xlink;
+    final_img_combined(index, :, :) = imageRGB_combined;
 end
 %} 
-fig1 = figure;
-set(fig1, 'Position', [100 100 350 350]);
+fig_motor = figure;
+set(fig_motor, 'Position', [50 50 300 600]);
 axes('Units','Normalize','Position',[0 0 1 1]);
-img1 = imagesc(final_img, [min(final_img, [], 'all') max(final_img, [], 'all')]);
+img1 = imagesc(final_img_motors, [min(final_img_motors, [], 'all') max(final_img_motors, [], 'all')]);
 set(gca,'Xtick',[]); set(gca,'Ytick',[]);
 set(gca, 'Box', 'off');
 % Add scale bars
@@ -210,10 +221,49 @@ len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
 x1 = (95/100)*pixels_x;
 x2 = (94.25/100)*pixels_x;
-y1 = (95/100)*pixels_y;
-y2 = (93/100)*pixels_y;
+y1 = (99/100)*pixels_y;
+y2 = (97/100)*pixels_y;
 l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
 l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
-
 set(l,'clipping','off')
 set(l2,'clipping','off')
+
+fig_xlink = figure;
+set(fig_xlink, 'Position', [100 50 300 600]);
+axes('Units','Normalize','Position',[0 0 1 1]);
+img2 = imagesc(final_img_xlinks, [min(final_img_xlinks, [], 'all') max(final_img_xlinks, [], 'all')]);
+set(gca,'Xtick',[]); set(gca,'Ytick',[]);
+set(gca, 'Box', 'off');
+% Add scale bars
+len_x = scale_x * 1000 / pixelLength;
+len_y = scale_t / dwell_time;
+x1 = (95/100)*pixels_x;
+x2 = (94.25/100)*pixels_x;
+y1 = (99/100)*pixels_y;
+y2 = (97/100)*pixels_y;
+l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
+l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
+set(l,'clipping','off')
+set(l2,'clipping','off')
+
+fig_combined = figure;
+set(fig_combined, 'Position', [150 50 300 600]);
+axes('Units','Normalize','Position',[0 0 1 1]);
+img3 = imagesc(final_img_combined, [min(final_img_combined, [], 'all') max(final_img_combined, [], 'all')]);
+set(gca,'Xtick',[]); set(gca,'Ytick',[]);
+set(gca, 'Box', 'off');
+% Add scale bars
+len_x = scale_x * 1000 / pixelLength;
+len_y = scale_t / dwell_time;
+x1 = (95/100)*pixels_x;
+x2 = (94.25/100)*pixels_x;
+y1 = (99/100)*pixels_y;
+y2 = (97/100)*pixels_y;
+l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
+l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
+set(l,'clipping','off')
+set(l2,'clipping','off')
+
+%saveas(fig_motor, 'kymo_motors.png', 'png');
+%saveas(fig_xlink, 'kymo_xlinks.png', 'png');
+%saveas(fig_combined, 'kymo_combo.png', 'png');

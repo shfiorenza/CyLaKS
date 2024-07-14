@@ -3,12 +3,14 @@ clear variables;
 fileDirectory = '/home/shane/projects/CyLaKS/%s';
 sim_name_base = 'test_xlink_bind_ii';
 sim_name_base = 'test_xlink_diffusion_Boltzmann';
-offsets = [0]; %[0.0, 4.1]; % , 8.2];
+offsets = [2]; %[0.0, 4.1]; % , 8.2];
 labels = [""]; % ["0.0", "4.1"]; %, "8.2"];
 dist_cutoff = 8;                % no. sites
 
-normalize_nonRest = 0;
+normalize_nonRest = 1;
 k_spring = 0.0453;  % pN/ nm
+k_rot = 25;
+y_dist = 32;
 
 kbT = 4.114;                    % pN * nm
 k_on = 0.000238;                % 1/(nM*s)
@@ -57,6 +59,14 @@ for i_offset = 1 : n_offsets
         else
             % Get x_dist for this configuration (-dist_cutoff to +dist_cutoff)
             x_dist = dynamic_head_pos - static_head_pos;
+            %{
+            theta = 0.0;
+            if x_dist < 0
+                theta = atan(y_dist/(-x_dist*8)) * 180 / 3.14159
+            else
+                theta = (3.14159 - atan(y_dist/(x_dist*8))) * 180 / 3.14159
+            end
+            %}
             % Convert to an index between 1 and 2*dist_cutoff + 1
             index = x_dist + dist_cutoff;
             % All x_dists but this one should not factor this step into avg_occu
@@ -74,7 +84,7 @@ for i_offset = 1 : n_offsets
             % All x_dists but this one should not factor this step into avg_occu
             for index = 1 : 2*dist_cutoff+1
                 if normalize_nonRest
-                    avg_occu(i_offset, index) = n_points_applicable(index) / n_points_applicable(dist_cutoff);
+                    avg_occu(i_offset, index) = n_points_applicable(index) / max(n_points_applicable); %(dist_cutoff);
                 else
                     avg_occu(i_offset, index) = n_points_applicable(index) / n_points_applicable(dist_cutoff+1);
                 end
@@ -94,9 +104,10 @@ color = [0 0.447 0.741; 0.85, 0.325, 0.098; 0.929, 0.694, 0.125; ...
 for i_offset = 1 : n_offsets
         % Plot theoretical avg_occu curve for continuous space using raw params
     %   (note: uses delta_u function defined at the end of this script)
-    avg_occu_theory = @(x) exp(-delta_u(x, offsets(i_offset), k_spring)/kbT);
-    %avg_occu_theory = @(x) c_bind / (c_bind + k_d*exp(delta_u(x, offsets(i_offset))/kbT));
-    fplot(@(x) avg_occu_theory(x), 'LineWidth', 2, 'Color', [0.6 0.6 0.6]);
+    avg_occu_theory = @(x) exp(-delta_u(x, offsets(i_offset), k_spring, k_rot, y_dist)/kbT);
+    %avg_occu_flipped = @(x) -avg_occu_theory(x);
+    x_max = fminbnd(@(x) -avg_occu_theory(x), -10, 10);
+    fplot(@(x) avg_occu_theory(x)/avg_occu_theory(x_max), 'LineWidth', 2, 'Color', [0.6 0.6 0.6]);
     sim_data = plot(linspace(-dist_cutoff, dist_cutoff, 2*dist_cutoff + 1), ...
         avg_occu(i_offset, :), 'o', 'MarkerSize', 12,'MarkerEdgeColor', color(i_offset, :), ...
         'LineWidth', 3);
@@ -134,8 +145,16 @@ legend('boxoff');
 
 %set(gca,'Children',[h(2) h(1)])
 
-function u = delta_u(x, offset, k_spring)
+function u = delta_u(x, offset, k_spring, k_rot, y_dist)
+    theta0 = 50 * pi / 180;
+    r0 = 32;
     site_size = 8.2; % nm
-    dr = sqrt(32^2 + (x*site_size + offset)^2) - 32;
-    u = 0.5*k_spring*dr*dr;
+    dr = sqrt(y_dist^2 + (x*site_size + offset)^2) - r0;
+    if x < 0
+        theta = atan(y_dist/(-x*site_size-offset));
+    else
+        theta = (3.14159 - atan(y_dist/(x*site_size-offset)));
+    end
+    dtheta = theta - theta0;
+    u = 0.5*k_spring*dr*dr + 0.5*k_rot*dtheta*dtheta;
 end

@@ -38,8 +38,8 @@ function endtag_length = get_endtag_length(sim_name)
     dwell_time = 10;
     dwell_steps = int32(dwell_time / time_per_datapoint);
 
-    starting_point = 1; % n_datapoints - dwell_steps;% 1
-    active_datapoints = n_datapoints; %double(dwell_steps);% n_datapoints - starting_point + 1;
+    starting_point = n_datapoints - dwell_steps;% 1
+    active_datapoints = double(dwell_steps);% n_datapoints - starting_point + 1;
 
     % Read in and average occupancy data over all datapoints
     for i = starting_point:1:n_datapoints
@@ -51,7 +51,7 @@ function endtag_length = get_endtag_length(sim_name)
     motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
     xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
     net_occupancy = motor_occupancy + xlink_occupancy;
-    %net_occupancy = xlink_occupancy;
+    net_occupancy = xlink_occupancy;
     occupancy_slope = smoothdata(gradient(net_occupancy, 0.008), 'movmean', smooth_window);
     occupancy_accel = smoothdata(gradient(occupancy_slope, 0.008), 'movmean', smooth_window);
     max_occupancy = max(net_occupancy);
@@ -62,7 +62,12 @@ function endtag_length = get_endtag_length(sim_name)
     endtag_site = 0;
 
     for i_site = 1:n_sites
-
+        if net_occupancy(i_site) < 0.5 * max_occupancy
+            endtag_site = i_site;
+            break
+        end
+        
+        %{
         if (~past_threshold && net_occupancy(i_site) < 0.5 * max_occupancy)
             past_threshold = true;
             i_threshold = i_site;
@@ -72,14 +77,13 @@ function endtag_length = get_endtag_length(sim_name)
             endtag_site = i_site;
             break;
         end
-
+        %}
     end
-
     if endtag_site == 0
         [max_accel, i_peak] = max(occupancy_accel(i_threshold + 1:n_sites));
         endtag_site = i_threshold + i_peak;
+        disp('boop')
     end
-
     endtag_length = endtag_site * site_size;
 
 end

@@ -16,7 +16,7 @@ filaments:
   n_bd_per_kmc: 10
   n_sites: [13, 13]
   polarity: [0, 1]
-  x_initial: [0, 0]
+  x_initial: [0, 2]
   y_initial: [0, 32]
   x_immobile_until: [1500, 1500]
   y_immobile_until: [1500, 1500]
@@ -64,7 +64,7 @@ xlinks:
   d_ii: 0.0655
   d_side: 0.0 # 0.0131
   r_0: 32
-  k_spring: 0.453
-  theta_0: 90
-  k_rot: 0 # 1000
+  k_spring: 0.0453
+  theta_0: 50 # 60
+  k_rot: 25 # 10 # 1000
   p_diffuse_off_end: 0.0

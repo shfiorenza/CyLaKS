@@ -1,25 +1,25 @@
 seed: 198261346419
 kbT: 4.114
 eta: 0.001 # water
-dt: 0.0002 # 0.00002
-t_run: 300 # 300 # 180 # 1800 # 300 # 400 # 00
+dt: 0.000005 # 0.00005 # 0.0002 # 0.00002
+t_run: 30 # 0 # 300 # 180 # 1800 # 300 # 400 # 00
 t_equil: 0
-t_snapshot: 0.1
+t_snapshot: 0.001
 dynamic_equil_window: -1 
 verbosity: 0
 filaments:
   count: 1
-  n_subfilaments: 8
+  n_subfilaments: 1
   periodic_barrel: false
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [500]
+  n_sites: [1000]
   polarity: [0]
   x_initial: [0]
   y_initial: [0]
-  x_immobile_until: [1500, 1500]
-  y_immobile_until: [1500, 1500]
+  x_immobile_until: [15000, 15000]
+  y_immobile_until: [15000, 15000]
   rotation_enabled: [false, false]
   wca_potential_enabled: false
   f_applied: [0.0]
@@ -31,13 +31,13 @@ motors:
   gaussian_stepping_coop: false # true
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
   t_active: 0
-  k_on: 0.00179 # x5
-  c_bulk: 0 # 20 # 2000 # 200 # 0 # 0.05
-  c_eff_bind: 4000000
+  k_on: 0.00895 # 0.0179 # 0.00358 # 0.00179 # 0.000358 # x1.4
+  c_bulk: 200 # 18.9 # # 200 # 0 # 0.05
+  c_eff_bind: 4000000 # 4000000
   k_on_ATP: 2500
   c_ATP: 2
-  k_hydrolyze: 110 # 0.1 # 10 # 50 # 110 # vs 95 for kif4a
-  k_off_i: 10 #  vs 8 for kif4a
+  k_hydrolyze: 80 # 110 # 0.1 # 10 # 50 # 110 # vs 95 for kif4a
+  k_off_i: 110 # 175 # 40 # 50 # 10 # 30 # 10 #  vs 8 for kif4a
   k_off_ii: 260 # 2375 # 260
   applied_force: 0.0
   internal_force: 26.0 # 0.0 # 26.0
@@ -53,19 +53,20 @@ motors:
   k_spring: 0.1325
   k_slack: 0.0265
 xlinks:
-  neighb_neighb_energy: 1.75 # 1.75 # 75 # 2.25
+  neighb_neighb_energy: 0.0 #1.75 # 1.75 # 75 # 2.25
   t_active: 0
   k_on: 0.00238 # x10
-  c_bulk: 10 # 100 # 50 # 0
+  c_bulk: 0 # 1 # 100 # 50 # 0
   c_eff_bind: 5000
   k_off_i: 0.143 
   k_off_ii: 0.0143
   d_i: 0.0131 # 0.131 # /10
   d_ii: 0.0655
-  d_side: 0.0131 # 0.131 # 0.0131 # 0.0 # 0.000131
+  d_side: 0.131 # 0.131 # 0.0131 # 0.0 # 0.000131
   r_0: 32
   k_spring: 0.453
   theta_0: 90
   k_rot: 0 # 1000
-  p_diffuse_off_end: 0.0
+  p_diffuse_off_end: 0.1
+
 

@@ -6,7 +6,8 @@ log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
 % Read in system params
-dt = sscanf(values{contains(params, "dt ")}, '%g');
+%wut = values{contains(params, "dt ")}
+dt = sscanf(values{contains(params, "dt ")}, '%f');
 time_per_datapoint = sscanf(values{contains(params, "t_snapshot ")}, '%g');
 n_datapoints = str2double(values{contains(params, "n_datapoints ")});
 % Use actual recorded number of datapoints to parse thru data/etc
@@ -16,14 +17,14 @@ end
 site_size =  sscanf(values{contains(params, "site_size ")}, '%g') / 1000; % in um
 % Read in number of MTs
 n_mts = sscanf(values{contains(params, "count ")}, '%g');
-if any(contains(params, "COUNT ") ~= 0)
-    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
-end
 if any(contains(params, "n_subfilaments") ~= 0)
     n_sub = sscanf(values{contains(params, "n_subfilaments ")}, '%g');
     if n_sub > n_mts
        n_mts = n_sub;
     end
+end
+if any(contains(params, "COUNT ") ~= 0)
+    n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
 end
 % Read in MT lengths (in n_sites)
 mt_lengths = zeros(1, n_mts);

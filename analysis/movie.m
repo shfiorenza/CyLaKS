@@ -1,17 +1,15 @@
 clear variables;
 
 sim_name = 'shep_multiPF_0_0.131_4'; % Raw sim name; do not include directory
-sim_name = 'test10x175';
-sim_name = 'shepherding_baseline/shep_1nM_200nM_8_1.5kT';
-sim_name = 'endtags_3/endtag_0.0524_25_1nM_200nM_8_1.375kT_500_1';
-sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0';
+sim_name = 'output16/shep_1nM_100nM_8_0.2kT_1x_0';
+%sim_name = 'test_xlink_diffusion_Boltzmann';
 
 output_movie_name = 'test';
 
-start_frame = 1;
-end_frame = -1;  % set to -1 to run until end of data
+start_frame = 250;
+end_frame = start_frame+1; %-1;  % set to -1 to run until end of data
 
-frames_per_plot = 100; 
+frames_per_plot = 10; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure
@@ -25,8 +23,8 @@ sid_motor = 2;
 r_prot = (params.site_size*1000);
 site_height = 1;
 site_width = 1;
-blue = [30 144 255] / 255;
-purple = [128 0 128] / 255;
+blue = [214 77 156] / 255; %[30 144 255] / 255;
+purple = [12 220 210] / 255; %[128 0 128] / 255;
 color = [purple; blue];
 if end_frame == -1
     end_frame = params.n_datapoints; 
@@ -83,7 +81,9 @@ for i_data = start_frame : frames_per_plot : end_frame
     height = 400; % (1/10)*(max_x - min_x);
     %top_start = filament_pos(1, 2, 2, i_data);
     %top_end = filament_pos(1, 1, 2, i_data);
-    ax.XLim = [(min_x - 25) (max_x + 25)];
+    %ax.XLim = [(min_x - 25) (max_x + 25)];
+    ax.XLim = [(min_x - 25) (min_x + 775)];
+    %ax.XLim = [(max_x - 400) (max_x + 25)];
     %ax.XLim = [(min_x - 25) (min_x + 475)];
     %ax.XLim = [(top_start - 25) (top_end + 25)];
     ax.YLim = [(avg_y - height/2) (avg_y + height/2)];

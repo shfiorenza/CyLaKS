@@ -7,12 +7,28 @@ int BindingHead::GetDirectionTowardRest() {
   return parent_->GetDirectionTowardRest(this);
 }
 
-int BindingHead::GetNumNeighborsOccupied() {
-  return site_->GetNumNeighborsOccupied();
+int BindingHead::GetNumNeighborsOccupied_Tot() {
+  return site_->GetNumNeighborsOccupied_Tot();
 }
 
-int BindingHead::GetNumNeighborsOccupied_Side() {
-  return site_->GetNumNeighborsOccupied_Side();
+int BindingHead::GetNumNeighborsOccupied_Tot_Side() {
+  return site_->GetNumNeighborsOccupied_Tot_Side();
+}
+
+int BindingHead::GetNumNeighborsOccupied_Xlink() {
+  return site_->GetNumNeighborsOccupied_Xlink();
+}
+
+int BindingHead::GetNumNeighborsOccupied_Xlink_Side() {
+  return site_->GetNumNeighborsOccupied_Xlink_Side();
+}
+
+int BindingHead::GetNumNeighborsOccupied_Motor() {
+  return site_->GetNumNeighborsOccupied_Motor();
+}
+
+int BindingHead::GetNumNeighborsOccupied_Motor_Side() {
+  return site_->GetNumNeighborsOccupied_Motor_Side();
 }
 
 int BindingHead::GetNumHeadsActive() { return parent_->n_heads_active_; }

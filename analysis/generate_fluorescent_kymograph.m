@@ -2,6 +2,8 @@ clear variables;
 
 %sim_name = 'out_endtags1/shep_1nM_100nM_8_250_0.2kT_1x_0';
 sim_name = 'output16/shep_0.1nM_10nM_8_0.2kT_1x_0';
+sim_name = 'motility_75_40_50nM_1nM_8x';
+sim_name = 'output18/shep_1nM_100nM_8_1000_0.8kT_1x_0';
 
 dwell_time = 0.1;  % dwell time of theoretical camera
 i_start = 1;
@@ -10,7 +12,7 @@ frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
 tubulin_intensity = 0.0; % 0.01;
-xlink_intensity = 0.02; % Controls how bright a single xlink is 
+xlink_intensity = 0.0025; % Controls how bright a single xlink is 
 motor_intensity = 0.01; %0.006;
 subfilaments = true; 
 

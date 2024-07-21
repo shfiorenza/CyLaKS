@@ -440,13 +440,13 @@ void ProteinManager::InitializeEvents() {
   Vec<size_t> dim_size_tot{1, 1, 2 * _n_neighbs_max + 1};
   // Starting indices {i, j, k} of array for neighb coop, only use k dimension
   Vec<int> i_min{0, 0, 0};
-  auto get_n_neighbs = [](Object *entry) {
-    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+  auto get_n_neighbs_xlink = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Xlink()};
     return indices_vec;
   };
-  auto get_n_neighbs_tot = [](Object *entry) {
-    Vec<int> indices_vec{entry->GetNumNeighborsOccupied() +
-                         entry->GetNumNeighborsOccupied_Side()};
+  auto get_n_neighbs_xlink_tot = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Xlink() +
+                         entry->GetNumNeighborsOccupied_Xlink_Side()};
     return indices_vec;
   };
   /* *** Bind_I *** */
@@ -486,7 +486,8 @@ void ProteinManager::InitializeEvents() {
   if (xlinks_.active_) {
     if (Params::Filaments::n_subfilaments == 1) {
       // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
-      filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+      filaments_->AddPop("neighbs", is_unocc, dim_size, i_min,
+                         get_n_neighbs_xlink);
       // Create a binomial event for each n_neighb possibility
       for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
         kmc_.events_.emplace_back(
@@ -502,7 +503,7 @@ void ProteinManager::InitializeEvents() {
       }
     } else {
       filaments_->AddPop("neighbs_tot", is_unocc, dim_size_tot, i_min,
-                         get_n_neighbs_tot);
+                         get_n_neighbs_xlink_tot);
       for (int n_neighbs{0}; n_neighbs <= 2 * _n_neighbs_max; n_neighbs++) {
         kmc_.events_.emplace_back(
             "bind_i_" + std::to_string(n_neighbs) + " (xlinks)",
@@ -615,7 +616,8 @@ void ProteinManager::InitializeEvents() {
   };
   if (xlinks_.active_) {
     if (Params::Filaments::n_subfilaments == 1) {
-      xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+      xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min,
+                     get_n_neighbs_xlink);
       for (int n_neighbs{0}; n_neighbs <= _n_neighbs_max; n_neighbs++) {
         kmc_.events_.emplace_back(
             "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
@@ -629,7 +631,7 @@ void ProteinManager::InitializeEvents() {
       }
     } else {
       xlinks_.AddPop("bound_i", is_bound_i, dim_size_tot, i_min,
-                     get_n_neighbs_tot);
+                     get_n_neighbs_xlink_tot);
       for (int n_neighbs{0}; n_neighbs <= 2 * _n_neighbs_max; n_neighbs++) {
         kmc_.events_.emplace_back(
             "unbind_i_" + std::to_string(n_neighbs) + " (xlinks)",
@@ -767,8 +769,8 @@ void ProteinManager::InitializeEvents() {
       // adjacent PFs, so we just pad i
       Vec<size_t> dim_size_multi{1, _n_neighbs_max + 1, _n_neighbs_max + 1};
       auto get_n_neighbs_multi = [](Object *entry) {
-        Vec<int> indices_vec{entry->GetNumNeighborsOccupied(),
-                             entry->GetNumNeighborsOccupied_Side()};
+        Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Xlink(),
+                             entry->GetNumNeighborsOccupied_Xlink_Side()};
         return indices_vec;
       };
       auto exe_diff_side = [](auto *head, auto *pop, auto *fil, int dir) {
@@ -892,6 +894,7 @@ void ProteinManager::RunKMC() {
 
 void ProteinManager::CheckProbabilities() {
   for (auto const &event : kmc_.events_) {
+    Sys::Log("Probabilitiy: p_%s = %g\n", event.name_.c_str(), event.p_occur_);
     Sys::Log(1, "p_%s = %g\n", event.name_.c_str(), event.p_occur_);
     if (event.p_occur_ < 0.0 or event.p_occur_ > 1.0) {
       Sys::Log("Invalid probabilitiy: p_%s = %g\n", event.name_.c_str(),

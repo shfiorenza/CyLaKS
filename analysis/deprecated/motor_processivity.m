@@ -1,19 +1,18 @@
 % FIX ME -- very janky implementation of multi PFs at the moment 
-
 clear variables;
 seeds = [0, 1, 2]; %, 3, 4, 5];
 %sim_name = "run_motor_mobility/kif4a_mobility_0";
 %sim_name = "run_heterodimer_kymograph/hybrid_motor_0.01_0";
 %file_dir = '/home/shane/projects/CyLaKS/';
-sim_name = 'output16/shep_0.1nM_10nM_8_0.2kT_1x_0';
-%sim_name = 'testH1x'
+%sim_name = 'output16/shep_0.1nM_10nM_8_0.2kT_1x_0';
+sim_name = 'motility_5x_75_40_50nM';
 file_dir = '..';
 
 xlink_SID = 1;
 motor_SID = 2;
 
-%chosen_SID = motor_SID;
-chosen_SID = xlink_SID;
+chosen_SID = motor_SID;
+%chosen_SID = xlink_SID;
 
 %"/home/shane/projects/CyLaKS/run_motor_mobility/kif4a_mobility"
 
@@ -27,7 +26,7 @@ n_mts = sscanf(values{contains(params, "count ")}, '%g');
 if any(contains(params, "COUNT ") ~= 0)
     n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
 end
-n_mts = 8;
+%n_mts = 8;
 mt_lengths = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
@@ -77,7 +76,7 @@ starting_site = zeros([100 * n_mts * n_sites 1]) - 1;
 starting_mt = zeros([100 * n_mts * n_sites 1]) - 1;
 starting_datapoint = zeros([100 * n_mts * n_sites 1]) - 1;
 
-for i_data = 1:n_datapoints - 1
+for i_data = 1 : n_datapoints - 1
     for i_mt = 1:1:n_mts
         motor_IDs = motor_data(:, i_mt, i_data);
         %future_IDs = motor_data(:, i_mt, i_data + 1);
@@ -189,7 +188,7 @@ for i_data = 1:n_datapoints - 1
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if end_site(1) > endtag_boundary && run_time > 0 && velocity > 5
+                if end_site(1) > endtag_boundary && run_time > 0 && velocity > 5 && velocity < 1500
                     %if all(jammed_motors(:) ~= motor_ID)
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
@@ -218,7 +217,7 @@ velocities = velocities(1:n_runs);
 avg_run = sum(runlengths) / n_runs
 avg_time = sum(lifetimes) / n_runs
 avg_vel = sum(velocities) / n_runs
-
+%}
 % matlab's exponential fit always goes to zero; offset it appropriately
 min_run = min(runlengths);
 runlengths = runlengths - min_run;
@@ -278,12 +277,13 @@ ylabel('Counts');
 
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 960, 600]);
-histfit(velocities, n_bins, 'lognormal');
+%histfit(velocities, n_bins, 'lognormal');
+histfit(velocities, n_bins, 'normal');
 %title(sprintf('Velocity histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
 xlabel('Velocity (nm/s)');
 ylabel('Counts');
 dim3 = [0.55 0.55 0.2 0.2];
 str3 = sprintf('Mean velocity: %#.1f +/- %#d nm/s', mean_vel, sigma_vel);
 annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on');
-xlim([0 400])
+%xlim([0 400])
 %}

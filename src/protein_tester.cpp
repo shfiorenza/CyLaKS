@@ -413,8 +413,8 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   // Binning helper functions
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
   Vec<int> i_min{0, 0, 0};
-  auto get_n_neighbs = [](Object *entry) {
-    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+  auto get_n_neighbs_xlink = [](Object *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Xlink()};
     return indices_vec;
   };
   // Sorting criteria functions
@@ -451,7 +451,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
   // if (Sys::binding_active_) {
   // Bind from solution (stage 0 -> stage 1)
   // Add unoccupied site tracker for crosslinkers; segregated by n_neighbs
-  filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs);
+  filaments_->AddPop("neighbs", is_unocc, dim_size, i_min, get_n_neighbs_xlink);
   auto exe_bind_i = [&](auto *site, auto *pop, auto *fil) {
     if (Sys::i_step_ < pop->step_active_) {
       return false;
@@ -479,7 +479,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
         });
   }
   // Singly bound unbinding to solution (stage 1 -> stage 0)
-  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs_xlink);
   auto exe_unbind_i = [](auto *head, auto *pop, auto *alt_pop, auto *fil) {
     bool executed{head->Unbind()};
     if (executed) {
@@ -558,7 +558,7 @@ void ProteinTester::InitializeTest_Filament_ForcedSlide() {
                              filaments_);
       });
   // Singly bound diffusion
-  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);
+  xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs_xlink);
   for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
     kmc_.events_.emplace_back(
         "diffuse_i_" + std::to_string(n_neighbs) + "_fwd",
@@ -923,8 +923,8 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
   };
   Vec<int> i_min{0, 0, 0};
   Vec<size_t> dim_size{1, 1, _n_neighbs_max + 1};
-  auto get_n_neighbs = [](auto *entry) {
-    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+  auto get_n_neighbs_motor = [](auto *entry) {
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Motor()};
     return indices_vec;
   };
   motors_.AddPop(
@@ -932,7 +932,7 @@ void ProteinTester::InitializeTest_Motor_Heterodimer() {
       [&](Object *base) {
         return is_singly_bound(dynamic_cast<Motor *>(base));
       },
-      dim_size, i_min, get_n_neighbs);
+      dim_size, i_min, get_n_neighbs_motor);
   for (int n_neighbs{0}; n_neighbs < _n_neighbs_max; n_neighbs++) {
     kmc_.events_.emplace_back(
         "diffuse_i_fwd", xlinks_.p_event_.at("diffuse_i_fwd").GetVal(n_neighbs),
@@ -2212,7 +2212,7 @@ void ProteinTester::InitializeTest_Shepherding() {
   // Starting indices {i, j, k} of array for neighb coop, only use k dimension
   Vec<int> i_min{0, 0, 0};
   auto get_n_neighbs = [](Object *entry) {
-    Vec<int> indices_vec{entry->GetNumNeighborsOccupied()};
+    Vec<int> indices_vec{entry->GetNumNeighborsOccupied_Xlink()};
     return indices_vec;
   };
   xlinks_.AddPop("bound_i", is_bound_i, dim_size, i_min, get_n_neighbs);

@@ -332,7 +332,7 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     return 0.0;
   }
   BindingSite *old_loc{head->site_};
-  if (old_loc->GetNumNeighborsOccupied() == _n_neighbs_max) {
+  if (old_loc->GetNumNeighborsOccupied_Tot() == _n_neighbs_max) {
     return 0.0;
   }
   BindingSite *static_loc{head->GetOtherHead()->site_};

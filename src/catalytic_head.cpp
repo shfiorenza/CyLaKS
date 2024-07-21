@@ -15,8 +15,8 @@ void CatalyticHead::Initialize(size_t sid, size_t id, double radius,
   BindingHead::other_head_ = dynamic_cast<BindingHead *>(other_head_);
 }
 
-int CatalyticHead::GetNumNeighborsOccupied() {
-  return site_->GetNumNeighborsOccupied();
+int CatalyticHead::GetNumNeighborsOccupied_Motor() {
+  return site_->GetNumNeighborsOccupied_Motor();
 }
 
 int CatalyticHead::GetNumHeadsActive() { return parent_->n_heads_active_; }

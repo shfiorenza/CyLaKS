@@ -1,11 +1,12 @@
 clear variables;
 
 sim_name = 'out_endtags1/shep_1nM_100nM_8_500_0.2kT_1x_0';
+sim_name = 'motility_75_40_50nM_1nM_8x';
 
 output_movie_name = 'out_multiPF';
 
 start_frame = 1;
-frames_per_plot = 1000; % in n_datapoints; number of timesteps per output plot
+frames_per_plot = 100; % in n_datapoints; number of timesteps per output plot
 end_frame = -1;  % set to -1 to run until end of data
 movie_duration = 30; % in seconds
 

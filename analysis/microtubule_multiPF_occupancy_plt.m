@@ -2,6 +2,7 @@ clear variables;
 
 %sim_name = 'out_endtags1/shep_0.1nM_100nM_8_500_0.2kT_1x_0';
 sim_name = 'output16/shep_1nM_100nM_8_0.2kT_1x_0';
+sim_name = 'output18/shep_1nM_100nM_8_1000_0.8kT_1x_0';
 
 % Load parameter structure
 file_dir = '..';

@@ -26,7 +26,14 @@ public:
   void Initialize(size_t sid, size_t id, double radius, Motor *parent_ptr,
                   CatalyticHead *other_head_ptr);
 
-  int GetNumNeighborsOccupied();
+  // int GetNumNeighborsOccupied_Tot();
+  // int GetNumNeighborsOccupied_Tot_Side();
+  // int GetNumNeighborsOccupied_Xlink();
+  // int GetNumNeighborsOccupied_Xlink_Side();
+  int GetNumNeighborsOccupied_Motor();
+  // int GetNumNeighborsOccupied_Motor_Side();
+  ;
+
   int GetNumHeadsActive();
   bool Trailing() { return trailing_; }
   Ligand GetLigand() { return ligand_; }

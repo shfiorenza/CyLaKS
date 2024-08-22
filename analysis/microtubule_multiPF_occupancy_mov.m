@@ -1,12 +1,16 @@
+%{
 clear variables;
 
 sim_name = 'out_endtags1/shep_1nM_100nM_8_500_0.2kT_1x_0';
 sim_name = 'motility_75_40_50nM_1nM_8x';
+sim_name = 'shep_10x_0.01_1kT_0.131_0.131_1nM_100nM';
+sim_name = 'output20/shep_1nM_100nM_8_1000_0.2kT_3x_0';
+sim_name = 'output22/shep_1nM_100nM_8_1250_0.2kT_0.1x_0.3x_1';
 
 output_movie_name = 'out_multiPF';
 
 start_frame = 1;
-frames_per_plot = 100; % in n_datapoints; number of timesteps per output plot
+frames_per_plot = 200; % in n_datapoints; number of timesteps per output plot
 end_frame = -1;  % set to -1 to run until end of data
 movie_duration = 30; % in seconds
 
@@ -49,6 +53,7 @@ fig1 = figure('Position', [50, 250, 1200, 300]);
 %set(fig1, 'Position', [50, 50, 1200, 300])
 
 % Read in and average occupancy data over all datapoints
+i_plot = 1;
 for i = 1:1:int32(params.n_datapoints)
     for i_pf = 1 : 1 : params.n_mts
         motor_avg_occupancy(:, i_pf) = motor_avg_occupancy(:, i_pf) + double(motor_raw_data(:, i_pf, i)) ./ frames_per_plot;
@@ -62,6 +67,9 @@ for i = 1:1:int32(params.n_datapoints)
         xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
         motor_occupancy_tot = smoothdata(motor_avg_occupancy_tot, 'movmean', smooth_window);
         xlink_occupancy_tot = smoothdata(xlink_avg_occupancy_tot, 'movmean', smooth_window);  
+        xlink_occu_vs_t(:, i_plot) = xlink_occupancy_tot; 
+        i_plot = i_plot + 1;
+
         
         % Reset arrays to zero before we start counting again 
         for i_pf = 1 : 1 : params.n_mts
@@ -73,7 +81,7 @@ for i = 1:1:int32(params.n_datapoints)
         
         % GET ENDTAG LENGTH HERE
 
-        %%plot fig%%
+        %%plot fig%%;
         clf;
         ax = axes('Units', 'normalized', 'Position', [0.1 0.1 0.8 0.8]);
         hold all
@@ -134,5 +142,11 @@ for i = 1:1:int32(params.n_datapoints)
     end
 
 end
+%}
+
+%plot3(xlink_occu_vs_t)
+x = linspace(1,1250, 1250)
+y = linspace(1,30, 30)
+plot3(y, x, xlink_occu_vs_t)
 
 close(v);

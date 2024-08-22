@@ -1,11 +1,14 @@
 function endtag_length = get_endtag_length(sim_name)
 
     %sim_name = "/home/shane/Projects/overlap_analysis/mgh_model/endtag_250_0";
+    plot_flag = false;
 
     motor_speciesID = 2;
     xlink_speciesID = 1;
     site_size = 0.0082; % in um
-
+    % Load parameter structure
+    params = load_parameters(sim_name);
+    %{
     % Open log file and parse it into param labels & their values
     log_file = sprintf('%s.log', sim_name);
     log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
@@ -20,37 +23,45 @@ function endtag_length = get_endtag_length(sim_name)
     if any(contains(params, "N_DATAPOINTS ") ~= 0)
         n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
     end
-   
     fileName = sprintf("%s_occupancy.file", sim_name);
     data_file = fopen(fileName);
     motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');
     xlink_raw_data = motor_raw_data;
     fclose(data_file);
+    %}
 
-    motor_avg_occupancy = zeros([n_sites 1]);
+    occupancy_filename = sprintf('%s_occupancy.file', sim_name);
+    occupancy = zeros(params.max_sites, params.n_mts, params.n_datapoints) - 1;
+    occupancy = load_data(occupancy, occupancy_filename, '*int');
+    xlink_raw_data = occupancy;
+    motor_raw_data = occupancy;
+
+    motor_avg_occupancy = zeros([params.max_sites 1]);
     motor_raw_data(motor_raw_data ~= motor_speciesID) = 0;
     motor_raw_data(motor_raw_data == motor_speciesID) = 1;
 
-    xlink_avg_occupancy = zeros([n_sites 1]);
+    xlink_avg_occupancy = zeros([params.max_sites 1]);
     xlink_raw_data(xlink_raw_data ~= xlink_speciesID) = 0;
     xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 
     dwell_time = 10;
-    dwell_steps = int32(dwell_time / time_per_datapoint);
+    dwell_steps = int32(dwell_time / params.time_per_datapoint);
 
-    starting_point = n_datapoints - dwell_steps;% 1
-    active_datapoints = double(dwell_steps);% n_datapoints - starting_point + 1;
+    starting_point = params.n_datapoints - dwell_steps; % 1
+    active_datapoints = double(dwell_steps); % n_datapoints - starting_point + 1;
 
     % Read in and average occupancy data over all datapoints
-    for i = starting_point:1:n_datapoints
-        motor_avg_occupancy(:, 1) = motor_avg_occupancy(:, 1) + double(motor_raw_data(:, i)) ./ active_datapoints;
-        xlink_avg_occupancy(:, 1) = xlink_avg_occupancy(:, 1) + double(xlink_raw_data(:, i)) ./ active_datapoints;
+    for i = starting_point:1:params.n_datapoints
+        for i_mt = 1 : params.n_mts
+            motor_avg_occupancy(:, 1) = motor_avg_occupancy(:, 1) + double(motor_raw_data(:, i_mt, i)) ./ (active_datapoints * params.n_mts);
+            xlink_avg_occupancy(:, 1) = xlink_avg_occupancy(:, 1) + double(xlink_raw_data(:, i_mt, i)) ./ (active_datapoints * params.n_mts);
+        end
     end
 
     smooth_window = 32; % should be equivalent to diffraction limit%n_sites / 20;
     motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
     xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
-    net_occupancy = motor_occupancy + xlink_occupancy;
+    %net_occupancy = motor_occupancy + xlink_occupancy;
     net_occupancy = xlink_occupancy;
     occupancy_slope = smoothdata(gradient(net_occupancy, 0.008), 'movmean', smooth_window);
     occupancy_accel = smoothdata(gradient(occupancy_slope, 0.008), 'movmean', smooth_window);
@@ -61,13 +72,7 @@ function endtag_length = get_endtag_length(sim_name)
     i_threshold = 0;
     endtag_site = 0;
 
-    for i_site = 1:n_sites
-        if net_occupancy(i_site) < 0.5 * max_occupancy
-            endtag_site = i_site;
-            break
-        end
-        
-        %{
+    for i_site = 1:params.max_sites 
         if (~past_threshold && net_occupancy(i_site) < 0.5 * max_occupancy)
             past_threshold = true;
             i_threshold = i_site;
@@ -80,9 +85,18 @@ function endtag_length = get_endtag_length(sim_name)
         %}
     end
     if endtag_site == 0
-        [max_accel, i_peak] = max(occupancy_accel(i_threshold + 1:n_sites));
+        [max_accel, i_peak] = max(occupancy_accel(i_threshold + 1:params.max_sites));
         endtag_site = i_threshold + i_peak;
         disp('boop')
+    end
+    
+    if plot_flag == true
+        fig = figure();
+        plot(net_occupancy);
+        hold on
+        plot([endtag_site endtag_site], [-1 2], '--')
+        ylim([0 1])
+        drawnow
     end
     endtag_length = endtag_site * site_size;
 

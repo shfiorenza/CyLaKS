@@ -1,11 +1,16 @@
 % FIX ME -- very janky implementation of multi PFs at the moment 
+
 clear variables;
 seeds = [0, 1, 2]; %, 3, 4, 5];
 %sim_name = "run_motor_mobility/kif4a_mobility_0";
 %sim_name = "run_heterodimer_kymograph/hybrid_motor_0.01_0";
 %file_dir = '/home/shane/projects/CyLaKS/';
-%sim_name = 'output16/shep_0.1nM_10nM_8_0.2kT_1x_0';
+
 sim_name = 'motility_5x_75_40_50nM';
+sim_name = 'motTestF_50';
+sim_name = 'output20/shep_1nM_100nM_8_1000_0.8kT_3x_0';
+sim_name = 'output22/shep_1nM_100nM_8_1000_0.2kT_0.1x_0.3x_1';
+sim_name = 'motility_50nM';
 file_dir = '..';
 
 xlink_SID = 1;
@@ -188,7 +193,7 @@ for i_data = 1 : n_datapoints - 1
                 run_time = delta_time * time_per_datapoint;
                 velocity = (run_length / run_time) * 1000; % convert to nm/s
                 % If time bound is above time cutoff, add to data
-                if end_site(1) > endtag_boundary && run_time > 0 && velocity > 5 && velocity < 1500
+                if end_site(1) > endtag_boundary && run_time > time_per_datapoint && velocity > 15 && velocity < 2500
                     %if all(jammed_motors(:) ~= motor_ID)
                     n_runs = n_runs + 1;
                     runlengths(n_runs) = run_length;
@@ -208,7 +213,7 @@ for i_data = 1 : n_datapoints - 1
     end
 end
 
-
+%}
 % trim arrays to get rid of un-used containers
 runlengths = runlengths(1:n_runs);
 lifetimes = lifetimes(1:n_runs);
@@ -239,17 +244,27 @@ conf_inv_time = paramci(time_dist);
 % calculate sigma
 sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
 %}
-vel_dist = fitdist(velocities, 'exponential');
+
+%min_vel = min(velocities);
+%velocities = velocities - (min_vel - 0.0001);
+%disp(velocities < 0)
+%{
+vel_dist = fitdist(velocities, 'lognormal');
+mean_vel = exp(vel_dist.mu + (vel_dist.sigma^2)/2);
+var_vel = (exp(vel_dist.sigma^2) - 1)*exp(2*vel_dist.mu + vel_dist.sigma^2);
+sigma_vel = sqrt(var_vel);
+%}
+vel_dist = fitdist(velocities, 'normal');
 mean_vel = vel_dist.mu;
 conf_inv_vel = paramci(vel_dist);
-sigma_vel = round(abs(conf_inv_vel(2) - conf_inv_vel(1)) / 2, 1, 'significant');
-%}
+sigma_vel = abs(conf_inv_vel(2) - conf_inv_vel(1)) / 2;
+sigma_vel = std(vel_dist)
 % prep figure
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600]);
 % plot run length histogram
 n_bins = int32(sqrt(n_runs));
-%n_bins = 20;
+n_bins = 45;
 hist = histfit(runlengths, n_bins, 'exponential');
 % Display mean runlength
 dim1 = [0.55 0.65 0.2 0.2];
@@ -276,14 +291,28 @@ xlabel('Lifetime (s)');
 ylabel('Counts');
 
 fig3 = figure();
-set(fig3, 'Position', [100, 100, 960, 600]);
-%histfit(velocities, n_bins, 'lognormal');
-histfit(velocities, n_bins, 'normal');
+set(fig3, 'Position', [100, 100, 720, 600]);
+hold on
+h3 = histfit(velocities, n_bins, 'normal'); %, 'FaceColor', 'k', 'EdgeColor', [0 0 0], 'LineWidth', 2);
+h3(1).FaceColor = [0 0 0];
+h3(1).EdgeColor = 'none';
+h3(1).BarWidth = 0.5;
+h3(2).LineWidth = 3;
+%histfit(velocities, n_bins, 'normal');
 %title(sprintf('Velocity histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
 xlabel('Velocity (nm/s)');
-ylabel('Counts');
-dim3 = [0.55 0.55 0.2 0.2];
-str3 = sprintf('Mean velocity: %#.1f +/- %#d nm/s', mean_vel, sigma_vel);
-annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on');
+ylabel('Frequency');
+xlim([0 1500]);
+dim3 = [0.6 0.65 0.2 0.2];
+str3 = sprintf('Mean: %#.1f nm/s', mean_vel);
+annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 24);
+dim4 = [0.6 0.6 0.2 0.2];
+str4 = sprintf('SD: %#.1f', sigma_vel);
+annotation('textbox', dim4, 'String', str4, 'FitBoxToText', 'on','EdgeColor','none', 'FontSize', 24);
+dim4 = [0.6 0.55 0.2 0.2]; % was 0.45
+str4 = sprintf('N: %i', length(velocities));
+annotation('textbox', dim4, 'String', str4, 'FitBoxToText', 'on','EdgeColor','none', 'FontSize', 24);
+set(gca,'box','off')
+set(gca, 'FontSize', 28);
 %xlim([0 400])
 %}

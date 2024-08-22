@@ -1,9 +1,10 @@
 clear variables;
 base_names = ["shep_0.1nM_10nM", "shep_0.1nM_100nM", "shep_1nM_10nM", "shep_1nM_100nM"];
-folder = "out_endtags2";
+%base_names = ["shep_1nM_100nM"];
+folder = "output22";
 
 mt_lengths = [250, 500, 750, 1000, 1250]; % in n_sites
-seeds = [1, 2, 3, 4]; %, 4, 5, 6, 7, 8, 9];
+seeds = [1, 2, 3]; %, 4]; %, 4, 5, 6, 7, 8, 9];
 
 dir = sprintf("../%s", folder);
 
@@ -18,7 +19,7 @@ for i_run = 1 : n_runs
     endtag_lengths = zeros(n_mts, n_seeds);
     for i_mt = 1 : n_mts
         for i_seed = 1 : n_seeds
-            sim_name = sprintf("%s/%s_8_%i_0.2kT_1x_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
+            sim_name = sprintf("%s/%s_8_%i_0.2kT_0.1x_0.3x_%i", dir, base_names(i_run), mt_lengths(i_mt), seeds(i_seed));
             endtag_lengths(i_mt, i_seed) = get_endtag_length_xlink(sim_name);
         end
     end
@@ -43,7 +44,7 @@ marker = ['o', 's', '^', 'v', 'd'];
 %}
 
 fig1 = figure();
-set(fig1, 'Position', [50, 50, 720, 540])
+set(fig1, 'Position', [50, 50, 960, 540])
 hold all;
 % Plot sim data
 for i_run = 1 : n_runs
@@ -71,7 +72,7 @@ set(gca, 'FontSize', 22);
 %ylim([0 1.9]); % 2]); %-0.25 11]);
 %yticks([0 0.5 1 1.5 2]); %5 10]);
 xlim([0 10]);
-ylim([0 10]);
+ylim([0 6]);
 %xticks([0.1 1 10]);
 %xticklabels([0.1 1 10]); 
 %set(gca, 'XScale', 'log');
@@ -82,6 +83,8 @@ ylim([0 10]);
 xlabel("Microtubule length, L_{M} (\mum)", 'FontSize', 18);
 ylabel("Endtag length, L_{ET} (\mum)", 'Fontsize', 18);
 legendLabel = ["0.1, 10", "0.1, 100", "1, 10", "1, 100"];
-legend(legendLabel,'location', 'northwest', 'FontSize', 16);
+leg = legend(legendLabel,'location', 'northeastoutside', 'FontSize', 22);
 legend('boxoff');
-
+title(leg, 'PRC1, K401 (nM)')
+set(gca,'box','off')
+set(gca, 'FontSize', 24);

@@ -6,9 +6,16 @@ sim_name = 'output18/shep_1nM_100nM_8_1000_0.8kT_1x_0';
 sim_name = 'shep_50x_0.02_0.5kT_0.131_0.131_0.1nM_10nM';
 sim_name = 'shep_10x_0.01_1kT_0.131_0.131_1nM_100nM';
 sim_name = 'output22/shep_1nM_100nM_8_250_0.2kT_0.1x_0.3x_1';
+sim_name = 'output26/shep_1nM_100nM_8_1000_0.6kT_1.75x_0.3x_0';
+sim_name = 'output23/shep_1nM_100nM_8_1000_0.6kT_0.1x_1.2x_0';
+sim_name = 'output24/shep_1nM_100nM_8_1000_0.6kT_2x_1.5x_0';
+sim_name = 'output28/shep_1nM_100nM_8_1000_0.6kT_3x_5x_0';
+sim_name = 'out_final/shep_0.1nM_100nM_8_1000_0.6kT_3x_5x_0';
+sim_name = 'out_final_newCombos/shep_0.75nM_30nM_8_1000_0.6kT_3x_5x_0';
+ 
 
 % Load parameter structure
-file_dir = '..';
+file_dir = '..'; 
 params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
 
 % Open occupancy data file 
@@ -60,7 +67,7 @@ plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints), xlink_avg_occu
 xlabel("Time (s)");
 %xlim([0 200]);
 ylabel("Fractional occupancy");
-%ylim([0 0.35]);
+%ylim([0 0.05]);
 set(gca,'box','off')
 set(gca, 'FontSize', 24);
 
@@ -70,7 +77,7 @@ plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints), motor_avg_occu
 xlabel("Time (s)");
 %xlim([0 200]);
 ylabel("Fractional occupancy");
-%ylim([0 0.35]);
+%ylim([0.15 0.2]);
 set(gca,'box','off')
 set(gca, 'FontSize', 24);
 

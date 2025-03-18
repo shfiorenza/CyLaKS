@@ -1,34 +1,11 @@
 function endtag_length = get_endtag_length(sim_name)
-
-    %sim_name = "/home/shane/Projects/overlap_analysis/mgh_model/endtag_250_0";
-    plot_flag = false;
+    plot_flag = true;
 
     motor_speciesID = 2;
     xlink_speciesID = 1;
     site_size = 0.0082; % in um
     % Load parameter structure
     params = load_parameters(sim_name);
-    %{
-    % Open log file and parse it into param labels & their values
-    log_file = sprintf('%s.log', sim_name);
-    log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
-    params = log{1, 1};
-    values = log{1, 2};
-    n_sites = values{contains(params, "n_sites[0]")};
-    n_sites = sscanf(n_sites, '%i');
-    % Read in system params
-    time_per_datapoint = sscanf(values{contains(params, "t_snapshot ")}, '%g');
-    n_datapoints = str2double(values{contains(params, "n_datapoints ")});
-    % Use actual recorded number of datapoints to parse thru data/etc
-    if any(contains(params, "N_DATAPOINTS ") ~= 0)
-        n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
-    end
-    fileName = sprintf("%s_occupancy.file", sim_name);
-    data_file = fopen(fileName);
-    motor_raw_data = fread(data_file, [n_sites, n_datapoints], '*int');
-    xlink_raw_data = motor_raw_data;
-    fclose(data_file);
-    %}
 
     occupancy_filename = sprintf('%s_occupancy.file', sim_name);
     occupancy = zeros(params.max_sites, params.n_mts, params.n_datapoints) - 1;
@@ -44,7 +21,7 @@ function endtag_length = get_endtag_length(sim_name)
     xlink_raw_data(xlink_raw_data ~= xlink_speciesID) = 0;
     xlink_raw_data(xlink_raw_data == xlink_speciesID) = 1;
 
-    dwell_time = 10;
+    dwell_time = 100;
     dwell_steps = int32(dwell_time / params.time_per_datapoint);
 
     starting_point = params.n_datapoints - dwell_steps; % 1
@@ -73,7 +50,7 @@ function endtag_length = get_endtag_length(sim_name)
     endtag_site = 0;
 
     for i_site = 1:params.max_sites 
-        if (~past_threshold && net_occupancy(i_site) < 0.5 * max_occupancy)
+        if (~past_threshold && net_occupancy(i_site) < 0.9 * max_occupancy)
             past_threshold = true;
             i_threshold = i_site;
         end
@@ -84,18 +61,20 @@ function endtag_length = get_endtag_length(sim_name)
         end
         %}
     end
+    %{
     if endtag_site == 0
         [max_accel, i_peak] = max(occupancy_accel(i_threshold + 1:params.max_sites));
         endtag_site = i_threshold + i_peak;
         disp('boop')
     end
-    
+    %}
     if plot_flag == true
         fig = figure();
         plot(net_occupancy);
         hold on
         plot([endtag_site endtag_site], [-1 2], '--')
         ylim([0 1])
+        title(sim_name)
         drawnow
     end
     endtag_length = endtag_site * site_size;

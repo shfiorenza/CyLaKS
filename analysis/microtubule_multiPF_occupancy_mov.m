@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 
 sim_name = 'out_endtags1/shep_1nM_100nM_8_500_0.2kT_1x_0';
@@ -6,6 +6,12 @@ sim_name = 'motility_75_40_50nM_1nM_8x';
 sim_name = 'shep_10x_0.01_1kT_0.131_0.131_1nM_100nM';
 sim_name = 'output20/shep_1nM_100nM_8_1000_0.2kT_3x_0';
 sim_name = 'output22/shep_1nM_100nM_8_1250_0.2kT_0.1x_0.3x_1';
+sim_name = 'output24/shep_0.1nM_10nM_8_1000_1.2kT_0.5x_1.5x_0';
+sim_name = 'outputProto3/shep_1nM_100nM_1_1000_1.0kT_2x_0.3x_0';
+%sim_name = 'output25/shep_1nM_100nM_8_1000_0.5kT_2x_0.3x_0';
+sim_name = 'output28/shep_1nM_100nM_8_1000_0.6kT_2.5x_3x_0';
+sim_name = 'output24/shep_1nM_100nM_8_1000_0.6kT_2x_1.5x_0';
+ 
 
 output_movie_name = 'out_multiPF';
 
@@ -145,8 +151,8 @@ end
 %}
 
 %plot3(xlink_occu_vs_t)
-x = linspace(1,1250, 1250)
-y = linspace(1,30, 30)
-plot3(y, x, xlink_occu_vs_t)
+%x = linspace(1,1250, 1250);
+%y = linspace(1,30, 30);
+%plot3(y, x, xlink_occu_vs_t)
 
 close(v);

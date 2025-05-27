@@ -1,40 +1,36 @@
 clear variables; 
-%{
-%sim_name = 'shep_0.1nM_50nM_1_1000_1.2kT_3x_5x_0';
-sim_name = 'shep_1nM_100nM_8_1000_0.6kT_3x_5x_0';
-%file_dir = '../outputProto5';
-file_dir = "../out_final";
-  % Default; only change if you move CyLaKS output files
-%}
-%base_names = ["shep_0.1nM_10nM", "shep_0.1nM_100nM", "shep_1nM_10nM", "shep_1nM_100nM"];
-%folder = "out_final1";
 
+sim_name = 'shep_0.1nM_100nM_8_3000_0.6kT_3x_5x_3';
+file_dir = "../out_final_xlinkOnlyLong";
+output_folder = 'kymo_output_xlinkOnlyLong';
 subfilaments = true; 
 
-file_dir = '../out_final_xlinkDiffusion4';
-output_folder = 'kymo_output_xlinkDiff4New';
+%{
+file_dir = '../out_final_proto';
 %output_folder = '.';
 %name_format = 'shep_%gnM_%gnM_8_%i_0.6kT_3x_5x_%i';
 %name_format = 'shep_0.1nM_%gnM_8_%i_0.6kT_3x_5x_%i_motor_%gx';
 %name_format = 'shep_%gnM_100nM_8_%i_0.6kT_3x_5x_%i_xlink_%gx';
-name_format = 'shep_0.1nM_10nM_8_%i_0.6kT_3x_5x_%i_xlinkDiff_%gx_%gx';
-%name_format = 'shep_0.1nM_100nM_8_%i_0.6kT_3x_5x_%i';
+%name_format = 'shep_0.1nM_10nM_8_%i_0.6kT_3x_5x_%i_xlinkDiff_%gx_%gx';
+name_format = 'shep_0.1nM_50nM_8_%i_0.6kT_3x_5x_%i';
+name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
 
 %vars_one = [0.1, 1];
 %vars_one = [0.75];
 %vars_one = [10, 30, 100];
 %vars_one = [0.01, 0.03, 0.1, 0.3, 1];
-vars_one = [1000];
+%vars_one = [1000];
 %vars_two = [1, 10, 50, 100, 250, 500, 1000];
 %vars_two = [30]
 %vars_two = [1000];
-vars_two = [0.1, 0.3, 1, 3, 10];
-%vars_two = [1];
+vars_one = [1];
+%vars_two = [0.1, 0.3, 1, 3, 10];
+vars_two = [1];
 seeds = [0];%, 1, 2, 3, 4, 5]; 
 %vars_tri = [1000];
 %vars_tri = [0.1, 0.3, 3, 10]; 
-vars_tri = [0.1, 0.3, 1, 3, 10];
-%vars_tri = [1];
+%vars_tri = [0.1, 0.3, 1, 3, 10];
+vars_tri = [1];
 %vars_tri = [1];
 for i_var = 1:length(vars_one)
     var_one = vars_one(i_var);
@@ -49,22 +45,22 @@ for i_var = 1:length(vars_one)
                 seed = seeds(i_seed);
                 %sim_name = sprintf(name_format, var_one, var_two, var_tri, seed)
                 %sim_name = sprintf(name_format, var_one, var_two, seed, var_tri)
-                sim_name = sprintf(name_format, var_one, seed, var_two, var_tri)
+                %sim_name = sprintf(name_format, var_one, seed, var_two, var_tri)
+                sim_name = sprintf(name_format, var_one, seed);
                 %}
 
 dwell_time = 1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = -1; 
-frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+i_end = 2400; 
+frac_visible_xlink = [1, 10]; % [numerator, denominator]; [1,1] for all visibile
 frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
 tubulin_intensity = 0.0; % 0.01;
-xlink_intensity_base = 0.065; %0.001; %0.02; %0.0125; %0.00125;  % Controls how bright a single xlink is 
-motor_intensity_base = 0.13; %0.01; %0.005; %0.01 %0.003; 
-
+xlink_intensity = 0.05;  % Controls how bright a single xlink is 
+motor_intensity = 0.0015;  % ditto but for motors 
 
 % Scale bar lengths 
-scale_x = 2; %2.5; %1; % microns
+scale_x = 5; %2.5; %1; % microns
 scale_t = 60; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
@@ -102,38 +98,6 @@ if i_end == -1
     i_end = params.n_datapoints;
 end
 dwell_steps = int32(dwell_time / params.time_per_datapoint);
-%{
-n_xlinks_avg = 0;
-n_motors_avg = 0;
-for i_data = 1 : params.n_datapoints
-    for i_mt = 1 : params.n_mts
-        for i_site = 1 : params.mt_lengths(i_mt)
-            id = protein_ids(i_site, i_mt, i_data); % unique individual ID
-            sid = occupancy(i_site, i_mt, i_data);  % species label ID 
-            if sid == xlink_ID
-                if mod(frac_visible_xlink(1)*id, frac_visible_xlink(2)) == 0
-                    n_xlinks_avg = n_xlinks_avg + 1/(params.n_datapoints * params.n_mts);
-                end
-            elseif sid == motor_ID
-                if mod(frac_visible_motor(1)*id, frac_visible_motor(2)) == 0
-                    n_motors_avg = n_motors_avg + 1/(params.n_datapoints * params.n_mts);
-                end
-            end
-        end
-    end
-end
-
-fprintf("%g, %g\n", n_xlinks_avg, n_motors_avg)
-
-xlink_intensity = xlink_intensity_base / n_xlinks_avg; % Controls how bright a single xlink is 
-motor_intensity = motor_intensity_base / n_motors_avg; 
-%}
-
-xlink_intensity = 0.006; %0.003; %0.003; %0.0015; %0.0005; %0.0015; %0.0025; %0.003; %0.006; %xlink_intensity_base / n_xlinks_avg; % Controls how bright a single xlink is 
-%if i_var == 2
-%    xlink_intensity = 0.0003;
-%end
-motor_intensity = 0.002; %0.00075; %0.00075; %0.001; %0.0015; %0.003; %motor_intensity_base / n_motors_avg; 
 
 % change from 'zeros' to 'ones' to make MTs fluorescent 
 site_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints);   
@@ -342,10 +306,13 @@ set(l2,'clipping','off')
 saveas(fig_motor, sprintf('%s/kymo_%s_%g_%g_motors.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
 saveas(fig_xlink, sprintf('%s/kymo_%s_%g_%g_xlinks.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
 saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
-close(fig_motor)
-close(fig_xlink)
-close(fig_combined)
-
+saveas(fig_motor, sprintf('%s/kymo_%s_%g_%g_motors.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+saveas(fig_xlink, sprintf('%s/kymo_%s_%g_%g_xlinks.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+%close(fig_motor)
+%close(fig_xlink)
+%close(fig_combined)
+%{
             end
         end
     end

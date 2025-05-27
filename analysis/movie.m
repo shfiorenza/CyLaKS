@@ -7,7 +7,7 @@ sim_name = 'shep_50x_0.02_0.5kT_0.131_0.131_0.1nM_10nM';
 sim_name = 'outputProto/shep_1nM_100nM_1_1000_0.4kT_0.1x_0.3x_0';
 sim_name = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x_0';
 %sim_name = 'out_final_newCombos/shep_0.75nM_30nM_8_1000_0.6kT_3x_5x_0';
-
+sim_name_base = 'final_motility_0.1nM_1x';
 
 output_movie_name = 'test';
 

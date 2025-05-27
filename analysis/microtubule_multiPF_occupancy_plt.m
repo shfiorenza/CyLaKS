@@ -26,6 +26,7 @@ occupancy = load_data(occupancy, occupancy_filename, '*int');
 xlink_speciesID = 1;
 motor_speciesID = 2;
 
+
 xlink_raw_data = occupancy; 
 motor_raw_data = occupancy; 
 
@@ -72,7 +73,8 @@ set(gca,'box','off')
 set(gca, 'FontSize', 24);
 
 fig_motor = figure('Position',[50 50 720 540]);
-plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints), motor_avg_occupancy_tot, ...
+%plot(motor_avg_occupancy_tot)
+plot(linspace(0, 0.1 * params.n_datapoints, params.n_datapoints-22), motor_avg_occupancy_tot(23:params.n_datapoints), ...
     'LineWidth', 5, 'Color', color_motor);
 xlabel("Time (s)");
 %xlim([0 200]);
@@ -81,6 +83,6 @@ ylabel("Fractional occupancy");
 set(gca,'box','off')
 set(gca, 'FontSize', 24);
 
-saveas(fig_xlink, 'occu_vs_t_xlink.png', 'png');
-saveas(fig_motor, 'occu_vs_t_motor.png', 'png');
+%saveas(fig_xlink, 'occu_vs_t_xlink.png', 'png');
+%aveas(fig_motor, 'occu_vs_t_motor.png', 'png');
 

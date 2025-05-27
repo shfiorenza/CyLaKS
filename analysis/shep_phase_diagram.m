@@ -1,4 +1,4 @@
-%{
+
 clear variables;
 
 %sim_name_base = 'shep_%inM_%inM_%i_%skT';
@@ -41,9 +41,9 @@ file_dir = '../out_final_xlinkDiffusion4';
 %var2Label = 'Relative crosslinker lifetime';
 seeds = [0];
 
-var1 = [0.1, 0.3, 1, 3, 10];
+var1 = [0.1, 0.3];%, 1, 3, 10];
 var1Label = 'Relative longitudinal diffusion';
-var2 = [0.1, 0.3, 1, 3, 10];
+var2 = [0.1, 0.3];%, 1, 3, 10];
 var2Label = 'Relative lateral diffusion';
 
 %var1 = [1];

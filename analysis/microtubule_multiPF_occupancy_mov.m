@@ -11,6 +11,7 @@ sim_name = 'outputProto3/shep_1nM_100nM_1_1000_1.0kT_2x_0.3x_0';
 %sim_name = 'output25/shep_1nM_100nM_8_1000_0.5kT_2x_0.3x_0';
 sim_name = 'output28/shep_1nM_100nM_8_1000_0.6kT_2.5x_3x_0';
 sim_name = 'output24/shep_1nM_100nM_8_1000_0.6kT_2x_1.5x_0';
+sim_name = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x_0'
  
 
 output_movie_name = 'out_multiPF';
@@ -38,8 +39,8 @@ frame_box = [0, 0, 1200, 300];
 xlink_speciesID = 1;
 motor_speciesID = 2;
 
-colors = get(gca,'colororder');
-colors = [colors; [0.4940    0.1840    0.5560]; [ 0.2500    0.2500    0.2500]];
+%colors = get(gca,'colororder');
+%colors = [colors; [0.4940    0.1840    0.5560]; [ 0.2500    0.2500    0.2500]];
 
 xlink_raw_data = occupancy; 
 motor_raw_data = occupancy; 

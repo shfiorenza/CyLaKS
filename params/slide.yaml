@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.01 # 0.1 # 0.001
 dt: 0.00002
-t_run: 200 # 00 # 00
+t_run: 60 # 00 # 00
 t_equil: 0
 t_snapshot: 0.01
 dynamic_equil_window: -1 
@@ -14,12 +14,12 @@ filaments:
   periodic_barrel: false
   site_size: 8.2
   n_bd_per_kmc: 10
-  n_sites: [2000, 1000]
-  polarity: [0, 1]
+  n_sites: [500, 1000]
+  polarity: [1, 1]
   x_initial: [0, 0]
   y_initial: [0, 32]
-  x_immobile_until: [1500, 0]
-  y_immobile_until: [1500, 0]
+  x_immobile_until: [1500, 20]
+  y_immobile_until: [1500, 20]
   rotation_enabled: [false, false]
   wca_potential_enabled: true
   f_applied: [0.0, 0.0]
@@ -30,7 +30,7 @@ motors:
   gaussian_ceiling_bulk: 4.75 # 4.0 # 4.75
   gaussian_stepping_coop: false # true
   neighb_neighb_energy: 0.0 # 1.6 # 1.75 # 1.6
-  t_active: 100
+  t_active: 10
   k_on: 0.000358
   c_bulk: 200 # 0.5
   c_eff_bind: 4000000
@@ -56,7 +56,7 @@ xlinks:
   neighb_neighb_energy: 2.25
   t_active: 0
   k_on: 0.000238
-  c_bulk: 1 # 0.5 # 1.0 
+  c_bulk: 10 # 0.5 # 1.0 
   c_eff_bind: 5000
   k_off_i: 0.143
   k_off_ii: 0.0143

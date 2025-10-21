@@ -31,8 +31,13 @@ public:
 
   int GetDirectionTowardRest();
   virtual int GetNumHeadsActive();
-  virtual int GetNumNeighborsOccupied();
-  virtual int GetNumNeighborsOccupied_Side();
+
+  virtual int GetNumNeighborsOccupied_Tot();
+  virtual int GetNumNeighborsOccupied_Tot_Side();
+  virtual int GetNumNeighborsOccupied_Xlink();
+  virtual int GetNumNeighborsOccupied_Xlink_Side();
+  virtual int GetNumNeighborsOccupied_Motor();
+  virtual int GetNumNeighborsOccupied_Motor_Side();
 
   BindingHead *GetOtherHead() { return other_head_; }
   BindingSite *GetSite() { return site_; }

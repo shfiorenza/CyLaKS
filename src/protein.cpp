@@ -281,8 +281,10 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     Sys::ErrorExit("Protein::GetWeight_diffuse");
   }
   int dx{dir * head->GetDirectionTowardRest()};
+  bool exactly_vertical{false};
   // For xlinks exactly at rest,
   if (dx == 0) {
+    exactly_vertical = true;
     // Diffuse from rest in a random direction
     if (dir == -1) {
       ran_ = SysRNG::GetRanProb();
@@ -302,6 +304,9 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     if (Sys::test_mode_.empty()) {
       return 0.0;
     }
+    if (Sys::test_mode_ != "filament_forced_slide") {
+      return 0.0;
+    }
     // Rather than use ghost sites, just use other crosslinker head to get
     // spring weight (should be the exact same dE)
     BindingHead *other_head{head->GetOtherHead()};
@@ -318,13 +323,16 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
     spring_.UpdatePosition();
     double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
     double weight_neighb{head->site_->GetWeight_Unbind()};
-    return weight_spring * weight_neighb;
+    // If xlink is exactly vertical, multiply weight by 2 for proper statistics
+    // (Each head needs 2 directions sampled -- only 1 sampled when vert)
+    double weight_config{exactly_vertical ? 2.0 : 1.0};
+    return weight_spring * weight_neighb * weight_config;
   }
   if (new_loc->occupant_ != nullptr) {
     return 0.0;
   }
   BindingSite *old_loc{head->site_};
-  if (old_loc->GetNumNeighborsOccupied() == _n_neighbs_max) {
+  if (old_loc->GetNumNeighborsOccupied_Tot() == _n_neighbs_max) {
     return 0.0;
   }
   BindingSite *static_loc{head->GetOtherHead()->site_};
@@ -334,8 +342,11 @@ double Protein::GetWeight_Diffuse(BindingHead *head, int dir) {
   spring_.UpdatePosition();
   double weight_spring{spring_.GetWeight_Shift(static_loc, old_loc, new_loc)};
   double weight_neighb{head->site_->GetWeight_Unbind()};
+  // If xlink is exactly vertical, multiply weight by 2 for proper statistics
+  // (Each head needs 2 directions sampled -- only 1 sampled when exactly vert)
+  double weight_config{exactly_vertical ? 2.0 : 1.0};
   // printf("WT[%i] = %g\n", dx, weight_spring * weight_neighb);
-  return weight_spring * weight_neighb;
+  return weight_spring * weight_neighb * weight_config;
 }
 
 double Protein::GetWeight_Bind_II() {
@@ -379,7 +390,19 @@ bool Protein::Diffuse(BindingHead *head, int dir) {
   BindingSite *old_site = head->site_;
   int i_new{(int)old_site->index_ + dx};
   if (i_new < 0 or i_new > old_site->filament_->sites_.size() - 1) {
-    return false;
+    if (Sys::test_mode_.empty()) {
+      return false;
+    }
+    if (Sys::test_mode_ != "filament_forced_slide") {
+      return false;
+    }
+    double ran{SysRNG::GetRanProb()};
+    if (ran < Params::Xlinks::p_diffuse_off_end) {
+      bool executed{head->Unbind()};
+      return executed;
+    } else {
+      return true; // return true so that lists update
+    }
   }
   BindingSite *new_site{&old_site->filament_->sites_[i_new]};
   if (new_site->occupant_ != nullptr) {

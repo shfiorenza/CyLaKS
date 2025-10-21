@@ -47,7 +47,7 @@ public:
       for (auto &&pop : unoccupied_) {
         pop.second.Sort(site);
       }
-      int n_neighbs{site->GetNumNeighborsOccupied()};
+      int n_neighbs{site->GetNumNeighborsOccupied_Motor()};
       site->SetWeight_Bind(Sys::weight_neighb_bind_[n_neighbs]);
       site->SetWeight_Unbind(Sys::weight_neighb_unbind_[n_neighbs]);
     }

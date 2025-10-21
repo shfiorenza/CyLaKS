@@ -51,6 +51,7 @@ function endtag_length = get_endtag_length(sim_name)
     motor_occupancy = smoothdata(motor_avg_occupancy, 'movmean', smooth_window);
     xlink_occupancy = smoothdata(xlink_avg_occupancy, 'movmean', smooth_window);
     net_occupancy = motor_occupancy + xlink_occupancy;
+    %net_occupancy = xlink_occupancy;
     occupancy_slope = smoothdata(gradient(net_occupancy, 0.008), 'movmean', smooth_window);
     occupancy_accel = smoothdata(gradient(occupancy_slope, 0.008), 'movmean', smooth_window);
     max_occupancy = max(net_occupancy);

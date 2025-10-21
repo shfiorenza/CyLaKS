@@ -41,7 +41,7 @@ public:
   void SetWeight_Bind(double val) { weight_bind_ = val; }
   void SetWeight_Unbind(double val) { weight_unbind_ = val; }
   void AddWeight_Bind(double val) {
-    int n_neighbs{GetNumNeighborsOccupied()};
+    int n_neighbs{GetNumNeighborsOccupied_Motor()};
     if (weight_bind_ == Sys::weight_lattice_bind_max_[n_neighbs]) {
       return;
     }
@@ -61,7 +61,7 @@ public:
     // (If weight is equal to unity, neither case matters)
   }
   void AddWeight_Unbind(double val) {
-    int n_neighbs{GetNumNeighborsOccupied()};
+    int n_neighbs{GetNumNeighborsOccupied_Motor()};
     if (weight_unbind_ == Sys::weight_lattice_unbind_max_[n_neighbs]) {
       return;
     }
@@ -83,8 +83,13 @@ public:
   double GetWeight_Bind() { return weight_bind_ / binding_affinity_; }
   double GetWeight_Unbind() { return weight_unbind_ * binding_affinity_; }
 
-  int GetNumNeighborsOccupied();
-  int GetNumNeighborsOccupied_Side();
+  int GetNumNeighborsOccupied_Tot();
+  int GetNumNeighborsOccupied_Tot_Side();
+  int GetNumNeighborsOccupied_Xlink();
+  int GetNumNeighborsOccupied_Xlink_Side();
+  int GetNumNeighborsOccupied_Motor();
+  int GetNumNeighborsOccupied_Motor_Side();
+
   BindingSite *GetNeighbor(int dir);
   BindingSite *GetNeighbor_Side(int dir);
 

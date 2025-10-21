@@ -41,8 +41,12 @@ public:
   virtual void AddTorque(double tq) {}
   virtual double GetForceApplied(int i_dim) { return 0.0; }
 
-  virtual int GetNumNeighborsOccupied() { return -1; }
-  virtual int GetNumNeighborsOccupied_Side() { return -1; }
+  virtual int GetNumNeighborsOccupied_Tot() { return -1; }
+  virtual int GetNumNeighborsOccupied_Tot_Side() { return -1; }
+  virtual int GetNumNeighborsOccupied_Xlink() { return -1; }
+  virtual int GetNumNeighborsOccupied_Xlink_Side() { return -1; }
+  virtual int GetNumNeighborsOccupied_Motor() { return -1; }
+  virtual int GetNumNeighborsOccupied_Motor_Side() { return -1; }
 
   virtual int GetNumHeadsActive() { return -1; }
 

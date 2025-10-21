@@ -1,18 +1,21 @@
 clear variables;
 
 sim_name = 'shep_multiPF_0_0.131_4'; % Raw sim name; do not include directory
-sim_name = 'test10x175';
-sim_name = 'shepherding_baseline/shep_1nM_200nM_8_1.5kT';
-sim_name = 'endtags_3/endtag_0.0524_25_1nM_200nM_8_1.375kT_500_1';
-sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0';
+sim_name = 'output16/shep_1nM_100nM_8_0.2kT_1x_0';
+%sim_name = 'test_xlink_diffusion_Boltzmann';
+sim_name = 'shep_50x_0.02_0.5kT_0.131_0.131_0.1nM_10nM';
+sim_name = 'outputProto/shep_1nM_100nM_1_1000_0.4kT_0.1x_0.3x_0';
+sim_name = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x_0';
+%sim_name = 'out_final_newCombos/shep_0.75nM_30nM_8_1000_0.6kT_3x_5x_0';
+sim_name_base = 'final_motility_0.1nM_1x';
 
 output_movie_name = 'test';
 
-start_frame = 1;
-end_frame = -1;  % set to -1 to run until end of data
+start_frame = 1; %250;
+end_frame = 3000;  % set to -1 to run until end of data
 
-frames_per_plot = 100; 
-movie_duration = 30; % in seconds
+frames_per_plot = 10; 
+movie_duration = 60; % in seconds
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files
@@ -25,8 +28,8 @@ sid_motor = 2;
 r_prot = (params.site_size*1000);
 site_height = 1;
 site_width = 1;
-blue = [30 144 255] / 255;
-purple = [128 0 128] / 255;
+blue = [214 77 156] / 255; %[30 144 255] / 255;
+purple = [12 220 210] / 255; %[128 0 128] / 255;
 color = [purple; blue];
 if end_frame == -1
     end_frame = params.n_datapoints; 
@@ -34,7 +37,7 @@ end
 active_frames = end_frame - start_frame;
 
 % Initialize videowriter object
-v = VideoWriter(output_movie_name);
+v = VideoWriter(output_movie_name);%, 'MPEG-4');
 v.FrameRate = (active_frames / frames_per_plot) / movie_duration;
 open(v);
 frame_box = [0 0 1445 200];
@@ -80,16 +83,21 @@ for i_data = start_frame : frames_per_plot : end_frame
     min_y = min(min(filament_pos(2, :, :, i_data)));
     max_y = max(max(filament_pos(2, :, :, i_data)));
     avg_y = (min_y + max_y)/2;
-    height = 400; % (1/10)*(max_x - min_x);
+    height = 1200; % (1/10)*(max_x - min_x);
     %top_start = filament_pos(1, 2, 2, i_data);
     %top_end = filament_pos(1, 1, 2, i_data);
     ax.XLim = [(min_x - 25) (max_x + 25)];
-    %ax.XLim = [(min_x - 25) (min_x + 475)];
+    %ax.XLim = [-500 500]
+    %ax.XLim = [(min_x - 25) (min_x + 1575)];
+    %ax.XLim = [(max_x - 400) (max_x + 25)];
+    ax.XLim = [(min_x - 25) (min_x + 2075)];
     %ax.XLim = [(top_start - 25) (top_end + 25)];
     ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
-    ax.XTick = linspace(-2000, 2000, 11);
-    ax.YTick = linspace(roundn(avg_y - height/2, 2), roundn(avg_y + height/2, 2), 3);
+
+
+    %ax.XTick = linspace(-2000, 2000, 11);
+    %ax.YTick = linspace(roundn(avg_y - height/2, 2), roundn(avg_y + height/2, 2), 3);
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';
@@ -102,7 +110,7 @@ for i_data = start_frame : frames_per_plot : end_frame
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
-            'LineWidth', 4, 'Color', [0.7 0.7 0.7]);
+            'LineWidth', 2, 'Color', [0.7 0.7 0.7]);
         n_sites = params.mt_lengths(i_mt);
         dx = -1;
         mt_dir = 1;
@@ -117,6 +125,9 @@ for i_data = start_frame : frames_per_plot : end_frame
         for i_site = 1 : n_sites
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
+            if i_site > 300
+                continue
+            end
             if(id ~= -1)
                 pos_x = plus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
                 pos_y = plus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
@@ -249,6 +260,7 @@ for i_data = start_frame : frames_per_plot : end_frame
     annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');
     drawnow();
     %  frame = getframe(gcf); %(fig1); %, frame_box);
+    set(gca,'xdir','reverse');%,'ydir','reverse')
     writeVideo(v, getframe(gcf));
 end
 

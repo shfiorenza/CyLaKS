@@ -1,34 +1,80 @@
 clear variables; 
 
-sim_name = 'out_coop8/prc1_coop_37.0nM_8_1.15kT_1.3x_0'
-
-dwell_time = 0.1;  % dwell time of theoretical camera
-i_start = 1;
-i_end = -1; 
-frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
-frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
-
-tubulin_intensity = 0.01;
-xlink_intensity = 0.003; %003; % Controls how bright a single xlink is 
-motor_intensity = 0.003; %003; 
+sim_name = 'shep_0.1nM_100nM_8_3000_0.6kT_3x_5x_3';
+file_dir = "../out_final_xlinkOnlyLong";
+output_folder = 'kymo_output_xlinkOnlyLong';
 subfilaments = true; 
 
+%{
+file_dir = '../out_final_proto';
+%output_folder = '.';
+%name_format = 'shep_%gnM_%gnM_8_%i_0.6kT_3x_5x_%i';
+%name_format = 'shep_0.1nM_%gnM_8_%i_0.6kT_3x_5x_%i_motor_%gx';
+%name_format = 'shep_%gnM_100nM_8_%i_0.6kT_3x_5x_%i_xlink_%gx';
+%name_format = 'shep_0.1nM_10nM_8_%i_0.6kT_3x_5x_%i_xlinkDiff_%gx_%gx';
+name_format = 'shep_0.1nM_50nM_8_%i_0.6kT_3x_5x_%i';
+name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
+
+%vars_one = [0.1, 1];
+%vars_one = [0.75];
+%vars_one = [10, 30, 100];
+%vars_one = [0.01, 0.03, 0.1, 0.3, 1];
+%vars_one = [1000];
+%vars_two = [1, 10, 50, 100, 250, 500, 1000];
+%vars_two = [30]
+%vars_two = [1000];
+vars_one = [1];
+%vars_two = [0.1, 0.3, 1, 3, 10];
+vars_two = [1];
+seeds = [0];%, 1, 2, 3, 4, 5]; 
+%vars_tri = [1000];
+%vars_tri = [0.1, 0.3, 3, 10]; 
+%vars_tri = [0.1, 0.3, 1, 3, 10];
+vars_tri = [1];
+%vars_tri = [1];
+for i_var = 1:length(vars_one)
+    var_one = vars_one(i_var);
+    for j_var = 1:length(vars_two)
+        var_two = vars_two(j_var);
+        %if i_var == 1 && j_var > 4
+        %    continue;
+        %end
+        for k_var = 1:length(vars_tri)
+            var_tri = vars_tri(k_var);
+            for i_seed = 1:length(seeds)
+                seed = seeds(i_seed);
+                %sim_name = sprintf(name_format, var_one, var_two, var_tri, seed)
+                %sim_name = sprintf(name_format, var_one, var_two, seed, var_tri)
+                %sim_name = sprintf(name_format, var_one, seed, var_two, var_tri)
+                sim_name = sprintf(name_format, var_one, seed);
+                %}
+
+dwell_time = 1;  % dwell time of theoretical camera
+i_start = 1;
+i_end = 2400; 
+frac_visible_xlink = [1, 10]; % [numerator, denominator]; [1,1] for all visibile
+frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
+
+tubulin_intensity = 0.0; % 0.01;
+xlink_intensity = 0.05;  % Controls how bright a single xlink is 
+motor_intensity = 0.0015;  % ditto but for motors 
+
 % Scale bar lengths 
-scale_x = 1; %2.5; %1; % microns
+scale_x = 5; %2.5; %1; % microns
 scale_t = 60; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
 pixelLength = 150;
-pixelPad = 2;
-gaussSigma = 1.0;
+pixelPad = 15;
+gaussSigma = 5.0;
 doPlot = 0;
-gaussAmp = 40000;
-bkgLevel = 200;
-noiseStd = 100;
+gaussAmp = 4000;
+bkgLevel = 0;
+noiseStd = 75; 
 intensityMax = gaussAmp/2 + bkgLevel;
 
 % Load parameter structure
-file_dir = '..';  % Default; only change if you move CyLaKS output files
+
 params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
 
 % Open data files 
@@ -47,21 +93,17 @@ occupancy = load_data(occupancy, occupancy_filename, '*int');
 site_ID = 0;
 xlink_ID = 1;
 motor_ID = 2;
+%disp(params.n_mts)
 if i_end == -1
     i_end = params.n_datapoints;
-end
-if subfilaments % rescale so we can compare across different n_subfilaments
-    xlink_intensity = xlink_intensity/sqrt(params.n_mts);
-    motor_intensity = motor_intensity/sqrt(params.n_mts);
 end
 dwell_steps = int32(dwell_time / params.time_per_datapoint);
 
 % change from 'zeros' to 'ones' to make MTs fluorescent 
-site_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints);
+site_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints);   
 % Get motor and xlink matrices from occupancy data
 motor_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
 xlink_matrix = zeros(params.max_sites, params.n_mts, params.n_datapoints); % from protein_ids;
-n_xlinks_avg = 0;
 for i_data = 1 : params.n_datapoints
     for i_mt = 1 : params.n_mts
         for i_site = 1 : params.mt_lengths(i_mt)
@@ -70,7 +112,6 @@ for i_data = 1 : params.n_datapoints
             if sid == xlink_ID
                 if mod(frac_visible_xlink(1)*id, frac_visible_xlink(2)) == 0
                     xlink_matrix(i_site, i_mt, i_data) = xlink_intensity;
-                    n_xlinks_avg = n_xlinks_avg + 1/(params.n_datapoints);
                 end
             elseif sid == motor_ID
                 if mod(frac_visible_motor(1)*id, frac_visible_motor(2)) == 0
@@ -80,8 +121,6 @@ for i_data = 1 : params.n_datapoints
         end
     end
 end
-
-disp(n_xlinks_avg)
 
 % Calculate final image dimensions
 pixels_y = ceil((i_end - i_start) / dwell_steps);
@@ -115,7 +154,9 @@ if params.n_mts == 2 && subfilaments == false
     %}
 end
 
-final_img = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_motors = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_xlinks = zeros(pixels_y, pixels_x, 3); % RGB image; 
+final_img_combined = zeros(pixels_y, pixels_x, 3); % RGB image; 
 % Run through data and create each line of kymograph step-by-step
 for i_data = i_start : dwell_steps : i_end - dwell_steps
     if params.n_mts == 2 && subfilaments == false
@@ -169,8 +210,8 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
         lineMatrix = [sites1 sites2 buffer leftover];
         %}
     else
-        dataMatrixMotors = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
-        dataMatrixXlinks = sum(xlink_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
+        dataMatrixMotors = sum(motor_matrix(:, :, i_data:i_data + dwell_steps), [2 3])'/params.n_mts;
+        dataMatrixXlinks = sum(xlink_matrix(:, :, i_data:i_data + dwell_steps), [2 3])'/params.n_mts;
         lineMatrix = sum(site_matrix(:, :, i_data:i_data + dwell_steps), [2 3])';
     end
     
@@ -194,15 +235,23 @@ for i_data = i_start : dwell_steps : i_end - dwell_steps
     imageXlinks = imageXlinks/intensityMax;
 
     % merge into RGB image
-    imageRGB = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
+    imageNull = zeros(size(imageLine));
+
+    imageRGB_motor = cat(3, imageMotors, imageNull, imageMotors);
+    imageRGB_xlink = cat(3, imageNull, imageXlinks, imageNull);
+    imageRGB_combined = cat(3, imageLine + imageMotors, imageXlinks, imageMotors);
+    
     index = (i_data - i_start) / dwell_steps + 1;
-    final_img(index, :, :) = imageRGB;
+
+    final_img_motors(index, :, :) = imageRGB_motor;
+    final_img_xlinks(index, :, :) = imageRGB_xlink;
+    final_img_combined(index, :, :) = imageRGB_combined;
 end
 %} 
-fig1 = figure;
-set(fig1, 'Position', [100 100 350 350]);
+fig_motor = figure;
+set(fig_motor, 'Position', [50 50 300 600]);
 axes('Units','Normalize','Position',[0 0 1 1]);
-img1 = imagesc(final_img, [min(final_img, [], 'all') max(final_img, [], 'all')]);
+img1 = imagesc(final_img_motors, [min(final_img_motors, [], 'all') max(final_img_motors, [], 'all')]);
 set(gca,'Xtick',[]); set(gca,'Ytick',[]);
 set(gca, 'Box', 'off');
 % Add scale bars
@@ -210,10 +259,62 @@ len_x = scale_x * 1000 / pixelLength;
 len_y = scale_t / dwell_time;
 x1 = (95/100)*pixels_x;
 x2 = (94.25/100)*pixels_x;
-y1 = (95/100)*pixels_y;
-y2 = (93/100)*pixels_y;
+y1 = (99/100)*pixels_y;
+y2 = (97/100)*pixels_y;
 l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
 l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
-
 set(l,'clipping','off')
 set(l2,'clipping','off')
+
+fig_xlink = figure;
+set(fig_xlink, 'Position', [100 50 300 600]);
+axes('Units','Normalize','Position',[0 0 1 1]);
+img2 = imagesc(final_img_xlinks, [min(final_img_xlinks, [], 'all') max(final_img_xlinks, [], 'all')]);
+set(gca,'Xtick',[]); set(gca,'Ytick',[]);
+set(gca, 'Box', 'off');
+% Add scale bars
+len_x = scale_x * 1000 / pixelLength;
+len_y = scale_t / dwell_time;
+x1 = (95/100)*pixels_x;
+x2 = (94.25/100)*pixels_x;
+y1 = (99/100)*pixels_y;
+y2 = (97/100)*pixels_y;
+l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
+l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
+set(l,'clipping','off')
+set(l2,'clipping','off')
+
+fig_combined = figure;
+set(fig_combined, 'Position', [150 50 300 600]);
+axes('Units','Normalize','Position',[0 0 1 1]);
+img3 = imagesc(final_img_combined, [min(final_img_combined, [], 'all') max(final_img_combined, [], 'all')]);
+set(gca,'Xtick',[]); set(gca,'Ytick',[]);
+set(gca, 'Box', 'off');
+% Add scale bars
+len_x = scale_x * 1000 / pixelLength;
+len_y = scale_t / dwell_time;
+x1 = (95/100)*pixels_x;
+x2 = (94.25/100)*pixels_x;
+y1 = (98/100)*pixels_y;
+y2 = (97/100)*pixels_y;
+l = line([x1 x1-len_x],[y1 y1],'Color','w','LineWidth',4); %tubulin
+l2 = line([x2 x2],[y2 y2-len_y],'Color','w','LineWidth',4); %tubulin
+set(l,'clipping','off')
+set(l2,'clipping','off')
+
+
+saveas(fig_motor, sprintf('%s/kymo_%s_%g_%g_motors.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
+saveas(fig_xlink, sprintf('%s/kymo_%s_%g_%g_xlinks.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
+saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.png', output_folder, sim_name, xlink_intensity, motor_intensity), 'png');
+saveas(fig_motor, sprintf('%s/kymo_%s_%g_%g_motors.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+saveas(fig_xlink, sprintf('%s/kymo_%s_%g_%g_xlinks.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
+%close(fig_motor)
+%close(fig_xlink)
+%close(fig_combined)
+%{
+            end
+        end
+    end
+end
+%}

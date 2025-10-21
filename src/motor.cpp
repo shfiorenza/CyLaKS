@@ -289,7 +289,7 @@ double Motor::GetWeight_BindATP_II(CatalyticHead *head) {
   }
   double weight_site{head->site_->GetWeight_Bind()};
   // ! FIXME  _lambda_neighb = 1.0 now; need to include neighb coop otherwise
-  // int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  // int n_neighbs{head->site_->GetNumNeighborsOccupied_Motor()};
   // Remove contribution from neighb mechanism
   return weight_site; // / Sys::weight_neighb_bind_[n_neighbs];
 }
@@ -314,7 +314,7 @@ double Motor::GetWeight_Unbind_II(CatalyticHead *head) {
     return weight_site;
   }
   double weight_sq{Square(weight_site)};
-  int n_neighbs{head->site_->GetNumNeighborsOccupied()};
+  int n_neighbs{head->site_->GetNumNeighborsOccupied_Motor()};
   if (n_neighbs == 2) {
     Sys::ErrorExit("bruh");
   }

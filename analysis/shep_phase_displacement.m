@@ -14,6 +14,16 @@ var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative motor lifetime';
 %}
 
+name = 'motorVel';
+sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVel_%gx_%gx';
+file_dir = '../out_final_motor_velocity';
+output_folder = 'plots_motorVelocity';
+var1 = [0.1, 0.3, 1, 3];
+var1Label = 'Relative hydrolysis rate';
+var2 = [0.1, 0.3, 1, 3, 10];
+var2Label = 'Relative motor lifetime';
+%}
+
 %{
 name = 'xlinkLife';
 sim_name_base = 'shep_%gnM_100nM_8_1000_0.6kT_3x_5x_0_xlink_%gx';
@@ -35,7 +45,7 @@ var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative longitudinal diffusion';
 %}
 
-
+%{
 name = 'protoNum';
 sim_name_base = 'shep_0.1nM_50nM_%i_1000_%.1fkT_3x_5x_0';
 file_dir = '../out_final_proto';
@@ -45,6 +55,7 @@ var1Label = "";
 var2 = [1, 2, 3, 5, 8];
 var2Label = "Protofilament Number";
 energies = [1.2, 0.8, 0.6, 0.6, 0.6];
+%}
 
 
 run_avg = zeros(length(var1), length(var2));
@@ -61,11 +72,11 @@ chosen_SID = xlink_SID;
 for i_var = 1 : length(var1)
     for j_var = 1 : length(var2)
         % for motor + xlink lifetimes
-        %sim_name = sprintf(sim_name_base, var1(i_var), var2(j_var)) %, seeds(i_seed));
+        sim_name = sprintf(sim_name_base, var1(i_var), var2(j_var)) %, seeds(i_seed));
         % for xlink diffusion
         %sim_name = sprintf(sim_name_base, var2(j_var), var1(i_var)) %, seeds(i_seed));
         % for protoNumer
-        sim_name = sprintf(sim_name_base, var2(j_var), energies(j_var))
+        %sim_name = sprintf(sim_name_base, var2(j_var), energies(j_var))
 
         % Open log file and parse it into param labels & their values
         %log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));

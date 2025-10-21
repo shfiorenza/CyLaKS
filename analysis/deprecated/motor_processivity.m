@@ -4,18 +4,19 @@ clear variables;
 %seeds = [0, 1, 2, 3, 4, 5];
 seeds = [0];
 
-file_dir = '..';
+file_dir = '../out_final_motMotility';
 %sim_name_base = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x';
-sim_name_base = 'outputProto5/shep_0.1nM_50nM_8_1000_0.6kT_3x_5x';
+%sim_name_base = 'outputProto5/shep_0.1nM_50nM_8_1000_0.6kT_3x_5x';
 %sim_name_base = 'outputProto6/shep_0.1nM_50nM_3_10000_0.6kT_3x_5x';
-%sim_name_base = 'final_motility_50nM_1x';
-sim_name_base = 'out_final_xlinkOnly/shep_0.1nM_0.0nM_8_1000_0.6kT_3x_5x_0';
+sim_name_base = 'final_motility_1nM_1x';
+%sim_name_base = 'shep_1nM_100nM_8_1250_0.6kT_3x_5x_0';
 
+output_folder = 'motor_motility';
 
 xlink_SID = 1;
 motor_SID = 2;
-%chosen_SID = motor_SID;
-chosen_SID = xlink_SID;
+chosen_SID = motor_SID;
+%chosen_SID = xlink_SID;
 
 % Open log file and parse it into param labels & their values
 %log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));
@@ -271,9 +272,10 @@ sigma_vel = std(vel_dist)
 % prep figure
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600]);
+set(gcf, 'DefaultAxesFontName', 'Arial');
+set(gcf, 'DefaultTextFontName', 'Arial');
 % plot run length histogram
 n_bins = int32(sqrt(n_runs));
-n_bins = 45;
 hist = histfit(runlengths, n_bins, 'exponential');
 % Display mean runlength
 dim1 = [0.55 0.65 0.2 0.2];
@@ -295,23 +297,27 @@ ylabel('Counts');
 
 fig2 = figure();
 set(fig2, 'Position', [75, 75, 960, 600]);
+set(gcf, 'DefaultAxesFontName', 'Arial');
+set(gcf, 'DefaultTextFontName', 'Arial');
 histfit(lifetimes, n_bins, 'exponential');
 xlabel('Lifetime (s)');
 ylabel('Counts');
 %}
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 720, 600]);
+set(gcf, 'DefaultAxesFontName', 'Arial');
+set(gcf, 'DefaultTextFontName', 'Arial');
 hold on
 histfit(velocities, n_bins, 'normal');
 xlabel('Velocity (nm/s)');
 ylabel('Counts');
 
-saveas(fig1, sprintf('%s_proc.png', sim_name), 'png');
-saveas(fig1, sprintf('%s_proc.svg', sim_name), 'svg');
-saveas(fig2, sprintf('%s_time.png', sim_name), 'png');
-saveas(fig2, sprintf('%s_time.svg', sim_name), 'svg');
-saveas(fig3, sprintf('%s_vel.png', sim_name), 'png');
-saveas(fig3, sprintf('%s_vel.svg', sim_name), 'svg');
+saveas(fig1, sprintf('%s/%s_proc.png', output_folder, sim_name), 'png');
+saveas(fig1, sprintf('%s/%s_proc.svg', output_folder, sim_name), 'svg');
+saveas(fig2, sprintf('%s/%s_time.png', output_folder, sim_name), 'png');
+saveas(fig2, sprintf('%s/%s_time.svg', output_folder, sim_name), 'svg');
+saveas(fig3, sprintf('%s/%s_vel.png', output_folder, sim_name), 'png');
+saveas(fig3, sprintf('%s/%s_vel.svg', output_folder, sim_name), 'svg');
 
 
 %{

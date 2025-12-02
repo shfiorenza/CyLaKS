@@ -7,6 +7,14 @@
 *.asv
 *.json
 *.avi
+*.tar.gz
+*.pdf
+*.png
+*.svg
+*.mp4
+params_temp*.yaml
+notes.txt
 .vscode/
+.cache/
 build/
 cylaks.exe

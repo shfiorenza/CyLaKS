@@ -9,13 +9,14 @@ sim_name = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x_0';
 %sim_name = 'out_final_newCombos/shep_0.75nM_30nM_8_1000_0.6kT_3x_5x_0';
 sim_name = 'out_final_motorVelWeighted/shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_30x_30x'
 %sim_name_base = 'final_motility_0.1nM_1x';
+sim_name = 'test_neuro';
 
 output_movie_name = 'test';
 
 start_frame = 1; %250;
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 100; 
+frames_per_plot = 1; 
 movie_duration = 60; % in seconds
 
 % Load parameter structure
@@ -92,9 +93,10 @@ for i_data = start_frame : frames_per_plot : end_frame
     %ax.XLim = [-500 500]
     %ax.XLim = [(min_x - 25) (min_x + 1575)];
     %ax.XLim = [(max_x - 400) (max_x + 25)];
-    ax.XLim = [(min_x - 25) (min_x + 2075)];
+    %ax.XLim = [(min_x - 100) (min_x + 2075)];
     %ax.XLim = [(top_start - 25) (top_end + 25)];
-    ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
+    ax.YLim = [(min_y - 25) (max_y + 25)];
+    %ax.YLim = [(avg_y - height/2) (avg_y + height/2)];
     %ax.XTick = linspace(roundn(min_x, 2), roundn(max_x, 2), 5);
 
 
@@ -113,6 +115,8 @@ for i_data = start_frame : frames_per_plot : end_frame
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
             'LineWidth', 2, 'Color', [0.7 0.7 0.7]);
+        rectangle('Position', [plus_pos(1)-r_prot/2 plus_pos(2)-r_prot/2 r_prot r_prot], ...
+             'FaceColor', [0 0 0], 'Curvature', [1 1]);
         n_sites = params.mt_lengths(i_mt);
         dx = -1;
         mt_dir = 1;
@@ -127,9 +131,9 @@ for i_data = start_frame : frames_per_plot : end_frame
         for i_site = 1 : n_sites
             id = protein_ids(i_site, i_mt, i_data);
             sid = occupancy(i_site, i_mt, i_data);
-            if i_site > 300
-                continue
-            end
+            % if i_site > 300
+            %     continue
+            % end
             if(id ~= -1)
                 pos_x = plus_pos(1) + ((i_site-1)/(n_sites-1))*line_vec(1);
                 pos_y = plus_pos(2) + ((i_site-1)/(n_sites-1))*line_vec(2);
@@ -201,7 +205,7 @@ for i_data = start_frame : frames_per_plot : end_frame
             end 
         end
         % Draw tethers
-        line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
+        %line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
         teth_coords = teth_data(:, i_mt, i_data);
         for i_teth=1:1:params.max_sites - 1
             if(teth_coords(i_teth) ~= -1)

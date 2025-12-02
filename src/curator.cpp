@@ -287,6 +287,7 @@ void Curator::ParseParameters() {
   ParseYAML(&dynamic_equil_window, "dynamic_equil_window", "s");
   ParseYAML(&verbosity, "verbosity", "");
   Log(" Filament parameters:\n");
+  ParseYAML(&Filaments::axon_arrangement, "filaments.axon_arrangement", "");
   ParseYAML(&Filaments::count, "filaments.count", "filaments");
   ParseYAML(&Filaments::n_subfilaments, "filaments.n_subfilaments",
             "subfilaments");
@@ -305,6 +306,27 @@ void Curator::ParseParameters() {
   ParseYAML(&Filaments::rotation_enabled, "filaments.rotation_enabled", "");
   ParseYAML(&Filaments::wca_potential_enabled,
             "filaments.wca_potential_enabled", "");
+  if (Filaments::axon_arrangement) {
+    Filaments::n_sites.resize(Filaments::count);
+    Filaments::polarity.resize(Filaments::count);
+    Filaments::x_initial.resize(Filaments::count);
+    Filaments::y_initial.resize(Filaments::count);
+    Filaments::x_immobile_until.resize(Filaments::count);
+    Filaments::y_immobile_until.resize(Filaments::count);
+    Filaments::rotation_enabled.resize(Filaments::count);
+    Sys::Log("   initializing protofilaments for axon arrangement\n");
+    for (int i_fil{1}; i_fil < Filaments::count; i_fil++) {
+      Filaments::n_sites[i_fil] = Filaments::n_sites[0];
+      Sys::Log("    n_sites[%i] = %i\n", i_fil, Filaments::n_sites[i_fil]);
+      Filaments::polarity[i_fil] = i_fil % 2 == 0 ? 0 : 1;
+      Sys::Log("    polarity[%i] = %i\n", i_fil, Filaments::polarity[i_fil]);
+      Filaments::x_initial[i_fil] = Filaments::x_initial[0];
+      Filaments::y_initial[i_fil] = Filaments::y_initial[0] + i_fil * 32.0;
+      Filaments::x_immobile_until[i_fil] = Filaments::x_immobile_until[0];
+      Filaments::y_immobile_until[i_fil] = Filaments::y_immobile_until[0];
+      Filaments::rotation_enabled[i_fil] = Filaments::rotation_enabled[0];
+    }
+  }
   // Check to make sure there are enough vector entries for given MT count
   if (Filaments::count > Filaments::n_sites.size() or
       Filaments::count > Filaments::polarity.size() or

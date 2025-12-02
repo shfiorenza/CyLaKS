@@ -48,7 +48,7 @@ var1Label = 'Crosslinker concentration (nM)';
 var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative crosslinker lifetime';
 %}
-%{
+
 name = 'xlinkDiffNorm';%'xlinkDiff';
 %sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_xlinkDiffNorm_%gx_%gx';
 sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_%gx';

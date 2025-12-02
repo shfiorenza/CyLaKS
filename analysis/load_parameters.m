@@ -28,6 +28,7 @@ if any(contains(params, "COUNT ") ~= 0)
 end
 % Read in MT lengths (in n_sites)
 mt_lengths = zeros(1, n_mts);
+%axon_arrangement = sscanf(values{contains(params, "axon_arrangement ")}, '%s');
 for i_mt = 1 : n_mts
     string = sprintf("n_sites[%i] ", i_mt - 1);
     mt_lengths(i_mt) =  sscanf(values{contains(params, string)}, '%i');
@@ -36,12 +37,13 @@ for i_mt = 1 : n_mts
         mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
     end
 end
-max_sites = max(mt_lengths);
+
 polarity = zeros(1, n_mts);
 for i_mt = 1 : n_mts
     string = sprintf("polarity[%i] ", i_mt - 1);
     polarity(i_mt) =  sscanf(values{contains(params, string)}, '%i');
 end
+max_sites = max(mt_lengths);
 n_dims = 2; % hard-coded for now; CyLaKS always outputs data in 2-D
 
 params = struct('dt',dt,'time_per_datapoint', time_per_datapoint, ...

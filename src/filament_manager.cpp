@@ -11,6 +11,21 @@ void FilamentManager::SetParameters() {
 void FilamentManager::GenerateFilaments() {
 
   // Create the appropriate number of protofilaments
+  if (Params::Filaments::axon_arrangement == true) {
+    protofilaments_.resize(Params::Filaments::count);
+    for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
+      protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
+    }
+    // Use "top" and "bot" neighbors to designate adjacent PFs in axon
+    for (int i_fil{1}; i_fil < protofilaments_.size() - 1; i_fil++) {
+      protofilaments_[i_fil].top_neighb_ = &protofilaments_[i_fil + 1];
+      protofilaments_[i_fil].bot_neighb_ = &protofilaments_[i_fil - 1];
+    }
+    size_t i_end{protofilaments_.size() - 1};
+    protofilaments_[0].top_neighb_ = &protofilaments_[1];
+    protofilaments_[i_end].bot_neighb_ = &protofilaments_[i_end - 1];
+    return;
+  }
   if (Params::Filaments::n_subfilaments <= 1) {
     protofilaments_.resize(Params::Filaments::count);
   } else {
@@ -120,6 +135,38 @@ void FilamentManager::UpdateForces() {
       pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
+  }
+  double F_factor{1e-5};
+  if (Params::Filaments::axon_arrangement) {
+    for (auto &&pf : protofilaments_) {
+      if (pf.top_neighb_ != nullptr) {
+        double overlap_start{pf.sites_[0].pos_[0]};
+        if (pf.top_neighb_->sites_[0].pos_[0] > overlap_start) {
+          overlap_start = pf.top_neighb_->sites_[0].pos_[0];
+        }
+        double overlap_end{pf.top_neighb_->sites_.back().pos_[0]};
+        if (pf.sites_.back().pos_[0] < overlap_end) {
+          overlap_end = pf.sites_.back().pos_[0];
+        }
+        double O{overlap_end - overlap_start};
+        if (O < 0.0) {
+          O = 0.0;
+        }
+        pf.force_[0] += pf.dx_ * O * F_factor;
+      }
+      if (pf.bot_neighb_ != nullptr) {
+        double overlap_start{pf.sites_[0].pos_[0]};
+        if (pf.bot_neighb_->sites_[0].pos_[0] > overlap_start) {
+          overlap_start = pf.bot_neighb_->sites_[0].pos_[0];
+        }
+        double overlap_end{pf.bot_neighb_->sites_.back().pos_[0]};
+        if (pf.sites_.back().pos_[0] < overlap_end) {
+          overlap_end = pf.sites_.back().pos_[0];
+        }
+        double O{overlap_end - overlap_start};
+        pf.force_[0] += pf.dx_ * O * F_factor;
+      }
+    }
   }
   if (Params::Filaments::wca_potential_enabled) {
     double r{protofilaments_[1].pos_[1] - protofilaments_[0].pos_[1]};

@@ -3,11 +3,12 @@ clear variables;
 %sim_name = 'shep_0.1nM_100nM_8_3000_0.6kT_3x_5x_3';
 %file_dir = "../";%out_final_xlinkOnlyLong";
 %sim_name = 'out_final_motorVelWeighted2/shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_1x_1x'
-output_folder = 'kymo_output_motorVelocityWeighted2';
+output_folder = 'kymo_output_xlinkDiffusionNorm';
 subfilaments = true; 
 
 %
 file_dir = '../out_final_motorVelWeighted2';
+file_dir = '../out_final_xlinkDiffusionNorm';
 %output_folder = '.';
 %name_format = 'shep_%gnM_%gnM_8_%i_0.6kT_3x_5x_%i';
 %name_format = 'shep_0.1nM_%gnM_8_%i_0.6kT_3x_5x_%i_motor_%gx';
@@ -16,6 +17,7 @@ file_dir = '../out_final_motorVelWeighted2';
 %name_format = 'shep_0.1nM_50nM_8_%i_0.6kT_3x_5x_%i';
 %name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
 name_format = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_%gx_%gx';
+name_format = 'shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_%gx';
 
 %vars_one = [0.1, 1];
 %vars_one = [0.75];
@@ -25,9 +27,9 @@ name_format = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_%gx_%gx';
 %vars_two = [1, 10, 50, 100, 250, 500, 1000];
 %vars_two = [30]
 %vars_two = [1000];
-vars_one = [0.1, 0.3, 1, 3, 10]; %vars_one = [1];
+vars_one = [0.0, 0.03, 0.1, 0.3, 1, 3, 10, 30]; %[0.1, 0.3, 1, 3, 10]; %vars_one = [1];
 %vars_two = [0.1, 0.3, 1, 3, 10];
-vars_two = [0.1, 0.3, 1, 3, 10, 30]; %vars_two = [1];
+vars_two = [0.03, 0.1, 0.3, 1, 3, 10, 30]; %[0.1, 0.3, 1, 3, 10, 30]; %vars_two = [1];
 seeds = [0];%, 1, 2, 3, 4, 5]; 
 %vars_tri = [1000];
 %vars_tri = [0.1, 0.3, 3, 10]; 
@@ -49,7 +51,12 @@ for i_var = 1:length(vars_one)
                 %sim_name = sprintf(name_format, var_one, var_two, seed, var_tri)
                 %sim_name = sprintf(name_format, var_one, seed, var_two, var_tri)
                 %sim_name = sprintf(name_format, var_one, seed)
-                sim_name = sprintf(name_format, var_one, var_two)
+                %sim_name = sprintf(name_format, var_one, var_two)
+                if i_var == 1
+                    sim_name = sprintf("shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_0.0x", var_two)
+                else
+                    sim_name = sprintf(name_format, var_two, var_one) %, seeds(i_seed));
+                end
                 %}
 
 dwell_time = 1;  % dwell time of theoretical camera

@@ -14,6 +14,7 @@ inline double t_snapshot; // Time between each data output; s
 inline double dynamic_equil_window; // Set to <=0 to disable dynamic equil; s
 inline size_t verbosity;            // Verbosity level; 0 (quiet) to 3 (max)
 namespace Filaments {
+inline bool axon_arrangement; // Are initializing an axon array?
 inline size_t count;          // Number of filaments in simulation
 inline size_t n_subfilaments; // For multiple protofilaments in a MT
 inline bool periodic_barrel;  // whether or not barrel wraps around completelty

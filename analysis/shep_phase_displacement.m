@@ -1,55 +1,71 @@
-% FIX ME -- very janky implementation of multi PFs at the moment
 
 clear variables;
+
+site_SID = 0;
+xlink_SID = 1;
+motor_SID = 2;
+endtag_boundary = 0; %500; %125;
+flux_win_size = 500;
+vel_limit_upper = 10000;
+vel_limit_lower = 0;
+
+xlink_analysis_only = false;
+
 
 seeds = [0];
 %{
 name = 'motorLife';
 sim_name_base = 'shep_0.1nM_%gnM_8_1000_0.6kT_3x_5x_0_motor_%gx';
 file_dir = '../out_final_motorLifetime';
-output_folder = 'plots_motorLifetime_arial';
+output_folder = 'plots_motorLifetime_0_noVelLimit';
 var1 = [10, 30, 100];
 var1Label = 'Motor concentration (nM)';
 var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative motor lifetime';
 %}
-
+%{
 name = 'motorVel';
-sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVel_%gx_%gx';
-file_dir = '../out_final_motor_velocity';
-output_folder = 'plots_motorVelocity';
-var1 = [0.1, 0.3, 1, 3];
+%sim_name_base = 'shep_0.0nM_0.1nM_%i_5000_0.6kT_0_motorMotility_%gx_%gx';
+sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_%gx_%gx';
+file_dir = '../out_final_motorVelWeighted2';
+%file_dir = '../out_final_motorMotility';
+output_folder = 'plots_motorVelocityWeighted2_0_noVelLimit';
+%output_folder = 'plots_motorMotility';
+var1 = [0.1, 0.3, 1, 3, 10]; %, 30];
 var1Label = 'Relative hydrolysis rate';
-var2 = [0.1, 0.3, 1, 3, 10];
+var2 = [0.1, 0.3, 1, 3, 10, 30];
 var2Label = 'Relative motor lifetime';
+%n_pfs = [8, 8, 8, 3, 3, 3];
 %}
 
 %{
 name = 'xlinkLife';
 sim_name_base = 'shep_%gnM_100nM_8_1000_0.6kT_3x_5x_0_xlink_%gx';
 file_dir = '../out_final_xlinkLifetime';
-output_folder = 'plots_xlinkLifetime_arial';
-var1 = [0.03, 0.1, 0.3, 1];
+output_folder = 'yerp'; %'plots_xlinkLifetime_0_noVelLimit';
+var1 = [0.01, 0.03, 0.1, 0.3, 1];
 var1Label = 'Crosslinker concentration (nM)';
 var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative crosslinker lifetime';
 %}
-%{
-name = 'xlinkDiff';
-sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_xlinkDiff_%gx_%gx';
-file_dir = '../out_final_xlinkDiffusion4';
-output_folder = 'plots_xlinkDiffusion4_arial';
-var1 = [0.1, 0.3, 1, 3, 10];
+
+name = 'xlinkDiffNorm';%'xlinkDiff';
+%sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_xlinkDiffNorm_%gx_%gx';
+sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_%gx';
+file_dir = '../out_final_xlinkDiffusionNorm';
+output_folder = 'plots_xlinkDiffusionNorm_0_noVelLimit';
+var1 = [0.0, 0.03, 0.1, 0.3, 1, 3, 10, 30];
+%var1 = [0.0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30];
 var1Label = 'Relative lateral diffusion';
-var2 = [0.1, 0.3, 1, 3, 10];
+var2 = [0.03, 0.1, 0.3, 1, 3, 10, 30];
 var2Label = 'Relative longitudinal diffusion';
 %}
 
-%{
+
 name = 'protoNum';
-sim_name_base = 'shep_0.1nM_50nM_%i_1000_%.1fkT_3x_5x_0';
-file_dir = '../out_final_proto';
-output_folder = 'plots_motor_protoNumber_arial';
+sim_name_base = 'shep_0.1nM_50nM_%i_5000_%.1fkT_3x_5x_0';
+file_dir = '../out_final_protoNum_5x';
+output_folder = 'plots_protoNumber_5x_50nM_0_noVelLimit';
 var1 = [1];
 var1Label = "";
 var2 = [1, 2, 3, 5, 8];
@@ -57,472 +73,477 @@ var2Label = "Protofilament Number";
 energies = [1.2, 0.8, 0.6, 0.6, 0.6];
 %}
 
+run_avg = zeros(length(var1), length(var2), 2);
+run_sem = zeros(length(var1), length(var2), 2);
+time_avg = zeros(length(var1), length(var2), 2);
+time_sem = zeros(length(var1), length(var2), 2);
+vel_avg = zeros(length(var1), length(var2), 2);
+vel_sem = zeros(length(var1), length(var2), 2);
+vel_geo_avg = zeros(length(var1), length(var2), 2);
+vel_geo_sem = zeros(length(var1), length(var2), 2);
+flux_plus = zeros(length(var1), length(var2), 2);
+flux_minus = zeros(length(var1), length(var2), 2);
+n_bound_avg = zeros(length(var1), length(var2), 2);
 
-run_avg = zeros(length(var1), length(var2));
-run_sd = zeros(length(var1), length(var2));
-time_avg = zeros(length(var1), length(var2));
-time_sd = zeros(length(var1), length(var2));
-vel_avg = zeros(length(var1), length(var2));
-vel_sd = zeros(length(var1), length(var2));
-vel_geo_avg = zeros(length(var1), length(var2));
-vel_geo_sd = zeros(length(var1), length(var2));
-
-xlink_SID = 1;
-chosen_SID = xlink_SID;
+%{
+run_theory = zeros(length(var1), length(var2));
+vel_theory = zeros(length(var1), length(var2));
+time_theory = zeros(length(var1), length(var2));
 for i_var = 1 : length(var1)
     for j_var = 1 : length(var2)
-        % for motor + xlink lifetimes
-        sim_name = sprintf(sim_name_base, var1(i_var), var2(j_var)) %, seeds(i_seed));
+            run_theory(i_var, j_var) = 179 * 0.0082 * var2(j_var);
+            vel_theory(i_var, j_var) = 8.2 * (1.0/(0.000520 + (0.01333/var1(i_var))));
+            time_theory(i_var, j_var) = 179 * var2(j_var) * (0.0009004 + (0.01333/var1(i_var)));
+    end
+end
+%}
+
+for i_var = 1 : length(var1)
+    for j_var = 1 : length(var2)
+        % for motor + xlink lifetimes + motor vel
+        %sim_name = sprintf(sim_name_base, var1(i_var), var2(j_var)) %, seeds(i_seed));
+        %sim_name = sprintf(sim_name_base, n_pfs(j_var), var1(i_var), var2(j_var)) %, seeds(i_seed));
         % for xlink diffusion
-        %sim_name = sprintf(sim_name_base, var2(j_var), var1(i_var)) %, seeds(i_seed));
+         % if i_var == 1
+         %     sim_name = sprintf("shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_0.0x", var2(j_var))
+         % else
+         %     sim_name = sprintf(sim_name_base, var2(j_var), var1(i_var)) %, seeds(i_seed));
+         % end
         % for protoNumer
-        %sim_name = sprintf(sim_name_base, var2(j_var), energies(j_var))
-
-        % Open log file and parse it into param labels & their values
-        %log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));
-        log_file = sprintf('%s/%s', file_dir, sprintf('%s.log', sim_name));
-        log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
-        params = log{1, 1};
-        values = log{1, 2};
-        % Read in number of MTs
-        n_mts = sscanf(values{contains(params, "count ")}, '%g');
-        if any(contains(params, "n_subfilaments") ~= 0)
-            n_sub = sscanf(values{contains(params, "n_subfilaments ")}, '%g');
-            if n_sub > n_mts
-                n_mts = n_sub;
-            end
+        sim_name = sprintf(sim_name_base, var2(j_var), energies(j_var))
+        try
+            params = load_parameters(sprintf('%s/%s', file_dir, sim_name));
+            catch_triggered = false;
+        catch
+            params = load_parameters(sprintf('%s/%s', file_dir, sprintf(sim_name_base, 5, energies(j_var))));
+            catch_triggered = true;
         end
-        if any(contains(params, "COUNT ") ~= 0)
-            n_mts = sscanf(values{contains(params, "COUNT ")}, '%g');
+        if catch_triggered
+            params.n_mts = 8;
+            disp("Catch triggered!");
         end
-        mt_lengths = zeros(1, n_mts);
-        for i_mt = 1 : n_mts
-            string = sprintf("n_sites[%i] ", i_mt - 1);
-            mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-            if any(contains(params, sprintf("N_SITES[%i] ", i_mt - 1)) ~= 0)
-                string = sprintf("N_SITES[%i] ", i_mt - 1);
-                mt_lengths(i_mt) = sscanf(values{contains(params, string)}, '%i');
-            end
-        end
-        n_sites = max(mt_lengths);
-        % Read in system params
-        dt = sscanf(values{contains(params, "dt ")}, '%g');
-        steps_per_datapoint = str2double(values{contains(params, "n_steps_per_snapshot ")});
-        time_per_datapoint = dt * steps_per_datapoint;
-        n_datapoints = str2double(values{contains(params, "n_datapoints ")});
-        % Use actual recorded number of datapoints to parse thru data/etc
-        if any(contains(params, "N_DATAPOINTS ") ~= 0)
-            n_datapoints = str2double(values{contains(params, "N_DATAPOINTS ")});
-        end
-        n_dims = 2;
-        site_size = 0.0082; % in um
         n_seeds = length(seeds);
+ 
+        % protein ID is unique; make following arrays serial w/ ID as index
+        active_proteins = zeros([2 params.n_mts params.n_mts * params.max_sites * 10]);
+        n_active = zeros([2 params.n_mts]);
+        starting_site = zeros([2 100 * params.n_mts * params.max_sites]) - 1;
+        starting_mt = zeros([2 100 * params.n_mts * params.max_sites]) - 1;
+        starting_datapoint = zeros([2 100 * params.n_mts * params.max_sites]) - 1;
+        runlengths = zeros([2 100 * n_seeds * params.n_mts * params.max_sites]);
+        lifetimes = zeros([2 100 * n_seeds  * params.n_mts * params.max_sites]);
+        velocities = zeros([2 100 * n_seeds  * params.n_mts * params.max_sites]);
+        n_runs = zeros([2 1]);
 
-        % motor ID is unique; make following arrays serial w/ ID as index
-        runlengths = zeros([(100 * n_seeds * n_mts * n_sites) 1]);
-        lifetimes = zeros([(100 * n_seeds  * n_mts * n_sites) 1]);
-        velocities = zeros([(100 * n_seeds  * n_mts * n_sites) 1]);
-        n_runs = 0;
-
+        midpoint = params.max_sites/2.0;
         for i_seed = 1:n_seeds
             if n_seeds > 1
                 disp("FIX SEEDS FIRST!!")
                 return
             end
             %sim_name = sprintf('%s_%i', sim_name_base, seeds(i_seed))
-
-            motorFileStruct = '%s_protein_id.file';
-            motorFileName = sprintf("%s/%s", file_dir, sprintf(motorFileStruct, sim_name));
-            motor_data_file = fopen(motorFileName);
-            raw_motor_data = fread(motor_data_file, n_mts * n_sites * n_datapoints, '*int');
-            fclose(motor_data_file);
-            motor_data = reshape(raw_motor_data, n_sites, n_mts, n_datapoints);
+            proteinFileStruct = '%s_protein_id.file';
+            proteinFileName = sprintf("%s/%s", file_dir, sprintf(proteinFileStruct, sim_name));
+            protein_data_file = fopen(proteinFileName);
+            if catch_triggered
+                raw_motor_data = fread(protein_data_file, '*int');
+                size_output = params.max_sites*params.n_mts;
+                len_data = size(raw_motor_data);
+                n_whole_outputs = floor(len_data/size_output);
+                n_whole_outputs = n_whole_outputs(1);
+                raw_motor_data = raw_motor_data(1:size_output*n_whole_outputs);
+                protein_data = reshape(raw_motor_data, params.max_sites, params.n_mts, n_whole_outputs);
+            else
+                raw_motor_data = fread(protein_data_file, params.n_mts * params.max_sites * params.n_datapoints, '*int');
+                protein_data = reshape(raw_motor_data, params.max_sites, params.n_mts, params.n_datapoints);
+            end
+            fclose(protein_data_file);
 
             occuFileStruct = '%s_occupancy.file';
             occuFileName = sprintf("%s/%s", file_dir, sprintf(occuFileStruct, sim_name));
             occu_data_file = fopen(occuFileName);
-            raw_occu_data = fread(occu_data_file, n_mts * n_sites * n_datapoints, '*int');
-            fclose(occu_data_file);
-            occupancy_data = reshape(raw_occu_data, n_sites, n_mts, n_datapoints);
+            if catch_triggered
+                raw_occu_data = fread(occu_data_file, '*int');
+                raw_occu_data = raw_occu_data(1:size_output*n_whole_outputs);
+                occupancy_data = reshape(raw_occu_data, params.max_sites, params.n_mts, n_whole_outputs);
+                params.n_datapoints = n_whole_outputs;
+            else
+                raw_occu_data = fread(occu_data_file, params.n_mts * params.max_sites * params.n_datapoints, '*int');
+                occupancy_data = reshape(raw_occu_data, params.max_sites, params.n_mts, params.n_datapoints);
+            end
+            fclose(occu_data_file);    
 
-            % have an active list for each MT
-            active_motors = zeros([n_mts n_mts * n_sites * 10]);
-            n_active = zeros([n_mts 1]);
-
-            starting_site = zeros([100 * n_mts * n_sites 1]) - 1;
-            starting_mt = zeros([100 * n_mts * n_sites 1]) - 1;
-            starting_datapoint = zeros([100 * n_mts * n_sites 1]) - 1;
-            for i_data = 1 : n_datapoints - 1
-                for i_mt = 1:1:n_mts
-                    motor_IDs = motor_data(:, i_mt, i_data);
-                    %future_IDs = motor_data(:, i_mt, i_data + 1);
-                    endtag_boundary = 0;
-
+            equil_factor = 0.5;
+            for i_data = 1 : params.n_datapoints - 1
+                if i_data >= params.n_datapoints*equil_factor
+                    for i_species = 1 : 1 : 2
+                        protein_IDs = protein_data(:, :, i_data);
+                        protein_IDs(occupancy_data(:, :, i_data) ~= i_species) = 0;
+                        protein_IDs(occupancy_data(:, :, i_data) == i_species) = 1;
+                        n_bound = sum(sum(protein_IDs));
+                        n_bound_avg(i_var, j_var, i_species) = n_bound_avg(i_var, j_var, i_species) + n_bound/((1.0-equil_factor)*params.n_datapoints);
+                    end
+                end
+                for i_mt = 1: 1 : params.n_mts
+                    protein_IDs = protein_data(:, i_mt, i_data);
                     % Scan through IDs of bound motors (-1 means no motor on that site)
-                    for i_site = 1:1:n_sites
-                        occupant = occupancy_data(i_site, i_mt, i_data);
-                        if occupant ~= chosen_SID
+                    for i_site = 1 : 1 : params.max_sites
+                        i_species = occupancy_data(i_site, i_mt, i_data);
+                        if i_species == site_SID || (xlink_analysis_only && i_species == motor_SID)
                             continue;
                         end
-                        motor_ID = motor_IDs(i_site);
-                        % Always count motor on first site
-                        if motor_ID > 0 && i_site == 1
-                            % Record the motor's starting site if this is the first time
+                        protein_ID = protein_IDs(i_site);
+                        if protein_ID <= 0
+                            disp("err");
+                            return
+                        end
+                        % Always count protein on first site
+                        if i_site == params.max_sites
+                            % Record the protein's starting site if this is the first time
                             % seeing it (-1 means it was not seen last datapoint)
-                            if starting_site(motor_ID) == -1
-                                starting_site(motor_ID) = i_site;
-                                starting_datapoint(motor_ID) = i_data;
-                                starting_mt(motor_ID) =  i_mt;
-                                n_active(i_mt) = n_active(i_mt) + 1;
-                                active_motors(i_mt, n_active(i_mt)) = motor_ID;
+                            if starting_site(i_species, protein_ID) == -1
+                                starting_site(i_species, protein_ID) = i_site;
+                                starting_datapoint(i_species, protein_ID) = i_data;
+                                starting_mt(i_species, protein_ID) =  i_mt;
+                                n_active(i_species, i_mt) = n_active(i_species, i_mt) + 1;
+                                active_proteins(i_species, i_mt, n_active(i_species, i_mt)) = protein_ID;
                             end
-                            % Otherwise if a motor is found, only count first head
-                        elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
+                        % Otherwise if a motor is found, only count first
+                        elseif protein_IDs(i_site + 1) ~= protein_ID
+                            % calculate flux
+                            if i_site >= midpoint - flux_win_size && i_site <= midpoint + flux_win_size
+                                for j_mt = i_mt : 1 : params.n_mts + i_mt - 1
+                                    if j_mt > params.n_mts
+                                        j_mt_adj = j_mt - params.n_mts;
+                                    else
+                                        j_mt_adj = j_mt;
+                                    end
+                                    future_site = find(protein_data(:, j_mt_adj, i_data + 1 ) == protein_ID, 1);
+                                    if ~isempty(future_site)
+                                        if (i_site < midpoint && i_site > midpoint - flux_win_size) && (future_site < midpoint + flux_win_size && future_site > midpoint)
+                                            flux_minus(i_var, j_var, i_species) = flux_minus(i_var, j_var, i_species) + 1.0/(params.t_run);
+                                        end
+                                        if (i_site < midpoint + flux_win_size && i_site > midpoint) && (future_site < midpoint && future_site > midpoint - flux_win_size)
+                                            flux_plus(i_var, j_var, i_species) = flux_plus(i_var, j_var, i_species) + 1.0/(params.t_run);
+                                        end
+                                        break;
+                                    end
+                                end
+                            end
                             % Record the motor's starting site if this is the first time
                             % seeing it (-1 means it was not seen last datapoint)
-                            if starting_site(motor_ID) == -1
-                                starting_site(motor_ID) = i_site;
-                                starting_datapoint(motor_ID) = i_data;
-                                starting_mt(motor_ID) =  i_mt;
-                                n_active(i_mt) = n_active(i_mt) + 1;
-                                active_motors(i_mt, n_active(i_mt)) = motor_ID;
+                            if starting_site(i_species, protein_ID) == -1
+                                starting_site(i_species, protein_ID) = i_site;
+                                starting_datapoint(i_species, protein_ID) = i_data;
+                                starting_mt(i_species, protein_ID) =  i_mt;
+                                n_active(i_species, i_mt) = n_active(i_species, i_mt) + 1;
+                                active_proteins(i_species, i_mt, n_active(i_species, i_mt)) = protein_ID;
                             end
                         end
                     end
                     % Check one datapoint into the future to see if any motors unbound
-                    n_deleted = 0;
-                    for i_motor = 1:1:n_active(i_mt)
-                        i_adj = i_motor - n_deleted;
-                        motor_ID = active_motors(i_mt, i_adj);
-                        unbound = true;
-                        for j_mt = 1 : 1 : n_mts
-                            future_site = find(motor_data(:, j_mt, i_data + 1 ) == motor_ID, 1);
-                            if ~isempty(future_site)
-                                unbound = false;
-                            end
-                        end
-                        %future_site = find(future_IDs == motor_ID, 1);
-                        if unbound
-                            % Calculate distance traveled
-                            end_site = -1;
-                            end_mt = -1;
-                            for j_mt = 1 : 1 : n_mts
-                                end_site = find(motor_data(:, j_mt, i_data) == motor_ID, 1);
-                                if ~isempty(end_site)
-                                    end_mt = j_mt;
-                                    break;
+                    for i_species = 1 : 1 : 2
+                        n_deleted = 0;
+                        for i_protein = 1:1:n_active(i_species, i_mt)
+                            i_adj = i_protein - n_deleted;
+                            protein_ID = active_proteins(i_species, i_mt, i_adj);
+                            unbound = true;
+                            for j_mt = i_mt : 1 : params.n_mts + i_mt - 1
+                                if j_mt > params.n_mts
+                                    j_mt_adj = j_mt - params.n_mts;
+                                else
+                                    j_mt_adj = j_mt;
+                                end
+                                future_site = find(protein_data(:, j_mt_adj, i_data + 1 ) == protein_ID, 1);
+                                if ~isempty(future_site)
+                                    % motors have high turnover rate; make sure they do not unbind+rebind in single step
+                                    if i_species == motor_SID
+                                        if j_mt == starting_mt(i_species, protein_ID) && future_site(1) < starting_site(i_species, protein_ID)
+                                            unbound = false;
+                                        end
+                                    else
+                                        unbound = false;
+                                    end
                                 end
                             end
-                            if isempty(end_site)
-                                disp('Error');
-                                return;
+                            if unbound
+                                % Calculate distance traveled
+                                end_site = -1;
+                                end_mt = -1;
+                                for j_mt = i_mt : 1 : params.n_mts + i_mt - 1
+                                    if j_mt > params.n_mts
+                                        j_mt_adj = j_mt - params.n_mts;
+                                    else
+                                        j_mt_adj = j_mt;
+                                    end
+                                    end_site = find(protein_data(:, j_mt_adj, i_data) == protein_ID, 1);
+                                    if ~isempty(end_site)
+                                        end_mt = j_mt_adj;
+                                        break;
+                                    end
+                                end
+                                if isempty(end_site)
+                                    disp('Error in finding end site');
+                                    return;
+                                end
+                                start_site = starting_site(i_species, protein_ID);
+                                delta = end_site(1) - start_site; % we want actual displacement, not MSD
+                                run_length = delta * params.site_size;
+                                % Calculate time bound
+                                start_datapoint = starting_datapoint(i_species, protein_ID);
+                                delta_time = i_data - start_datapoint;
+                                run_time = delta_time * params.time_per_datapoint;
+                                velocity = (run_length / run_time) * 1000; % convert to nm/s
+                                % If time bound is above time cutoff, add to data
+                                if end_site(1) > endtag_boundary && run_time >= params.time_per_datapoint && abs(velocity) > vel_limit_lower && abs(velocity) < vel_limit_upper
+                                    n_runs(i_species) = n_runs(i_species) + 1;
+                                    runlengths(i_species, n_runs(i_species)) = run_length;
+                                    lifetimes(i_species, n_runs(i_species)) = run_time;
+                                    velocities(i_species, n_runs(i_species)) = velocity;
+                                end
+                                starting_site(i_species, protein_ID) = -1;
+                                starting_datapoint(i_species, protein_ID) = -1;
+                                starting_mt(i_species, protein_ID) = -1;
+                                % Switch now-deleted entry with last entry in active_motors
+                                active_proteins(i_species, i_mt, i_adj) = active_proteins(i_species, i_mt, n_active(i_species, i_mt));
+                                active_proteins(i_species, i_mt, n_active(i_species, i_mt)) = -1;
+                                n_active(i_species, i_mt) = n_active(i_species, i_mt) - 1;
+                                n_deleted = n_deleted + 1;
                             end
-                            start_site = starting_site(motor_ID);
-                            delta = end_site(1) - start_site; % we want actual displacement, not MSD
-                            run_length = delta * site_size;
-                            % Calculate time bound
-                            start_datapoint = starting_datapoint(motor_ID);
-                            delta_time =i_data - start_datapoint;
-                            run_time = delta_time * time_per_datapoint;
-                            velocity = (abs(run_length) / run_time) * 1000; % make vel pos. only and convert to nm/s
-                            % If time bound is above time cutoff, add to data
-                            if end_site(1) > endtag_boundary && run_time > time_per_datapoint && velocity > 0 && velocity < 1000
-                                n_runs = n_runs + 1;
-                                runlengths(n_runs) = run_length;
-                                lifetimes(n_runs) = run_time;
-                                velocities(n_runs) = velocity;
-                            end
-                            starting_site(motor_ID) = -1;
-                            starting_datapoint(motor_ID) = -1;
-                            starting_mt(motor_ID) = -1;
-                            % Switch now-deleted entry with last entry in active_motors
-                            active_motors(i_mt, i_adj) = active_motors(i_mt, n_active(i_mt));
-                            active_motors(i_mt, n_active(i_mt)) = -1;
-                            n_active(i_mt) = n_active(i_mt) - 1;
-                            n_deleted = n_deleted + 1;
                         end
                     end
                 end
             end
         end
-        % trim arrays to get rid of un-used containers
-        runlengths = runlengths(1:n_runs);
-        lifetimes = lifetimes(1:n_runs);
-        velocities = velocities(1:n_runs);
+        % get statistics and generate histograms
+        [run_avg(i_var, j_var, xlink_SID), run_sem(i_var, j_var, xlink_SID)] = ...
+            get_stats(xlink_SID, runlengths, n_runs, 'normal', "Run length (um)", output_folder, sim_name, "run");
+        [time_avg(i_var, j_var, xlink_SID), time_sem(i_var, j_var, xlink_SID)] = ...
+            get_stats(xlink_SID, lifetimes, n_runs, 'exponential', "Lifetime (s)", output_folder, sim_name, "time");
+        [vel_avg(i_var, j_var, xlink_SID), vel_sem(i_var, j_var, xlink_SID)] = ...
+            get_stats(xlink_SID, velocities, n_runs, 'normal', "Velocity (nm/s)", output_folder, sim_name, "vel");
+        [vel_geo_avg(i_var, j_var, xlink_SID), vel_geo_sem(i_var, j_var, xlink_SID)] = ...
+            get_stats(xlink_SID, abs(velocities), n_runs, 'lognormal', "Geometric velocity (nm/s)", output_folder, sim_name, "velGeo");
+        [run_avg(i_var, j_var, motor_SID), run_sem(i_var, j_var, motor_SID)] = ...
+            get_stats(motor_SID, abs(runlengths), n_runs, 'exponential', "Run length (um)", output_folder, sim_name, "run");
+        [time_avg(i_var, j_var, motor_SID), time_sem(i_var, j_var, motor_SID)] = ...
+            get_stats(motor_SID, lifetimes, n_runs, 'exponential', "Lifetime (s)", output_folder, sim_name, "time");
+        [vel_avg(i_var, j_var, motor_SID), vel_sem(i_var, j_var, motor_SID)] = ...
+            get_stats(motor_SID, velocities, n_runs, 'normal', "Velocity (nm/s)", output_folder, sim_name, "vel");
+        %fprintf("(Xlinks) Run: %.2f ± %.2f | Time: %.2f ± %.2f | Vel: %.2f ± %.2f\n", avg_run_xlinks, err_run_xlinks, avg_time_xlinks, err_time_xlinks, avg_vel_xlinks, err_vel_xlinks)
+        %fprintf("(Motors) Run: %.2f ± %.2f | Time: %.2f ± %.2f | Vel: %.2f ± %.2f\n", avg_run_motors, err_run_motors, avg_time_motors, err_time_motors, avg_vel_motors, err_vel_motors)
 
-        avg_run = sum(runlengths) / n_runs;
-        err_run = std(runlengths) / sqrt(n_runs);
-        avg_time = sum(lifetimes) / n_runs;
-        err_time = std(lifetimes) / sqrt(n_runs);
-        avg_vel = sum(velocities) / n_runs;
-        err_vel = std(velocities) / sqrt(n_runs);
-        fprintf("Run: %.2f ± %.2f | Time: %.2f ± %.2f | Vel: %.2f ± %.2f\n", avg_run, err_run, avg_time, err_time, avg_vel, err_run)
-
-        % runlengths - normal
-        run_dist = fitdist(runlengths, 'normal');
-        mean_run = run_dist.mean;
-        sigma_run = run_dist.std;
-        if(abs(avg_run - mean_run) > 1e-6)
-            disp("Error in runlength calculations")
-            return
-        end
-        conf_inv_run = paramci(run_dist);
-        stderr_run = (conf_inv_run(2) - conf_inv_run(1)) / 4; % get std_err
-        % lifetimes - exponential
-        min_time = min(lifetimes);
-        lifetimes_adj = lifetimes - min_time; % exp. function always goes to zero; need to adjust
-        time_dist = fitdist(lifetimes_adj, 'exponential');
-        mean_time = time_dist.mean + min_time;
-        sigma_time = time_dist.std;
-        if(abs(avg_time - mean_time) > 1e-6)
-            disp("Error in lifetime calculations")
-            return
-        end
-        conf_inv_time = paramci(time_dist);
-        stderr_time = (conf_inv_time(2) - conf_inv_time(1)) / 4; % get std_err
-        % velocities - lognormal
-        vel_dist = fitdist(velocities, 'lognormal');
-        mean_vel = vel_dist.mean;
-        sigma_vel = vel_dist.std;
-        conf_inv_vel = paramci(vel_dist);
-        stderr_vel = (conf_inv_vel(2) - conf_inv_vel(1)) / 4; % get std_err
-        mean_vel_geo = exp(vel_dist.mu);
-        sigma_vel_geo = exp(vel_dist.sigma);
-
-        % save statistics;
-        run_avg(i_var, j_var) = mean_run;
-        run_sd(i_var, j_var) = sigma_run;
-        time_avg(i_var, j_var) = mean_time;
-        time_sd(i_var, j_var) = sigma_time;
-        vel_avg(i_var, j_var) = mean_vel;
-        vel_sd(i_var, j_var) = sigma_vel;
-        vel_geo_avg(i_var, j_var) = mean_vel_geo;
-        vel_geo_sd(i_var, j_var) = sigma_vel_geo;
-
-        % plot figures
-        n_bins = int32(sqrt(n_runs));
-        % runlengths
-        runs = figure('Position', [50, 50, 720, 600]);
-        set(gcf, 'DefaultAxesFontName', 'Arial');
-        set(gcf, 'DefaultTextFontName', 'Arial');
-        h = histfit(runlengths, n_bins, 'normal');
-        % Display fit statistics
-        dim1 = [0.625 0.7 0.2 0.2];
-        str1 = sprintf('Mean = %#.2f ± %#.2f um', mean_run, stderr_run);
-        dim2 = [0.625 0.65 0.2 0.2];
-        str2 = sprintf('SD = %#.2f um', sigma_run);
-        dim3 = [0.625 0.6 0.2 0.2];
-        str3 = sprintf('N = %i', n_runs);
-        annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        % Cosmetic stuff
-        title(sprintf('%s', sim_name),'Interpreter', 'none');
-        xlabel('Run length (um)');
-        ylabel('Counts');
-        set(gca,'box','off')
-        set(gca, 'FontSize', 14);
-        set(gca,'TickDir','out');
-        set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-        h(1).FaceColor = [0 0 0];
-        h(1).EdgeColor = 'none';
-        h(1).BarWidth = 0.5;
-        h(2).LineWidth = 3;
-
-        %lifetimes
-        times = figure('Position', [75, 75, 720, 600]);
-        set(gcf, 'DefaultAxesFontName', 'Arial');
-        set(gcf, 'DefaultTextFontName', 'Arial');
-        h = histfit(lifetimes, n_bins, 'exponential');
-        % Display fit statistics
-        dim1 = [0.625 0.7 0.2 0.2];
-        str1 = sprintf('Mean = %#.2f ± %#.2f s', mean_time, stderr_time);
-        dim2 = [0.625 0.65 0.2 0.2];
-        str2 = sprintf('SD = %#.2f s', sigma_time);
-        dim3 = [0.625 0.6 0.2 0.2];
-        str3 = sprintf('N = %i', n_runs);
-        annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        % Cosmetic stuff
-        title(sprintf('%s', sim_name),'Interpreter', 'none');
-        xlabel('Lifetime (s)');
-        ylabel('Counts');
-        set(gca,'box','off')
-        set(gca, 'FontSize', 14);
-        set(gca, 'FontName', 'Arial');
-        set(gca,'TickDir','out');
-        set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-        h(1).FaceColor = [0 0 0];
-        h(1).EdgeColor = 'none';
-        h(1).BarWidth = 0.5;
-        h(2).LineWidth = 3;
-
-        % velocities
-        vels = figure('Position', [100, 100, 720, 600]);
-        set(gcf, 'DefaultAxesFontName', 'Arial');
-        set(gcf, 'DefaultTextFontName', 'Arial');
-        h = histfit(velocities, n_bins, 'lognormal');
-        % Display fit statistics
-        dim1 = [0.625 0.7 0.2 0.2];
-        str1 = sprintf('Mean = %#.2f ± %#.2f nm/s', mean_vel, stderr_vel);
-        dim2 = [0.625 0.65 0.2 0.2];
-        str2 = sprintf('SD = %#.2f nm/s', sigma_vel);
-        dim3 = [0.625 0.6 0.2 0.2];
-        str3 = sprintf('Geo Mean = %#.2f nm/s', mean_vel_geo);
-        dim4 = [0.625 0.55 0.2 0.2];
-        str4 = sprintf('Geo SD = %#.2f nm/s', sigma_vel_geo);
-        dim5 = [0.625 0.5 0.2 0.2];
-        str5 = sprintf('N = %i', n_runs);
-        annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim4, 'String', str4, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        annotation('textbox', dim5, 'String', str5, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14);
-        % Cosmetic stuff
-        title(sprintf('%s', sim_name),'Interpreter', 'none');
-        xlabel('Velocity (nm/s)');
-        ylabel('Counts');
-        xlim([0 max(velocities)]);
-        set(gca,'box','off')
-        set(gca, 'FontSize', 14);
-        set(gca, 'FontName', 'Arial');
-        set(gca,'TickDir','out');
-        set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-        h(1).FaceColor = [0 0 0];
-        h(1).EdgeColor = 'none';
-        h(1).BarWidth = 0.5;
-        h(2).LineWidth = 3;
-
-        saveas(runs, sprintf('%s/%s_runs.png', output_folder, sim_name), 'png');
-        saveas(runs, sprintf('%s/%s_runs.svg', output_folder, sim_name), 'svg');
-        saveas(times, sprintf('%s/%s_times.png', output_folder, sim_name), 'png');
-        saveas(times, sprintf('%s/%s_times.svg', output_folder, sim_name), 'svg');
-        saveas(vels, sprintf('%s/%s_vel.png', output_folder, sim_name), 'png');
-        saveas(vels, sprintf('%s/%s_vel.svg', output_folder, sim_name), 'svg');
-        close(runs);
-        close(times);
-        close(vels);
     end
 end
 %}
+net_flux = flux_plus - flux_minus;
+if strcmp(name,'protoNum') == 1
+    disp("Normalizing flux values for protofilament number!");
+    for i = 1 : length(var2)
+       net_flux(1, i, :) = net_flux(1, i, :) * 8 / var2(i);
+       n_bound_avg(1, i, :) = n_bound_avg(1, i, :) * 8 / var2(i);
+    end
+end
 
-phase_run = figure('Position', [50, 100, 720, 540]);
-hm = heatmap(abs(run_avg), 'ColorLimits', [0 max(abs(run_avg), [],'all')], 'FontName', 'Arial');
+% phase_runTh = figure('Position', [50, 100, 720, 540]);
+% hm = heatmap(run_theory, 'ColorLimits', [0 max(run_theory, [],'all')], 'FontName', 'Arial');
+% hm.YDisplayData=flip(hm.YDisplayData);
+% phase_velTh = figure('Position', [50, 100, 720, 540]);
+% hm = heatmap(vel_theory, 'ColorLimits', [0 max(vel_theory, [],'all')], 'FontName', 'Arial');
+% hm.YDisplayData=flip(hm.YDisplayData);
+% phase_timeTh = figure('Position', [50, 100, 720, 540]);
+% hm = heatmap(time_theory, 'ColorLimits', [0 max(time_theory, [],'all')], 'FontName', 'Arial');
+% hm.YDisplayData=flip(hm.YDisplayData);
+
+for SID =  1 : 1 : 2
+    make_phase(abs(run_avg), var1, var2, var1Label, var2Label, "displacement (um)", output_folder, "run", name, SID)
+    make_phase(time_avg, var1, var2, var1Label, var2Label, "lifetime (s)", output_folder, "time", name, SID)
+    make_phase(abs(vel_avg), var1, var2, var1Label, var2Label, "velocity (nm/s)", output_folder, "vel", name, SID)
+    make_phase(net_flux, var1, var2, var1Label, var2Label, "flux (1/s)", output_folder, "flux", name, SID)
+    make_phase(n_bound_avg, var1, var2, var1Label, var2Label, "number bound", output_folder, "num", name, SID)
+    make_plot(abs(run_avg), var1, var2, var1Label, var2Label, "displacement (um)", output_folder, "run", name, SID);
+    make_plot(time_avg, var1, var2, var1Label, var2Label, "lifetime (s)", output_folder, "time", name, SID);
+    make_plot(abs(vel_avg), var1, var2, var1Label, var2Label, "velocity (nm/s)", output_folder, "vel", name, SID);
+    make_plot(net_flux, var1, var2, var1Label, var2Label, "flux (1/s)", output_folder, "flux", name, SID);
+    make_plot(n_bound_avg, var1, var2, var1Label, var2Label, "number bound", output_folder, "num", name, SID);
+    if SID == xlink_SID
+        make_phase(abs(vel_geo_avg), var1, var2, var1Label, var2Label, "geometric velocity (nm/s)", output_folder, "velGeo", name, SID)
+        make_plot(abs(vel_geo_avg), var1, var2, var1Label, var2Label, "geometric velocity (nm/s)", output_folder, "velGeo", name, SID);
+    end
+end
+
+function [avg, sem] = get_stats(SID, data_arr, n_runs_arr, distribution, dataLabel, output_folder, sim_name, plotname)
+n_runs = n_runs_arr(SID);
+data = data_arr(SID, 1:n_runs);
+if strcmp(distribution, 'lognormal') == 1
+    avg = exp(sum(log(data)) / n_runs);
+    sd = exp(std(log(data)));
+    sem = sd / sqrt(n_runs);
+else
+    avg = sum(data) / n_runs;
+    sd = std(data);
+    sem = sd / sqrt(n_runs);
+end
+if n_runs < 10
+    disp("Not enough statistics for histogram fitting")
+    return
+end
+if strcmp(distribution, 'exponential') == 1
+    min_val = min(data);
+    data = data - min_val; 
+end
+pd = fitdist(data', distribution);
+conf_inv = paramci(pd);
+if strcmp(distribution, 'normal') == 1
+    mu = pd.mu;
+    sigma = pd.sigma;
+    stderr = (conf_inv(2) - conf_inv(1)) / (2*1.96); % get std_err
+elseif strcmp(distribution, 'exponential') == 1
+    mu = pd.mu + min_val;
+    sigma = nan;
+    stderr = (conf_inv(2) - conf_inv(1)) / (2*1.96); % get std_err
+elseif strcmp(distribution, 'lognormal') == 1
+    mu = exp(pd.mu);
+    sigma = exp(pd.sigma);
+    stderr = (exp(conf_inv(2)) - exp(conf_inv(1))) / (2*1.96); % get std_err
+else
+    disp("unrecognized probability distribution")
+    return
+end
+if abs(avg - mu) > 1e-6
+    fprintf("Error calculating %s for species %i\n", dataLabel, SID)
+    avg = nan;
+    sem = nan;
+    return;
+end
+switch plotname
+    case 'run'
+        bin_lower_lim = 0.1;
+    case 'time'
+        bin_lower_lim = 0.2;
+    case 'vel'
+        bin_lower_lim = 50;
+    case 'velGeo'
+        bin_lower_lim = 50;
+    otherwise 
+        disp('error')
+        return
+end
+if SID == 1
+    speciesLabel = "xlink";
+elseif SID == 2
+    speciesLabel = "motor";
+end
+fig = figure('Position', [50 50 720 600]);
+set(gcf, 'DefaultAxesFontName', 'Arial');
+set(gcf, 'DefaultTextFontName', 'Arial');
+bin_width = max(bin_lower_lim, 2*iqr(data)/(n_runs^(1/3)));
+n_bins = ceil((max(data) - min(data))/bin_width);
+h = histfit(data, n_bins, distribution);
+h(1).FaceAlpha = 0.5;
+h(1).EdgeAlpha = 0.5;
+h(1).FaceColor = [0 0 0];
+h(1).EdgeColor = 'none';
+h(1).BarWidth = 0.75;
+h(2).LineWidth = 3;
+xlim([min(0, min(data)) max(data)])
+xlabel(sprintf("%s of %ss", dataLabel, speciesLabel));
+ylabel("Count");
+dim1 = [0.625 0.7 0.2 0.2];
+str1 = sprintf('Avg = %#.3g ± %#.2g', avg, sem);
+dim2 = [0.625 0.65 0.2 0.2];
+str2 = sprintf('Std = %#.3g', sd);
+dim3 = [0.625 0.6 0.2 0.2];
+str3 = sprintf('Mu = %#.3g ± %#.2g', mu, stderr);
+dim4 = [0.625 0.55 0.2 0.2];
+str4 = sprintf('Sigma = %#.3g', sigma);
+dim5 = [0.625 0.5 0.2 0.2];
+str5 = sprintf('N = %i', n_runs);
+dim6 = [0.625 0.45 0.2 0.2];
+str6 = sprintf('Bin width = %#.3g', bin_width);
+annotation('textbox', dim1, 'String', str1, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+annotation('textbox', dim2, 'String', str2, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+annotation('textbox', dim4, 'String', str4, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+annotation('textbox', dim5, 'String', str5, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+annotation('textbox', dim6, 'String', str6, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 14, "FontName", "Arial");
+set(gca,'box','off')
+set(gca, 'FontSize', 18);
+set(gca, 'FontName', 'Arial');
+set(gca,'TickDir','out');
+set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
+title(sprintf("%s (%ss)", sim_name, speciesLabel),'Interpreter', 'none', "FontName", "Arial", "FontSize", 10);
+exportgraphics(fig, sprintf('%s/%s_%s_%s.png', output_folder, sim_name, speciesLabel, plotname),'ContentType','image');
+exportgraphics(fig, sprintf('%s/%s_%s_%s.pdf', output_folder, sim_name, speciesLabel, plotname),'ContentType','vector');
+%saveas(fig, sprintf('%s/%s_%s_%s.svg', output_folder, sim_name, speciesLabel, plotname),'svg');
+%saveas(fig, sprintf('%s/%s_%s_%s.png', output_folder, sim_name, speciesLabel, plotname),'png');
+close(fig);
+%fprintf("%.3g +/- %.1g\n", mu, stderr);
+%fprintf("%.3g +/- %.1g\n", avg, sem);
+end
+
+function make_phase(data, var1, var2, var1Label, var2Label, dataLabel, output_folder, plotname, name, SID)
+data = data(:, :, SID);
+if SID == 1
+    speciesLabel = "MAP";
+elseif SID == 2
+    speciesLabel = "motor";
+else
+    disp("Error saving files.")
+    return;
+end
+fig = figure('Position', [50, 100, 720, 540]);
+hm = heatmap(data, 'ColorLimits', [0 max(data, [],'all')], 'FontName', 'Arial');
 hm.YDisplayLabels = num2str( var1' );
 hm.YLabel = var1Label; 
 hm.XDisplayLabels = num2str( var2' );
 hm.XLabel = var2Label;
-hm.CellLabelFormat = '%.2f';
+hm.CellLabelFormat = '%.3g';
 hm.YDisplayData=flip(hm.YDisplayData);
 hm.GridVisible = 'off';
-hs = struct(hm);
-set(gca, 'FontSize', 16);
-ylabel(hs.Colorbar, "Average MAP displacement (um)", 'FontSize', 20);
+hm.Units = 'centimeters'; 
+hm.Position(3:4) = min(hm.Position(3:4))*[1,1]; % make heatmap square
+set(gca, "FontSize", 16);
+set(gca, "FontName", "Arial");
+ylabel(hm.NodeChildren(2), "Average " + speciesLabel + " " + dataLabel, "FontSize", 18, "FontName", "Arial");
+saveas(fig, sprintf('%s/phase_%s_%s_%s.png', output_folder, speciesLabel, plotname, name), 'png');
+saveas(fig, sprintf('%s/phase_%s_%s_%s.svg', output_folder, speciesLabel, plotname, name), 'svg');
+end
 
-phase_time = figure('Position', [50, 100, 720, 540]);
-hm = heatmap(time_avg, 'ColorLimits', [0 max(time_avg, [],'all')], 'FontName', 'Arial');
-hm.YDisplayLabels = num2str( var1' );
-hm.YLabel = var1Label; 
-hm.XDisplayLabels = num2str( var2' );
-hm.XLabel = var2Label;
-hm.CellLabelFormat = '%.2f';
-hm.YDisplayData=flip(hm.YDisplayData);
-hm.GridVisible = 'off';
-hs = struct(hm);
-set(gca, 'FontSize', 16);
-ylabel(hs.Colorbar, "Average MAP lifetime (s)", 'FontSize', 20);
-
-phase_vel = figure('Position', [50, 100, 720, 540]);
-hm = heatmap(vel_avg, 'ColorLimits', [0 max(vel_avg, [],'all')], 'FontName', 'Arial');
-hm.YDisplayLabels = num2str( var1' );
-hm.YLabel = var1Label; 
-hm.XDisplayLabels = num2str( var2' );
-hm.XLabel = var2Label;
-hm.CellLabelFormat = '%.2f';
-hm.YDisplayData=flip(hm.YDisplayData);
-hm.GridVisible = 'off';
-hs = struct(hm);
-set(gca, 'FontSize', 16);
-ylabel(hs.Colorbar, "Average MAP velocity (nm/s)", 'FontSize', 20);
-
-%plot_run = figure('Position', [50 50 720 540]);
-plot_run = figure('Position', [50 50 720 600]);
-set(gcf, 'DefaultAxesFontName', 'Arial');
-set(gcf, 'DefaultTextFontName', 'Arial');
-%plot(abs(run_avg'), '.', 'MarkerSize', 50)
-plot([1 2 3 5 8],abs(run_avg'), '.', 'MarkerSize', 50)
-xticks(1:length(var2));
-xticklabels(num2str( var2' ));
+function make_plot(data, var1, var2, var1Label, var2Label, dataLabel, output_folder, plotname, name, SID)
+data = data(:, :, SID);
+if SID == 1
+    speciesLabel = "MAP";
+elseif SID == 2
+    speciesLabel = "motor";
+else
+    disp("Error saving files.")
+    return;
+end
+fig = figure('Position', [50 50 960 540]);
+if strcmp(name,'protoNum') == 1
+    plot([1 2 3 5 8], data', '.', 'MarkerSize', 50)
+    xticks([1 2 3 5 8])
+    xlim([0 10]);
+else
+    plot(data', '.', 'MarkerSize', 50)
+    xticks(1:length(var2));
+    xticklabels(num2str( var2' ));
+    xlim([0 length(var2)+1]);
+end
+ylim([0 1.15*max(data)]);
 xlabel(var2Label);
-ylim([0 inf]);
-ylabel("Average MAP displacement (um)");
+ylabel("Average " + speciesLabel + " " + dataLabel);
 legendLabel = num2str( var1' );
-legend(legendLabel, 'Location', 'northeastoutside');
+leg = legend(legendLabel, 'Location', 'northeastoutside');
+title(leg, var1Label);
+set(gca, 'FontName', 'Arial')
+set(gca, 'FontSize', 18);
 set(gca,'box','off')
-%set(gca, 'FontSize', 18);
-set(gca, 'FontSize', 28);
 set(gca,'TickDir','out');
 set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-xlim([0 10]);
-xticks([1 2 3 5 8])
+pbaspect([1 1 1]);
+saveas(fig, sprintf('%s/plot_%s_%s_%s.png', output_folder, speciesLabel, plotname, name), 'png');
+saveas(fig, sprintf('%s/plot_%s_%s_%s.svg', output_folder, speciesLabel, plotname, name), 'svg');
+end
 
-
-%plot_time = figure('Position', [50 50 720 540]);
-plot_time = figure('Position', [50 50 720 600]);
-set(gcf, 'DefaultAxesFontName', 'Arial');
-set(gcf, 'DefaultTextFontName', 'Arial');
-%plot(time_avg', '.', 'MarkerSize', 50)
-plot([1 2 3 5 8],abs(time_avg'), '.', 'MarkerSize', 50)
-hold on
-xticks(1:length(var2));
-xticklabels(num2str( var2' ));
-xlabel(var2Label);
-ylim([0 inf]);
-ylabel("Average MAP lifetime (s)");
-legendLabel = num2str( var1' );
-legend(legendLabel, 'Location', 'northeastoutside');
-set(gca,'box','off')
-%set(gca, 'FontSize', 18);
-set(gca, 'FontSize', 28);
-set(gca,'TickDir','out');
-set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-xlim([0 10]);
-xticks([1 2 3 5 8])
-
-%plot_vel = figure('Position', [50 50 720 540]);
-plot_vel = figure('Position', [50 50 720 600]);
-set(gcf, 'DefaultAxesFontName', 'Arial');
-set(gcf, 'DefaultTextFontName', 'Arial');
-%plot(vel_avg', '.', 'MarkerSize', 50)
-plot([1 2 3 5 8],abs(vel_avg'), '.', 'MarkerSize', 50)
-hold on
-xticks(1:length(var2));
-xticklabels(num2str( var2' ));
-xlabel(var2Label);
-ylim([0 inf]);
-ylabel("Average MAP velocity (nm/s)");
-legendLabel = num2str( var1' );
-legend(legendLabel, 'Location', 'northeastoutside');
-set(gca,'box','off')
-%set(gca, 'FontSize', 18);
-set(gca, 'FontSize', 28);
-set(gca,'TickDir','out');
-set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
-xlim([0 10]);
-xticks([1 2 3 5 8])
-
-saveas(phase_run, sprintf('%s/phase_run_%s.png', output_folder, name), 'png');
-saveas(phase_run, sprintf('%s/phase_run_%s.svg', output_folder, name), 'svg');
-saveas(phase_time, sprintf('%s/phase_time_%s.png', output_folder, name), 'png');
-saveas(phase_time, sprintf('%s/phase_time_%s.svg', output_folder, name), 'svg');
-saveas(phase_vel, sprintf('%s/phase_vel_%s.png', output_folder, name), 'png');
-saveas(phase_vel, sprintf('%s/phase_vel_%s.svg', output_folder, name), 'svg');
-saveas(plot_run, sprintf('%s/plot_run_%s.png', output_folder, name), 'png');
-saveas(plot_run, sprintf('%s/plot_run_%s.svg', output_folder, name), 'svg');
-saveas(plot_time, sprintf('%s/plot_time_%s.png', output_folder, name), 'png');
-saveas(plot_time, sprintf('%s/plot_time_%s.svg', output_folder, name), 'svg');
-saveas(plot_vel, sprintf('%s/plot_vel_%s.png', output_folder, name), 'png');
-saveas(plot_vel, sprintf('%s/plot_vel_%s.svg', output_folder, name), 'svg');
-
-close all;

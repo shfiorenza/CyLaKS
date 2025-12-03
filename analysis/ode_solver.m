@@ -12,6 +12,6 @@ cond1 = y(0) == 0.5;
 cond2 = y(1) == 0.5;
 conds = [cond1 cond2];
 
-ySol = dsolve(ode, cond1)
+ySol = dsolve(ode, cond1);
 
 fplot(ySol, [0 1])

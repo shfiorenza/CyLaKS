@@ -72,6 +72,8 @@ void Protofilament::UpdateRodPosition() {
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
+  // noise_par = noise_perp = noise_rot = 0.0;
+
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
   Vec2D<double> rod_basis{GetOrthonormalBasis(orientation_)};

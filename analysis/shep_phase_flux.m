@@ -13,13 +13,17 @@ var1Label = 'Motor concentration (nM)';
 var2 = [0.1, 0.3, 1, 3, 10];
 var2Label = 'Relative motor lifetime';
 %}
+
 name = 'motorVel';
-sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVel_%gx_%gx';
-file_dir = '../out_final_motor_velocity';
-output_folder = 'plots_motorVelocity';
-var1 = [0.1, 0.3, 1, 3];
+sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_0_motorVelConstNum_%gx_%gx';
+%sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVel_%gx_%gx';
+file_dir = '../out_final_motorVel_constNum';
+output_folder = 'plots_motorVelocityConstNum';
+%file_dir = '../out_final_motor_velocity';
+%output_folder = 'plots_motorVelocity';
+var1 = [0.1, 0.3, 1, 3, 10, 30];
 var1Label = 'Relative hydrolysis rate';
-var2 = [0.1, 0.3, 1, 3, 10];
+var2 = [0.1, 0.3, 1, 3, 10, 30];
 var2Label = 'Relative motor lifetime';
 %}
 
@@ -35,12 +39,13 @@ var2Label = 'Relative crosslinker lifetime';
 %}
 %{
 name = 'xlinkDiff';
-sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_xlinkDiff_%gx_%gx';
-file_dir = '../out_final_xlinkDiffusion4';
-output_folder = 'plots_flux';
-var1 = [0.1, 0.3, 1, 3, 10];
+%sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_xlinkDiff_%gx_%gx';
+sim_name_base = 'shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_%gx';
+file_dir = '../out_final_xlinkDiffusionNorm';
+output_folder = 'plots_xlinkDiffusionNorm';
+var1 = [0.0, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 3, 10, 30];
 var1Label = 'Relative lateral diffusion';
-var2 = [0.1, 0.3, 1, 3, 10];
+var2 = [0.03, 0.1, 0.3, 1, 3, 10, 30];
 var2Label = 'Relative longitudinal diffusion';
 %}
 %{
@@ -64,10 +69,14 @@ flux_minus = zeros(length(var1), length(var2));
 
 for i_var = 1 : length(var1)
     for j_var = 1 : length(var2)
-        % for motor + xlink lifetimes
+        % for motor + xlink lifetimes + motor vel
         sim_name = sprintf(sim_name_base, var1(i_var), var2(j_var)) %, seeds(i_seed));
         % for xlink diffusion
-        %sim_name = sprintf(sim_name_base, var2(j_var), var1(i_var)) %, seeds(i_seed));
+        % if i_var == 1
+        %     sim_name = sprintf("shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_0.0x", var2(j_var))
+        % else
+        %     sim_name = sprintf(sim_name_base, var2(j_var), var1(i_var)) %, seeds(i_seed));
+        % end
         % for protoNumer
         %sim_name = sprintf(sim_name_base, var2(j_var), energies(j_var))
 
@@ -112,8 +121,7 @@ for i_var = 1 : length(var1)
         site_size = 0.0082; % in um
         n_seeds = length(seeds);
 
-        midpoint = n_sites/2.0;
-        win_size = 50;
+
 
         for i_seed = 1:n_seeds
             if n_seeds > 1
@@ -169,13 +177,13 @@ for i_var = 1 : length(var1)
 end
 net_flux = flux_plus - flux_minus
 %}
-for i = 1 : length(var2)
-    net_flux(i) = net_flux(i) * 8 / var2(i);
+if strcmp(name,'protoNum') == 1
+    for i = 1 : length(var2)
+       net_flux(i) = net_flux(i) * 8 / var2(i);
+    end
 end
 
-
-
-phase = figure('Position', [50, 100, 720, 540]);
+phase_flux = figure('Position', [50, 100, 720, 540]);
 hm = heatmap(net_flux, 'ColorLimits', [0 max(net_flux, [],'all')], 'FontName', 'Arial');
 hm.YDisplayLabels = num2str( var1' );
 hm.YLabel = var1Label; 
@@ -187,33 +195,33 @@ hm.GridVisible = 'off';
 hs = struct(hm);
 set(gca, 'FontSize', 16);
 ylabel(hs.Colorbar, "Average MAP flux (1/s)", 'FontSize', 20);
-%}
 
 
-%plot_run = figure('Position', [50 50 720 540]);
-plot_flux = figure('Position', [50 50 720 600]);
+
+plot_flux = figure('Position', [50 50 720 540]);
+%plot_flux = figure('Position', [50 50 720 600]);
 set(gcf, 'DefaultAxesFontName', 'Arial');
 set(gcf, 'DefaultTextFontName', 'Arial');
-%plot(net_flux', '.', 'MarkerSize', 50)
-plot([1 2 3 5 8],net_flux', '.', 'MarkerSize', 50)
+plot(net_flux', '.', 'MarkerSize', 50)
+%plot([1 2 3 5 8],net_flux', '.', 'MarkerSize', 50)
 xticks(1:length(var2));
 xticklabels(num2str( var2' ));
 xlabel(var2Label);
 ylim([0 inf]);
 ylabel("Average MAP flux (1/s)");
 legendLabel = num2str( var1' );
-%legend(legendLabel, 'Location', 'northeastoutside');
+legend(legendLabel, 'Location', 'northeastoutside');
 set(gca,'box','off')
-%set(gca, 'FontSize', 18);
-set(gca, 'FontSize', 28);
+set(gca, 'FontSize', 18);
+%set(gca, 'FontSize', 28);
 set(gca,'TickDir','out');
 set(gca,'LineWidth',1,'TickLength',[0.025 0.025]);
 xlim([0 10]);
-xticks([1 2 3 5 8])
+%xticks([1 2 3 5 8])
 %}
 
-saveas(phase, sprintf('%s/phase_flux_%s.svg', output_folder, name), 'svg');
-saveas(phase, sprintf('%s/phase_flux_%s.png', output_folder, name), 'png');
+saveas(phase_flux, sprintf('%s/phase_flux_%s.svg', output_folder, name), 'svg');
+saveas(phase_flux, sprintf('%s/phase_flux_%s.png', output_folder, name), 'png');
 saveas(plot_flux, sprintf('%s/plot_flux_%s.svg', output_folder, name), 'svg');
 saveas(plot_flux, sprintf('%s/plot_flux_%s.png', output_folder, name), 'png');
 %close all

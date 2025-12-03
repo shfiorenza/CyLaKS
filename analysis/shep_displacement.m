@@ -11,9 +11,11 @@ file_dir = '..';
 %sim_name_base = 'out_final_xlinkOnly/shep_0.1nM_0.0nM_8_1000_0.6kT_3x_5x_0';
 sim_name_base = 'out_final/shep_0.1nM_100nM_8_1000_0.6kT_3x_5x_0';
 %sim_name_base = 'out_final/shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0'
+sim_name_base = '/out_final_xlinkLifetime/shep_0.01nM_100nM_8_1000_0.6kT_3x_5x_0_xlink_0.1x'
 
 xlink_SID = 1;
-chosen_SID = xlink_SID;
+motor_SID = 2;
+chosen_SID = motor_SID; %xlink_SID;
 
 % Open log file and parse it into param labels & their values
 %log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));
@@ -90,7 +92,7 @@ for i_seed = 1:n_seeds
         for i_mt = 1:1:n_mts
             motor_IDs = motor_data(:, i_mt, i_data);
             %future_IDs = motor_data(:, i_mt, i_data + 1);
-            endtag_boundary = 0;
+            endtag_boundary = 125;
 
             % Scan through IDs of bound motors (-1 means no motor on that site)
             for i_site = 1:1:n_sites
@@ -100,7 +102,7 @@ for i_seed = 1:n_seeds
                 end
                 motor_ID = motor_IDs(i_site);
                 % Always count motor on first site
-                if motor_ID > 0 && i_site == 1
+                if motor_ID > 0 && i_site == n_sites
                     % Record the motor's starting site if this is the first time
                     % seeing it (-1 means it was not seen last datapoint)
                     if starting_site(motor_ID) == -1
@@ -111,7 +113,7 @@ for i_seed = 1:n_seeds
                         active_motors(i_mt, n_active(i_mt)) = motor_ID;
                     end
                     % Otherwise if a motor is found, only count first head
-                elseif motor_ID > 0 && motor_IDs(i_site - 1) ~= motor_ID
+                elseif motor_ID > 0 && motor_IDs(i_site + 1) ~= motor_ID
                     % Record the motor's starting site if this is the first time
                     % seeing it (-1 means it was not seen last datapoint)
                     if starting_site(motor_ID) == -1
@@ -130,9 +132,15 @@ for i_seed = 1:n_seeds
                 motor_ID = active_motors(i_mt, i_adj);
                 unbound = true;
                 for j_mt = 1 : 1 : n_mts
-                    future_site = find(motor_data(:, j_mt, i_data + 1 ) == motor_ID, 1);
+                    future_site = find(motor_data(:, j_mt, i_data + 1 ) == motor_ID);
                     if ~isempty(future_site)
-                        unbound = false;
+                        if chosen_SID == motor_SID
+                            if j_mt == starting_mt(motor_ID) && future_site(1) < starting_site(motor_ID)
+                                unbound = false;
+                            end
+                        else
+                            unbound = false;
+                        end
                     end
                 end
                 %future_site = find(future_IDs == motor_ID, 1);
@@ -141,7 +149,7 @@ for i_seed = 1:n_seeds
                     end_site = -1;
                     end_mt = -1;
                     for j_mt = 1 : 1 : n_mts
-                        end_site = find(motor_data(:, j_mt, i_data) == motor_ID, 1);
+                        end_site = find(motor_data(:, j_mt, i_data) == motor_ID);
                         if ~isempty(end_site)
                             end_mt = j_mt;
                             break;
@@ -156,11 +164,14 @@ for i_seed = 1:n_seeds
                     run_length = delta * site_size;
                     % Calculate time bound
                     start_datapoint = starting_datapoint(motor_ID);
-                    delta_time =i_data - start_datapoint;
+                    delta_time = i_data - start_datapoint;
                     run_time = delta_time * time_per_datapoint;
                     velocity = (abs(run_length) / run_time) * 1000; % make vel pos. only and convert to nm/s
                     % If time bound is above time cutoff, add to data
-                    if end_site(1) > endtag_boundary && run_time > time_per_datapoint && velocity > 0 && velocity < 1000
+                    if end_site(1) > endtag_boundary && run_time > time_per_datapoint && velocity > 10 && velocity < 50000
+                        %if run_length > 0
+                        %    fprintf("%g, %g\n", run_time, velocity);
+                        %end
                         n_runs = n_runs + 1;
                         runlengths(n_runs) = run_length;
                         lifetimes(n_runs) = run_time;

@@ -1,26 +1,25 @@
 % FIX ME -- very janky implementation of multi PFs at the moment 
 
 clear variables;
-%seeds = [0, 1, 2, 3, 4, 5];
-seeds = [0];
+seeds = [0, 1, 2, 3, 4, 5];
+%seeds = [0];
 
-file_dir = '../out_final_motMotility';
-%sim_name_base = 'out_final/shep_1nM_100nM_8_1000_0.6kT_3x_5x';
+%file_dir = '../out_final_motMotility';
+file_dir = '..';
+sim_name_base = 'out_final/shep_0.1nM_10nM_8_1000_0.6kT_3x_5x';
 %sim_name_base = 'outputProto5/shep_0.1nM_50nM_8_1000_0.6kT_3x_5x';
 %sim_name_base = 'outputProto6/shep_0.1nM_50nM_3_10000_0.6kT_3x_5x';
-sim_name_base = 'final_motility_1nM_1x';
+%sim_name_base = 'final_motility_1nM_1x';
 %sim_name_base = 'shep_1nM_100nM_8_1250_0.6kT_3x_5x_0';
 
-output_folder = 'motor_motility';
+output_folder = 'test';
 
-xlink_SID = 1;
-motor_SID = 2;
-chosen_SID = motor_SID;
+
 %chosen_SID = xlink_SID;
 
 % Open log file and parse it into param labels & their values
-%log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));
-log_file = sprintf('%s/%s', file_dir, sprintf('%s.log', sim_name_base));
+log_file = sprintf('%s/%s', file_dir, sprintf('%s_0.log', sim_name_base));
+%log_file = sprintf('%s/%s', file_dir, sprintf('%s.log', sim_name_base));
 log = textscan(fileread(log_file), '%s %s', 'Delimiter', '=');
 params = log{1, 1};
 values = log{1, 2};
@@ -65,8 +64,8 @@ velocities = zeros([(100 * n_seeds  * n_mts * n_sites) 1]);
 n_runs = 0;
 
 for i_seed = 1:n_seeds
-    %sim_name = sprintf('%s_%i', sim_name_base, seeds(i_seed))
-    sim_name = sim_name_base;
+    sim_name = sprintf('%s_%i', sim_name_base, seeds(i_seed))
+    %sim_name = sim_name_base;
 
     motorFileStruct = '%s_protein_id.file';
     motorFileName = sprintf("%s/%s", file_dir, sprintf(motorFileStruct, sim_name));
@@ -254,7 +253,7 @@ sigma_time = abs(conf_inv_time(2) - conf_inv_time(1)) / 2;
 %min_vel = min(velocities);
 %velocities = velocities - (min_vel - 0.0001);
 %disp(velocities < 0)
-%{
+
 vel_dist = fitdist(velocities, 'lognormal');
 mean_vel = exp(vel_dist.mu + (vel_dist.sigma^2)/2);
 mean_vel_geo = exp(vel_dist.mu)
@@ -262,13 +261,13 @@ sigma_vel_geo = exp(vel_dist.sigma)
 %var_vel = (exp(vel_dist.sigma^2) - 1)*exp(2*vel_dist.mu + vel_dist.sigma^2);
 %sigma_vel = sqrt(var_vel);
 %}
-
+%{
 vel_dist = fitdist(velocities, 'normal');
 mean_vel = vel_dist.mu;
 conf_inv_vel = paramci(vel_dist);
 sigma_vel = std(vel_dist)
 %}
-
+%{
 % prep figure
 fig1 = figure();
 set(fig1, 'Position', [50, 50, 960, 600]);
@@ -302,7 +301,6 @@ set(gcf, 'DefaultTextFontName', 'Arial');
 histfit(lifetimes, n_bins, 'exponential');
 xlabel('Lifetime (s)');
 ylabel('Counts');
-%}
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 720, 600]);
 set(gcf, 'DefaultAxesFontName', 'Arial');
@@ -311,16 +309,16 @@ hold on
 histfit(velocities, n_bins, 'normal');
 xlabel('Velocity (nm/s)');
 ylabel('Counts');
+%}
+% saveas(fig1, sprintf('%s/%s_proc.png', output_folder, sim_name), 'png');
+% saveas(fig1, sprintf('%s/%s_proc.svg', output_folder, sim_name), 'svg');
+% saveas(fig2, sprintf('%s/%s_time.png', output_folder, sim_name), 'png');
+% saveas(fig2, sprintf('%s/%s_time.svg', output_folder, sim_name), 'svg');
+% saveas(fig3, sprintf('%s/%s_vel.png', output_folder, sim_name), 'png');
+% saveas(fig3, sprintf('%s/%s_vel.svg', output_folder, sim_name), 'svg');
 
-saveas(fig1, sprintf('%s/%s_proc.png', output_folder, sim_name), 'png');
-saveas(fig1, sprintf('%s/%s_proc.svg', output_folder, sim_name), 'svg');
-saveas(fig2, sprintf('%s/%s_time.png', output_folder, sim_name), 'png');
-saveas(fig2, sprintf('%s/%s_time.svg', output_folder, sim_name), 'svg');
-saveas(fig3, sprintf('%s/%s_vel.png', output_folder, sim_name), 'png');
-saveas(fig3, sprintf('%s/%s_vel.svg', output_folder, sim_name), 'svg');
 
 
-%{
 n_bins = 45;
 fig3 = figure();
 set(fig3, 'Position', [100, 100, 720, 600]);
@@ -334,11 +332,11 @@ h3(2).LineWidth = 3;
 %title(sprintf('Velocity histogram for %g micron MT with %i pM Kif4A', int32(n_sites * 0.008), conc));
 xlabel('Velocity (nm/s)');
 ylabel('Frequency');
-%xlim([0 400]);
-xlim([0 1000]);
+xlim([0 400]);
+%xlim([0 1000]);
 dim3 = [0.525 0.65 0.2 0.2];
-%str3 = sprintf('Geo Mean = %#.1f nm/s', mean_vel_geo);
-str3 = sprintf('Mean = %#.1f nm/s', mean_vel);
+str3 = sprintf('Geo Mean = %#.1f nm/s', mean_vel_geo);
+%str3 = sprintf('Mean = %#.1f nm/s', mean_vel);
 annotation('textbox', dim3, 'String', str3, 'FitBoxToText', 'on', 'EdgeColor','none', 'FontSize', 24);
 dim4 = [0.525 0.6 0.2 0.2];
 str4 = sprintf('Geo SD = %#.1f', sigma_vel_geo);

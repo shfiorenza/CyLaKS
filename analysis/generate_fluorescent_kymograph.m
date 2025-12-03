@@ -1,19 +1,23 @@
 clear variables; 
 
-sim_name = 'shep_0.1nM_100nM_8_3000_0.6kT_3x_5x_3';
-file_dir = "../out_final_xlinkOnlyLong";
-output_folder = 'kymo_output_xlinkOnlyLong';
+%sim_name = 'shep_0.1nM_100nM_8_3000_0.6kT_3x_5x_3';
+%file_dir = "../";%out_final_xlinkOnlyLong";
+%sim_name = 'out_final_motorVelWeighted2/shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_1x_1x'
+output_folder = 'kymo_output_xlinkDiffusionNorm';
 subfilaments = true; 
 
-%{
-file_dir = '../out_final_proto';
+%
+file_dir = '../out_final_motorVelWeighted2';
+file_dir = '../out_final_xlinkDiffusionNorm';
 %output_folder = '.';
 %name_format = 'shep_%gnM_%gnM_8_%i_0.6kT_3x_5x_%i';
 %name_format = 'shep_0.1nM_%gnM_8_%i_0.6kT_3x_5x_%i_motor_%gx';
 %name_format = 'shep_%gnM_100nM_8_%i_0.6kT_3x_5x_%i_xlink_%gx';
 %name_format = 'shep_0.1nM_10nM_8_%i_0.6kT_3x_5x_%i_xlinkDiff_%gx_%gx';
-name_format = 'shep_0.1nM_50nM_8_%i_0.6kT_3x_5x_%i';
-name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
+%name_format = 'shep_0.1nM_50nM_8_%i_0.6kT_3x_5x_%i';
+%name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
+name_format = 'shep_0.1nM_10nM_8_1000_0.6kT_3x_5x_0_motorVelWeighted_%gx_%gx';
+name_format = 'shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_%gx';
 
 %vars_one = [0.1, 1];
 %vars_one = [0.75];
@@ -23,9 +27,9 @@ name_format = 'shep_0.1nM_50nM_%i_1000_1.2kT_3x_5x_%i';
 %vars_two = [1, 10, 50, 100, 250, 500, 1000];
 %vars_two = [30]
 %vars_two = [1000];
-vars_one = [1];
+vars_one = [0.0, 0.03, 0.1, 0.3, 1, 3, 10, 30]; %[0.1, 0.3, 1, 3, 10]; %vars_one = [1];
 %vars_two = [0.1, 0.3, 1, 3, 10];
-vars_two = [1];
+vars_two = [0.03, 0.1, 0.3, 1, 3, 10, 30]; %[0.1, 0.3, 1, 3, 10, 30]; %vars_two = [1];
 seeds = [0];%, 1, 2, 3, 4, 5]; 
 %vars_tri = [1000];
 %vars_tri = [0.1, 0.3, 3, 10]; 
@@ -46,21 +50,27 @@ for i_var = 1:length(vars_one)
                 %sim_name = sprintf(name_format, var_one, var_two, var_tri, seed)
                 %sim_name = sprintf(name_format, var_one, var_two, seed, var_tri)
                 %sim_name = sprintf(name_format, var_one, seed, var_two, var_tri)
-                sim_name = sprintf(name_format, var_one, seed);
+                %sim_name = sprintf(name_format, var_one, seed)
+                %sim_name = sprintf(name_format, var_one, var_two)
+                if i_var == 1
+                    sim_name = sprintf("shep_0.1nM_10nM_8_1000_0.6kT_0_xlinkDiffNorm_%gx_0.0x", var_two)
+                else
+                    sim_name = sprintf(name_format, var_two, var_one) %, seeds(i_seed));
+                end
                 %}
 
 dwell_time = 1;  % dwell time of theoretical camera
 i_start = 1;
-i_end = 2400; 
-frac_visible_xlink = [1, 10]; % [numerator, denominator]; [1,1] for all visibile
+i_end = -1; 
+frac_visible_xlink = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 frac_visible_motor = [1, 1]; % [numerator, denominator]; [1,1] for all visibile
 
 tubulin_intensity = 0.0; % 0.01;
-xlink_intensity = 0.05;  % Controls how bright a single xlink is 
-motor_intensity = 0.0015;  % ditto but for motors 
+xlink_intensity = 0.003; %0.05;  % Controls how bright a single xlink is 
+motor_intensity = 0.0008; %0.0015;  % ditto but for motors 
 
 % Scale bar lengths 
-scale_x = 5; %2.5; %1; % microns
+scale_x = 2; %5; %2.5; %1; % microns
 scale_t = 60; %30; %10; % seconds
 % parameters for making simulated image (i.e., each frame)
 siteLength = 8.2;
@@ -309,12 +319,11 @@ saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.png', output_folder, sim_na
 saveas(fig_motor, sprintf('%s/kymo_%s_%g_%g_motors.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
 saveas(fig_xlink, sprintf('%s/kymo_%s_%g_%g_xlinks.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
 saveas(fig_combined, sprintf('%s/kymo_%s_%g_%g_combo.svg', output_folder, sim_name, xlink_intensity, motor_intensity), 'svg');
-%close(fig_motor)
-%close(fig_xlink)
-%close(fig_combined)
-%{
+close(fig_motor)
+close(fig_xlink)
+close(fig_combined)
             end
         end
     end
 end
-%}
+

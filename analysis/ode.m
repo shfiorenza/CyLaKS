@@ -7,6 +7,8 @@ c = 1.5;
 k_off = 0.5; 
 
 syms y(x)
-ode = (2*y - 1)*diff(y) + k_on*c*(L/v)*(1-y) -k_off*(L/v)*y == 0;
+func = (2*y - 1)*diff(y) + k_on*c*(L/v)*(1-y) -k_off*(L/v)*y == 0;
 
-ySol(x) = dsolve(ode)
+ySol(x) = dsolve(func);
+
+fplot(ySol, [0 1])

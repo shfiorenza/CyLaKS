@@ -17,7 +17,8 @@ public:
   size_t index_{0}; // Index in filament_manager's protofilament_ list
   Vec<size_t> immobile_until_; // In number of timesteps; x/y dim
 
-  int dx_{0};              // 1 or -1; gives direction to plus-end
+  int dx_{0}; // 1 or -1; gives direction to plus-end
+  size_t n_sites_{0};
   Vec<BindingSite> sites_; // Binding sites that belong to this protofilament
 
   BindingSite *plus_end_{nullptr};   // Pointer to plus-end; static as of now
@@ -29,6 +30,7 @@ public:
 
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
+  void SetParametersNucleated();
   void GenerateSites(); // Part of initialization routine; makes binding sites
 
   void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
@@ -40,6 +42,13 @@ public:
     RigidRod::Initialize(sid, id);
     index_ = index;
     SetParameters();
+    GenerateSites();
+    UpdateSitePositions();
+  }
+  void Nucleate(size_t sid, size_t id, size_t index) {
+    RigidRod::Initialize(sid, id);
+    index_ = index;
+    SetParametersNucleated();
     GenerateSites();
     UpdateSitePositions();
   }

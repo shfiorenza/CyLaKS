@@ -1,9 +1,10 @@
 #include "cylaks/protofilament.hpp"
+#include "cylaks/system_parameters.hpp"
 
 void Protofilament::SetParameters() {
 
   using namespace Params;
-  // using namespace Filaments;
+  n_sites_ = Filaments::n_sites[index_];
   pos_[0] = Filaments::x_initial[index_];
   pos_[1] = Filaments::y_initial[index_];
   orientation_[0] = 1.0;
@@ -33,12 +34,52 @@ void Protofilament::SetParameters() {
   }
 }
 
+void Protofilament::SetParametersNucleated() {
+
+  using namespace Params;
+  // using namespace Filaments;
+  n_sites_ = Filaments::n_sites[index_ - 1];
+  pos_[0] = Filaments::x_initial[index_ - 1];
+  pos_[1] = Filaments::y_initial[index_ - 1] + 32;
+  orientation_[0] = 1.0;
+  orientation_[1] = 0.0; // Begin aligned with x-axis
+  immobile_until_.resize(2);
+  immobile_until_[0] = Filaments::x_immobile_until[index_ - 1] / dt; // n_steps
+  immobile_until_[1] = Filaments::y_immobile_until[index_ - 1] / dt; // n_steps
+  length_ = Filaments::site_size * Filaments::n_sites[index_ - 1];   // nm
+  polarity_ = Filaments::polarity[index_ - 2];
+  polarity_ == 0 ? dx_ = -1 : dx_ = 1;
+  dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
+  Filaments::n_sites.push_back(n_sites_);
+  Filaments::x_initial.push_back(pos_[0]);
+  Filaments::y_initial.push_back(pos_[1]);
+  Filaments::x_immobile_until.push_back(immobile_until_[0]);
+  Filaments::y_immobile_until.push_back(immobile_until_[1]);
+  Filaments::polarity.push_back(polarity_);
+  Filaments::rotation_enabled.push_back(false);
+  double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
+  // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
+  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_ - 1]) {
+    Sys::Log("Filament #%i aspect ratio is too small for the form of gamma_rot "
+             "we use. Please increase filament length.\n",
+             index_ - 1);
+    Sys::ErrorExit("Protofilament::SetParameters()");
+  }
+  double eta_adj{eta * 1e-06};                      // pN*s/nm^2
+  double pi{M_PI};                                  // literally just pi
+  gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
+  gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
+  gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8)); // pN*s*nm
+  for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
+    sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
+  }
+}
+
 void Protofilament::GenerateSites() {
 
-  size_t n_sites{Params::Filaments::n_sites[index_]};
-  sites_.resize(n_sites);
+  sites_.resize(n_sites_);
   // Initialize sites
-  for (int i_entry{0}; i_entry < n_sites; i_entry++) {
+  for (int i_entry{0}; i_entry < n_sites_; i_entry++) {
     sites_[i_entry].Initialize(_id_site, Sys::n_objects_++, _r_site, i_entry,
                                this);
   }
@@ -53,8 +94,8 @@ void Protofilament::GenerateSites() {
       site.AddNeighbor(&sites_[i_bck]);
     }
   }
-  plus_end_ = &sites_[(n_sites - 1) * polarity_];
-  minus_end_ = &sites_[(n_sites - 1) * (1.0 - polarity_)];
+  plus_end_ = &sites_[(n_sites_ - 1) * polarity_];
+  minus_end_ = &sites_[(n_sites_ - 1) * (1.0 - polarity_)];
   // plus_end_->SetBindingAffinity(0.1);
   // for (int i_site{0}; i_site < 10; i_site++) {
   //   int index = plus_end_->index_ - (dx_ * i_site);
@@ -63,7 +104,7 @@ void Protofilament::GenerateSites() {
   // }
   Sys::Log(2, "     plus_end = site %i\n", plus_end_->index_);
   Sys::Log(2, "     minus_end = site %i\n", minus_end_->index_);
-  center_index_ = double(n_sites - 1) / 2;
+  center_index_ = double(n_sites_ - 1) / 2;
 }
 
 void Protofilament::UpdateRodPosition() {

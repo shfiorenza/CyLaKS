@@ -1,5 +1,8 @@
 #include "cylaks/filament_manager.hpp"
 #include "cylaks/protein_manager.hpp"
+#include "cylaks/protofilament.hpp"
+#include "cylaks/system_definitions.hpp"
+#include "cylaks/system_namespace.hpp"
 
 void FilamentManager::SetParameters() {
 
@@ -13,6 +16,7 @@ void FilamentManager::GenerateFilaments() {
   // Create the appropriate number of protofilaments
   if (Params::Filaments::axon_arrangement == true) {
     protofilaments_.resize(Params::Filaments::count);
+    protofilaments_.reserve(10 * Params::Filaments::count);
     for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
       protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
     }
@@ -130,17 +134,30 @@ bool FilamentManager::AllFilamentsImmobile() {
 
 void FilamentManager::UpdateForces() {
 
+  if (Sys::i_step_ % 100 == 0) {
+    protofilaments_.emplace_back();
+    size_t i_last{protofilaments_.size() - 1};
+    protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last);
+    protofilaments_[i_last - 1].top_neighb_ = &protofilaments_.back();
+    protofilaments_.back().bot_neighb_ = &protofilaments_[i_last - 1];
+    protofilaments_.back().top_neighb_ = nullptr;
+    printf("added MT #%zu\n", i_last);
+    // exit(1);
+  }
+
   for (auto &&pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
   }
-  double F_factor{1e-5};
+  double F_factor{1e-4};
   if (Params::Filaments::axon_arrangement) {
     for (auto &&pf : protofilaments_) {
+      // printf("checking PF #%zu\n", pf.index_);
       if (pf.top_neighb_ != nullptr) {
         double overlap_start{pf.sites_[0].pos_[0]};
+        // printf("%g\n", overlap_start);
         if (pf.top_neighb_->sites_[0].pos_[0] > overlap_start) {
           overlap_start = pf.top_neighb_->sites_[0].pos_[0];
         }
@@ -149,13 +166,14 @@ void FilamentManager::UpdateForces() {
           overlap_end = pf.sites_.back().pos_[0];
         }
         double O{overlap_end - overlap_start};
-        if (O < 0.0) {
-          O = 0.0;
-        }
+        // if (O < 0.0) {
+        //   O = 0.0;
+        // }
         pf.force_[0] += pf.dx_ * O * F_factor;
       }
       if (pf.bot_neighb_ != nullptr) {
         double overlap_start{pf.sites_[0].pos_[0]};
+        // printf("%g\n", overlap_start);
         if (pf.bot_neighb_->sites_[0].pos_[0] > overlap_start) {
           overlap_start = pf.bot_neighb_->sites_[0].pos_[0];
         }
@@ -164,6 +182,9 @@ void FilamentManager::UpdateForces() {
           overlap_end = pf.sites_.back().pos_[0];
         }
         double O{overlap_end - overlap_start};
+        // if (O < 0.0) {
+        //   O = 0.0;
+        // }
         pf.force_[0] += pf.dx_ * O * F_factor;
       }
     }

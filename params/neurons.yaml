@@ -9,7 +9,7 @@ dynamic_equil_window: -1
 verbosity: 0
 filaments:
   axon_arrangement: true
-  count: 5
+  count: 16
   n_subfilaments: 0
   periodic_barrel: false
   radius: 12.5

@@ -465,6 +465,7 @@ void Curator::GenerateDataFiles() {
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
+  AddDataFile("axon_coords");
   if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
@@ -585,6 +586,9 @@ void Curator::OutputData() {
   }
   // Choose correct object to read data from
   size_t n_pfs{filaments_.protofilaments_.size()};
+  double n_fila[1];
+  n_fila[0] = n_pfs;
+  data_files_.at("axon_coords").Write(n_fila, 1);
   bool motors_active{proteins_.motors_.active_};
   bool motors_tethering{proteins_.motors_.tethering_active_};
   bool xlinks_active{proteins_.xlinks_.active_};
@@ -616,6 +620,8 @@ void Curator::OutputData() {
     }
     data_files_.at("filament_pos").Write(coord1, _n_dims_max);
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
+    data_files_.at("axon_coords").Write(coord1, _n_dims_max);
+    data_files_.at("axon_coords").Write(coord2, _n_dims_max);
     if (!motors_active and !xlinks_active) {
       continue;
     }

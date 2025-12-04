@@ -23,31 +23,22 @@ fig1 = figure('Position', [50 50 1000 500]);
 filament_filename = sprintf('%s/%s_axon_coords.file', file_dir, sim_name);
 filament_file = fopen(filament_filename);
 data_raw = fread(filament_file, '*double');
-n_filas = zeros(1, params.n_datapoints);
+n_mts = zeros(1, params.n_datapoints);
 i_data = 1;
-%chunk_size = 2 * params.n_dims * params.n_mts;
 for i_datapoint = 1 : 1 : params.n_datapoints
-    n_fila = data_raw(i_data);
-    n_filas(i_datapoint) = n_fila;
+    n_mts(i_datapoint) = data_raw(i_data);
     i_data = i_data + 1;
-    for i_mt = 1 : 1 : n_fila
+    for i_mt = 1 : 1 : n_mts(i_datapoint)
+        mt_lengths(i_mt, i_datapoint) = data_raw(i_data);
+        i_data = i_data+1;
         for i_dim = 1 : 1 : params.n_dims
             for i_end = 1 : 1 : 2
-                data(i_end, i_dim, i_mt, i_datapoint) = data_raw(i_data);
+                filament_pos(i_end, i_dim, i_mt, i_datapoint) = data_raw(i_data);
                 i_data = i_data + 1;
             end
-         %   data(2, i_dim, i_mt, i_datapoint) = data_raw(i_data);
-         %   i_data = i_data + 1;
-    %data(i_step, :) = data_raw(i_data:i_data + chunk_size - 1);
-    %i_data = i_data + chunk_size;
         end
     end
 end
-filament_pos = data;
-%filament_pos = reshape();
-%data = fgetl(filament_file)
-%filament_pos = zeros(params.n_dims, 2, params.n_mts, params.n_datapoints);
-%filament_pos = load_data(filament_pos, filament_filename, '*double'); 
 
 % Run through all datapoints; each one is a frame in our movie
 for i_data = start_frame : frames_per_plot : end_frame
@@ -67,11 +58,11 @@ for i_data = start_frame : frames_per_plot : end_frame
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';
     % Draw filaments
-    if(params.n_mts > 1)
-        com_y_one = (filament_pos(2, 1, 1, i_data) + filament_pos(2, 2, 1, i_data))/2;
-        com_y_two = (filament_pos(2, 1, 2, i_data) + filament_pos(2, 2, 2, i_data))/2;
-    end
-    for i_mt = 1:1:n_filas(i_datapoint)
+    % if(params.n_mts > 1)
+    %     com_y_one = (filament_pos(2, 1, 1, i_data) + filament_pos(2, 2, 1, i_data))/2;
+    %     com_y_two = (filament_pos(2, 1, 2, i_data) + filament_pos(2, 2, 2, i_data))/2;
+    % end
+    for i_mt = 1:1:n_mts(i_data)
         plus_pos = filament_pos(:, 1, i_mt, i_data);
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
@@ -79,8 +70,8 @@ for i_data = start_frame : frames_per_plot : end_frame
         rectangle('Position', [plus_pos(1)-r_prot/2 plus_pos(2)-r_prot/2 r_prot r_prot], ...
              'FaceColor', [0 0 0], 'Curvature', [1 1]);
         %n_sites = params.mt_lengths(i_mt);
-        dx = -1;
-        mt_dir = 1;
+        %dx = -1;
+        %mt_dir = 1;
         % line_vec = [minus_pos(1) - plus_pos(1), minus_pos(2) - plus_pos(2)];
         % if params.polarity(i_mt) == 1
         %     dx = 1;

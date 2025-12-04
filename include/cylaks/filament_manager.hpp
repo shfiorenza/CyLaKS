@@ -1,5 +1,6 @@
 #ifndef _CYLAKS_FILAMENT_MANAGER_HPP_
 #define _CYLAKS_FILAMENT_MANAGER_HPP_
+#include "cylaks/event_manager.hpp"
 #include "population.hpp"
 #include "protofilament.hpp"
 #include "system_namespace.hpp"
@@ -13,6 +14,8 @@ class FilamentManager {
 protected:
   bool up_to_date_{false};
 
+  size_t n_pfs_max_{2000};
+
   // Some temporary hacky stuff for WCA potential
   double sigma_{25.0};    // nm
   double epsilon_{1.0};   // kbT
@@ -25,10 +28,11 @@ protected:
 
 public:
   bool never_mobile_{true};
+  EventManager kmc_;
   Vec<Protofilament> protofilaments_;
   Vec<BindingSite *> sites_;
-
   Map<Str, Population<Object>> unoccupied_;
+  Map<Str, Population<Object>> pfs_;
 
 protected:
   void SetParameters();
@@ -38,6 +42,8 @@ protected:
 
   virtual void UpdateForces();
   virtual void UpdateLattice();
+  void UpdateNeighbors();
+  bool NucleateProtofilament(Protofilament *parent);
 
 public:
   FilamentManager() {}
@@ -75,6 +81,7 @@ public:
     }
     UpdateLattice();
   }
+  void RunKMC();
   void RunBD() {
     if (AllFilamentsImmobile()) {
       return;

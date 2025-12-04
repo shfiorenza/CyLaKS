@@ -34,28 +34,30 @@ void Protofilament::SetParameters() {
   }
 }
 
-void Protofilament::SetParametersNucleated() {
+void Protofilament::SetParametersNucleated(Protofilament *parent) {
 
   using namespace Params;
   // using namespace Filaments;
-  n_sites_ = Filaments::n_sites[index_ - 1];
-  pos_[0] = Filaments::x_initial[index_ - 1];
-  pos_[1] = Filaments::y_initial[index_ - 1] + 32;
-  orientation_[0] = 1.0;
-  orientation_[1] = 0.0; // Begin aligned with x-axis
+  n_sites_ = 100; // Filaments::n_sites[index_ - 1];
+  double ran{SysRNG::GetRanProb()};
+  pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
+  pos_[1] = parent->pos_[1] + 10.0;
+  orientation_[0] = parent->orientation_[0]; // 1.0
+  orientation_[1] = parent->orientation_[1]; // 0.0
   immobile_until_.resize(2);
-  immobile_until_[0] = Filaments::x_immobile_until[index_ - 1] / dt; // n_steps
-  immobile_until_[1] = Filaments::y_immobile_until[index_ - 1] / dt; // n_steps
-  length_ = Filaments::site_size * Filaments::n_sites[index_ - 1];   // nm
-  polarity_ = Filaments::polarity[index_ - 2];
+  immobile_until_[0] =
+      0; // Filaments::x_immobile_until[index_ - 1] / dt; // n_steps
+  immobile_until_[1] = Filaments::y_immobile_until[0] / dt; // n_steps
+  length_ = Filaments::site_size * n_sites_;                // nm
+  polarity_ = parent->polarity_;
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
-  Filaments::n_sites.push_back(n_sites_);
-  Filaments::x_initial.push_back(pos_[0]);
-  Filaments::y_initial.push_back(pos_[1]);
-  Filaments::x_immobile_until.push_back(immobile_until_[0]);
-  Filaments::y_immobile_until.push_back(immobile_until_[1]);
-  Filaments::polarity.push_back(polarity_);
+  // Filaments::n_sites.push_back(n_sites_);
+  // Filaments::x_initial.push_back(pos_[0]);
+  // Filaments::y_initial.push_back(pos_[1]);
+  // Filaments::x_immobile_until.push_back(immobile_until_[0]);
+  // Filaments::y_immobile_until.push_back(immobile_until_[1]);
+  // Filaments::polarity.push_back(polarity_);
   Filaments::rotation_enabled.push_back(false);
   double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
   // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0

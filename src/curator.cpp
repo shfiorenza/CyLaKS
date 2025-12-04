@@ -516,6 +516,8 @@ void Curator::UpdateObjects() {
 
   if (Sys::test_mode_.empty()) {
     proteins_.RunKMC();
+    filaments_.RunKMC();
+    proteins_.RunBD();
     filaments_.RunBD();
   } else {
     test_proteins_.RunKMC();
@@ -612,6 +614,9 @@ void Curator::OutputData() {
     } else {
       pf = &test_filaments_.protofilaments_[i_pf];
     }
+    double length[1];
+    length[0] = pf->sites_.size();
+    data_files_.at("axon_coords").Write(length, 1);
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -622,6 +627,8 @@ void Curator::OutputData() {
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
     data_files_.at("axon_coords").Write(coord1, _n_dims_max);
     data_files_.at("axon_coords").Write(coord2, _n_dims_max);
+    // printf("MT #%i: (%g, %g) - (%g, %g)\n", i_pf, coord1[0], coord1[1],
+    //        coord2[0], coord2[1]);
     if (!motors_active and !xlinks_active) {
       continue;
     }

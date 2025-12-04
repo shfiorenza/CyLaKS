@@ -3,6 +3,7 @@
 #include "cylaks/protofilament.hpp"
 #include "cylaks/system_definitions.hpp"
 #include "cylaks/system_namespace.hpp"
+#include "cylaks/system_rng.hpp"
 
 void FilamentManager::SetParameters() {
 
@@ -16,7 +17,7 @@ void FilamentManager::GenerateFilaments() {
   // Create the appropriate number of protofilaments
   if (Params::Filaments::axon_arrangement == true) {
     protofilaments_.resize(Params::Filaments::count);
-    protofilaments_.reserve(10 * Params::Filaments::count);
+    protofilaments_.reserve(n_pfs_max_);
     for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
       protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
     }
@@ -121,7 +122,6 @@ void FilamentManager::GenerateFilaments() {
 }
 
 bool FilamentManager::AllFilamentsImmobile() {
-
   for (auto const &pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       if (Sys::i_step_ > pf.immobile_until_[i_dim]) {
@@ -132,59 +132,75 @@ bool FilamentManager::AllFilamentsImmobile() {
   return true;
 }
 
-void FilamentManager::UpdateForces() {
+void FilamentManager::RunKMC() {
 
-  if (Sys::i_step_ % 100 == 0) {
-    protofilaments_.emplace_back();
-    size_t i_last{protofilaments_.size() - 1};
-    protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last);
-    protofilaments_[i_last - 1].top_neighb_ = &protofilaments_.back();
-    protofilaments_.back().bot_neighb_ = &protofilaments_[i_last - 1];
-    protofilaments_.back().top_neighb_ = nullptr;
-    printf("added MT #%zu\n", i_last);
-    // exit(1);
+  double p_nucleate = 5e-6 * Params::dt; // probability per micron
+  double tot_nucleation{0.0};
+  Vec<Protofilament *> targets;
+  targets.reserve(protofilaments_.size());
+  for (auto &&pf : protofilaments_) {
+    tot_nucleation += pf.length_ * p_nucleate;
+    targets.push_back(&pf);
   }
+  int n_events = SysRNG::SamplePoisson(tot_nucleation);
+  // printf("%i\n", n_events);
+  for (int i_event{0}; i_event < n_events; i_event++) {
+    double p_cum{0.0};
+    double ran{SysRNG::GetRanProb()};
+    for (int i_pf{0}; i_pf < targets.size(); i_pf++) {
+      Protofilament *pf{targets[i_pf]};
+      p_cum += pf->length_ * p_nucleate / tot_nucleation;
+      if (ran < p_cum) {
+        // shlould be handled by mgmt properly
+        bool success{NucleateProtofilament(pf)};
+        // bool success{targets[i_pf]->Nucleate()};
+        if (success) {
+          targets[i_pf] = targets.back();
+          targets.pop_back();
+          UpdateNeighbors();
+        }
+        break;
+      }
+    }
+  }
+}
+
+void FilamentManager::UpdateForces() {
 
   for (auto &&pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      // SF TODO FIX for nucleating microtubules
       pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
   }
-  double F_factor{1e-4};
+  double F_factor{0.5e-6};
   if (Params::Filaments::axon_arrangement) {
     for (auto &&pf : protofilaments_) {
-      // printf("checking PF #%zu\n", pf.index_);
-      if (pf.top_neighb_ != nullptr) {
-        double overlap_start{pf.sites_[0].pos_[0]};
-        // printf("%g\n", overlap_start);
-        if (pf.top_neighb_->sites_[0].pos_[0] > overlap_start) {
-          overlap_start = pf.top_neighb_->sites_[0].pos_[0];
+      for (auto &&neighb : pf.neighbors_) {
+        double dx{pf.plus_end_->pos_[0] - neighb->plus_end_->pos_[0]};
+        pf.force_[0] += -dx * 1e-7;
+        // printf("%g\n", dx);
+        if (pf.polarity_ == neighb->polarity_) {
+          continue;
         }
-        double overlap_end{pf.top_neighb_->sites_.back().pos_[0]};
+        double overlap_start{pf.sites_[0].pos_[0]};
+        if (neighb->sites_[0].pos_[0] > overlap_start) {
+          overlap_start = neighb->sites_[0].pos_[0];
+        }
+        double overlap_end{neighb->sites_.back().pos_[0]};
         if (pf.sites_.back().pos_[0] < overlap_end) {
           overlap_end = pf.sites_.back().pos_[0];
         }
         double O{overlap_end - overlap_start};
-        // if (O < 0.0) {
-        //   O = 0.0;
-        // }
-        pf.force_[0] += pf.dx_ * O * F_factor;
-      }
-      if (pf.bot_neighb_ != nullptr) {
-        double overlap_start{pf.sites_[0].pos_[0]};
-        // printf("%g\n", overlap_start);
-        if (pf.bot_neighb_->sites_[0].pos_[0] > overlap_start) {
-          overlap_start = pf.bot_neighb_->sites_[0].pos_[0];
+        if (O < 0.0) {
+          O = 0.0;
         }
-        double overlap_end{pf.bot_neighb_->sites_.back().pos_[0]};
-        if (pf.sites_.back().pos_[0] < overlap_end) {
-          overlap_end = pf.sites_.back().pos_[0];
+        double min_length{pf.length_ > neighb->length_ ? neighb->length_
+                                                       : pf.length_};
+        if (O > min_length) {
+          O = min_length;
         }
-        double O{overlap_end - overlap_start};
-        // if (O < 0.0) {
-        //   O = 0.0;
-        // }
         pf.force_[0] += pf.dx_ * O * F_factor;
       }
     }
@@ -207,3 +223,30 @@ void FilamentManager::UpdateForces() {
 }
 
 void FilamentManager::UpdateLattice() { proteins_->UpdateLatticeDeformation(); }
+
+void FilamentManager::UpdateNeighbors() {
+
+  double threshold{32.0};
+  for (auto &&pf : protofilaments_) {
+    for (auto &&neighb : protofilaments_) {
+      if (fabs(pf.pos_[1] - neighb.pos_[1]) <= threshold) {
+        pf.neighbors_.push_back(&neighb);
+      }
+    }
+  }
+}
+
+bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
+
+  if (protofilaments_.size() >= n_pfs_max_) {
+    return false;
+  }
+  protofilaments_.emplace_back();
+  size_t i_last{protofilaments_.size() - 1};
+  protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last, parent);
+  // protofilaments_[i_last - 1].top_neighb_ = &protofilaments_.back();
+  // protofilaments_.back().bot_neighb_ = &protofilaments_[i_last - 1];
+  // protofilaments_.back().top_neighb_ = nullptr;
+  printf("added MT #%zu\n", i_last);
+  return true;
+}

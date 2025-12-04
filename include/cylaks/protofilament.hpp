@@ -9,20 +9,23 @@
 // Protofilament: Infinitely-thin rigid rod with a 1-D lattice of binding sites
 class Protofilament : public RigidRod {
 protected:
-  size_t polarity_{0};       // 0 or 1 for plus-end or minus-end at i_site = 0
   double dt_eff_{0.0};       // Effective timestep during BD sub-step
   double center_index_{0.0}; // Rod center (relative to i_site = 0) in n_sites
 
 public:
-  size_t index_{0}; // Index in filament_manager's protofilament_ list
+  size_t polarity_{0}; // 0 or 1 for plus-end or minus-end at i_site = 0
+  size_t index_{0};    // Index in filament_manager's protofilament_ list
   Vec<size_t> immobile_until_; // In number of timesteps; x/y dim
 
   int dx_{0}; // 1 or -1; gives direction to plus-end
   size_t n_sites_{0};
   Vec<BindingSite> sites_; // Binding sites that belong to this protofilament
 
-  BindingSite *plus_end_{nullptr};   // Pointer to plus-end; static as of now
-  BindingSite *minus_end_{nullptr};  // Pointer to minus-end; static as of now
+  BindingSite *plus_end_{nullptr};  // Pointer to plus-end; static as of now
+  BindingSite *minus_end_{nullptr}; // Pointer to minus-end; static as of now
+
+  Vec<Protofilament *> neighbors_;
+
   Protofilament *neighbor_{nullptr}; // Pointer to PF that xlinks can crosslink
 
   Protofilament *top_neighb_{nullptr}; // higher index PF in explicit MT barrel
@@ -30,7 +33,7 @@ public:
 
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
-  void SetParametersNucleated();
+  void SetParametersNucleated(Protofilament *parent);
   void GenerateSites(); // Part of initialization routine; makes binding sites
 
   void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
@@ -45,13 +48,15 @@ public:
     GenerateSites();
     UpdateSitePositions();
   }
-  void Nucleate(size_t sid, size_t id, size_t index) {
+  void Nucleate(size_t sid, size_t id, size_t index, Protofilament *parent) {
     RigidRod::Initialize(sid, id);
     index_ = index;
-    SetParametersNucleated();
+    SetParametersNucleated(parent);
     GenerateSites();
     UpdateSitePositions();
   }
+  bool Nucleate() { return false; }
+
   BindingSite *GetNeighb(BindingSite *site, int delta);
   Vec<double> GetPolarOrientation() {
     double c{polarity_ == 0 ? -1.0 : 1.0};

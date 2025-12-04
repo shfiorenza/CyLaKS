@@ -2,7 +2,7 @@ seed: 198261346419
 kbT: 4.114
 eta: 0.001 # water
 dt: 5e-3 #0.000005 # 0.00005 # 0.0002 # 0.00002
-t_run: 30 # 1800 # 300 # 400 # 00
+t_run: 100 # 0 # 1800 # 300 # 400 # 00
 t_equil: 0
 t_snapshot: 0.1
 dynamic_equil_window: -1 

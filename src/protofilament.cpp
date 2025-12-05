@@ -1,4 +1,5 @@
 #include "cylaks/protofilament.hpp"
+#include "cylaks/system_namespace.hpp"
 #include "cylaks/system_parameters.hpp"
 
 void Protofilament::SetParameters() {
@@ -115,7 +116,7 @@ void Protofilament::UpdateRodPosition() {
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
-  // noise_par = noise_perp = noise_rot = 0.0;
+  noise_par = noise_perp = noise_rot = 0.0;
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
@@ -138,12 +139,17 @@ void Protofilament::UpdateRodPosition() {
     // Only update position if protofilament isnt immobilized
     if (Sys::i_step_ > immobile_until_[i_dim]) {
       double vel{Dot(xi_inv[i_dim], force_)};
+      velocity_[i_dim] = vel;
       // if (i_dim == 0 and vel != 50) {
       //   printf("v[%i] = %g\n", i_dim, vel);
       // }
       pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
+      // velocity_[i_dim] += rod_basis[0][i_dim] * noise_par / dt_eff_;
+      // printf("%g\n", rod_basis[0][i_dim] * noise_par / dt_eff_);
+      // velocity_[i_dim] += rod_basis[1][i_dim] * noise_perp / dt_eff_;
+      // printf("%g\n", rod_basis[1][i_dim] * noise_perp / dt_eff_);
       // Check for NaN positions
       if (pos_[i_dim] != pos_[i_dim]) {
         Sys::Log("force = %g\n", force_[i_dim]);
@@ -222,4 +228,43 @@ BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
     return nullptr;
   }
   return &sites_[i_neighb];
+}
+
+void Protofilament::AddSite() {
+
+  int i_plus = plus_end_->index_;
+  n_sites_++;
+  sites_.emplace_back();
+  sites_.back().Initialize(_id_site, Sys::n_objects_++, _r_site, n_sites_,
+                           this);
+  if (i_plus == 0) {
+    plus_end_ = &sites_[0];
+    minus_end_ = &sites_.back();
+    pos_[0] += -Params::Filaments::site_size / 2.0;
+  } else {
+    minus_end_ = &sites_[0];
+    plus_end_ = &sites_.back();
+    pos_[0] += Params::Filaments::site_size / 2.0;
+  }
+  center_index_ = double(n_sites_ - 1) / 2;
+}
+
+void Protofilament::RemoveSite() {
+  int i_plus = plus_end_->index_;
+  if (n_sites_ == 2) {
+    return;
+  }
+  n_sites_--;
+  sites_.pop_back();
+
+  if (i_plus == 0) {
+    plus_end_ = &sites_[0];
+    minus_end_ = &sites_.back();
+    pos_[0] += Params::Filaments::site_size / 2.0;
+  } else {
+    minus_end_ = &sites_[0];
+    plus_end_ = &sites_.back();
+    pos_[0] += -Params::Filaments::site_size / 2.0;
+  }
+  center_index_ = double(n_sites_ - 1) / 2;
 }

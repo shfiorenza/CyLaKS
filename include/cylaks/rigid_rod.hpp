@@ -1,5 +1,6 @@
 #ifndef _CYLAKS_RIGID_ROD_HPP_
 #define _CYLAKS_RIGID_ROD_HPP_
+#include "cylaks/system_definitions.hpp"
 #include "object.hpp"
 
 // RigidRod: Basic rod that cannot bend; infinitely thin.
@@ -13,6 +14,7 @@ public:
   double torque_{0.0};
   Vec<double> force_;       // In pN; zero'd out every timestep
   Vec<double> orientation_; // Unit vector
+  Vec<double> velocity_;
 
 protected:
   void SetParameters() {
@@ -20,6 +22,7 @@ protected:
     sigma_.resize(3);
     force_.resize(_n_dims_max);
     orientation_.resize(_n_dims_max);
+    velocity_.resize(_n_dims_max);
   }
 
 public:

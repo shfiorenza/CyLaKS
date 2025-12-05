@@ -3,6 +3,7 @@
 #include "cylaks/protofilament.hpp"
 #include "cylaks/system_definitions.hpp"
 #include "cylaks/system_namespace.hpp"
+#include "cylaks/system_parameters.hpp"
 #include "cylaks/system_rng.hpp"
 
 void FilamentManager::SetParameters() {
@@ -134,6 +135,54 @@ bool FilamentManager::AllFilamentsImmobile() {
 
 void FilamentManager::RunKMC() {
 
+  double p_p2g = 0.05;
+  double p_g2s = 0.0005;
+  double p_s2p = 0.0005;
+  double v_grow = 120;   // nm/s
+  double v_shrink = 120; // nm/s
+
+  double p_add_site = v_grow * Params::dt / Params::Filaments::site_size;
+  double p_rmv_site = v_shrink * Params::dt / Params::Filaments::site_size;
+  if (p_add_site >= 1.0 || p_rmv_site >= 1.0) {
+    printf("filament problems. decrease timestep.\n");
+    exit(1);
+  }
+  // Dynamic instability
+  for (auto &&pf : protofilaments_) {
+    double ran{SysRNG::GetRanProb()};
+    switch (pf.state_) {
+    case pause: {
+      if (ran < p_p2g) {
+        pf.state_ = grow;
+        break;
+      }
+      break;
+    }
+    case grow: {
+      if (ran < p_g2s) {
+        pf.state_ = shrink;
+        break;
+      }
+      double ran2{SysRNG::GetRanProb()};
+      if (ran2 < p_add_site) {
+        pf.AddSite();
+      }
+      break;
+    }
+    case shrink: {
+      if (ran < p_s2p) {
+        pf.state_ = pause;
+        break;
+      }
+      double ran2{SysRNG::GetRanProb()};
+      if (ran2 < p_add_site) {
+        pf.RemoveSite();
+      }
+      break;
+    }
+    }
+  }
+  // Nucleation of new microtubules
   double p_nucleate = 5e-6 * Params::dt; // probability per micron
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
@@ -174,16 +223,13 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
-  double F_factor{0.5e-6};
+  double F_factor{1.0e-9};
+  double v0{67};              // nm/s
+  double wall_location{5000}; // nm
   if (Params::Filaments::axon_arrangement) {
     for (auto &&pf : protofilaments_) {
       for (auto &&neighb : pf.neighbors_) {
         double dx{pf.plus_end_->pos_[0] - neighb->plus_end_->pos_[0]};
-        pf.force_[0] += -dx * 1e-7;
-        // printf("%g\n", dx);
-        if (pf.polarity_ == neighb->polarity_) {
-          continue;
-        }
         double overlap_start{pf.sites_[0].pos_[0]};
         if (neighb->sites_[0].pos_[0] > overlap_start) {
           overlap_start = neighb->sites_[0].pos_[0];
@@ -201,7 +247,34 @@ void FilamentManager::UpdateForces() {
         if (O > min_length) {
           O = min_length;
         }
-        pf.force_[0] += pf.dx_ * O * F_factor;
+        double dVel{pf.velocity_[0] - neighb->velocity_[0]};
+        // printf("%g - %g = %g\n", pf.velocity_[0], neighb->velocity_[0],
+        // dVel);
+        if (pf.polarity_ != neighb->polarity_) {
+          // printf("%g\n", 1.0 - dVel / v0);
+          // pf.force_[0] += pf.dx_ * (1.0 - dVel / v0) * O * F_factor;
+          pf.force_[0] += pf.dx_ * O * F_factor;
+        } else {
+        }
+        // pf.force_[0] += -dVel * O * F_factor;
+        // pf.force_[0] += O * F_factor;
+      }
+      if (pf.plus_end_->pos_[0] > pf.minus_end_->pos_[0]) {
+        double r{pf.plus_end_->pos_[0] - wall_location};
+        if (r < threshold_) {
+          double f_mag{48 * epsilon_ *
+                       (Pow(sigma_, 12) / Pow(r, 13) -
+                        0.5 * Pow(sigma_, 6) / Pow(r, 7))};
+          pf.force_[0] -= f_mag;
+        }
+      } else {
+        double r{pf.minus_end_->pos_[0] - wall_location};
+        if (r < threshold_) {
+          double f_mag{48 * epsilon_ *
+                       (Pow(sigma_, 12) / Pow(r, 13) -
+                        0.5 * Pow(sigma_, 6) / Pow(r, 7))};
+          pf.force_[0] -= f_mag;
+        }
       }
     }
   }

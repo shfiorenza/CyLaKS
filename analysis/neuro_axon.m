@@ -47,7 +47,6 @@ for i_data = start_frame : frames_per_plot : end_frame
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.075 0.085 0.9 0.9]);
     hold all;
-    set(gca,'xdir','reverse');%,'ydir','reverse')
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
     min_y = min(min(filament_pos(2, :, :, i_data)));

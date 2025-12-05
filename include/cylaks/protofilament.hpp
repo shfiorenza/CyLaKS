@@ -1,6 +1,7 @@
 #ifndef _CYLAKS_PROTOFILAMENT_HPP_
 #define _CYLAKS_PROTOFILAMENT_HPP_
 #include "binding_site.hpp"
+#include "cylaks/system_definitions.hpp"
 #include "rigid_rod.hpp"
 #include "system_namespace.hpp"
 #include "system_parameters.hpp"
@@ -24,10 +25,11 @@ public:
   BindingSite *plus_end_{nullptr};  // Pointer to plus-end; static as of now
   BindingSite *minus_end_{nullptr}; // Pointer to minus-end; static as of now
 
+  PolyState state_{pause};
+
+  // SF TODO FIX condense all of these
   Vec<Protofilament *> neighbors_;
-
   Protofilament *neighbor_{nullptr}; // Pointer to PF that xlinks can crosslink
-
   Protofilament *top_neighb_{nullptr}; // higher index PF in explicit MT barrel
   Protofilament *bot_neighb_{nullptr}; // lower index PF in explicit MT barrel
 
@@ -87,5 +89,7 @@ public:
     UpdateRodPosition();
     UpdateSitePositions();
   }
+  void AddSite();
+  void RemoveSite();
 };
 #endif

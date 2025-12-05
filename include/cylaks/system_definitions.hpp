@@ -11,6 +11,7 @@
 #include <vector>
 
 enum Ligand { NONE, ATP, ADPP, ADP };
+enum PolyState { pause, grow, shrink };
 inline static const double _max_weight{1e3};
 
 /* Physical constants */

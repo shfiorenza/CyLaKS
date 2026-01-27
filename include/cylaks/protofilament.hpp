@@ -35,7 +35,7 @@ public:
 
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
-  void SetParametersNucleated(Protofilament *parent);
+  bool SetParametersNucleated(Protofilament *parent);
   void GenerateSites(); // Part of initialization routine; makes binding sites
 
   void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
@@ -50,12 +50,13 @@ public:
     GenerateSites();
     UpdateSitePositions();
   }
-  void Nucleate(size_t sid, size_t id, size_t index, Protofilament *parent) {
+  bool Nucleate(size_t sid, size_t id, size_t index, Protofilament *parent) {
     RigidRod::Initialize(sid, id);
     index_ = index;
-    SetParametersNucleated(parent);
+    bool success{SetParametersNucleated(parent)};
     GenerateSites();
     UpdateSitePositions();
+    return success;
   }
   bool Nucleate() { return false; }
 

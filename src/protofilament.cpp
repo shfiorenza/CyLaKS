@@ -35,21 +35,33 @@ void Protofilament::SetParameters() {
   }
 }
 
-void Protofilament::SetParametersNucleated(Protofilament *parent) {
+bool Protofilament::SetParametersNucleated(Protofilament *parent) {
 
   using namespace Params;
   // using namespace Filaments;
-  n_sites_ = 100; // Filaments::n_sites[index_ - 1];
+  n_sites_ = 100;                            // Filaments::n_sites[index_ - 1];
+  length_ = Filaments::site_size * n_sites_; // nm
   double ran{SysRNG::GetRanProb()};
   pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
-  pos_[1] = parent->pos_[1] + 10.0;
+  size_t n_tries{0};
+  while ((pos_[0] - length_ / 2.0) <= -4400) {
+    double ran{SysRNG::GetRanProb()};
+    pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
+    // printf("%g\n", pos_[0]);
+    if (n_tries > 10) {
+      printf("FAILED to nucleate\n");
+      return false;
+    }
+    n_tries++;
+  }
+  state_ = pause;
+  pos_[1] = parent->pos_[1] + (SysRNG::GetRanProb() - 0.5) * 20.0;
   orientation_[0] = parent->orientation_[0]; // 1.0
   orientation_[1] = parent->orientation_[1]; // 0.0
   immobile_until_.resize(2);
   immobile_until_[0] =
       0; // Filaments::x_immobile_until[index_ - 1] / dt; // n_steps
   immobile_until_[1] = Filaments::y_immobile_until[0] / dt; // n_steps
-  length_ = Filaments::site_size * n_sites_;                // nm
   polarity_ = parent->polarity_;
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
@@ -76,6 +88,7 @@ void Protofilament::SetParametersNucleated(Protofilament *parent) {
   for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
     sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
   }
+  return true;
 }
 
 void Protofilament::GenerateSites() {
@@ -139,6 +152,10 @@ void Protofilament::UpdateRodPosition() {
     // Only update position if protofilament isnt immobilized
     if (Sys::i_step_ > immobile_until_[i_dim]) {
       double vel{Dot(xi_inv[i_dim], force_)};
+      // if (vel > 0.1) {
+      //   //   // printf("%g\n", vel);
+      //   vel = 0.1;
+      // }
       velocity_[i_dim] = vel;
       // if (i_dim == 0 and vel != 50) {
       //   printf("v[%i] = %g\n", i_dim, vel);

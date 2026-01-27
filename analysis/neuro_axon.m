@@ -1,11 +1,14 @@
 clear variables;
 
-sim_name = 'test';
+sim_name = 'test3';
+
+output_movie_name = 'test3_0.5';
 
 start_frame = 1; 
 end_frame = -1;  % set to -1 to run until end of data
 
 frames_per_plot = 10; 
+movie_duration = 30; % in seconds
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files
@@ -16,6 +19,13 @@ if end_frame == -1
 end
 active_frames = end_frame - start_frame;
 r_prot = (params.site_size*1000);
+
+% Initialize videowriter object
+v = VideoWriter(output_movie_name);%, 'MPEG-4');
+v.FrameRate = (active_frames / frames_per_plot) / movie_duration;
+open(v);
+frame_box = [0 0 1445 200];
+
 
 % Open figure and set to desired size (each frame must be this same size)
 fig1 = figure('Position', [50 50 1000 500]);
@@ -46,13 +56,16 @@ for i_data = start_frame : frames_per_plot : end_frame
     clf;
     % Set Axes properties
     ax = axes('Units', 'normalized', 'Position', [0.075 0.085 0.9 0.9]);
+    set(gca,'xdir','reverse');%,'ydir','reverse')
     hold all;
     min_x = min(min(filament_pos(1, :, :, i_data)));
     max_x = max(max(filament_pos(1, :, :, i_data)));
     min_y = min(min(filament_pos(2, :, :, i_data)));
     max_y = max(max(filament_pos(2, :, :, i_data)));
-    ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.YLim = [(min_y - 25) (max_y + 25)];
+    %ax.XLim = [(min_x - 25) (max_x + 25)];
+    ax.XLim = [-7500 100000];
+    %ax.XLim = [-100000 100000];
+    ax.YLim = [(min_y - 500) (max_y + 500)];
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';
@@ -66,7 +79,7 @@ for i_data = start_frame : frames_per_plot : end_frame
         minus_pos = filament_pos(:, 2, i_mt, i_data);
         line([plus_pos(1)-r_prot/2, minus_pos(1)-r_prot/2],[plus_pos(2), minus_pos(2)], ...
             'LineWidth', 2, 'Color', [0.7 0.7 0.7]);
-        rectangle('Position', [plus_pos(1)-r_prot/2 plus_pos(2)-r_prot/2 r_prot r_prot], ...
+        rectangle('Position', [plus_pos(1)-r_prot/2 plus_pos(2)-2*r_prot r_prot 4*r_prot], ...
              'FaceColor', [0 0 0], 'Curvature', [1 1]);
         %n_sites = params.mt_lengths(i_mt);
         %dx = -1;
@@ -83,4 +96,7 @@ for i_data = start_frame : frames_per_plot : end_frame
     str = sprintf('Time: %#.2f seconds', time);
     annotation('textbox', dim, 'String', str, 'FitBoxToText', 'on');
     drawnow();
+   writeVideo(v, getframe(gcf));
 end
+
+close(v);

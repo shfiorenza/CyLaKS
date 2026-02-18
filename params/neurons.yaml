@@ -1,8 +1,8 @@
 seed: 198261346419
 kbT: 4.114
 eta: 0.001 # water
-dt: 1e-3 #0.000005 # 0.00005 # 0.0002 # 0.00002
-t_run: 600 #300 #60 # 0 # 1800 # 300 # 400 # 00
+dt: 1e-2 #0.000005 # 0.00005 # 0.0002 # 0.00002
+t_run: 6000 #300 #60 # 0 # 1800 # 300 # 400 # 00
 t_equil: 0
 t_snapshot: 0.1
 dynamic_equil_window: -1 
@@ -20,7 +20,7 @@ filaments:
   x_initial: [0] #, 0, 0]
   y_initial: [0] #, 30, 60]
   x_immobile_until: [0]
-  y_immobile_until: [1000]
+  y_immobile_until: [10000]
   rotation_enabled: [false]
   wca_potential_enabled: false
   f_applied: [0.0]

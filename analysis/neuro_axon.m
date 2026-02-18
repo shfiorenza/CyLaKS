@@ -1,13 +1,13 @@
 clear variables;
 
-sim_name = 'test3';
+sim_name = 'test';
 
-output_movie_name = 'test3_0.5';
+output_movie_name = 'test';
 
 start_frame = 1; 
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 10; 
+frames_per_plot = 100; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure
@@ -50,6 +50,7 @@ for i_datapoint = 1 : 1 : params.n_datapoints
     end
 end
 
+
 % Run through all datapoints; each one is a frame in our movie
 for i_data = start_frame : frames_per_plot : end_frame
     % Clear figure so that it only displays figures from current datapoint
@@ -63,9 +64,10 @@ for i_data = start_frame : frames_per_plot : end_frame
     min_y = min(min(filament_pos(2, :, :, i_data)));
     max_y = max(max(filament_pos(2, :, :, i_data)));
     %ax.XLim = [(min_x - 25) (max_x + 25)];
-    ax.XLim = [-7500 100000];
+    ax.XLim = [-7500 200000];
     %ax.XLim = [-100000 100000];
-    ax.YLim = [(min_y - 500) (max_y + 500)];
+    %ax.YLim = [(min_y - 500) (max_y + 500)];
+    ax.YLim = [-1000 1000];
     ax.TickLength = [0.005 0.005];
     ax.XLabel.String = 'x position (nm)';
     ax.YLabel.String = 'y position (nm)';

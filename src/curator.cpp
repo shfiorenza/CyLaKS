@@ -466,6 +466,7 @@ void Curator::GenerateDataFiles() {
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
   AddDataFile("axon_coords");
+  AddDataFile("axon_forces");
   if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
@@ -591,6 +592,7 @@ void Curator::OutputData() {
   double n_fila[1];
   n_fila[0] = n_pfs;
   data_files_.at("axon_coords").Write(n_fila, 1);
+  // data_files_.at("axon_forces").Write(n_fila, 1);
   bool motors_active{proteins_.motors_.active_};
   bool motors_tethering{proteins_.motors_.tethering_active_};
   bool xlinks_active{proteins_.xlinks_.active_};
@@ -616,7 +618,11 @@ void Curator::OutputData() {
     }
     double length[1];
     length[0] = pf->sites_.size();
+    double force[2];
+    force[0] = pf->force_[0];
+    force[1] = pf->force_[1];
     data_files_.at("axon_coords").Write(length, 1);
+    data_files_.at("axon_forces").Write(force, 2);
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {

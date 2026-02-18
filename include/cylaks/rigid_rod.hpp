@@ -14,7 +14,8 @@ public:
   double torque_{0.0};
   Vec<double> force_;       // In pN; zero'd out every timestep
   Vec<double> orientation_; // Unit vector
-  Vec<double> velocity_;
+  Vec<double> velocity_avg_;
+  Vec2D<double> velocity_all_;
 
 protected:
   void SetParameters() {
@@ -22,7 +23,16 @@ protected:
     sigma_.resize(3);
     force_.resize(_n_dims_max);
     orientation_.resize(_n_dims_max);
-    velocity_.resize(_n_dims_max);
+    velocity_avg_.resize(_n_dims_max);
+    velocity_all_.resize(_n_dims_max);
+    size_t win_size{100};
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      velocity_all_[i_dim].resize(win_size);
+      for (int i_entry{0}; i_entry < win_size; i_entry++) {
+        velocity_all_[i_dim][i_entry] = 0.0;
+      }
+      velocity_avg_[i_dim] = 0.0;
+    }
   }
 
 public:

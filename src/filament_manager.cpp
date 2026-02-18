@@ -41,7 +41,7 @@ void FilamentManager::GenerateFilaments() {
         // }
       }
     }
-    double p_parallel{1.0};
+    double p_parallel{0.5};
     for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
       if (SysRNG::GetRanProb() < p_parallel) {
         Params::Filaments::polarity[i_fil] = 0;
@@ -169,8 +169,10 @@ void FilamentManager::RunKMC() {
   double p_p2g = 0.005;
   double p_g2s = 0.0005;
   double p_s2p = 0.005;
-  double v_grow = 120;   // nm/s
-  double v_shrink = 600; // nm/s
+  double v_grow = 120;  // nm/s
+  double v_shrink = 60; // nm/s
+
+  double soma_boundary = 150000; // nm
 
   double p_add_site = v_grow * Params::dt / Params::Filaments::site_size;
   double p_rmv_site = v_shrink * Params::dt / Params::Filaments::site_size;
@@ -180,6 +182,15 @@ void FilamentManager::RunKMC() {
   }
   // Dynamic instability
   for (auto &&pf : protofilaments_) {
+    if (pf.plus_end_->pos_[0] > soma_boundary ||
+        pf.minus_end_->pos_[0] > soma_boundary) {
+      pf.RemoveSite();
+      // pf.state_ = shrink;
+      // double ran2{SysRNG::GetRanProb()};
+      // if (ran2 < p_add_site) {
+      // }
+      continue;
+    }
     double ran{SysRNG::GetRanProb()};
     switch (pf.state_) {
     case pause: {
@@ -213,8 +224,29 @@ void FilamentManager::RunKMC() {
     }
     }
   }
+  for (auto &&pf : protofilaments_) {
+    if (pf.n_sites_ == 2) {
+      // printf("boop\n");
+      size_t i_pf{pf.index_};
+      protofilaments_.erase(protofilaments_.begin() + i_pf);
+      for (int i_entry{0}; i_entry < protofilaments_.size(); i_entry++) {
+        protofilaments_[i_entry].index_ = i_entry;
+      }
+      // protofilaments_[i_pf] = protofilaments_.back();
+      // protofilaments_[i_pf].index_ = i_pf;
+      // protofilaments_.pop_back();
+      // protofilaments_.shrink_to_fit();
+      // printf("bap\n");
+      UpdateNeighbors();
+      // AnnihilateProtofilament(pf);
+    }
+  }
+  // protofilaments_.erase(
+  //     std::remove_if(protofilaments_.begin(), protofilaments_.end(),
+  //                    [](Protofilament pf) { return pf.n_sites_ == 2; }),
+  //     protofilaments_.end());
   // Nucleation of new microtubules
-  double p_nucleate = 0; // 5e-7 * Params::dt; // probability per micron
+  double p_nucleate = 3e-7 * Params::dt; // probability per micron
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
   targets.reserve(protofilaments_.size());
@@ -250,11 +282,12 @@ void FilamentManager::UpdateForces() {
   for (auto &&pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       // SF TODO FIX for nucleating microtubules
-      pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
+      // pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
+      pf.force_[i_dim] = 0.0;
     }
     pf.torque_ = 0.0;
   }
-  double F_factor{1.0e-9};
+  double F_factor{1.0e-8};
   double v0{67};               // nm/s
   double wall_location{-4500}; // nm
   double k_spring{2e-4};
@@ -281,27 +314,26 @@ void FilamentManager::UpdateForces() {
         if (O > min_length) {
           O = min_length;
         }
-        double dVel{pf.velocity_[0] - neighb->velocity_[0]};
-        // printf("%g - %g = %g\n", pf.velocity_[0], neighb->velocity_[0],
-        // dVel);
-        // if (min_length < 1000) {
-        //   printf("%g\n", pf.dx_ * O * F_factor);
-        // }
+        double dVel{pf.velocity_avg_[0] - neighb->velocity_avg_[0]};
         if (pf.polarity_ != neighb->polarity_) {
           // printf("%g\n", 1.0 - dVel / v0);
           // pf.force_[0] += pf.dx_ * (1.0 - dVel / v0) * O * F_factor;
-          pf.force_[0] += pf.dx_ * O * F_factor;
+          pf.force_[0] += pf.dx_ * O * F_factor; // * 1e3;
 
           // neighb->force_[0] -= pf.dx_ * O * F_factor;
           // printf("1\n");
         } else {
-          pf.force_[0] += -dVel * O * F_factor / 100.0;
+          pf.force_[0] += -dVel * O * F_factor;
+          // printf("%g = %g * %g * %g\n", pf.force_[0], -dVel, O, F_factor);
+          // pf.force_[0] += 1e-5;
 
           // pf.force_[0] += O * F_factor;
           // printf("2\n");
         }
       }
-      // printf("+ %g <-> %g\n", pf.plus_end_->pos_[0], pf.minus_end_->pos_[0]);
+      // continue;
+      // printf("+ %g <-> %g\n", pf.plus_end_->pos_[0],
+      // pf.minus_end_->pos_[0]);
       if (pf.plus_end_->pos_[0] < pf.minus_end_->pos_[0]) {
         double r{pf.plus_end_->pos_[0] - wall_location};
         // printf("%g\n", r);
@@ -324,6 +356,7 @@ void FilamentManager::UpdateForces() {
       }
     }
   }
+  /*
   if (Params::Filaments::wca_potential_enabled) {
     double r{protofilaments_[1].pos_[1] - protofilaments_[0].pos_[1]};
     if (r < threshold_) {
@@ -335,6 +368,7 @@ void FilamentManager::UpdateForces() {
     }
   }
   proteins_->UpdateExtensions();
+  */
   // for (auto &&pf : protofilaments_) {
   //   printf("F = <%g, %g> for PF #%i\n", pf.force_[0], pf.force_[1],
   //   pf.index_);
@@ -345,14 +379,18 @@ void FilamentManager::UpdateLattice() { proteins_->UpdateLatticeDeformation(); }
 
 void FilamentManager::UpdateNeighbors() {
 
-  double threshold{320};
+  double threshold{32};
   for (auto &&pf : protofilaments_) {
+    pf.neighbors_.clear();
     for (auto &&neighb : protofilaments_) {
-      // if (fabs(pf.pos_[1] - neighb.pos_[1]) <= threshold) {
-      pf.neighbors_.push_back(&neighb);
-      // }
+      if (fabs(pf.pos_[1] - neighb.pos_[1]) <= threshold) {
+        pf.neighbors_.push_back(&neighb);
+      }
     }
   }
+  // for (auto &&pf : protofilaments_) {
+  //   printf("neighb size is %zu\n", pf.neighbors_.size());
+  // }
 }
 
 bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
@@ -371,6 +409,6 @@ bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
   // protofilaments_[i_last - 1].top_neighb_ = &protofilaments_.back();
   // protofilaments_.back().bot_neighb_ = &protofilaments_[i_last - 1];
   // protofilaments_.back().top_neighb_ = nullptr;
-  printf("added MT #%zu\n", i_last);
+  printf("added MT #%zu (t = %g)\n", i_last, Sys::i_step_ * Params::dt);
   return true;
 }

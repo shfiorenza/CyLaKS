@@ -129,7 +129,7 @@ void Protofilament::UpdateRodPosition() {
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
-  noise_par = noise_perp = noise_rot = 0.0;
+  // noise_par = noise_perp = noise_rot = 0.0;
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
@@ -153,16 +153,44 @@ void Protofilament::UpdateRodPosition() {
     if (Sys::i_step_ > immobile_until_[i_dim]) {
       double vel{Dot(xi_inv[i_dim], force_)};
       // if (vel > 0.1) {
-      //   //   // printf("%g\n", vel);
+      // printf("%g\n", vel);
       //   vel = 0.1;
       // }
-      velocity_[i_dim] = vel;
+      // velocity_avg_[i_dim] = vel;
       // if (i_dim == 0 and vel != 50) {
       //   printf("v[%i] = %g\n", i_dim, vel);
       // }
       pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
+      size_t win_size = velocity_all_[i_dim].size();
+      if (Sys::i_step_ < win_size) {
+        velocity_all_[i_dim][Sys::i_step_] = vel;
+        velocity_all_[i_dim][Sys::i_step_] +=
+            rod_basis[0][i_dim] * noise_par / dt_eff_;
+        velocity_all_[i_dim][Sys::i_step_] +=
+            rod_basis[1][i_dim] * noise_perp / dt_eff_;
+        velocity_avg_[i_dim] += velocity_all_[i_dim][Sys::i_step_] / win_size;
+      } else {
+        size_t i_entry{Sys::i_step_ % win_size};
+        velocity_all_[i_dim][i_entry] = vel;
+        velocity_all_[i_dim][i_entry] +=
+            rod_basis[0][i_dim] * noise_par / dt_eff_;
+        velocity_all_[i_dim][i_entry] +=
+            rod_basis[1][i_dim] * noise_perp / dt_eff_;
+        velocity_avg_[i_dim] += velocity_all_[i_dim][i_entry] / win_size;
+        size_t i_last{win_size - 1 - i_entry};
+        velocity_avg_[i_dim] -= velocity_all_[i_dim][i_last] / win_size;
+      }
+      // if (index_ == 0) {
+      //   printf("%zu: vel_avg[%i] is %g\n", Sys::i_step_, i_dim,
+      //          velocity_avg_[i_dim]);
+      // }
+      // if (Sys::i_step_ > 250) {
+      //   return;
+      //   Sys::EarlyExit();
+      // }
+
       // velocity_[i_dim] += rod_basis[0][i_dim] * noise_par / dt_eff_;
       // printf("%g\n", rod_basis[0][i_dim] * noise_par / dt_eff_);
       // velocity_[i_dim] += rod_basis[1][i_dim] * noise_perp / dt_eff_;

@@ -17,8 +17,8 @@ protected:
   size_t n_pfs_max_{2000};
 
   // Some temporary hacky stuff for WCA potential
-  double sigma_{25.0};    // nm
-  double epsilon_{1.0};   // kbT
+  double sigma_{500};     // nm
+  double epsilon_{10.0};  // kbT
   double threshold_{0.0}; // nm
 
   size_t n_bd_iterations_{0};

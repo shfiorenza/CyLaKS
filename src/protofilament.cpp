@@ -44,16 +44,16 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
   double ran{SysRNG::GetRanProb()};
   pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
   size_t n_tries{0};
-  while ((pos_[0] - length_ / 2.0) <= -4400) {
-    double ran{SysRNG::GetRanProb()};
-    pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
-    // printf("%g\n", pos_[0]);
-    if (n_tries > 10) {
-      printf("FAILED to nucleate\n");
-      return false;
-    }
-    n_tries++;
+  // while ((pos_[0] - length_ / 2.0) <= -4400) {
+  double ran2{SysRNG::GetRanProb()};
+  pos_[0] = parent->pos_[0] + (ran2 - 0.5) * parent->length_;
+  // printf("%g\n", pos_[0]);
+  if (n_tries > 10) {
+    printf("FAILED to nucleate\n");
+    return false;
   }
+  n_tries++;
+  // }
   state_ = pause;
   pos_[1] = parent->pos_[1] + (SysRNG::GetRanProb() - 0.5) * 20.0;
   orientation_[0] = parent->orientation_[0]; // 1.0
@@ -129,7 +129,7 @@ void Protofilament::UpdateRodPosition() {
   double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
   double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
 
-  // noise_par = noise_perp = noise_rot = 0.0;
+  noise_par = noise_perp = noise_rot = 0.0;
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod

@@ -465,8 +465,9 @@ void Curator::GenerateDataFiles() {
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
-  AddDataFile("axon_coords");
-  AddDataFile("axon_forces");
+  AddDataFile("filament_num");
+  AddDataFile("filament_lengths");
+  AddDataFile("filament_forces");
   if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
@@ -591,7 +592,8 @@ void Curator::OutputData() {
   size_t n_pfs{filaments_.protofilaments_.size()};
   double n_fila[1];
   n_fila[0] = n_pfs;
-  data_files_.at("axon_coords").Write(n_fila, 1);
+  // data_files_.at("axon_coords").Write(n_fila, 1);
+  data_files_.at("filament_num").Write(n_fila, 1);
   // data_files_.at("axon_forces").Write(n_fila, 1);
   bool motors_active{proteins_.motors_.active_};
   bool motors_tethering{proteins_.motors_.tethering_active_};
@@ -618,11 +620,11 @@ void Curator::OutputData() {
     }
     double length[1];
     length[0] = pf->sites_.size();
+    data_files_.at("filament_lengths").Write(length, 1);
     double force[2];
     force[0] = pf->force_[0];
     force[1] = pf->force_[1];
-    data_files_.at("axon_coords").Write(length, 1);
-    data_files_.at("axon_forces").Write(force, 2);
+    data_files_.at("filament_forces").Write(force, 2);
     double coord1[_n_dims_max];
     double coord2[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
@@ -631,8 +633,8 @@ void Curator::OutputData() {
     }
     data_files_.at("filament_pos").Write(coord1, _n_dims_max);
     data_files_.at("filament_pos").Write(coord2, _n_dims_max);
-    data_files_.at("axon_coords").Write(coord1, _n_dims_max);
-    data_files_.at("axon_coords").Write(coord2, _n_dims_max);
+    // data_files_.at("axon_coords").Write(coord1, _n_dims_max);
+    // data_files_.at("axon_coords").Write(coord2, _n_dims_max);
     // printf("MT #%i: (%g, %g) - (%g, %g)\n", i_pf, coord1[0], coord1[1],
     //        coord2[0], coord2[1]);
     if (!motors_active and !xlinks_active) {

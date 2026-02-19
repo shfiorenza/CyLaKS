@@ -5,6 +5,7 @@
 #include "cylaks/system_namespace.hpp"
 #include "cylaks/system_parameters.hpp"
 #include "cylaks/system_rng.hpp"
+#include <cmath>
 
 void FilamentManager::SetParameters() {
 
@@ -167,12 +168,12 @@ bool FilamentManager::AllFilamentsImmobile() {
 void FilamentManager::RunKMC() {
 
   double p_p2g = 0.005;
-  double p_g2s = 0.0005;
+  double p_g2s = 0.0025;
   double p_s2p = 0.005;
   double v_grow = 120;  // nm/s
   double v_shrink = 60; // nm/s
 
-  double soma_boundary = 150000; // nm
+  double soma_boundary = 50000; // nm
 
   double p_add_site = v_grow * Params::dt / Params::Filaments::site_size;
   double p_rmv_site = v_shrink * Params::dt / Params::Filaments::site_size;
@@ -184,12 +185,12 @@ void FilamentManager::RunKMC() {
   for (auto &&pf : protofilaments_) {
     if (pf.plus_end_->pos_[0] > soma_boundary ||
         pf.minus_end_->pos_[0] > soma_boundary) {
-      pf.RemoveSite();
+      // pf.RemoveSite();
       // pf.state_ = shrink;
       // double ran2{SysRNG::GetRanProb()};
       // if (ran2 < p_add_site) {
       // }
-      continue;
+      // continue;
     }
     double ran{SysRNG::GetRanProb()};
     switch (pf.state_) {
@@ -246,7 +247,7 @@ void FilamentManager::RunKMC() {
   //                    [](Protofilament pf) { return pf.n_sites_ == 2; }),
   //     protofilaments_.end());
   // Nucleation of new microtubules
-  double p_nucleate = 3e-7 * Params::dt; // probability per micron
+  double p_nucleate = 0.0; // 1e-7 * Params::dt; // probability per micron
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
   targets.reserve(protofilaments_.size());
@@ -291,7 +292,8 @@ void FilamentManager::UpdateForces() {
   double v0{67};               // nm/s
   double wall_location{-4500}; // nm
   double k_spring{2e-4};
-  double r0{25.0};
+  double r0{100.0};
+  // double r0{pow(2.0, 1.0 / 6.0) * sigma_};
   if (Params::Filaments::axon_arrangement) {
     for (auto &&pf : protofilaments_) {
       // printf("%zu neighbs\n", pf.neighbors_.size());
@@ -336,22 +338,23 @@ void FilamentManager::UpdateForces() {
       // pf.minus_end_->pos_[0]);
       if (pf.plus_end_->pos_[0] < pf.minus_end_->pos_[0]) {
         double r{pf.plus_end_->pos_[0] - wall_location};
-        // printf("%g\n", r);
         if (r < r0) {
+          // printf("plus: %g\n", r);
           double f_mag{-k_spring * (r - r0)};
           // double f_mag{48 * epsilon_ *
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += f_mag;
+          pf.force_[0] += 0.0; // f_mag;
         }
       } else {
         double r{pf.minus_end_->pos_[0] - wall_location};
         if (r < r0) {
+          // printf("minus: %g\n", r);
           double f_mag{-k_spring * (r - r0)};
           // double f_mag{48 * epsilon_ *
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += f_mag;
+          pf.force_[0] += 0.0; // f_mag;
         }
       }
     }

@@ -1,13 +1,17 @@
 clear variables;
 
-sim_name = 'test2';
+sim_name = 'test_slideOnly';
+sim_name = 'test_nucleateOnly';
+sim_name = 'test_dynamicsOnly';
+sim_name = 'test_dynamicsNucleation';
+sim_name = 'test';
 
 output_movie_name = 'test';
 
 start_frame = 1; 
 end_frame = -1;  % set to -1 to run until end of data
 
-frames_per_plot = 100; 
+frames_per_plot = 1000; 
 movie_duration = 30; % in seconds
 
 % Load parameter structure
@@ -56,7 +60,7 @@ for i_datapoint = 1 : 1 : params.n_datapoints
 end
 
 % Open figure and set to desired size (each frame must be this same size)
-fig1 = figure('Position', [50 50 1000 500]);
+fig1 = figure('Position', [50 50 1000 250]);
 
 
 min_x = min(mt_pos(:, :, :, 1), [], "all");
@@ -69,25 +73,25 @@ for i_frame = start_frame : frames_per_plot : end_frame
     % Clear figure so that it only displays figures from current datapoint
     clf;
     % Set Axes properties
-    ax = axes('Units', 'normalized', 'Position', [0.075 0.085 0.9 0.9]);
+    ax = axes('Units', 'normalized', 'Position', [0.075 0.17 0.9 0.8]);
     set(gca,'xdir','reverse');%,'ydir','reverse')
     hold all;
-
     for i_data = i_frame : i_frame + frames_per_plot - 1
         for i_mt = 1 : mt_num(i_data)
             len_sites = mt_len(i_data, i_mt);
-            pos_start = min(min(mt_pos(i_data, i_mt, :, 1)));
+            pos_start = min(mt_pos(i_data, i_mt, :, 1));
             i_start = ceil((pos_start - min_x)/8.2) + 1;
-            for i = i_start : i_start + len_sites - 1
+            for i = i_start : i_start + len_sites - 2
                 occu_data(i_frame, i) = occu_data(i_frame, i) + 1/frames_per_plot;
             end
         end
     end
 
     plot(linspace(min_x/1000.0, max_x/1000.0, ceil(n_sites)), occu_data(i_frame, :), 'LineWidth', 3)
-    ylim([0 100]);
+    %ylim([0 100]);
     xlabel("Position (microns)");
     ylabel("Microtubule density (A.U.)")
+    xlim([min_x/1000.0 - 1 max_x/1000.0 + 1])
     dim = [0.11 0.625 .3 .3];
     time = (i_frame - start_frame) * params.time_per_datapoint;
     str = sprintf('Time: %#.2f seconds', time);

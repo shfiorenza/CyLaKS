@@ -1,4 +1,5 @@
 #include "cylaks/curator.hpp"
+#include "cylaks/system_parameters.hpp"
 #include "yaml-cpp/parser.h"
 #include "yaml-cpp/yaml.h"
 
@@ -288,7 +289,31 @@ void Curator::ParseParameters() {
   ParseYAML(&verbosity, "verbosity", "");
   Log(" Filament parameters:\n");
   ParseYAML(&Filaments::axon_arrangement, "filaments.axon_arrangement", "");
+  if (Filaments::axon_arrangement) {
+    ParseYAML(&Filaments::Neuron::block_size, "neuron.block_size", "filaments");
+    ParseYAML(&Filaments::Neuron::x_offset, "neuron.x_offset", "nm");
+    ParseYAML(&Filaments::Neuron::y_offset, "neuron.y_offset", "nm");
+    ParseYAML(&Filaments::Neuron::neighb_threshold, "neuron.neighb_threshold",
+              "nm");
+    ParseYAML(&Filaments::Neuron::p_plus, "neuron.p_plus", "");
+    ParseYAML(&Filaments::Neuron::p_p2g, "neuron.p_p2g", "");
+    ParseYAML(&Filaments::Neuron::p_g2s, "neuron.p_g2s", "");
+    ParseYAML(&Filaments::Neuron::p_s2p, "neuron.p_s2p", "");
+    ParseYAML(&Filaments::Neuron::v_grow, "neuron.v_grow", "nm/s");
+    ParseYAML(&Filaments::Neuron::v_shrink, "neuron.v_shrink", "nm/s");
+    ParseYAML(&Filaments::Neuron::p_nucleate, "neuron.p_nucleate", "");
+    ParseYAML(&Filaments::Neuron::nucleated_length, "neuron.nucleated_length",
+              "sites");
+    ParseYAML(&Filaments::Neuron::F_factor_slide, "neuron.F_factor_slide", "");
+    ParseYAML(&Filaments::Neuron::F_factor_para, "neuron.F_factor_para", "");
+    ParseYAML(&Filaments::Neuron::tip_pos, "neuron.tip_pos", "nm");
+    ParseYAML(&Filaments::Neuron::tip_k, "neuron.tip_k", "pN/nm");
+    ParseYAML(&Filaments::Neuron::tip_r0, "neuron.tip_r0", "nm");
+    ParseYAML(&Filaments::Neuron::soma_pos, "neuron.soma_pos", "nm");
+    ParseYAML(&Filaments::Neuron::soma_depoly, "neuron.soma_depoly", "");
+  }
   ParseYAML(&Filaments::count, "filaments.count", "filaments");
+  ParseYAML(&Filaments::diffusion, "filaments.diffusion", "");
   ParseYAML(&Filaments::n_subfilaments, "filaments.n_subfilaments",
             "subfilaments");
   ParseYAML(&Filaments::periodic_barrel, "filaments.periodic_barrel", "");
@@ -318,10 +343,10 @@ void Curator::ParseParameters() {
     for (int i_fil{1}; i_fil < Filaments::count; i_fil++) {
       Filaments::n_sites[i_fil] = Filaments::n_sites[0];
       Sys::Log("    n_sites[%i] = %i\n", i_fil, Filaments::n_sites[i_fil]);
-      Filaments::polarity[i_fil] = i_fil % 2 == 0 ? 0 : 1;
+      // Filaments::polarity[i_fil] = i_fil % 2 == 0 ? 0 : 1;
       Sys::Log("    polarity[%i] = %i\n", i_fil, Filaments::polarity[i_fil]);
-      Filaments::x_initial[i_fil] = Filaments::x_initial[0];
-      Filaments::y_initial[i_fil] = Filaments::y_initial[0] + i_fil * 32.0;
+      // Filaments::x_initial[i_fil] = Filaments::x_initial[0];
+      // Filaments::y_initial[i_fil] = Filaments::y_initial[0] + i_fil * 32.0;
       Filaments::x_immobile_until[i_fil] = Filaments::x_immobile_until[0];
       Filaments::y_immobile_until[i_fil] = Filaments::y_immobile_until[0];
       Filaments::rotation_enabled[i_fil] = Filaments::rotation_enabled[0];

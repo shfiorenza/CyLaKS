@@ -15,12 +15,35 @@ inline double dynamic_equil_window; // Set to <=0 to disable dynamic equil; s
 inline size_t verbosity;            // Verbosity level; 0 (quiet) to 3 (max)
 namespace Filaments {
 inline bool axon_arrangement; // Are initializing an axon array?
+namespace Neuron {
+inline size_t block_size;
+inline double x_offset;
+inline double y_offset;
+inline double neighb_threshold;
+inline double p_plus;
+inline double p_p2g;
+inline double p_g2s;
+inline double p_s2p;
+inline double v_grow;
+inline double v_shrink;
+inline double p_nucleate;
+inline size_t nucleated_length;
+inline double F_factor_slide;
+inline double F_factor_para;
+inline double tip_pos;
+inline double tip_k;
+inline double tip_r0;
+inline double soma_pos;
+inline bool soma_depoly;
+
+}; // namespace Neuron
 inline size_t count;          // Number of filaments in simulation
 inline size_t n_subfilaments; // For multiple protofilaments in a MT
-inline bool periodic_barrel;  // whether or not barrel wraps around completelty
-inline double radius;         // Radius of rod (or barrel for MTs); nm
-inline double site_size;      // Length of each binding site; nm
-inline size_t n_bd_per_kmc;   // BD iterations done per KMC iteration
+inline bool diffusion;
+inline bool periodic_barrel; // whether or not barrel wraps around completelty
+inline double radius;        // Radius of rod (or barrel for MTs); nm
+inline double site_size;     // Length of each binding site; nm
+inline size_t n_bd_per_kmc;  // BD iterations done per KMC iteration
 inline std::vector<size_t> n_sites;  // Length of each filament; n_sites
 inline std::vector<size_t> polarity; // 0 (1) sets plus-end to i=0 (n_sites - 1)
 inline std::vector<double> x_initial; // Starting x-coord of filament COM; nm

@@ -10,8 +10,6 @@
 void FilamentManager::SetParameters() {
 
   threshold_ = std::pow(2, 1.0 / 6.0) * sigma_;
-  // threshold_ *= 5;
-  // epsilon_ = 0; // 1e-6;
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;
 }
@@ -22,46 +20,54 @@ void FilamentManager::GenerateFilaments() {
   if (Params::Filaments::axon_arrangement == true) {
     protofilaments_.resize(Params::Filaments::count);
     protofilaments_.reserve(n_pfs_max_);
-    size_t block_size{8};
+    size_t block_size{Params::Filaments::Neuron::block_size};
     size_t n_blocks{Params::Filaments::count / block_size};
-    for (size_t i_block{1}; i_block < n_blocks; i_block++) {
+    double x_offset{Params::Filaments::Neuron::x_offset};
+    double y_offset{Params::Filaments::Neuron::y_offset};
+    for (size_t i_block{0}; i_block < n_blocks; i_block++) {
       for (size_t i_fil{i_block * block_size};
            i_fil < (i_block + 1) * block_size; i_fil++) {
-        Params::Filaments::x_initial[i_fil] = 5000 * i_block;
-
-        Params::Filaments::y_initial[i_fil] =
-            Params::Filaments::y_initial[i_fil - i_block * block_size];
-        // if (i_block % 2 != 0) {
+        if (i_block > 0) {
+          Params::Filaments::x_initial[i_fil] = x_offset * i_block;
+        }
+        // Params::Filaments::y_initial[i_fil] =
+        //     Params::Filaments::y_initial[i_fil - i_block * block_size];
         Params::Filaments::y_initial[i_fil] +=
-            (SysRNG::GetRanProb() - 0.5) * 32.0;
-        // Params::Filaments::polarity[i_fil] = 0;
-        // } else {
-        // Params::Filaments::y_initial[i_fil] +=
-        //     i_block * 12.0; //+= SysRNG::GetRanProb() * 8.0;
-        // Params::Filaments::polarity[i_fil] = 1;
+            (i_fil - i_block * block_size) * y_offset;
+        // if (i_block % 2 == 1) {
+        //   Params::Filaments::y_initial[i_fil] += 0.5 * y_offset;
         // }
+        Params::Filaments::y_initial[i_fil] +=
+            (SysRNG::GetRanProb() - 0.5) * y_offset;
       }
     }
-    double p_parallel{0.5};
+    size_t n_pfs_tot = protofilaments_.size();
+    size_t n_plus_out =
+        std::round(n_pfs_tot * Params::Filaments::Neuron::p_plus);
+    size_t indices[n_pfs_tot];
+    for (int i_fil{0}; i_fil < n_pfs_tot; i_fil++) {
+      indices[i_fil] = i_fil;
+    }
+    SysRNG::Shuffle(indices, n_pfs_tot, sizeof(size_t));
+    for (size_t i_fil{0}; i_fil < n_plus_out; i_fil++) {
+      Params::Filaments::polarity[indices[i_fil]] = 0;
+    }
+    for (size_t i_fil{n_plus_out}; i_fil < n_pfs_tot; i_fil++) {
+      Params::Filaments::polarity[indices[i_fil]] = 1;
+    }
+    /*
     for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
-      if (SysRNG::GetRanProb() < p_parallel) {
+      if (SysRNG::GetRanProb() < Params::Filaments::Neuron::p_plus) {
         Params::Filaments::polarity[i_fil] = 0;
       } else {
         Params::Filaments::polarity[i_fil] = 1;
       }
     }
+    */
     for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
       protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
     }
     UpdateNeighbors();
-    // Use "top" and "bot" neighbors to designate adjacent PFs in axon
-    // for (int i_fil{1}; i_fil < protofilaments_.size() - 1; i_fil++) {
-    //   protofilaments_[i_fil].top_neighb_ = &protofilaments_[i_fil + 1];
-    //   protofilaments_[i_fil].bot_neighb_ = &protofilaments_[i_fil - 1];
-    // }
-    // size_t i_end{protofilaments_.size() - 1};
-    // protofilaments_[0].top_neighb_ = &protofilaments_[1];
-    // protofilaments_[i_end].bot_neighb_ = &protofilaments_[i_end - 1];
     return;
   }
   if (Params::Filaments::n_subfilaments <= 1) {
@@ -166,80 +172,69 @@ bool FilamentManager::AllFilamentsImmobile() {
 }
 
 void FilamentManager::RunKMC() {
-
-  double p_p2g = 0.005;
-  double p_g2s = 0.0025;
-  double p_s2p = 0.005;
-  double v_grow = 120;  // nm/s
-  double v_shrink = 60; // nm/s
-
-  double soma_boundary = 50000; // nm
-
-  double p_add_site = v_grow * Params::dt / Params::Filaments::site_size;
-  double p_rmv_site = v_shrink * Params::dt / Params::Filaments::site_size;
+  double p_add_site = Params::Filaments::Neuron::v_grow * Params::dt /
+                      Params::Filaments::site_size;
+  double p_rmv_site = Params::Filaments::Neuron::v_shrink * Params::dt /
+                      Params::Filaments::site_size;
   if (p_add_site >= 1.0 || p_rmv_site >= 1.0) {
-    printf("filament problems. decrease timestep.\n");
-    exit(1);
+    Sys::ErrorExit("filament problems. decrease timestep.\n");
   }
   // Dynamic instability
   for (auto &&pf : protofilaments_) {
-    if (pf.plus_end_->pos_[0] > soma_boundary ||
-        pf.minus_end_->pos_[0] > soma_boundary) {
-      // pf.RemoveSite();
-      // pf.state_ = shrink;
-      // double ran2{SysRNG::GetRanProb()};
-      // if (ran2 < p_add_site) {
-      // }
-      // continue;
+    if (Params::Filaments::Neuron::soma_depoly) {
+      // SF TODO: should prolly split into plus/minus-end depoly for this
+      if (pf.plus_end_->pos_[0] > Params::Filaments::Neuron::soma_pos) {
+        pf.RemoveSite_PlusEnd();
+        continue;
+      }
+      if (pf.minus_end_->pos_[0] > Params::Filaments::Neuron::soma_pos) {
+        // pf.RemoveSite_PlusEnd();
+        pf.RemoveSite_MinusEnd();
+        continue;
+      }
     }
     double ran{SysRNG::GetRanProb()};
     switch (pf.state_) {
     case pause: {
-      if (ran < p_p2g) {
+      if (ran < Params::Filaments::Neuron::p_p2g) {
         pf.state_ = grow;
         break;
       }
       break;
     }
     case grow: {
-      if (ran < p_g2s) {
+      if (ran < Params::Filaments::Neuron::p_g2s) {
         pf.state_ = shrink;
         break;
       }
       double ran2{SysRNG::GetRanProb()};
       if (ran2 < p_add_site) {
-        pf.AddSite();
+        pf.AddSite_PlusEnd();
       }
       break;
     }
     case shrink: {
-      if (ran < p_s2p) {
+      if (ran < Params::Filaments::Neuron::p_s2p) {
         pf.state_ = pause;
         break;
       }
       double ran2{SysRNG::GetRanProb()};
-      if (ran2 < p_add_site) {
-        pf.RemoveSite();
+      if (ran2 < p_rmv_site) {
+        pf.RemoveSite_PlusEnd();
       }
       break;
     }
     }
   }
+  // SF TODO optimize with dynamic flagging
   for (auto &&pf : protofilaments_) {
     if (pf.n_sites_ == 2) {
-      // printf("boop\n");
       size_t i_pf{pf.index_};
       protofilaments_.erase(protofilaments_.begin() + i_pf);
       for (int i_entry{0}; i_entry < protofilaments_.size(); i_entry++) {
         protofilaments_[i_entry].index_ = i_entry;
       }
-      // protofilaments_[i_pf] = protofilaments_.back();
-      // protofilaments_[i_pf].index_ = i_pf;
-      // protofilaments_.pop_back();
-      // protofilaments_.shrink_to_fit();
-      // printf("bap\n");
       UpdateNeighbors();
-      // AnnihilateProtofilament(pf);
     }
   }
   // protofilaments_.erase(
@@ -247,7 +242,8 @@ void FilamentManager::RunKMC() {
   //                    [](Protofilament pf) { return pf.n_sites_ == 2; }),
   //     protofilaments_.end());
   // Nucleation of new microtubules
-  double p_nucleate = 0.0; // 1e-7 * Params::dt; // probability per micron
+  double p_nucleate{Params::Filaments::Neuron::p_nucleate *
+                    Params::dt}; // per micron
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
   targets.reserve(protofilaments_.size());
@@ -256,7 +252,6 @@ void FilamentManager::RunKMC() {
     targets.push_back(&pf);
   }
   int n_events = SysRNG::SamplePoisson(tot_nucleation);
-  // printf("%i\n", n_events);
   for (int i_event{0}; i_event < n_events; i_event++) {
     double p_cum{0.0};
     double ran{SysRNG::GetRanProb()};
@@ -264,9 +259,7 @@ void FilamentManager::RunKMC() {
       Protofilament *pf{targets[i_pf]};
       p_cum += pf->length_ * p_nucleate / tot_nucleation;
       if (ran < p_cum) {
-        // shlould be handled by mgmt properly
         bool success{NucleateProtofilament(pf)};
-        // bool success{targets[i_pf]->Nucleate()};
         if (success) {
           targets[i_pf] = targets.back();
           targets.pop_back();
@@ -282,23 +275,20 @@ void FilamentManager::UpdateForces() {
 
   for (auto &&pf : protofilaments_) {
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      // SF TODO FIX for nucleating microtubules
-      // pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
-      pf.force_[i_dim] = 0.0;
+      pf.force_[i_dim] = Params::Filaments::f_applied[i_dim];
     }
     pf.torque_ = 0.0;
   }
-  double F_factor{1.0e-8};
-  double v0{67};               // nm/s
-  double wall_location{-4500}; // nm
-  double k_spring{2e-4};
-  double r0{100.0};
+  double F_factor_slide{Params::Filaments::Neuron::F_factor_slide};
+  double F_factor_para{Params::Filaments::Neuron::F_factor_para};
+  double v0{67};                                      // nm/s
+  double tip_pos{Params::Filaments::Neuron::tip_pos}; // nm
+  double k_spring{Params::Filaments::Neuron::tip_k};
+  double r0{Params::Filaments::Neuron::tip_r0};
   // double r0{pow(2.0, 1.0 / 6.0) * sigma_};
   if (Params::Filaments::axon_arrangement) {
     for (auto &&pf : protofilaments_) {
-      // printf("%zu neighbs\n", pf.neighbors_.size());
       for (auto &&neighb : pf.neighbors_) {
-        // double dx{pf.plus_end_->pos_[0] - neighb->plus_end_->pos_[0]};
         double overlap_start{pf.sites_[0].pos_[0]};
         if (neighb->sites_[0].pos_[0] > overlap_start) {
           overlap_start = neighb->sites_[0].pos_[0];
@@ -318,43 +308,29 @@ void FilamentManager::UpdateForces() {
         }
         double dVel{pf.velocity_avg_[0] - neighb->velocity_avg_[0]};
         if (pf.polarity_ != neighb->polarity_) {
-          // printf("%g\n", 1.0 - dVel / v0);
           // pf.force_[0] += pf.dx_ * (1.0 - dVel / v0) * O * F_factor;
-          pf.force_[0] += pf.dx_ * O * F_factor; // * 1e3;
-
-          // neighb->force_[0] -= pf.dx_ * O * F_factor;
-          // printf("1\n");
+          pf.force_[0] += pf.dx_ * O * F_factor_slide;
         } else {
-          pf.force_[0] += -dVel * O * F_factor;
-          // printf("%g = %g * %g * %g\n", pf.force_[0], -dVel, O, F_factor);
-          // pf.force_[0] += 1e-5;
-
-          // pf.force_[0] += O * F_factor;
-          // printf("2\n");
+          pf.force_[0] += -dVel * O * F_factor_para;
         }
       }
-      // continue;
-      // printf("+ %g <-> %g\n", pf.plus_end_->pos_[0],
-      // pf.minus_end_->pos_[0]);
       if (pf.plus_end_->pos_[0] < pf.minus_end_->pos_[0]) {
-        double r{pf.plus_end_->pos_[0] - wall_location};
+        double r{pf.plus_end_->pos_[0] - tip_pos};
         if (r < r0) {
-          // printf("plus: %g\n", r);
           double f_mag{-k_spring * (r - r0)};
           // double f_mag{48 * epsilon_ *
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += 0.0; // f_mag;
+          pf.force_[0] += f_mag;
         }
       } else {
-        double r{pf.minus_end_->pos_[0] - wall_location};
+        double r{pf.minus_end_->pos_[0] - tip_pos};
         if (r < r0) {
-          // printf("minus: %g\n", r);
           double f_mag{-k_spring * (r - r0)};
           // double f_mag{48 * epsilon_ *
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += 0.0; // f_mag;
+          pf.force_[0] += f_mag;
         }
       }
     }
@@ -370,19 +346,15 @@ void FilamentManager::UpdateForces() {
       protofilaments_[0].force_[1] -= f_mag;
     }
   }
-  proteins_->UpdateExtensions();
   */
-  // for (auto &&pf : protofilaments_) {
-  //   printf("F = <%g, %g> for PF #%i\n", pf.force_[0], pf.force_[1],
-  //   pf.index_);
-  // }
+  proteins_->UpdateExtensions();
 }
 
 void FilamentManager::UpdateLattice() { proteins_->UpdateLatticeDeformation(); }
 
 void FilamentManager::UpdateNeighbors() {
 
-  double threshold{32};
+  double threshold{Params::Filaments::Neuron::neighb_threshold};
   for (auto &&pf : protofilaments_) {
     pf.neighbors_.clear();
     for (auto &&neighb : protofilaments_) {
@@ -391,9 +363,6 @@ void FilamentManager::UpdateNeighbors() {
       }
     }
   }
-  // for (auto &&pf : protofilaments_) {
-  //   printf("neighb size is %zu\n", pf.neighbors_.size());
-  // }
 }
 
 bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
@@ -409,9 +378,6 @@ bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
     protofilaments_.pop_back();
     return false;
   }
-  // protofilaments_[i_last - 1].top_neighb_ = &protofilaments_.back();
-  // protofilaments_.back().bot_neighb_ = &protofilaments_[i_last - 1];
-  // protofilaments_.back().top_neighb_ = nullptr;
-  printf("added MT #%zu (t = %g)\n", i_last, Sys::i_step_ * Params::dt);
+  Sys::Log("added MT #%zu (t = %g)\n", i_last, Sys::i_step_ * Params::dt);
   return true;
 }

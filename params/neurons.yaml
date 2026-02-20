@@ -1,18 +1,39 @@
 seed: 198261346419
 kbT: 4.114
 eta: 0.001 # water
-dt: 1e-2 #0.000005 # 0.00005 # 0.0002 # 0.00002
-t_run: 3600 #300 #60 # 0 # 1800 # 300 # 400 # 00
+dt: 1e-1 #0.000005 # 0.00005 # 0.0002 # 0.00002
+t_run: 3600 #3600 #300 #60 # 0 # 1800 # 300 # 400 # 00
 t_equil: 0
 t_snapshot: 0.1
 dynamic_equil_window: -1 
 verbosity: 0
+neuron:
+  block_size: 4
+  x_offset: 5000
+  y_offset: 8
+  neighb_threshold: 32
+  p_plus: 0.5
+  p_p2g: 0.005
+  p_g2s: 0.005
+  p_s2p: 0.005
+  v_grow: 0.0 #60
+  v_shrink: 0.0 #60
+  p_nucleate: 0.0 #3.3e-6
+  nucleated_length: 100
+  F_factor_slide: 1e-8
+  F_factor_para: 1e-9
+  tip_pos: -5000
+  tip_k: 2e-3
+  tip_r0: 100 
+  soma_pos: 25000
+  soma_depoly: false #true
 filaments:
   axon_arrangement: true
-  count: 64
+  diffusion: false
+  count: 64 #32
   n_subfilaments: 0
   periodic_barrel: false
-  radius: 125 #12.5
+  radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 1 #10
   n_sites: [1000]

@@ -90,7 +90,8 @@ public:
     UpdateRodPosition();
     UpdateSitePositions();
   }
-  void AddSite();
-  void RemoveSite();
+  void AddSite_PlusEnd();
+  void RemoveSite_PlusEnd();
+  void RemoveSite_MinusEnd();
 };
 #endif

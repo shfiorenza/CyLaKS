@@ -39,39 +39,34 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
 
   using namespace Params;
   // using namespace Filaments;
-  n_sites_ = 100;                            // Filaments::n_sites[index_ - 1];
+  n_sites_ = Filaments::Neuron::nucleated_length;
   length_ = Filaments::site_size * n_sites_; // nm
-  double ran{SysRNG::GetRanProb()};
-  pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
   size_t n_tries{0};
-  // while ((pos_[0] - length_ / 2.0) <= -4400) {
-  double ran2{SysRNG::GetRanProb()};
-  pos_[0] = parent->pos_[0] + (ran2 - 0.5) * parent->length_;
-  // printf("%g\n", pos_[0]);
-  if (n_tries > 10) {
-    printf("FAILED to nucleate\n");
-    return false;
-  }
-  n_tries++;
-  // }
+  do {
+    double ran{SysRNG::GetRanProb()};
+    pos_[0] = parent->pos_[0] + (ran - 0.5) * parent->length_;
+    if (n_tries > 10) {
+      printf("FAILED to nucleate\n");
+      return false;
+    }
+    n_tries++;
+  } while ((pos_[0] - length_ / 2.0) <= Filaments::Neuron::tip_pos &&
+           Filaments::Neuron::tip_k > 0.0);
   state_ = pause;
-  pos_[1] = parent->pos_[1] + (SysRNG::GetRanProb() - 0.5) * 20.0;
+  pos_[1] = parent->pos_[1] +
+            (SysRNG::GetRanProb() - 0.5) * Filaments::Neuron::y_offset;
   orientation_[0] = parent->orientation_[0]; // 1.0
   orientation_[1] = parent->orientation_[1]; // 0.0
   immobile_until_.resize(2);
-  immobile_until_[0] =
-      0; // Filaments::x_immobile_until[index_ - 1] / dt; // n_steps
-  immobile_until_[1] = Filaments::y_immobile_until[0] / dt; // n_steps
+  immobile_until_[0] = parent->immobile_until_[0];
+  immobile_until_[1] = parent->immobile_until_[1];
   polarity_ = parent->polarity_;
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
   // Filaments::n_sites.push_back(n_sites_);
   // Filaments::x_initial.push_back(pos_[0]);
   // Filaments::y_initial.push_back(pos_[1]);
-  // Filaments::x_immobile_until.push_back(immobile_until_[0]);
-  // Filaments::y_immobile_until.push_back(immobile_until_[1]);
-  // Filaments::polarity.push_back(polarity_);
-  Filaments::rotation_enabled.push_back(false);
+  // Filaments::rotation_enabled.push_back(false);
   double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
   // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
   if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_ - 1]) {
@@ -125,11 +120,14 @@ void Protofilament::GenerateSites() {
 
 void Protofilament::UpdateRodPosition() {
 
-  double noise_par{SysRNG::GetGaussianNoise(sigma_[0])};
-  double noise_perp{SysRNG::GetGaussianNoise(sigma_[1])};
-  double noise_rot{SysRNG::GetGaussianNoise(sigma_[2])};
-
-  noise_par = noise_perp = noise_rot = 0.0;
+  double noise_par{0.0};
+  double noise_perp{0.0};
+  double noise_rot{0.0};
+  if (Params::Filaments::diffusion) {
+    noise_par = SysRNG::GetGaussianNoise(sigma_[0]);
+    noise_perp = SysRNG::GetGaussianNoise(sigma_[1]);
+    noise_rot = SysRNG::GetGaussianNoise(sigma_[2]);
+  }
 
   // First row is a unit vector (in lab frame) along length of rod
   // Second row is a unit vector (in lab frame) perpendicular to length of rod
@@ -152,44 +150,19 @@ void Protofilament::UpdateRodPosition() {
     // Only update position if protofilament isnt immobilized
     if (Sys::i_step_ > immobile_until_[i_dim]) {
       double vel{Dot(xi_inv[i_dim], force_)};
-      // if (vel > 0.1) {
-      // printf("%g\n", vel);
-      //   vel = 0.1;
-      // }
-      // velocity_avg_[i_dim] = vel;
-      // if (i_dim == 0 and vel != 50) {
-      //   printf("v[%i] = %g\n", i_dim, vel);
-      // }
       pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
       size_t win_size = velocity_all_[i_dim].size();
-      if (Sys::i_step_ < win_size) {
-        velocity_all_[i_dim][Sys::i_step_] = vel;
-        velocity_all_[i_dim][Sys::i_step_] +=
-            rod_basis[0][i_dim] * noise_par / dt_eff_;
-        velocity_all_[i_dim][Sys::i_step_] +=
-            rod_basis[1][i_dim] * noise_perp / dt_eff_;
-        velocity_avg_[i_dim] += velocity_all_[i_dim][Sys::i_step_] / win_size;
-      } else {
-        size_t i_entry{Sys::i_step_ % win_size};
-        velocity_all_[i_dim][i_entry] = vel;
-        velocity_all_[i_dim][i_entry] +=
-            rod_basis[0][i_dim] * noise_par / dt_eff_;
-        velocity_all_[i_dim][i_entry] +=
-            rod_basis[1][i_dim] * noise_perp / dt_eff_;
-        velocity_avg_[i_dim] += velocity_all_[i_dim][i_entry] / win_size;
-        size_t i_last{win_size - 1 - i_entry};
-        velocity_avg_[i_dim] -= velocity_all_[i_dim][i_last] / win_size;
-      }
-      // if (index_ == 0) {
-      //   printf("%zu: vel_avg[%i] is %g\n", Sys::i_step_, i_dim,
-      //          velocity_avg_[i_dim]);
-      // }
-      // if (Sys::i_step_ > 250) {
-      //   return;
-      //   Sys::EarlyExit();
-      // }
+      size_t i_entry{Sys::i_step_ % win_size};
+      size_t i_last{win_size - 1 - i_entry};
+      velocity_all_[i_dim][i_entry] = vel;
+      velocity_all_[i_dim][i_entry] +=
+          rod_basis[0][i_dim] * noise_par / dt_eff_;
+      velocity_all_[i_dim][i_entry] +=
+          rod_basis[1][i_dim] * noise_perp / dt_eff_;
+      velocity_avg_[i_dim] += velocity_all_[i_dim][i_entry] / win_size;
+      velocity_avg_[i_dim] -= velocity_all_[i_dim][i_last] / win_size;
 
       // velocity_[i_dim] += rod_basis[0][i_dim] * noise_par / dt_eff_;
       // printf("%g\n", rod_basis[0][i_dim] * noise_par / dt_eff_);
@@ -275,7 +248,7 @@ BindingSite *Protofilament::GetNeighb(BindingSite *site, int delta) {
   return &sites_[i_neighb];
 }
 
-void Protofilament::AddSite() {
+void Protofilament::AddSite_PlusEnd() {
 
   int i_plus = plus_end_->index_;
   n_sites_++;
@@ -285,7 +258,7 @@ void Protofilament::AddSite() {
   if (i_plus == 0) {
     plus_end_ = &sites_[0];
     minus_end_ = &sites_.back();
-    pos_[0] += -Params::Filaments::site_size / 2.0;
+    pos_[0] -= Params::Filaments::site_size / 2.0;
   } else {
     minus_end_ = &sites_[0];
     plus_end_ = &sites_.back();
@@ -294,7 +267,7 @@ void Protofilament::AddSite() {
   center_index_ = double(n_sites_ - 1) / 2;
 }
 
-void Protofilament::RemoveSite() {
+void Protofilament::RemoveSite_PlusEnd() {
   int i_plus = plus_end_->index_;
   if (n_sites_ == 2) {
     return;
@@ -309,7 +282,27 @@ void Protofilament::RemoveSite() {
   } else {
     minus_end_ = &sites_[0];
     plus_end_ = &sites_.back();
-    pos_[0] += -Params::Filaments::site_size / 2.0;
+    pos_[0] -= Params::Filaments::site_size / 2.0;
+  }
+  center_index_ = double(n_sites_ - 1) / 2;
+}
+
+void Protofilament::RemoveSite_MinusEnd() {
+  int i_plus = plus_end_->index_;
+  if (n_sites_ == 2) {
+    return;
+  }
+  n_sites_--;
+  sites_.pop_back();
+
+  if (i_plus == 0) {
+    plus_end_ = &sites_[0];
+    minus_end_ = &sites_.back();
+    pos_[0] -= Params::Filaments::site_size / 2.0;
+  } else {
+    minus_end_ = &sites_[0];
+    plus_end_ = &sites_.back();
+    pos_[0] += Params::Filaments::site_size / 2.0;
   }
   center_index_ = double(n_sites_ - 1) / 2;
 }

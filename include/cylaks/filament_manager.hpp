@@ -44,6 +44,8 @@ protected:
   virtual void UpdateLattice();
   void UpdateNeighbors();
   bool NucleateProtofilament(Protofilament *parent);
+  bool NucleateProtofilamentAtSoma();
+  bool NucleateProtofilamentInCyto();
 
 public:
   FilamentManager() {}

@@ -92,6 +92,7 @@ void FilamentManager::GenerateFilaments() {
     x_immobile_until = std::vector(n_subfilaments, x_immobile_until[0]);
     y_immobile_until = std::vector(n_subfilaments, y_immobile_until[0]);
   }
+
   // Initialize the protofilaments we implicitly created w/ the resize
   for (int i_fil{0}; i_fil < protofilaments_.size(); i_fil++) {
     protofilaments_[i_fil].Initialize(_id_site, Sys::n_objects_++, i_fil);
@@ -172,6 +173,17 @@ bool FilamentManager::AllFilamentsImmobile() {
 }
 
 void FilamentManager::RunKMC() {
+  // grow means unstable tip is growing
+  // shrink means unstable tip is shrinking
+  // pause means entire MT is stable; no labile tip
+  // - grow->shrink: catastrophe
+  // - shrink->grow: rescue
+  // - grow->pause: stabilize
+  // - pause->grow: growth
+  double k_cata{Params::Filaments::Neuron::k_cata};
+  double k_resc{Params::Filaments::Neuron::k_resc};
+  double k_stab{Params::Filaments::Neuron::k_stab};
+  double k_grow{Params::Filaments::Neuron::k_grow};
   double p_add_site = Params::Filaments::Neuron::v_grow * Params::dt /
                       Params::Filaments::site_size;
   double p_rmv_site = Params::Filaments::Neuron::v_shrink * Params::dt /
@@ -181,8 +193,12 @@ void FilamentManager::RunKMC() {
   }
   // Dynamic instability
   for (auto &&pf : protofilaments_) {
+    // printf("pf #%zu: %zu stable, %zu labile, %zu tot\n", pf.index_,
+    //        pf.n_sites_stable_, pf.n_sites_labile_, pf.n_sites_);
+    // if (pf.n_sites_stable_ > 100000) {
+    //   exit(1);
+    // }
     if (Params::Filaments::Neuron::soma_depoly) {
-      // SF TODO: should prolly split into plus/minus-end depoly for this
       if (pf.plus_end_->pos_[0] > Params::Filaments::Neuron::soma_pos) {
         pf.RemoveSite_PlusEnd();
         continue;
@@ -196,15 +212,20 @@ void FilamentManager::RunKMC() {
     double ran{SysRNG::GetRanProb()};
     switch (pf.state_) {
     case pause: {
-      if (ran < Params::Filaments::Neuron::p_p2g) {
+      // if (ran < Params::Filaments::Neuron::p_p2g) {
+      if (ran < k_grow * Params::dt) {
         pf.state_ = grow;
         break;
       }
       break;
     }
     case grow: {
-      if (ran < Params::Filaments::Neuron::p_g2s) {
+      if (ran < k_cata * Params::dt) {
         pf.state_ = shrink;
+        break;
+      } else if (ran < k_cata * Params::dt + k_stab * Params::dt) {
+        pf.Stabilize();
+        pf.state_ = pause;
         break;
       }
       double ran2{SysRNG::GetRanProb()};
@@ -214,7 +235,11 @@ void FilamentManager::RunKMC() {
       break;
     }
     case shrink: {
-      if (ran < Params::Filaments::Neuron::p_s2p) {
+      if (ran < k_resc * Params::dt) {
+        pf.state_ = grow;
+        break;
+      } else if (ran < k_resc * Params::dt + k_stab * Params::dt) {
+        pf.Stabilize();
         pf.state_ = pause;
         break;
       }
@@ -237,13 +262,33 @@ void FilamentManager::RunKMC() {
       UpdateNeighbors();
     }
   }
-  // protofilaments_.erase(
-  //     std::remove_if(protofilaments_.begin(), protofilaments_.end(),
-  //                    [](Protofilament pf) { return pf.n_sites_ == 2; }),
-  //     protofilaments_.end());
-  // Nucleation of new microtubules
-  double p_nucleate{Params::Filaments::Neuron::p_nucleate *
-                    Params::dt}; // per micron
+  bool MTs_added{false};
+  // New MTs arriving from soma
+  double p_spawn_soma{Params::Filaments::Neuron::k_spawn_soma * Params::dt};
+  int n_spawn_soma = SysRNG::SamplePoisson(p_spawn_soma);
+  for (int i_event{0}; i_event < n_spawn_soma; i_event++) {
+    bool success{NucleateProtofilamentAtSoma()};
+    if (success) {
+      // printf("MT arrived from soma !\n");
+      MTs_added = true;
+    }
+  }
+  // New MTs spawning in cytoplasm
+  double p_spawn_cyto{Params::Filaments::Neuron::k_spawn_cyto * Params::dt};
+  p_spawn_cyto *= (Params::Filaments::Neuron::soma_pos -
+                   Params::Filaments::Neuron::tip_pos);
+  int n_spawn_cyto = SysRNG::SamplePoisson(p_spawn_cyto);
+  for (int i_event{0}; i_event < n_spawn_cyto; i_event++) {
+    bool success{NucleateProtofilamentInCyto()};
+    if (success) {
+      MTs_added = true;
+    }
+  }
+  // New MTs nucleating from pre-existing MTs
+  double p_nucleate{Params::Filaments::Neuron::k_nucleate *
+                    Params::dt}; // per nm
+  size_t n_max{500};
+  p_nucleate *= (1.0 - double(protofilaments_.size()) / double(n_max));
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
   targets.reserve(protofilaments_.size());
@@ -263,11 +308,36 @@ void FilamentManager::RunKMC() {
         if (success) {
           targets[i_pf] = targets.back();
           targets.pop_back();
-          UpdateNeighbors();
+          MTs_added = true;
         }
         break;
       }
     }
+  }
+  size_t n_stable{0};
+  Vec<Protofilament *> stable_pfs;
+  stable_pfs.reserve(protofilaments_.size());
+  for (auto &&pf : protofilaments_) {
+    if (pf.n_sites_stable_ == pf.n_sites_) {
+      stable_pfs.push_back(&pf);
+      n_stable++;
+    }
+  }
+  double avg_loss{Params::Filaments::Neuron::k_loss * n_stable * Params::dt};
+  int n_lost = SysRNG::SamplePoisson(avg_loss);
+  int indices[n_lost];
+  SysRNG::SetRanIndices(indices, n_lost, n_stable);
+  for (int i_event{0}; i_event < n_lost; i_event++) {
+    Protofilament *pf = stable_pfs[indices[i_event]];
+    int i_pf = pf->index_;
+    protofilaments_.erase(protofilaments_.begin() + i_pf);
+    for (int i_entry{0}; i_entry < protofilaments_.size(); i_entry++) {
+      protofilaments_[i_entry].index_ = i_entry;
+    }
+    MTs_added = true;
+  }
+  if (MTs_added) {
+    UpdateNeighbors();
   }
 }
 
@@ -281,7 +351,6 @@ void FilamentManager::UpdateForces() {
   }
   double F_factor_slide{Params::Filaments::Neuron::F_factor_slide};
   double F_factor_para{Params::Filaments::Neuron::F_factor_para};
-  double v0{67};                                      // nm/s
   double tip_pos{Params::Filaments::Neuron::tip_pos}; // nm
   double k_spring{Params::Filaments::Neuron::tip_k};
   double r0{Params::Filaments::Neuron::tip_r0};
@@ -322,6 +391,8 @@ void FilamentManager::UpdateForces() {
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
           pf.force_[0] += f_mag;
+          // printf("PLUS: %g\n", f_mag);
+          // pf.f_barrier_ = f_mag;
         }
       } else {
         double r{pf.minus_end_->pos_[0] - tip_pos};
@@ -331,6 +402,8 @@ void FilamentManager::UpdateForces() {
           //              (Pow(sigma_, 12) / Pow(r, 13) -
           //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
           pf.force_[0] += f_mag;
+          // printf("MINUS: %g\n", f_mag);
+          // pf.f_barrier_ = f_mag;
         }
       }
     }
@@ -378,6 +451,42 @@ bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
     protofilaments_.pop_back();
     return false;
   }
-  Sys::Log("added MT #%zu (t = %g)\n", i_last, Sys::i_step_ * Params::dt);
+  Sys::Log("Added MT #%zu (t = %g)\n", i_last, Sys::i_step_ * Params::dt);
+  return true;
+}
+
+bool FilamentManager::NucleateProtofilamentAtSoma() {
+
+  if (protofilaments_.size() >= n_pfs_max_) {
+    return false;
+  }
+  protofilaments_.emplace_back();
+  size_t i_last{protofilaments_.size() - 1};
+  bool success{
+      protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last, 1)};
+  if (!success) {
+    protofilaments_.pop_back();
+    return false;
+  }
+  Sys::Log("Added MT (SOMA) #%zu (t = %g)\n", i_last,
+           Sys::i_step_ * Params::dt);
+  return true;
+}
+
+bool FilamentManager::NucleateProtofilamentInCyto() {
+
+  if (protofilaments_.size() >= n_pfs_max_) {
+    return false;
+  }
+  protofilaments_.emplace_back();
+  size_t i_last{protofilaments_.size() - 1};
+  bool success{
+      protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last, 2)};
+  if (!success) {
+    protofilaments_.pop_back();
+    return false;
+  }
+  Sys::Log("Added MT (CYTO) #%zu (t = %g)\n", i_last,
+           Sys::i_step_ * Params::dt);
   return true;
 }

@@ -1,42 +1,46 @@
 seed: 198261346419
 kbT: 4.114
-eta: 0.001 # water
-dt: 1e-1 #0.000005 # 0.00005 # 0.0002 # 0.00002
-t_run: 3600 #3600 #300 #60 # 0 # 1800 # 300 # 400 # 00
+eta: 0.01 # 0.01 # 0.001 # water
+dt: 1e-2 #0.000005 # 0.00005 # 0.0002 # 0.00002
+t_run: 21000 #7200 #3600 #3600 #300 #60 # 0 # 1800 # 300 # 400 # 00
 t_equil: 0
-t_snapshot: 0.1
+t_snapshot: 10 # 0.1
 dynamic_equil_window: -1 
 verbosity: 0
 neuron:
   block_size: 4
-  x_offset: 5000
+  x_offset: 1000
   y_offset: 8
   neighb_threshold: 32
   p_plus: 0.5
-  p_p2g: 0.005
-  p_g2s: 0.005
-  p_s2p: 0.005
-  v_grow: 0.0 #60
-  v_shrink: 0.0 #60
-  p_nucleate: 0.0 #3.3e-6
+  k_cata: 0.18
+  k_resc: 0.0463
+  k_stab: 0.0023 #0.00067 # 0.0023
+  k_grow: 0.0083
+  v_grow: 283 # 150 #4.72 #10 
+  v_shrink: 117 # 250 # 1.94 #  
+  k_spawn_soma: 0.092
+  k_spawn_cyto: 5e-8 # 3.3e-6 # 5e-8
+  k_nucleate: 2.83e-5
   nucleated_length: 100
+  k_loss: 0.00117 #0.000833 #0.0025 # 0.00083 #0.000117
   F_factor_slide: 1e-8
-  F_factor_para: 1e-9
-  tip_pos: -5000
+  F_factor_para: 1e-9 #1e-9 #1e-9 # 0.0 #1e-8 # 0.0 #1e-7
+  tip_pos: -100 #5000
   tip_k: 2e-3
   tip_r0: 100 
-  soma_pos: 25000
-  soma_depoly: false #true
+  soma_pos: 40000
+  soma_depoly: true
 filaments:
   axon_arrangement: true
-  diffusion: false
-  count: 64 #32
+  diffusion: false # true
+  count: 160 #96 #32
   n_subfilaments: 0
   periodic_barrel: false
   radius: 12.5
   site_size: 8.2
   n_bd_per_kmc: 1 #10
-  n_sites: [1000]
+  n_sites: [500]
   polarity: [0] #, 0, 0]
   x_initial: [0] #, 0, 0]
   y_initial: [0] #, 30, 60]

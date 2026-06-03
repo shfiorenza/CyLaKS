@@ -10,6 +10,7 @@
 // Protofilament: Infinitely-thin rigid rod with a 1-D lattice of binding sites
 class Protofilament : public RigidRod {
 protected:
+  bool rotation_enabled_;
   double dt_eff_{0.0};       // Effective timestep during BD sub-step
   double center_index_{0.0}; // Rod center (relative to i_site = 0) in n_sites
 
@@ -20,6 +21,8 @@ public:
 
   int dx_{0}; // 1 or -1; gives direction to plus-end
   size_t n_sites_{0};
+  size_t n_sites_stable_{0};
+  size_t n_sites_labile_{0};
   Vec<BindingSite> sites_; // Binding sites that belong to this protofilament
 
   BindingSite *plus_end_{nullptr};  // Pointer to plus-end; static as of now
@@ -36,6 +39,8 @@ public:
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
   bool SetParametersNucleated(Protofilament *parent);
+  bool SetParametersNucleatedAtSoma();
+  bool SetParametersNucleatedInCyto();
   void GenerateSites(); // Part of initialization routine; makes binding sites
 
   void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
@@ -54,6 +59,21 @@ public:
     RigidRod::Initialize(sid, id);
     index_ = index;
     bool success{SetParametersNucleated(parent)};
+    GenerateSites();
+    UpdateSitePositions();
+    return success;
+  }
+  bool Nucleate(size_t sid, size_t id, size_t index, size_t flag) {
+    RigidRod::Initialize(sid, id);
+    index_ = index;
+    bool success{false};
+    if (flag == 1) {
+      success = SetParametersNucleatedAtSoma();
+    } else if (flag == 2) {
+      success = SetParametersNucleatedInCyto();
+    } else {
+      Sys::ErrorExit("protofilament::Nucleate");
+    }
     GenerateSites();
     UpdateSitePositions();
     return success;
@@ -93,5 +113,6 @@ public:
   void AddSite_PlusEnd();
   void RemoveSite_PlusEnd();
   void RemoveSite_MinusEnd();
+  void Stabilize();
 };
 #endif

@@ -1,4 +1,5 @@
 #include "cylaks/protofilament.hpp"
+#include "cylaks/system_definitions.hpp"
 #include "cylaks/system_namespace.hpp"
 #include "cylaks/system_parameters.hpp"
 
@@ -6,6 +7,7 @@ void Protofilament::SetParameters() {
 
   using namespace Params;
   n_sites_ = Filaments::n_sites[index_];
+  n_sites_stable_ = n_sites_;
   pos_[0] = Filaments::x_initial[index_];
   pos_[1] = Filaments::y_initial[index_];
   orientation_[0] = 1.0;
@@ -14,6 +16,7 @@ void Protofilament::SetParameters() {
   immobile_until_[0] = Filaments::x_immobile_until[index_] / dt; // n_steps
   immobile_until_[1] = Filaments::y_immobile_until[index_] / dt; // n_steps
   length_ = Filaments::site_size * Filaments::n_sites[index_];   // nm
+  rotation_enabled_ = Filaments::rotation_enabled[index_];
   polarity_ = Filaments::polarity[index_];
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   dt_eff_ = dt / Filaments::n_bd_per_kmc;       // s
@@ -40,6 +43,8 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
   using namespace Params;
   // using namespace Filaments;
   n_sites_ = Filaments::Neuron::nucleated_length;
+  n_sites_stable_ = 0;
+  n_sites_labile_ = n_sites_;
   length_ = Filaments::site_size * n_sites_; // nm
   size_t n_tries{0};
   do {
@@ -52,7 +57,7 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
     n_tries++;
   } while ((pos_[0] - length_ / 2.0) <= Filaments::Neuron::tip_pos &&
            Filaments::Neuron::tip_k > 0.0);
-  state_ = pause;
+  state_ = grow;
   pos_[1] = parent->pos_[1] +
             (SysRNG::GetRanProb() - 0.5) * Filaments::Neuron::y_offset;
   orientation_[0] = parent->orientation_[0]; // 1.0
@@ -60,13 +65,109 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
   immobile_until_.resize(2);
   immobile_until_[0] = parent->immobile_until_[0];
   immobile_until_[1] = parent->immobile_until_[1];
+  rotation_enabled_ = false;
   polarity_ = parent->polarity_;
+  // parent->polarity_ == 0 ? polarity_ = 1 : polarity_ = 0;
   polarity_ == 0 ? dx_ = -1 : dx_ = 1;
   dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
   // Filaments::n_sites.push_back(n_sites_);
   // Filaments::x_initial.push_back(pos_[0]);
   // Filaments::y_initial.push_back(pos_[1]);
   // Filaments::rotation_enabled.push_back(false);
+  double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
+  // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
+  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_ - 1]) {
+    Sys::Log("Filament #%i aspect ratio is too small for the form of gamma_rot "
+             "we use. Please increase filament length.\n",
+             index_ - 1);
+    Sys::ErrorExit("Protofilament::SetParameters()");
+  }
+  double eta_adj{eta * 1e-06};                      // pN*s/nm^2
+  double pi{M_PI};                                  // literally just pi
+  gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
+  gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
+  gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8)); // pN*s*nm
+  for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
+    sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
+  }
+  return true;
+}
+
+bool Protofilament::SetParametersNucleatedAtSoma() {
+
+  using namespace Params;
+  // using namespace Filaments;
+  n_sites_ = Filaments::Neuron::nucleated_length;
+  n_sites_stable_ = 0;
+  n_sites_labile_ = n_sites_;
+  length_ = Filaments::site_size * n_sites_; // nm
+  pos_[0] = Filaments::Neuron::soma_pos - 0.5 * length_;
+  polarity_ = 0;
+  state_ = grow;
+  pos_[1] = 0.5 * Filaments::Neuron::block_size * Filaments::Neuron::y_offset +
+            (SysRNG::GetRanProb() - 0.5) * Filaments::Neuron::block_size *
+                Filaments::Neuron::y_offset;
+  orientation_[0] = 1.0;
+  orientation_[1] = 0.0;
+  immobile_until_.resize(2);
+  immobile_until_[0] = Filaments::x_immobile_until[0] / dt;
+  immobile_until_[1] = Filaments::y_immobile_until[0] / dt;
+  rotation_enabled_ = false;
+  polarity_ == 0 ? dx_ = -1 : dx_ = 1;
+  dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
+  // Filaments::n_sites.push_back(n_sites_);
+  // Filaments::x_initial.push_back(pos_[0]);
+  // Filaments::y_initial.push_back(pos_[1]);
+  // Filaments::rotation_enabled.push_back(false);
+
+  double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
+  // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
+  if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_ - 1]) {
+    Sys::Log("Filament #%i aspect ratio is too small for the form of gamma_rot "
+             "we use. Please increase filament length.\n",
+             index_ - 1);
+    Sys::ErrorExit("Protofilament::SetParameters()");
+  }
+  double eta_adj{eta * 1e-06};                      // pN*s/nm^2
+  double pi{M_PI};                                  // literally just pi
+  gamma_[0] = 2 * pi * eta_adj * length_ / log(ar); // pN*s/nm
+  gamma_[1] = 2 * gamma_[0];                        // pN*s/nm
+  gamma_[2] = pi * eta_adj * Cube(length_) / (3 * (log(ar) - 0.8)); // pN*s*nm
+  for (int i_dim{0}; i_dim < sigma_.size(); i_dim++) {
+    sigma_[i_dim] = sqrt(2 * kbT * dt_eff_ / gamma_[i_dim]); // nm or rad
+  }
+  return true;
+}
+
+bool Protofilament::SetParametersNucleatedInCyto() {
+
+  using namespace Params;
+  // using namespace Filaments;
+  n_sites_ = Filaments::Neuron::nucleated_length;
+  n_sites_stable_ = 0;
+  n_sites_labile_ = n_sites_;
+  length_ = Filaments::site_size * n_sites_; // nm
+  double l_axon{Filaments::Neuron::soma_pos - Filaments::Neuron::tip_pos};
+  pos_[0] = 0.5 * length_ + SysRNG::GetRanProb() * (l_axon - length_);
+  SysRNG::GetRanProb() > 0.5 ? polarity_ = 0 : polarity_ = 1;
+  // polarity_ = 0;
+  state_ = grow;
+  pos_[1] = 0.5 * Filaments::Neuron::block_size * Filaments::Neuron::y_offset +
+            (SysRNG::GetRanProb() - 0.5) * Filaments::Neuron::block_size *
+                Filaments::Neuron::y_offset;
+  orientation_[0] = 1.0;
+  orientation_[1] = 0.0;
+  immobile_until_.resize(2);
+  immobile_until_[0] = Filaments::x_immobile_until[0] / dt;
+  immobile_until_[1] = Filaments::y_immobile_until[0] / dt;
+  rotation_enabled_ = false;
+  polarity_ == 0 ? dx_ = -1 : dx_ = 1;
+  dt_eff_ = dt / Filaments::n_bd_per_kmc; // s
+  // Filaments::n_sites.push_back(n_sites_);
+  // Filaments::x_initial.push_back(pos_[0]);
+  // Filaments::y_initial.push_back(pos_[1]);
+  // Filaments::rotation_enabled.push_back(false);
+
   double ar{length_ / (2 * Filaments::radius)}; // unitless aspect ratio
   // Make sure the denominator for gamma_[2] (gamma_rot) is greater than 0.0
   if (ar <= 0.8 / 3.0 and Filaments::rotation_enabled[index_ - 1]) {
@@ -153,6 +254,7 @@ void Protofilament::UpdateRodPosition() {
       pos_[i_dim] += vel * dt_eff_;
       pos_[i_dim] += rod_basis[0][i_dim] * noise_par;
       pos_[i_dim] += rod_basis[1][i_dim] * noise_perp;
+      // Take a moving average of velocity to avoid instability
       size_t win_size = velocity_all_[i_dim].size();
       size_t i_entry{Sys::i_step_ % win_size};
       size_t i_last{win_size - 1 - i_entry};
@@ -175,7 +277,7 @@ void Protofilament::UpdateRodPosition() {
       }
     }
     // Only update orientation if rotation is enabled
-    if (Params::Filaments::rotation_enabled[index_]) {
+    if (rotation_enabled_) {
       orientation_[i_dim] += torque_proj[i_dim] / gamma_[2] * dt_eff_;
       orientation_[i_dim] += rod_basis[1][i_dim] * noise_rot;
       // Check for NaN orientations
@@ -186,7 +288,7 @@ void Protofilament::UpdateRodPosition() {
       u_norm += Square(orientation_[i_dim]);
     }
   }
-  if (Params::Filaments::rotation_enabled[index_]) {
+  if (rotation_enabled_) {
     // Re-normalize orientation vector
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
       orientation_[i_dim] /= sqrt(u_norm);
@@ -252,6 +354,7 @@ void Protofilament::AddSite_PlusEnd() {
 
   int i_plus = plus_end_->index_;
   n_sites_++;
+  n_sites_labile_++;
   sites_.emplace_back();
   sites_.back().Initialize(_id_site, Sys::n_objects_++, _r_site, n_sites_,
                            this);
@@ -270,7 +373,15 @@ void Protofilament::AddSite_PlusEnd() {
 void Protofilament::RemoveSite_PlusEnd() {
   int i_plus = plus_end_->index_;
   if (n_sites_ == 2) {
+    printf("this shouldnt happen\n");
     return;
+  }
+  if (state_ == pause) {
+    n_sites_stable_--;
+  }
+  // if (n_sites_labile_ > 0) {
+  if (state_ == shrink or state_ == grow) {
+    n_sites_labile_--;
   }
   n_sites_--;
   sites_.pop_back();
@@ -283,26 +394,38 @@ void Protofilament::RemoveSite_PlusEnd() {
     minus_end_ = &sites_[0];
     plus_end_ = &sites_.back();
     pos_[0] -= Params::Filaments::site_size / 2.0;
+  }
+  center_index_ = double(n_sites_ - 1) / 2;
+  if (n_sites_labile_ == 0) {
+    state_ = pause;
+  }
+}
+
+void Protofilament::RemoveSite_MinusEnd() {
+  if (n_sites_ == 2) {
+    return;
+  }
+  int i_plus = plus_end_->index_;
+  n_sites_--;
+  if (n_sites_stable_ > 0) {
+    n_sites_stable_--;
+  }
+  sites_.pop_back();
+
+  if (i_plus == 0) {
+    plus_end_ = &sites_[0];
+    minus_end_ = &sites_.back();
+    pos_[0] -= Params::Filaments::site_size / 2.0;
+  } else {
+    minus_end_ = &sites_[0];
+    plus_end_ = &sites_.back();
+    pos_[0] += Params::Filaments::site_size / 2.0;
   }
   center_index_ = double(n_sites_ - 1) / 2;
 }
 
-void Protofilament::RemoveSite_MinusEnd() {
-  int i_plus = plus_end_->index_;
-  if (n_sites_ == 2) {
-    return;
-  }
-  n_sites_--;
-  sites_.pop_back();
+void Protofilament::Stabilize() {
 
-  if (i_plus == 0) {
-    plus_end_ = &sites_[0];
-    minus_end_ = &sites_.back();
-    pos_[0] -= Params::Filaments::site_size / 2.0;
-  } else {
-    minus_end_ = &sites_[0];
-    plus_end_ = &sites_.back();
-    pos_[0] += Params::Filaments::site_size / 2.0;
-  }
-  center_index_ = double(n_sites_ - 1) / 2;
+  n_sites_stable_ = n_sites_;
+  n_sites_labile_ = 0;
 }

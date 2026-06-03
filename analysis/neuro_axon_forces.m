@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'test2b';
+sim_name = 'test_long';
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files

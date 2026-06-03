@@ -296,14 +296,18 @@ void Curator::ParseParameters() {
     ParseYAML(&Filaments::Neuron::neighb_threshold, "neuron.neighb_threshold",
               "nm");
     ParseYAML(&Filaments::Neuron::p_plus, "neuron.p_plus", "");
-    ParseYAML(&Filaments::Neuron::p_p2g, "neuron.p_p2g", "");
-    ParseYAML(&Filaments::Neuron::p_g2s, "neuron.p_g2s", "");
-    ParseYAML(&Filaments::Neuron::p_s2p, "neuron.p_s2p", "");
+    ParseYAML(&Filaments::Neuron::k_cata, "neuron.k_cata", "");
+    ParseYAML(&Filaments::Neuron::k_resc, "neuron.k_resc", "");
+    ParseYAML(&Filaments::Neuron::k_stab, "neuron.k_stab", "");
+    ParseYAML(&Filaments::Neuron::k_grow, "neuron.k_grow", "");
     ParseYAML(&Filaments::Neuron::v_grow, "neuron.v_grow", "nm/s");
     ParseYAML(&Filaments::Neuron::v_shrink, "neuron.v_shrink", "nm/s");
-    ParseYAML(&Filaments::Neuron::p_nucleate, "neuron.p_nucleate", "");
+    ParseYAML(&Filaments::Neuron::k_spawn_cyto, "neuron.k_spawn_cyto", "");
+    ParseYAML(&Filaments::Neuron::k_spawn_soma, "neuron.k_spawn_soma", "");
+    ParseYAML(&Filaments::Neuron::k_nucleate, "neuron.k_nucleate", "");
     ParseYAML(&Filaments::Neuron::nucleated_length, "neuron.nucleated_length",
               "sites");
+    ParseYAML(&Filaments::Neuron::k_loss, "neuron.k_loss", "");
     ParseYAML(&Filaments::Neuron::F_factor_slide, "neuron.F_factor_slide", "");
     ParseYAML(&Filaments::Neuron::F_factor_para, "neuron.F_factor_para", "");
     ParseYAML(&Filaments::Neuron::tip_pos, "neuron.tip_pos", "nm");
@@ -490,6 +494,7 @@ void Curator::GenerateDataFiles() {
   // Open filament pos file, which stores the N-dim coordinates of the two
   // endpoints of each filament every datapoint
   AddDataFile("filament_pos");
+  AddDataFile("filament_pos_tip");
   AddDataFile("filament_num");
   AddDataFile("filament_lengths");
   AddDataFile("filament_forces");
@@ -650,14 +655,29 @@ void Curator::OutputData() {
     force[0] = pf->force_[0];
     force[1] = pf->force_[1];
     data_files_.at("filament_forces").Write(force, 2);
-    double coord1[_n_dims_max];
-    double coord2[_n_dims_max];
+    double plus_coord[_n_dims_max];
+    double minus_coord[_n_dims_max];
     for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
-      coord1[i_dim] = (double)pf->plus_end_->pos_[i_dim];
-      coord2[i_dim] = (double)pf->minus_end_->pos_[i_dim];
+      plus_coord[i_dim] = (double)pf->plus_end_->pos_[i_dim];
+      minus_coord[i_dim] = (double)pf->minus_end_->pos_[i_dim];
     }
-    data_files_.at("filament_pos").Write(coord1, _n_dims_max);
-    data_files_.at("filament_pos").Write(coord2, _n_dims_max);
+    data_files_.at("filament_pos").Write(plus_coord, _n_dims_max);
+    data_files_.at("filament_pos").Write(minus_coord, _n_dims_max);
+    double stable_coord[_n_dims_max];
+    for (int i_dim{0}; i_dim < _n_dims_max; i_dim++) {
+      stable_coord[i_dim] = (double)pf->minus_end_->pos_[i_dim] +
+                            pf->dx_ * pf->orientation_[i_dim] *
+                                pf->n_sites_stable_ *
+                                Params::Filaments::site_size;
+      // printf("%g[%i] = %g + %i*%g*%zu*%g\n", stable_coord[i_dim], i_dim,
+      //        pf->minus_end_->pos_[i_dim], pf->dx_, pf->orientation_[i_dim],
+      //        pf->n_sites_stable_, Params::Filaments::site_size);
+      // stable_coord[i_dim] = (double)pf->plus_end_->pos_[i_dim] -
+      //                       pf->dx_ * pf->orientation_[i_dim] *
+      //                           pf->n_sites_labile_ *
+      //                           Params::Filaments::site_size;
+    }
+    data_files_.at("filament_pos_tip").Write(stable_coord, _n_dims_max);
     // data_files_.at("axon_coords").Write(coord1, _n_dims_max);
     // data_files_.at("axon_coords").Write(coord2, _n_dims_max);
     // printf("MT #%i: (%g, %g) - (%g, %g)\n", i_pf, coord1[0], coord1[1],

@@ -212,7 +212,6 @@ void FilamentManager::RunKMC() {
     double ran{SysRNG::GetRanProb()};
     switch (pf.state_) {
     case pause: {
-      // if (ran < Params::Filaments::Neuron::p_p2g) {
       if (ran < k_grow * Params::dt) {
         pf.state_ = grow;
         break;
@@ -287,8 +286,8 @@ void FilamentManager::RunKMC() {
   // New MTs nucleating from pre-existing MTs
   double p_nucleate{Params::Filaments::Neuron::k_nucleate *
                     Params::dt}; // per nm
-  size_t n_max{500};
-  p_nucleate *= (1.0 - double(protofilaments_.size()) / double(n_max));
+  // size_t n_max{500};
+  // p_nucleate *= (1.0 - double(protofilaments_.size()) / double(n_max));
   double tot_nucleation{0.0};
   Vec<Protofilament *> targets;
   targets.reserve(protofilaments_.size());

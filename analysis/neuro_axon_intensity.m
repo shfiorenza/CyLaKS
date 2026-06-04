@@ -1,6 +1,6 @@
 clear variables;
 
-sim_name = 'test_long';
+sim_name = 'test_longID';
 
 output_movie_name = 'test_long2_profile';
 

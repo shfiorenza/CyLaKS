@@ -498,6 +498,7 @@ void Curator::GenerateDataFiles() {
   AddDataFile("filament_num");
   AddDataFile("filament_lengths");
   AddDataFile("filament_forces");
+  AddDataFile("filament_id");
   if (motors_active or xlinks_active) {
     // Open occupancy file, which stores the species ID of each occupant
     // (or -1 for none) for all MT sites during data collection (DC)
@@ -651,6 +652,9 @@ void Curator::OutputData() {
     double length[1];
     length[0] = pf->sites_.size();
     data_files_.at("filament_lengths").Write(length, 1);
+    double id[1];
+    id[0] = pf->GetID();
+    data_files_.at("filament_id").Write(id, 1);
     double force[2];
     force[0] = pf->force_[0];
     force[1] = pf->force_[1];

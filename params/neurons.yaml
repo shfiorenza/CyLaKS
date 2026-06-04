@@ -21,9 +21,9 @@ neuron:
   v_shrink: 117 # 250 # 1.94 #  
   k_spawn_soma: 0.092
   k_spawn_cyto: 5e-8 # 3.3e-6 # 5e-8
-  k_nucleate: 2.83e-5
+  k_nucleate: 1e-6 #2.83e-5
   nucleated_length: 100
-  k_loss: 0.00117 #0.000833 #0.0025 # 0.00083 #0.000117
+  k_loss: 0.000117 #0.00117 #0.000833 #0.0025 # 0.00083 #0.000117
   F_factor_slide: 1e-8
   F_factor_para: 1e-9 #1e-9 #1e-9 # 0.0 #1e-8 # 0.0 #1e-7
   tip_pos: -100 #5000

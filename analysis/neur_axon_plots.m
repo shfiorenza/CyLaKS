@@ -1,7 +1,10 @@
-sim_name = 'test_longID';
+sim_name = 'test_smol';
 
 plot_histograms = false;
-win_size = 120; % seconds
+win_size = 600; % seconds
+tip_pos = 0;
+soma_pos = 40000;
+
 
 % Load parameter structure
 file_dir = '..';  % Default; only change if you move CyLaKS output files
@@ -47,19 +50,26 @@ n_mts_max = max(mt_num);
 win_size_steps = win_size / params.time_per_datapoint;
 vel_plus = nan(params.n_datapoints, n_mts_max);
 vel_minus = nan(params.n_datapoints, n_mts_max);
+n_plus_out = zeros(params.n_datapoints, 1);
+n_minus_out = zeros(params.n_datapoints, 1);
 for i_datapoint = win_size_steps + 1: 1 : params.n_datapoints
    for i_mt = 1 : mt_num(i_datapoint)
         id = mt_id(i_datapoint, i_mt);
         cur_pos_plus = mt_pos(i_datapoint, i_mt, 1, 1);
         cur_pos_minus = mt_pos(i_datapoint, i_mt, 2, 1);
         i_old = find(mt_id(i_datapoint - win_size_steps, :) == id, 1);
-        if ~isempty(i_old) % && cur_pos_plus > 30000
+        if ~isempty(i_old) %&& cur_pos_plus < 10000
             old_pos_plus = mt_pos(i_datapoint - win_size_steps, i_old, 1, 1);
             old_pos_minus = mt_pos(i_datapoint - win_size_steps, i_old, 2, 1);
-            vel_plus(i_datapoint, i_mt) = (cur_pos_plus - old_pos_plus) / win_size;
-            vel_plus(i_datapoint, i_mt) = vel_plus(i_datapoint, i_mt) * 60 / 1000;
-            vel_minus(i_datapoint, i_mt) = (cur_pos_minus - old_pos_minus) / win_size;
-            vel_minus(i_datapoint, i_mt) = vel_minus(i_datapoint, i_mt) * 60 / 1000;
+            vp = (cur_pos_plus - old_pos_plus) / win_size  * 60 / 1000;
+            vm = (cur_pos_minus - old_pos_minus) / win_size * 60 / 1000;
+            vel_plus(i_datapoint, i_mt) = vp;
+            vel_minus(i_datapoint, i_mt) = vm;
+            if cur_pos_plus > cur_pos_minus
+                n_minus_out(i_datapoint) = n_minus_out(i_datapoint) + 1;
+            else
+                n_plus_out(i_datapoint) = n_plus_out(i_datapoint) + 1;
+            end
         end
    end
 end
@@ -68,21 +78,24 @@ if plot_histograms
     fig = figure('Position', [50 50 720 360]);
 end
 
-avg_vel_plus = zeros(params.n_datapoints, 1);
-avg_vel_minus = zeros(params.n_datapoints, 1);
+avg_vel_plus = NaN(params.n_datapoints, 1);
+avg_vel_minus = NaN(params.n_datapoints, 1);
+err_vel_minus = NaN(params.n_datapoints, 1);
 
-for i_datapoint = win_size_steps + 1:1: params.n_datapoints
-    
-    avg_plus = mean(vel_plus(i_datapoint, :), "omitnan"); %sum(data) / n_runs;
-    sd_plus = std(vel_plus(i_datapoint, :), "omitnan");
-    sem_plus = sd_plus / sqrt(max(size(vel_plus(i_datapoint, :))));
+for i_datapoint = win_size_steps + 1: 1 : params.n_datapoints
+    serial_plus = rmmissing(reshape(vel_plus(i_datapoint, :), [], 1));
+    avg_plus = mean(serial_plus);
+    sd_plus = std(serial_plus);
+    sem_plus = sd_plus / sqrt(length(serial_plus));
 
-    avg_minus = mean(vel_minus(i_datapoint, :), "omitnan"); %sum(data) / n_runs;
-    sd_minus = std(vel_minus(i_datapoint, :), "omitnan");
-    sem_minus = sd_minus / sqrt(max(size(vel_minus(i_datapoint, :))));
+    serial_minus = rmmissing(reshape(vel_minus(i_datapoint, :), [], 1));
+    avg_minus = mean(serial_minus); 
+    sd_minus = std(serial_minus);
+    sem_minus = sd_minus / sqrt(length(serial_minus));
 
     avg_vel_plus(i_datapoint) = avg_plus;
     avg_vel_minus(i_datapoint) = avg_minus;
+    err_vel_minus(i_datapoint) = sem_minus;
 
     if ~plot_histograms
         continue;
@@ -106,13 +119,21 @@ for i_datapoint = win_size_steps + 1:1: params.n_datapoints
 drawnow()
 end
 
+polarity = n_plus_out ./ (n_plus_out + n_minus_out);
+
 fig = figure('Position', [0 50 720 360]);
-%plot(linspace(0, params.t_run/60, params.n_datapoints), avg_vel_plus, 'LineWidth', 3);
+%plot(linspace(0, params.t_run/60, params.n_datapoints), smooth(avg_vel_plus), 'LineWidth', 3);
 hold on
+yyaxis left
 plot(linspace(0, params.t_run/60, params.n_datapoints), avg_vel_minus, 'LineWidth', 3);
+ylabel("Velocity (um/min)");
+yyaxis right
+plot(linspace(0, params.t_run/60, params.n_datapoints), polarity, 'LineWidth', 3);
+ylabel("Polarity (unitless)");
+%errorbar(linspace(0, params.t_run/60, params.n_datapoints), avg_vel_minus, err_vel_minus, 'LineWidth', 3);
 xlim([0 params.t_run / 60])
 xlabel("Time (min)");
-ylabel("Velocity (um/min)");
+
 return
 
 active_ids = zeros(n_mts_max);
@@ -154,16 +175,3 @@ fontsize(14, "points");
 xlabel("Time (min)", "FontSize", 18);
 ylabel("Microtubule count", "FontSize", 18);
 ylim([0 700]);
-
-return
-plot(pos(:, 1));
-return
-hold on
-for i_mt = 200 : 205
-    plot(pos(:, i_mt));
-end
-
-%min_x = min(mt_pos(:, :, :, 1), [], "all");
-%max_x = max(mt_pos(:, :, :, 1), [], "all");
-%span = max_x - min_x;
-%n_sites = span / 8.2;

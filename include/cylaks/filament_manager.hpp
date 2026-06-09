@@ -28,6 +28,8 @@ protected:
 
 public:
   bool never_mobile_{true};
+  double axon_tip_pos_{0.0};
+  double axon_tip_force_{0.0};
   EventManager kmc_;
   Vec<Protofilament> protofilaments_;
   Vec<BindingSite *> sites_;

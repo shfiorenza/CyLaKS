@@ -26,15 +26,15 @@ neuron:
   k_loss: 0.000117 #0.00117 #0.000833 #0.0025 # 0.00083 #0.000117
   F_factor_slide: 1e-8
   F_factor_para: 1e-9 #1e-9 #1e-9 # 0.0 #1e-8 # 0.0 #1e-7
-  tip_pos: -100 #5000
+  tip_pos: 40000 #5000
   tip_k: 2e-3
   tip_r0: 100 
-  soma_pos: 40000
+  soma_pos: 0 #40000
   soma_depoly: true
 filaments:
   axon_arrangement: true
   diffusion: false # true
-  count: 160 #96 #32
+  count: 160 #40  #96 #32
   n_subfilaments: 0
   periodic_barrel: false
   radius: 12.5

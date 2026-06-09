@@ -38,9 +38,9 @@ public:
 
 protected:
   void SetParameters(); // Part of initialization routine; sets local params
-  bool SetParametersNucleated(Protofilament *parent);
+  bool SetParametersNucleated(Protofilament *parent, double axon_tip_pos);
   bool SetParametersNucleatedAtSoma();
-  bool SetParametersNucleatedInCyto();
+  bool SetParametersNucleatedInCyto(double axon_tip_pos);
   void GenerateSites(); // Part of initialization routine; makes binding sites
 
   void UpdateRodPosition();   // Use Brownian Dynamics to update rod pos/angle
@@ -55,22 +55,24 @@ public:
     GenerateSites();
     UpdateSitePositions();
   }
-  bool Nucleate(size_t sid, size_t id, size_t index, Protofilament *parent) {
+  bool Nucleate(size_t sid, size_t id, size_t index, Protofilament *parent,
+                double axon_tip_pos) {
     RigidRod::Initialize(sid, id);
     index_ = index;
-    bool success{SetParametersNucleated(parent)};
+    bool success{SetParametersNucleated(parent, axon_tip_pos)};
     GenerateSites();
     UpdateSitePositions();
     return success;
   }
-  bool Nucleate(size_t sid, size_t id, size_t index, size_t flag) {
+  bool Nucleate(size_t sid, size_t id, size_t index, size_t flag,
+                double axon_tip_pos) {
     RigidRod::Initialize(sid, id);
     index_ = index;
     bool success{false};
     if (flag == 1) {
       success = SetParametersNucleatedAtSoma();
     } else if (flag == 2) {
-      success = SetParametersNucleatedInCyto();
+      success = SetParametersNucleatedInCyto(axon_tip_pos);
     } else {
       Sys::ErrorExit("protofilament::Nucleate");
     }

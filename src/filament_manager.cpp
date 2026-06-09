@@ -5,6 +5,7 @@
 #include "cylaks/system_namespace.hpp"
 #include "cylaks/system_parameters.hpp"
 #include "cylaks/system_rng.hpp"
+#include <algorithm>
 #include <cmath>
 
 void FilamentManager::SetParameters() {
@@ -12,6 +13,7 @@ void FilamentManager::SetParameters() {
   threshold_ = std::pow(2, 1.0 / 6.0) * sigma_;
   n_bd_iterations_ = Params::Filaments::n_bd_per_kmc;
   dt_eff_ = Params::dt / n_bd_iterations_;
+  axon_tip_pos_ = Params::Filaments::Neuron::tip_pos;
 }
 
 void FilamentManager::GenerateFilaments() {
@@ -199,11 +201,11 @@ void FilamentManager::RunKMC() {
     //   exit(1);
     // }
     if (Params::Filaments::Neuron::soma_depoly) {
-      if (pf.plus_end_->pos_[0] > Params::Filaments::Neuron::soma_pos) {
+      if (pf.plus_end_->pos_[0] < Params::Filaments::Neuron::soma_pos) {
         pf.RemoveSite_PlusEnd();
         continue;
       }
-      if (pf.minus_end_->pos_[0] > Params::Filaments::Neuron::soma_pos) {
+      if (pf.minus_end_->pos_[0] < Params::Filaments::Neuron::soma_pos) {
         // pf.RemoveSite_PlusEnd();
         pf.RemoveSite_MinusEnd();
         continue;
@@ -274,8 +276,7 @@ void FilamentManager::RunKMC() {
   }
   // New MTs spawning in cytoplasm
   double p_spawn_cyto{Params::Filaments::Neuron::k_spawn_cyto * Params::dt};
-  p_spawn_cyto *= (Params::Filaments::Neuron::soma_pos -
-                   Params::Filaments::Neuron::tip_pos);
+  p_spawn_cyto *= (axon_tip_pos_ - Params::Filaments::Neuron::soma_pos);
   int n_spawn_cyto = SysRNG::SamplePoisson(p_spawn_cyto);
   for (int i_event{0}; i_event < n_spawn_cyto; i_event++) {
     bool success{NucleateProtofilamentInCyto()};
@@ -348,13 +349,14 @@ void FilamentManager::UpdateForces() {
     }
     pf.torque_ = 0.0;
   }
+  double F_factor_friction{1e-11}; // 1e-9 is 1x
   double F_factor_slide{Params::Filaments::Neuron::F_factor_slide};
   double F_factor_para{Params::Filaments::Neuron::F_factor_para};
-  double tip_pos{Params::Filaments::Neuron::tip_pos}; // nm
   double k_spring{Params::Filaments::Neuron::tip_k};
   double r0{Params::Filaments::Neuron::tip_r0};
   // double r0{pow(2.0, 1.0 / 6.0) * sigma_};
   if (Params::Filaments::axon_arrangement) {
+    axon_tip_force_ = 0.0;
     for (auto &&pf : protofilaments_) {
       for (auto &&neighb : pf.neighbors_) {
         double overlap_start{pf.sites_[0].pos_[0]};
@@ -375,6 +377,7 @@ void FilamentManager::UpdateForces() {
           O = min_length;
         }
         double dVel{pf.velocity_avg_[0] - neighb->velocity_avg_[0]};
+        pf.force_[0] += -pf.velocity_avg_[0] * pf.length_ * F_factor_friction;
         if (pf.polarity_ != neighb->polarity_) {
           // pf.force_[0] += pf.dx_ * (1.0 - dVel / v0) * O * F_factor;
           pf.force_[0] += pf.dx_ * O * F_factor_slide;
@@ -382,30 +385,22 @@ void FilamentManager::UpdateForces() {
           pf.force_[0] += -dVel * O * F_factor_para;
         }
       }
-      if (pf.plus_end_->pos_[0] < pf.minus_end_->pos_[0]) {
-        double r{pf.plus_end_->pos_[0] - tip_pos};
-        if (r < r0) {
-          double f_mag{-k_spring * (r - r0)};
-          // double f_mag{48 * epsilon_ *
-          //              (Pow(sigma_, 12) / Pow(r, 13) -
-          //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += f_mag;
-          // printf("PLUS: %g\n", f_mag);
-          // pf.f_barrier_ = f_mag;
-        }
-      } else {
-        double r{pf.minus_end_->pos_[0] - tip_pos};
-        if (r < r0) {
-          double f_mag{-k_spring * (r - r0)};
-          // double f_mag{48 * epsilon_ *
-          //              (Pow(sigma_, 12) / Pow(r, 13) -
-          //               0.5 * Pow(sigma_, 6) / Pow(r, 7))};
-          pf.force_[0] += f_mag;
-          // printf("MINUS: %g\n", f_mag);
-          // pf.f_barrier_ = f_mag;
-        }
+      double MT_tip{std::max(pf.plus_end_->pos_[0], pf.minus_end_->pos_[0])};
+      double r{MT_tip - axon_tip_pos_};
+      if (r > Params::Filaments::Neuron::tip_r0) {
+        double f_mag{-k_spring * (r - r0)};
+        pf.force_[0] += f_mag;
+        axon_tip_force_ -= f_mag;
       }
     }
+    // if (f_on_tip > 0) {
+    // }
+    double F0_axon_tip{0.015}; // 1x = 0.001;
+    // printf("f on tip: %g pN\n", axon_tip_force_);
+    double v_axon_tip{-80 + 80 * (axon_tip_force_ / F0_axon_tip)}; // nm/s
+    axon_tip_pos_ += v_axon_tip * Params::dt;
+    // printf("v: %g\n", v_axon_tip);
+    // exit(1);
   }
   /*
   if (Params::Filaments::wca_potential_enabled) {
@@ -445,7 +440,7 @@ bool FilamentManager::NucleateProtofilament(Protofilament *parent) {
   protofilaments_.emplace_back();
   size_t i_last{protofilaments_.size() - 1};
   bool success{protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++,
-                                               i_last, parent)};
+                                               i_last, parent, axon_tip_pos_)};
   if (!success) {
     protofilaments_.pop_back();
     return false;
@@ -461,8 +456,8 @@ bool FilamentManager::NucleateProtofilamentAtSoma() {
   }
   protofilaments_.emplace_back();
   size_t i_last{protofilaments_.size() - 1};
-  bool success{
-      protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last, 1)};
+  bool success{protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++,
+                                               i_last, 1, axon_tip_pos_)};
   if (!success) {
     protofilaments_.pop_back();
     return false;
@@ -479,13 +474,14 @@ bool FilamentManager::NucleateProtofilamentInCyto() {
   }
   protofilaments_.emplace_back();
   size_t i_last{protofilaments_.size() - 1};
-  bool success{
-      protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++, i_last, 2)};
+  bool success{protofilaments_.back().Nucleate(_id_site, Sys::n_objects_++,
+                                               i_last, 2, axon_tip_pos_)};
   if (!success) {
     protofilaments_.pop_back();
     return false;
   }
   Sys::Log("Added MT (CYTO) #%zu (t = %g)\n", i_last,
            Sys::i_step_ * Params::dt);
+  printf("l = %g\n", axon_tip_pos_);
   return true;
 }

@@ -38,7 +38,8 @@ void Protofilament::SetParameters() {
   }
 }
 
-bool Protofilament::SetParametersNucleated(Protofilament *parent) {
+bool Protofilament::SetParametersNucleated(Protofilament *parent,
+                                           double axon_tip_pos) {
 
   using namespace Params;
   // using namespace Filaments;
@@ -55,7 +56,7 @@ bool Protofilament::SetParametersNucleated(Protofilament *parent) {
       return false;
     }
     n_tries++;
-  } while ((pos_[0] - length_ / 2.0) <= Filaments::Neuron::tip_pos &&
+  } while ((pos_[0] + length_ / 2.0) > axon_tip_pos &&
            Filaments::Neuron::tip_k > 0.0);
   state_ = grow;
   pos_[1] = parent->pos_[1] +
@@ -139,7 +140,7 @@ bool Protofilament::SetParametersNucleatedAtSoma() {
   return true;
 }
 
-bool Protofilament::SetParametersNucleatedInCyto() {
+bool Protofilament::SetParametersNucleatedInCyto(double axon_tip_pos) {
 
   using namespace Params;
   // using namespace Filaments;
@@ -147,7 +148,7 @@ bool Protofilament::SetParametersNucleatedInCyto() {
   n_sites_stable_ = 0;
   n_sites_labile_ = n_sites_;
   length_ = Filaments::site_size * n_sites_; // nm
-  double l_axon{Filaments::Neuron::soma_pos - Filaments::Neuron::tip_pos};
+  double l_axon{axon_tip_pos - Filaments::Neuron::soma_pos};
   pos_[0] = 0.5 * length_ + SysRNG::GetRanProb() * (l_axon - length_);
   SysRNG::GetRanProb() > 0.5 ? polarity_ = 0 : polarity_ = 1;
   // polarity_ = 0;
